@@ -559,6 +559,159 @@
               </div>
             </div>
 
+            <!-- GitHub Section -->
+            <div v-else-if="activeSection === 'github'" class="section-content github-section">
+              <div class="section-header">
+                <h2 class="gradient-text-purple">Source Code Repository</h2>
+                <p class="section-desc">Explore the complete codebase on GitHub</p>
+              </div>
+
+              <!-- GitHub CTA -->
+              <div class="github-hero">
+                <div class="github-logo">
+                  <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.5">
+                    <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+                  </svg>
+                </div>
+                <h3>eyobassey/rapidcapsule</h3>
+                <p>AI-Powered Telemedicine Platform - Complete source code with 4 services, 46+ modules, and 400K+ lines of code</p>
+                <a href="https://github.com/eyobassey/rapidcapsule" target="_blank" rel="noopener noreferrer" class="github-btn">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+                  </svg>
+                  View on GitHub
+                </a>
+              </div>
+
+              <!-- Repository Stats -->
+              <div class="repo-stats">
+                <h3>Repository Statistics</h3>
+                <div class="stats-grid">
+                  <div class="stat-item"><span class="stat-value">1,600+</span><span class="stat-label">Files</span></div>
+                  <div class="stat-item"><span class="stat-value">400K+</span><span class="stat-label">Lines of Code</span></div>
+                  <div class="stat-item"><span class="stat-value">4</span><span class="stat-label">Services</span></div>
+                  <div class="stat-item"><span class="stat-value">46+</span><span class="stat-label">Backend Modules</span></div>
+                  <div class="stat-item"><span class="stat-value">273</span><span class="stat-label">Components</span></div>
+                  <div class="stat-item"><span class="stat-value">100+</span><span class="stat-label">API Endpoints</span></div>
+                </div>
+              </div>
+
+              <!-- Project Structure -->
+              <div class="repo-structure">
+                <h3>Project Structure</h3>
+                <div class="structure-grid">
+                  <a href="https://github.com/eyobassey/rapidcapsule/tree/main/RC" target="_blank" class="structure-card border-blue">
+                    <div class="structure-icon bg-blue">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2">
+                        <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+                        <line x1="12" y1="18" x2="12.01" y2="18"></line>
+                      </svg>
+                    </div>
+                    <div class="structure-info">
+                      <h4>RC/</h4>
+                      <p>Patient Frontend</p>
+                      <span class="tech-badge">Vue.js 3</span>
+                    </div>
+                  </a>
+                  <a href="https://github.com/eyobassey/rapidcapsule/tree/main/RC-Backend" target="_blank" class="structure-card border-green">
+                    <div class="structure-icon bg-green">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2">
+                        <rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect>
+                        <rect x="9" y="9" width="6" height="6"></rect>
+                      </svg>
+                    </div>
+                    <div class="structure-info">
+                      <h4>RC-Backend/</h4>
+                      <p>Patient API (32 modules)</p>
+                      <span class="tech-badge">NestJS</span>
+                    </div>
+                  </a>
+                  <a href="https://github.com/eyobassey/rapidcapsule/tree/main/RC_Admin_UI" target="_blank" class="structure-card border-purple">
+                    <div class="structure-icon bg-purple">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="2" y1="12" x2="22" y2="12"></line>
+                        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                      </svg>
+                    </div>
+                    <div class="structure-info">
+                      <h4>RC_Admin_UI/</h4>
+                      <p>Admin Dashboard</p>
+                      <span class="tech-badge">Vuetify 3</span>
+                    </div>
+                  </a>
+                  <a href="https://github.com/eyobassey/rapidcapsule/tree/main/RC_Admin_Backend" target="_blank" class="structure-card border-orange">
+                    <div class="structure-icon bg-orange">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2">
+                        <rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect>
+                        <rect x="9" y="9" width="6" height="6"></rect>
+                      </svg>
+                    </div>
+                    <div class="structure-info">
+                      <h4>RC_Admin_Backend/</h4>
+                      <p>Admin API (14 modules)</p>
+                      <span class="tech-badge">NestJS</span>
+                    </div>
+                  </a>
+                </div>
+              </div>
+
+              <!-- Key Files -->
+              <div class="key-files">
+                <h3>Key Documentation</h3>
+                <div class="files-list">
+                  <a href="https://github.com/eyobassey/rapidcapsule/blob/main/README.md" target="_blank" class="file-link">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                      <polyline points="14 2 14 8 20 8"></polyline>
+                    </svg>
+                    <span>README.md</span>
+                    <span class="file-desc">Project overview & setup guide</span>
+                  </a>
+                  <a href="https://github.com/eyobassey/rapidcapsule/blob/main/docs/ARCHITECTURE.md" target="_blank" class="file-link">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                      <polyline points="14 2 14 8 20 8"></polyline>
+                    </svg>
+                    <span>docs/ARCHITECTURE.md</span>
+                    <span class="file-desc">System architecture documentation</span>
+                  </a>
+                  <a href="https://github.com/eyobassey/rapidcapsule/blob/main/docs/DIAGRAMS.md" target="_blank" class="file-link">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                      <polyline points="14 2 14 8 20 8"></polyline>
+                    </svg>
+                    <span>docs/DIAGRAMS.md</span>
+                    <span class="file-desc">Mermaid architecture diagrams</span>
+                  </a>
+                  <a href="https://github.com/eyobassey/rapidcapsule/blob/main/ecosystem.config.example.js" target="_blank" class="file-link">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                      <polyline points="14 2 14 8 20 8"></polyline>
+                    </svg>
+                    <span>ecosystem.config.example.js</span>
+                    <span class="file-desc">PM2 deployment configuration</span>
+                  </a>
+                </div>
+              </div>
+
+              <!-- Tech Badges -->
+              <div class="tech-badges-section">
+                <h3>Technologies Used</h3>
+                <div class="badges-row">
+                  <span class="tech-pill vue">Vue.js 3</span>
+                  <span class="tech-pill nest">NestJS</span>
+                  <span class="tech-pill ts">TypeScript</span>
+                  <span class="tech-pill mongo">MongoDB</span>
+                  <span class="tech-pill redis">Redis</span>
+                  <span class="tech-pill aws">AWS</span>
+                  <span class="tech-pill socket">Socket.io</span>
+                  <span class="tech-pill ai">Infermedica AI</span>
+                  <span class="tech-pill ai">Claude AI</span>
+                </div>
+              </div>
+            </div>
+
           </div>
         </main>
       </div>
@@ -598,7 +751,8 @@ export default {
       { id: 'security', label: 'Security', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>' },
       { id: 'flows', label: 'Data Flows', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>' },
       { id: 'tech', label: 'Tech Stack', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>' },
-      { id: 'readme', label: 'Read Me', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>' }
+      { id: 'readme', label: 'Read Me', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>' },
+      { id: 'github', label: 'GitHub', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>' }
     ];
 
     const users = [
@@ -1296,6 +1450,202 @@ svg {
 }
 
 .copyright { font-size: 0.75rem; color: #64748b; }
+
+/* GitHub Section Styles */
+.github-section {
+  h3 { font-size: 1.125rem; font-weight: 700; color: #c084fc; margin-bottom: 1rem; }
+}
+
+.github-hero {
+  text-align: center;
+  padding: 3rem 2rem;
+  border-radius: 1.5rem;
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.15), rgba(30, 41, 59, 0.95), rgba(59, 130, 246, 0.1));
+
+  .github-logo {
+    margin-bottom: 1.5rem;
+    svg { opacity: 0.9; }
+  }
+
+  h3 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #ffffff;
+    margin-bottom: 0.75rem;
+  }
+
+  p {
+    color: #94a3b8;
+    max-width: 32rem;
+    margin: 0 auto 1.5rem;
+    line-height: 1.6;
+  }
+}
+
+.github-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.875rem 2rem;
+  border-radius: 0.75rem;
+  background: linear-gradient(135deg, #a855f7, #6366f1);
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 1rem;
+  text-decoration: none;
+  transition: all 0.3s;
+  box-shadow: 0 4px 12px rgba(168, 85, 247, 0.3);
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(168, 85, 247, 0.4);
+  }
+}
+
+.repo-stats {
+  border-radius: 1.5rem;
+  border: 1px solid rgba(6, 182, 212, 0.3);
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.1), rgba(30, 41, 59, 0.95));
+  padding: 1.5rem;
+}
+
+.repo-structure {
+  border-radius: 1.5rem;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(30, 41, 59, 0.95));
+  padding: 1.5rem;
+}
+
+.structure-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.structure-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: 0.75rem;
+  background: rgba(51, 65, 85, 0.5);
+  text-decoration: none;
+  transition: all 0.3s;
+
+  &:hover {
+    transform: translateY(-2px);
+    background: rgba(51, 65, 85, 0.7);
+  }
+
+  &.border-blue { border: 1px solid rgba(59, 130, 246, 0.4); &:hover { border-color: rgba(59, 130, 246, 0.6); } }
+  &.border-green { border: 1px solid rgba(34, 197, 94, 0.4); &:hover { border-color: rgba(34, 197, 94, 0.6); } }
+  &.border-purple { border: 1px solid rgba(168, 85, 247, 0.4); &:hover { border-color: rgba(168, 85, 247, 0.6); } }
+  &.border-orange { border: 1px solid rgba(249, 115, 22, 0.4); &:hover { border-color: rgba(249, 115, 22, 0.6); } }
+}
+
+.structure-icon {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  &.bg-blue { background: rgba(59, 130, 246, 0.3); }
+  &.bg-green { background: rgba(34, 197, 94, 0.3); }
+  &.bg-purple { background: rgba(168, 85, 247, 0.3); }
+  &.bg-orange { background: rgba(249, 115, 22, 0.3); }
+}
+
+.structure-info {
+  h4 { font-size: 1rem; font-weight: 600; color: #ffffff; margin: 0 0 0.25rem 0; }
+  p { font-size: 0.75rem; color: #94a3b8; margin: 0 0 0.5rem 0; }
+}
+
+.tech-badge {
+  display: inline-block;
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.625rem;
+  font-weight: 600;
+  background: rgba(6, 182, 212, 0.2);
+  color: #22d3ee;
+  border: 1px solid rgba(6, 182, 212, 0.3);
+}
+
+.key-files {
+  border-radius: 1.5rem;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(30, 41, 59, 0.95));
+  padding: 1.5rem;
+}
+
+.files-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.file-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  background: rgba(51, 65, 85, 0.5);
+  text-decoration: none;
+  transition: all 0.3s;
+
+  &:hover {
+    background: rgba(51, 65, 85, 0.7);
+    transform: translateX(4px);
+  }
+
+  span {
+    font-size: 0.875rem;
+    color: #60a5fa;
+    font-weight: 500;
+  }
+
+  .file-desc {
+    color: #64748b;
+    font-weight: 400;
+    margin-left: auto;
+  }
+}
+
+.tech-badges-section {
+  border-radius: 1.5rem;
+  border: 1px solid rgba(249, 115, 22, 0.3);
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.1), rgba(30, 41, 59, 0.95));
+  padding: 1.5rem;
+}
+
+.badges-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+}
+
+.tech-pill {
+  padding: 0.5rem 1rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid;
+
+  &.vue { background: rgba(66, 184, 131, 0.2); color: #42b883; border-color: rgba(66, 184, 131, 0.4); }
+  &.nest { background: rgba(229, 33, 58, 0.2); color: #e5213a; border-color: rgba(229, 33, 58, 0.4); }
+  &.ts { background: rgba(49, 120, 198, 0.2); color: #3178c6; border-color: rgba(49, 120, 198, 0.4); }
+  &.mongo { background: rgba(0, 237, 100, 0.2); color: #00ed64; border-color: rgba(0, 237, 100, 0.4); }
+  &.redis { background: rgba(220, 50, 47, 0.2); color: #dc322f; border-color: rgba(220, 50, 47, 0.4); }
+  &.aws { background: rgba(255, 153, 0, 0.2); color: #ff9900; border-color: rgba(255, 153, 0, 0.4); }
+  &.socket { background: rgba(37, 37, 37, 0.4); color: #ffffff; border-color: rgba(255, 255, 255, 0.3); }
+  &.ai { background: rgba(168, 85, 247, 0.2); color: #c084fc; border-color: rgba(168, 85, 247, 0.4); }
+}
 
 @media (max-width: 1024px) {
   .layout { flex-direction: column; }
