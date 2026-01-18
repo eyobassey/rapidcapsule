@@ -604,5 +604,5 @@ Week 1 successfully laid the foundation for a multi-channel telemedicine platfor
 
 **Document Version**: 1.0
 **Last Updated**: October 25, 2025
-**Author**: Development Team
+**Author**: Bassey Eyo
 **Classification**: Internal Development Notes

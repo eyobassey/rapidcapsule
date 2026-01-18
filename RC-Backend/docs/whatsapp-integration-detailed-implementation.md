@@ -5721,5 +5721,5 @@ describe('WhatsApp Webhook Signature Validation', () => {
 
 **Document Version**: 2.0.0
 **Last Updated**: January 2025
-**Author**: Development Team
+**Author**: Bassey Eyo
 **Status**: Ready for Implementation

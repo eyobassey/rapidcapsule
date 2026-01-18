@@ -906,5 +906,5 @@ Critical fixes to specialist-created appointments ensure that **all appointment 
 
 **Document Version**: 1.0
 **Last Updated**: October 25, 2025
-**Author**: Development Team
+**Author**: Bassey Eyo
 **Classification**: Internal Development Notes
