@@ -1,0 +1,215 @@
+// MEDIA QUERY MANAGER
+/*
+0 - 600px:      Phones
+601 - 900px:    Tablet portrait
+901 - 1200px:   Tablet landscape
+1201 - 1919px:	Samll laptops
+1920 - 2559px :  Base styles
+2560px +:         Large screens
+
+$breakpoint argument options:
+- phone
+- tab-portrait
+- tab-landscape
+- large-screen
+*/
+
+@mixin responsive($breakPoint) {
+	@if $breakPoint == phone {
+		@media only screen and (max-width: 37.5em) /* 600px */ {
+			@content;
+		}
+	}
+
+	@if $breakPoint == tab-portrait {
+		@media only screen and (max-width: 56.25em) /* 900px */ {
+			@content;
+		}
+	}
+
+	@if $breakPoint == tab-landscape {
+		@media only screen and (max-width: 75em) /* 1200px */ {
+			@content;
+		}
+	}
+
+	@if $breakPoint == small-laptop {
+		@media only screen and (max-width: 119.9375em) /* 1919px */ {
+			@content;
+		}
+	}
+
+	@if $breakPoint == large-screen {
+		@media only screen and (min-width: 160em) /* 2560px */ {
+			@content;
+		}
+	}
+}
+
+/* LAYOUT & POSITIONING */
+
+// flex-box manager
+@mixin flexItem($type) {
+	@if $type == horizontal {
+		display: flex;
+		flex-direction: row;
+		@content;
+	}
+
+	@if $type == vertical {
+		display: flex;
+		flex-direction: column;
+		@content;
+	}
+}
+
+// absolute position manager
+@mixin absolutePosition($position) {
+	@if $position == v-center {
+		position: absolute;
+		top: 50%;
+		transform: translateY(-50%);
+		@content;
+	}
+
+	@if $position == h-center {
+		position: absolute;
+		left: 50%;
+		transform: translateX(-50%);
+		@content;
+	}
+
+	@if $position == abs-center {
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+	}
+
+	@if $position == left {
+		position: absolute;
+		@content;
+	}
+
+	@if $position == right {
+		position: absolute;
+		@content;
+	}
+
+	@if $position == custom {
+		position: absolute;
+		@content;
+	}
+}
+
+/* ANIMATIONS MANAGER */
+
+@mixin animation($type) {
+	@if $type == tab-transition {
+		.slide-enter-from,
+		.slide-leave-to {
+			opacity: 0;
+			transform: translateX(50px);
+		}
+
+		.slide-leave-from,
+		.slide-enter-to {
+			opacity: 1;
+			transform: translateX(0);
+		}
+
+		.slide-enter-active {
+			transition: all 150ms ease-out;
+		}
+
+		.slide-leave-active {
+			transition: all 5ms linear;
+		}
+	}
+
+	@if $type == toast-transition {
+		.toast-enter-from,
+		.toast-leave-to {
+			opacity: 0;
+			right: $size-0;
+			bottom: $size-44;
+		}
+
+		.toast-leave-from,
+		.toast-enter-to {
+			opacity: 1;
+			right: $size-48;
+			bottom: $size-44;
+		}
+
+		.toast-enter-active {
+			transition: all 150ms ease-out;
+		}
+
+		.toast-leave-active {
+			transition: all 100ms linear;
+		}
+	}
+}
+
+/* SCROLL BAR */
+@mixin scrollBar($type) {
+	@if $type == normal {
+		&::-webkit-scrollbar {
+			width: $size-4;
+			display: none;
+		}
+
+		&::-webkit-scrollbar-track {
+			border-radius: 100vw;
+			background-color: $color-g-92;
+			margin-block: $size-4;
+		}
+		&::-webkit-scrollbar-thumb {
+			background-color: $color-g-85;
+			border-radius: 100vw;
+		}
+		&.scroll-visible::-webkit-scrollbar {
+			display: block;
+		}
+	}
+	@if $type == inverted {
+		&::-webkit-scrollbar {
+			width: $size-4;
+			display: none;
+		}
+
+		&::-webkit-scrollbar-track {
+			border-radius: 100vw;
+			background-color: $color-g-97;
+			margin-block: $size-4;
+		}
+
+		&::-webkit-scrollbar-thumb {
+			background-color: $color-g-90;
+			border-radius: 100vw;
+		}
+
+		&.scroll-visible::-webkit-scrollbar {
+			display: block;
+		}
+	}
+	@if $type == reset {
+		&::-webkit-scrollbar {
+			all: initial;
+		}
+
+		&::-webkit-scrollbar-track {
+			all: initial;
+		}
+
+		&::-webkit-scrollbar-thumb {
+			all: initial;
+		}
+	}
+	@if $type == none {
+		&::-webkit-scrollbar {
+			display: none;
+		}
+	}
+}

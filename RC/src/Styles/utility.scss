@@ -1,0 +1,187 @@
+@import "./mixins.scss";
+
+// SPACERS
+.spacer {
+	&-top {
+		&-8 {
+			margin-top: $size-8;
+		}
+		&-10 {
+			margin-top: $size-10;
+		}
+		&-12 {
+			margin-top: $size-12;
+		}
+		&-16 {
+			margin-top: $size-16;
+		}
+		&-24 {
+			margin-top: $size-24;
+		}
+		&-28 {
+			margin-top: $size-28;
+		}
+		&-32 {
+			margin-top: $size-32;
+		}
+		&-44 {
+			margin-top: $size-44;
+		}
+		&-48 {
+			margin-top: $size-48;
+		}
+		&-56 {
+			margin-top: $size-56;
+		}
+		&-64 {
+			margin-top: $size-64;
+		}
+		&-72 {
+			margin-top: $size-72;
+		}
+	}
+
+	&-bottom {
+		&-4 {
+			margin-bottom: $size-4;
+		}
+		&-8 {
+			margin-bottom: $size-8;
+		}
+		&-10 {
+			margin-bottom: $size-10;
+		}
+		&-12 {
+			margin-bottom: $size-12;
+		}
+		&-16 {
+			margin-bottom: $size-16;
+		}
+		&-24 {
+			margin-bottom: $size-24;
+		}
+		&-28 {
+			margin-bottom: $size-28;
+		}
+		&-32 {
+			margin-bottom: $size-32;
+		}
+		&-44 {
+			margin-bottom: $size-44;
+		}
+		&-48 {
+			margin-bottom: $size-48;
+		}
+		&-56 {
+			margin-bottom: $size-56;
+		}
+		&-64 {
+			margin-bottom: $size-64;
+		}
+		&-72 {
+			margin-bottom: $size-72;
+		}
+	}
+}
+
+// LAYOUT
+.input__group--row {
+	display: flex;
+	flex-direction: column;
+	gap: $size-16;
+	width: 100%;
+
+	& > * {
+		width: 100%;
+	}
+}
+
+.input__group {
+	display: flex;
+	flex-wrap: wrap;
+	gap: $size-16;
+	width: 100%;
+
+	& > * {
+		flex-grow: 1;
+		flex-shrink: 0;
+		flex-basis: auto;
+		width: min(200px, 100%);
+	}
+}
+
+.col-2 {
+	width: 60%;
+}
+
+// CARD STYLES
+.card-shadow {
+	box-shadow: $size-24 $size-24 $size-56 rgba($color-black, 0.15),
+		$size-12 $size-32 $size-72 rgba($color-black, 0.1);
+}
+
+.drop-shadow {
+	box-shadow: $size-2 $size-6 $size-16 rgba($color-black, 0.25);
+}
+
+.card-outline {
+	border: 1px solid $color-pri-t4;
+}
+
+// UTILITY
+.hidden {
+	display: none;
+}
+
+.clickable {
+	cursor: pointer;
+}
+
+.error-input {
+	color: $color-denote-red;
+	margin-left: 8px;
+	font-size: $size-11;
+}
+
+.sep-dot {
+	@include flexItem(horizontal) {
+		justify-content: center;
+		align-items: center;
+		padding: $size-4;
+
+		> * {
+			width: $size-4;
+			height: $size-4;
+			border-radius: 50%;
+			background-color: $color-g-44;
+		}
+	}
+}
+
+.page-content {
+	display: flex;
+	flex-direction: column;
+	gap: $size-12;
+	width: 100%;
+	height: 100vh;
+  
+	&__body {
+	  display: flex;
+	  flex-direction: column;
+	  gap: $size-26;
+	  width: 100%;
+	  height: 100%;
+	  overflow-y: scroll;
+	  padding: $size-0 $size-48;
+  
+	  &::-webkit-scrollbar {
+		display: none;
+		width: 12px;
+		background-color: $color-g-97;
+	  }
+	}
+  }
+
+  .top-space {
+	margin-top: $size-80;
+  }

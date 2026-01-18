@@ -1,0 +1,58 @@
+import { Module } from '@nestjs/common';
+import { AppointmentsService } from './appointments.service';
+import { AppointmentsController } from './appointments.controller';
+import { MongooseModule } from '@nestjs/mongoose';
+import { Appointment, AppointmentSchema } from './entities/appointment.entity';
+import { Zoom } from '../../common/external/zoom/zoom';
+import { UsersModule } from '../users/users.module';
+import { FileUploadHelper } from '../../common/helpers/file-upload.helpers';
+import { GeneralHelpers } from '../../common/helpers/general.helpers';
+import { TaskScheduler } from '../../core/worker/task.scheduler';
+import { SchedulerRegistry } from '@nestjs/schedule';
+import { PaymentHandler } from '../../common/external/payment/payment.handler';
+import { AdminSettingsModule } from '../admin-settings/admin-settings.module';
+import { Paystack } from '../../common/external/payment/providers/paystack';
+import { PaymentsModule } from '../payments/payments.module';
+import { CardsModule } from '../cards/cards.module';
+import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
+import {
+  AppointmentReferral,
+  AppointmentReferralSchema,
+} from './entities/referral.entity';
+import { ClinicalNotesModule } from '../clinical-notes/clinical-notes.module';
+import { JwtModule } from '@nestjs/jwt';
+import { AdminOrJwtGuard } from './guards/admin-or-jwt.guard';
+
+@Module({
+  imports: [
+    UsersModule,
+    AdminSettingsModule,
+    PaymentsModule,
+    CardsModule,
+    SubscriptionsModule,
+    ClinicalNotesModule,
+    JwtModule.register({
+      secret: process.env.JWTKEY || 'theBestKepSecret',
+      signOptions: { expiresIn: '24h' },
+    }),
+    MongooseModule.forFeature([
+      { name: Appointment.name, schema: AppointmentSchema },
+      { name: AppointmentReferral.name, schema: AppointmentReferralSchema },
+    ]),
+  ],
+  controllers: [AppointmentsController],
+  providers: [
+    AppointmentsService,
+    Zoom,
+    FileUploadHelper,
+    GeneralHelpers,
+    TaskScheduler,
+    SchedulerRegistry,
+    PaymentHandler,
+    Paystack,
+    AdminOrJwtGuard,
+  ],
+  exports: [AppointmentsService],
+})
+export class AppointmentsModule {}
+

@@ -1,0 +1,18 @@
+/*
+0 - 600px:      Phones
+601 - 900px:    Tablet portrait
+901 - 1200px:   Tablet landscape
+1201 - 1439px:	Samll laptops
+1440 - 1920px:  Base styles
+1921 +:         Large screens
+
+$breakpoint argument options:
+- phone
+- tab-portrait
+- tab-landscape
+- large-screen
+*/
+/* LAYOUT & POSITIONING */
+/* ANIMATIONS MANAGER */
+/* SCROLL BAR */
+/*# sourceMappingURL=mixins.css.map */

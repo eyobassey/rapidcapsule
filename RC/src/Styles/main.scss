@@ -1,0 +1,90 @@
+// :deep(.vc-container) {
+// 	width: 100%;
+// 	border: 0;
+// 	background: transparent;
+
+// 	.vc-title {
+// 		color: $color-black;
+// 		font-weight: $fw-semi-bold;
+// 		font-size: $size-24;
+// 		background: transparent;
+// 	}
+// 	.vc-pane {
+// 		display: flex;
+// 		flex-direction: column;
+// 		justify-content: center;
+// 		gap: $size-28;
+// 	}
+// 	.vc-arrow {
+// 		background: transparent;
+// 	}
+//     .vc-day-content {
+//         width: 40px !important;
+//         height: 40px !important;
+//         font-size: $size-12 !important;
+//     }
+//     .vc-weekday {
+//         font-size: $size-12 !important;
+//     }
+//     .vc-weekday-1, .vc-weekday-2 {
+//         color: $color-pri-main !important;
+//     }
+//     .weekday-1 .vc-day-content,
+//     .weekday-2 .vc-day-content {
+//         color: $color-pri-main;
+//     }
+
+// 	.vc-highlights .vc-highlight {
+// 		background: $color-sec-s2 !important;
+//         width: 40px !important;
+//         height: 40px !important;
+//         font-size: $size-12 !important;
+// 	}
+//     .weekday-1 .vc-highlight-content-solid,
+//     .weekday-2 .vc-highlight-content-solid {
+//         color: $color-white;
+//         background: $color-pri-main;
+//     }
+// }
+
+.integrations {
+    &__wrapper {
+        margin-top: $size-28;
+        padding-bottom: $size-16;
+        border-bottom: 1px solid $color-g-90;
+
+        @include flexItem(horizontal) {
+            justify-content: space-between;
+            align-items: center;
+        }
+    }
+
+    &__leftContent {
+        @include flexItem(horizontal) {
+            gap: $size-16;
+            align-items: center;
+        }
+    }
+
+    &__text {
+        font-size: $size-20;
+        line-height: $size-22;
+        font-weight: $fw-bold;
+
+        @include responsive(phone) {
+            font-size: $size-16;
+        }
+    }
+
+    &__subText {
+        margin-top: $size-8;
+        font-size: $size-12;
+        color: $color-g-44;
+        line-height: $size-16;
+        font-weight: $fw-regular;
+
+        @include responsive(phone) {
+            display: none;
+        }
+    }
+}

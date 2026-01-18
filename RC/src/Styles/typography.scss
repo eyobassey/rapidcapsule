@@ -1,0 +1,109 @@
+// FONT SIZE CLASSES
+.fs {
+	&-11 {
+		font-size: $size-11;
+	}
+	&-12 {
+		font-size: $size-12;
+	}
+	&-14 {
+		font-size: $size-14;
+	}
+	&-16 {
+		font-size: 1.067rem;
+	}
+	&-18 {
+		font-size: 1.2rem;
+	}
+	&-20 {
+		font-size: 1.333rem;
+	}
+	&-24 {
+		font-size: 1.6rem;
+	}
+	&-26 {
+		font-size: 1.733rem;
+	}
+	&-28 {
+		font-size: 1.867rem;
+	}
+	&-36 {
+		font-size: 2.4rem;
+	}
+	&-40 {
+		font-size: 2.667rem;
+	}
+	&-48 {
+		font-size: 3.2rem;
+	}
+}
+
+// FONT WEIGHT CLASSES
+.fw {
+	&-regular {
+		font-weight: 400;
+	}
+	&-medium {
+		font-weight: 500;
+	}
+	&-semi-bold {
+		font-weight: 600;
+	}
+	&-bold {
+		font-weight: 700;
+	}
+}
+
+// LINE HEIGHT CLASSES
+.lh {
+	&-100 {
+		line-height: 1;
+	}
+	&-125 {
+		line-height: 1.25;
+	}
+	&-150 {
+		line-height: 1.5;
+	}
+}
+
+// LETTER SPACING CLASSES
+.ls {
+	&-2 {
+		letter-spacing: 0.02em;
+	}
+}
+
+// TEXT ALIGN CLASSES
+.align {
+	&-center {
+		text-align: center;
+	}
+	&-right {
+		text-align: right;
+	}
+	&-left {
+		text-align: left;
+	}
+}
+
+// FONT STYLE CLASSES
+.text-link {
+	font-size: inherit;
+	font-weight: inherit;
+	line-height: inherit;
+	letter-spacing: inherit;
+	text-decoration: none;
+	color: $color-pri;
+	cursor: pointer;
+
+	&:hover {
+		text-decoration: underline;
+		color: $color-pri-s2;
+	}
+
+	&:active,
+	&:visited {
+		color: $color-pri;
+	}
+}

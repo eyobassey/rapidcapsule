@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rapid Capsule - Pitch Deck</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        @page {
+            size: landscape;
+            margin: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+            line-height: 1.5;
+        }
+
+        .slide {
+            width: 100%;
+            min-height: 100vh;
+            padding: 60px 80px;
+            page-break-after: always;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            background: white;
+            position: relative;
+        }
+
+        .slide:last-child {
+            page-break-after: avoid;
+        }
+
+        /* Slide variants */
+        .slide.cover {
+            background: linear-gradient(135deg, #1a5f7a 0%, #0d3446 100%);
+            color: white;
+            text-align: center;
+        }
+
+        .slide.accent {
+            background: linear-gradient(135deg, #00a896 0%, #028090 100%);
+            color: white;
+        }
+
+        .slide.dark {
+            background: #1a1a2e;
+            color: white;
+        }
+
+        .slide.problem {
+            background: linear-gradient(135deg, #d32f2f 0%, #b71c1c 100%);
+            color: white;
+        }
+
+        .slide.solution {
+            background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%);
+            color: white;
+        }
+
+        /* Typography */
+        h1 {
+            font-size: 3.5em;
+            font-weight: 700;
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            font-size: 2.5em;
+            font-weight: 600;
+            margin-bottom: 40px;
+            color: #1a5f7a;
+        }
+
+        .slide.cover h2,
+        .slide.accent h2,
+        .slide.dark h2,
+        .slide.problem h2,
+        .slide.solution h2 {
+            color: white;
+        }
+
+        h3 {
+            font-size: 1.5em;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #1a5f7a;
+        }
+
+        .subtitle {
+            font-size: 1.8em;
+            opacity: 0.9;
+            margin-bottom: 40px;
+        }
+
+        .tagline {
+            font-size: 1.3em;
+            opacity: 0.8;
+            margin-top: 40px;
+        }
+
+        /* Content elements */
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            margin: 40px 0;
+            flex-wrap: wrap;
+        }
+
+        .stat {
+            text-align: center;
+            padding: 20px 40px;
+        }
+
+        .stat-number {
+            font-size: 3.5em;
+            font-weight: 700;
+            color: #d32f2f;
+        }
+
+        .slide.problem .stat-number,
+        .slide.accent .stat-number,
+        .slide.dark .stat-number {
+            color: #ffeb3b;
+        }
+
+        .stat-label {
+            font-size: 1.1em;
+            opacity: 0.9;
+            margin-top: 10px;
+        }
+
+        .columns {
+            display: flex;
+            gap: 60px;
+            margin: 30px 0;
+        }
+
+        .column {
+            flex: 1;
+        }
+
+        .feature-box {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 20px;
+        }
+
+        .slide:not(.cover):not(.accent):not(.dark):not(.problem):not(.solution) .feature-box {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+        }
+
+        .feature-box h3 {
+            margin-bottom: 15px;
+        }
+
+        .slide.accent .feature-box h3,
+        .slide.dark .feature-box h3,
+        .slide.problem .feature-box h3,
+        .slide.solution .feature-box h3 {
+            color: white;
+        }
+
+        ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        li {
+            padding: 10px 0;
+            padding-left: 30px;
+            position: relative;
+            font-size: 1.2em;
+        }
+
+        li::before {
+            content: "→";
+            position: absolute;
+            left: 0;
+            color: #00a896;
+        }
+
+        .slide.accent li::before,
+        .slide.dark li::before,
+        .slide.problem li::before,
+        .slide.solution li::before {
+            color: #ffeb3b;
+        }
+
+        .highlight {
+            background: rgba(255,235,59,0.3);
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        .logo {
+            font-size: 1.5em;
+            font-weight: 700;
+            position: absolute;
+            bottom: 30px;
+            left: 80px;
+            opacity: 0.7;
+        }
+
+        .slide-number {
+            position: absolute;
+            bottom: 30px;
+            right: 80px;
+            opacity: 0.5;
+            font-size: 0.9em;
+        }
+
+        .big-quote {
+            font-size: 2em;
+            font-style: italic;
+            text-align: center;
+            margin: 40px 0;
+            padding: 40px;
+            border-left: 5px solid #ffeb3b;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 30px 0;
+        }
+
+        th, td {
+            padding: 15px 20px;
+            text-align: left;
+            border-bottom: 1px solid rgba(0,0,0,0.1);
+        }
+
+        th {
+            background: rgba(0,0,0,0.05);
+            font-weight: 600;
+        }
+
+        .cta-box {
+            background: rgba(255,255,255,0.15);
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            margin-top: 40px;
+        }
+
+        .revenue-item {
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 15px;
+        }
+
+        .slide:not(.cover):not(.accent):not(.dark):not(.problem):not(.solution) .revenue-item {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+        }
+
+        .revenue-title {
+            font-weight: 600;
+            font-size: 1.3em;
+            margin-bottom: 8px;
+        }
+
+        .timeline {
+            display: flex;
+            justify-content: space-between;
+            margin: 40px 0;
+            position: relative;
+        }
+
+        .timeline::before {
+            content: "";
+            position: absolute;
+            top: 30px;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: rgba(255,255,255,0.3);
+        }
+
+        .timeline-item {
+            text-align: center;
+            flex: 1;
+            position: relative;
+        }
+
+        .timeline-dot {
+            width: 20px;
+            height: 20px;
+            background: #ffeb3b;
+            border-radius: 50%;
+            margin: 20px auto;
+        }
+
+        @media print {
+            .slide {
+                height: 100vh;
+                overflow: hidden;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Slide 1: Cover -->
+    <div class="slide cover">
+        <h1>Rapid Capsule</h1>
+        <p class="subtitle">AI-Powered Healthcare for Africa</p>
+        <p class="tagline">Telemedicine + Prescription Verification + Transparent Healthcare Funding</p>
+        <div class="stats-row" style="margin-top: 60px;">
+            <div class="stat">
+                <div class="stat-number" style="color: #00a896;">1.4B</div>
+                <div class="stat-label">Africans Underserved</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number" style="color: #00a896;">$40B+</div>
+                <div class="stat-label">Global Health Funding</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number" style="color: #00a896;">100K+</div>
+                <div class="stat-label">Deaths from Fake Drugs/Year</div>
+            </div>
+        </div>
+        <p class="slide-number">BGV Spring 2026</p>
+    </div>
+
+    <!-- Slide 2: Problem -->
+    <div class="slide problem">
+        <h2>The Problem: A Deadly Trifecta</h2>
+        <div class="columns">
+            <div class="column">
+                <div class="feature-box">
+                    <h3>Access Crisis</h3>
+                    <ul>
+                        <li>80% of Nigerians lack quality healthcare access</li>
+                        <li>Doctors concentrated in cities</li>
+                        <li>100M+ rural population underserved</li>
+                        <li>2,000+ doctors leave Nigeria annually</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="column">
+                <div class="feature-box">
+                    <h3>Counterfeit Medications</h3>
+                    <ul>
+                        <li>17% of medications in Nigeria are fake (WHO)</li>
+                        <li>100,000+ Africans die annually</li>
+                        <li>No verification infrastructure</li>
+                        <li>Pharmacists catch fakes manually</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="column">
+                <div class="feature-box">
+                    <h3>Funding Corruption</h3>
+                    <ul>
+                        <li>Nigeria ranks 150/180 on corruption index</li>
+                        <li>$Billions in aid untracked</li>
+                        <li>Donors can't verify impact</li>
+                        <li>"Did my money reach patients?"</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="logo">Rapid Capsule</div>
+        <p class="slide-number">2</p>
+    </div>
+
+    <!-- Slide 3: Solution Overview -->
+    <div class="slide solution">
+        <h2>The Solution: Rapid Capsule</h2>
+        <p style="font-size: 1.4em; margin-bottom: 40px;">An integrated AI-powered healthcare platform with three core products</p>
+        <div class="columns">
+            <div class="column">
+                <div class="feature-box">
+                    <h3>1. Telemedicine</h3>
+                    <p style="font-size: 1.1em;">Connect patients to verified specialists via video consultations with AI-powered symptom assessment and triage</p>
+                </div>
+            </div>
+            <div class="column">
+                <div class="feature-box">
+                    <h3>2. Prescription Verification</h3>
+                    <p style="font-size: 1.1em;">AI/OCR system that authenticates prescriptions and detects counterfeit medications before they reach patients</p>
+                </div>
+            </div>
+            <div class="column">
+                <div class="feature-box">
+                    <h3>3. Lifeguard</h3>
+                    <p style="font-size: 1.1em;">Transparent healthcare funding matching donors directly with verified patients—blockchain-auditable proof of impact</p>
+                </div>
+            </div>
+        </div>
+        <div class="logo">Rapid Capsule</div>
+        <p class="slide-number">3</p>
+    </div>
+
+    <!-- Slide 4: Telemedicine Deep Dive -->
+    <div class="slide">
+        <h2>Product 1: AI-Powered Telemedicine</h2>
+        <div class="columns">
+            <div class="column">
+                <h3>How It Works</h3>
+                <ul>
+                    <li>AI symptom assessment and triage</li>
+                    <li>Match with verified specialists</li>
+                    <li>Video consultations</li>
+                    <li>Digital prescriptions</li>
+                    <li>Medication delivery</li>
+                    <li>WhatsApp integration for accessibility</li>
+                </ul>
+            </div>
+            <div class="column">
+                <h3>Key Differentiators</h3>
+                <ul>
+                    <li>Infermedica AI for preliminary diagnosis</li>
+                    <li>Specialist verification system</li>
+                    <li>Integrated pharmacy network</li>
+                    <li>Works on low bandwidth</li>
+                    <li>WhatsApp-native ordering</li>
+                </ul>
+            </div>
+        </div>
+        <div class="stats-row">
+            <div class="stat">
+                <div class="stat-number">60%+</div>
+                <div class="stat-label">Nigerian Smartphone Penetration</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number">100M+</div>
+                <div class="stat-label">WhatsApp Users in Nigeria</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number">10x</div>
+                <div class="stat-label">Post-COVID Telemedicine Growth</div>
+            </div>
+        </div>
+        <div class="logo">Rapid Capsule</div>
+        <p class="slide-number">4</p>
+    </div>
+
+    <!-- Slide 5: Prescription Verification -->
+    <div class="slide">
+        <h2>Product 2: Prescription Verification</h2>
+        <div class="columns">
+            <div class="column">
+                <h3>The Counterfeit Crisis</h3>
+                <div class="feature-box">
+                    <ul>
+                        <li>17% of drugs in Nigeria are fake</li>
+                        <li>100,000+ deaths annually in Africa</li>
+                        <li>Pharmacists manually spot-check</li>
+                        <li>No systematic verification exists</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="column">
+                <h3>Our Solution</h3>
+                <div class="feature-box">
+                    <ul>
+                        <li>AI/OCR prescription scanning</li>
+                        <li>Fraud scoring algorithm</li>
+                        <li>Doctor license verification</li>
+                        <li>Drug authenticity database</li>
+                        <li>Real-time alerts for suspicious patterns</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="big-quote" style="border-left-color: #1a5f7a; color: #333;">
+            "I catch fake prescriptions weekly but have no system to help me."<br>
+            <span style="font-size: 0.6em; font-style: normal;">— Lagos Pharmacist</span>
+        </div>
+        <div class="logo">Rapid Capsule</div>
+        <p class="slide-number">5</p>
+    </div>
+
+    <!-- Slide 6: Lifeguard -->
+    <div class="slide accent">
+        <h2>Product 3: Lifeguard</h2>
+        <p style="font-size: 1.3em; margin-bottom: 30px;">Transparent Healthcare Funding — Donor-to-Patient Matching</p>
+        <div class="columns">
+            <div class="column">
+                <div class="feature-box">
+                    <h3>For Donors</h3>
+                    <ul>
+                        <li>Specify criteria: disease, demographics, location, budget</li>
+                        <li>Real-time dashboards showing impact</li>
+                        <li>Blockchain-auditable transactions</li>
+                        <li>Outcome tracking (recovery rates)</li>
+                        <li>Tax-deductible receipts</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="column">
+                <div class="feature-box">
+                    <h3>For Patients</h3>
+                    <ul>
+                        <li>Automated eligibility matching</li>
+                        <li>Free or subsidized treatment</li>
+                        <li>No bureaucratic hurdles</li>
+                        <li>Direct pharmacy fulfillment</li>
+                        <li>Post-treatment follow-up</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="big-quote">
+            "We send millions but can't prove who received treatment."<br>
+            <span style="font-size: 0.6em; font-style: normal;">— NGO Program Officer</span>
+        </div>
+        <div class="logo">Rapid Capsule</div>
+        <p class="slide-number">6</p>
+    </div>
+
+    <!-- Slide 7: Why Now -->
+    <div class="slide dark">
+        <h2>Why Now?</h2>
+        <div class="columns">
+            <div class="column">
+                <div class="feature-box">
+                    <h3>Tech Maturity</h3>
+                    <p>AI/OCR for prescription verification is now accurate and affordable. Smartphone penetration in Nigeria has reached 60%+.</p>
+                </div>
+                <div class="feature-box">
+                    <h3>Post-COVID Shift</h3>
+                    <p>Telemedicine adoption accelerated 10x. Patients and doctors now embrace remote consultations.</p>
+                </div>
+            </div>
+            <div class="column">
+                <div class="feature-box">
+                    <h3>Brain Drain Crisis</h3>
+                    <p>Nigeria loses 2,000+ doctors annually to migration. Telemedicine lets diaspora doctors serve home populations remotely.</p>
+                </div>
+                <div class="feature-box">
+                    <h3>Donor Trust Collapse</h3>
+                    <p>High-profile aid scandals have donors demanding transparency. Lifeguard's direct-to-patient tracking meets this moment.</p>
+                </div>
+            </div>
+        </div>
+        <div class="logo">Rapid Capsule</div>
+        <p class="slide-number">7</p>
+    </div>
+
+    <!-- Slide 8: Market Size -->
+    <div class="slide">
+        <h2>Market Opportunity</h2>
+        <div class="stats-row">
+            <div class="stat">
+                <div class="stat-number">$40B+</div>
+                <div class="stat-label">Global Health Funding Annually</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number">200M+</div>
+                <div class="stat-label">Nigerian Population</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number">1.4B</div>
+                <div class="stat-label">African Population</div>
+            </div>
+        </div>
+        <div class="columns">
+            <div class="column">
+                <h3>Serviceable Market</h3>
+                <ul>
+                    <li>50M+ Nigerian middle class (B2C telemedicine)</li>
+                    <li>10,000+ pharmacies needing verification</li>
+                    <li>$2B+ annual donor funding to Nigeria health</li>
+                    <li>Growing HMO and employer health market</li>
+                </ul>
+            </div>
+            <div class="column">
+                <h3>Expansion Path</h3>
+                <ul>
+                    <li>Nigeria → West Africa → Pan-African</li>
+                    <li>Lifeguard: Global donor market</li>
+                    <li>UK/EU markets via BGV network</li>
+                    <li>Diaspora healthcare for Africans abroad</li>
+                </ul>
+            </div>
+        </div>
+        <div class="logo">Rapid Capsule</div>
+        <p class="slide-number">8</p>
+    </div>
+
+    <!-- Slide 9: Business Model -->
+    <div class="slide">
+        <h2>Business Model</h2>
+        <div class="columns">
+            <div class="column">
+                <div class="revenue-item">
+                    <div class="revenue-title">1. Telemedicine (B2C)</div>
+                    <p>15% commission on consultations</p>
+                    <p style="color: #666;">₦5,000-15,000 ($3-10) per visit</p>
+                </div>
+                <div class="revenue-item">
+                    <div class="revenue-title">2. Pharmacy & Prescriptions (B2C/B2B)</div>
+                    <p>10-15% margin on medications</p>
+                    <p style="color: #666;">₦200 ($0.15) per verification for pharmacies</p>
+                </div>
+            </div>
+            <div class="column">
+                <div class="revenue-item">
+                    <div class="revenue-title">3. Lifeguard Platform (B2B/Donors)</div>
+                    <p>5-8% platform fee on donations</p>
+                    <p style="color: #666;">Aligned with industry (GoFundMe 2.9%, GlobalGiving 15%)</p>
+                </div>
+                <div class="revenue-item">
+                    <div class="revenue-title">4. Enterprise (B2B)</div>
+                    <p>Per-employee-per-month subscription</p>
+                    <p style="color: #666;">₦500-2,000 for employers/HMOs</p>
+                </div>
+            </div>
+        </div>
+        <div class="stats-row">
+            <div class="stat">
+                <div class="stat-number">$100M+</div>
+                <div class="stat-label">ARR Potential (8-10 years)</div>
+            </div>
+        </div>
+        <div class="logo">Rapid Capsule</div>
+        <p class="slide-number">9</p>
+    </div>
+
+    <!-- Slide 10: Competitive Moat -->
+    <div class="slide accent">
+        <h2>Competitive Advantage</h2>
+        <div class="columns">
+            <div class="column">
+                <div class="feature-box">
+                    <h3>Data Moats</h3>
+                    <ul>
+                        <li>Every prescription trains our AI fraud detection</li>
+                        <li>Building Nigeria's largest counterfeit database</li>
+                        <li>Longitudinal patient health records</li>
+                    </ul>
+                </div>
+                <div class="feature-box">
+                    <h3>Network Effects</h3>
+                    <ul>
+                        <li>Triple-sided marketplace (Lifeguard)</li>
+                        <li>Donors ↔ Patients ↔ Pharmacies</li>
+                        <li>High switching costs once connected</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="column">
+                <div class="feature-box">
+                    <h3>Distribution</h3>
+                    <ul>
+                        <li>WhatsApp integration</li>
+                        <li>100M+ Nigerians already on platform</li>
+                        <li>No app download friction</li>
+                    </ul>
+                </div>
+                <div class="feature-box">
+                    <h3>Regulatory Head Start</h3>
+                    <ul>
+                        <li>Pharmacy partnerships in place</li>
+                        <li>Prescription compliance frameworks</li>
+                        <li>Years to replicate</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="logo">Rapid Capsule</div>
+        <p class="slide-number">10</p>
+    </div>
+
+    <!-- Slide 11: Impact Metrics -->
+    <div class="slide">
+        <h2>Measuring Impact</h2>
+        <div class="columns">
+            <div class="column">
+                <div class="feature-box">
+                    <h3>Access</h3>
+                    <ul>
+                        <li>Consultations delivered</li>
+                        <li>Patients reached</li>
+                        <li>% from underserved/rural areas</li>
+                    </ul>
+                </div>
+                <div class="feature-box">
+                    <h3>Counterfeits Prevented</h3>
+                    <ul>
+                        <li>Prescriptions verified</li>
+                        <li>Fraudulent medications flagged</li>
+                        <li>Estimated lives saved</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="column">
+                <div class="feature-box">
+                    <h3>Lifeguard Outcomes</h3>
+                    <ul>
+                        <li>Donor funds matched</li>
+                        <li>Patients receiving free treatment</li>
+                        <li>Recovery rates tracked</li>
+                    </ul>
+                </div>
+                <div class="feature-box">
+                    <h3>Health Equity</h3>
+                    <ul>
+                        <li>Treatment completion rates</li>
+                        <li>Cost savings per patient</li>
+                        <li>Time-to-care reduction</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <p style="text-align: center; font-size: 1.2em; margin-top: 30px; color: #1a5f7a;">
+            All metrics dashboarded in real-time for complete transparency
+        </p>
+        <div class="logo">Rapid Capsule</div>
+        <p class="slide-number">11</p>
+    </div>
+
+    <!-- Slide 12: Validation -->
+    <div class="slide">
+        <h2>Validation</h2>
+        <div class="columns">
+            <div class="column">
+                <div class="feature-box">
+                    <h3>Problem Validation</h3>
+                    <ul>
+                        <li>50+ patient interviews confirming pain points</li>
+                        <li>Hours traveling for basic consultations</li>
+                        <li>Fear of counterfeit medications</li>
+                        <li>Inability to verify prescriptions</li>
+                    </ul>
+                </div>
+                <div class="feature-box">
+                    <h3>Stakeholder Demand</h3>
+                    <ul>
+                        <li>Pharmacists requesting verification tools</li>
+                        <li>Manual rejection of suspicious prescriptions daily</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="column">
+                <div class="feature-box">
+                    <h3>Donor Validation</h3>
+                    <ul>
+                        <li>NGO program officers confirm transparency need</li>
+                        <li>"Show me exactly who my money helped"</li>
+                        <li>Current systems lack accountability</li>
+                    </ul>
+                </div>
+                <div class="feature-box">
+                    <h3>Market Gap</h3>
+                    <ul>
+                        <li>Competitors offer telemedicine OR pharmacy</li>
+                        <li>None integrate verification + funding</li>
+                        <li>No prescription authentication exists</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="logo">Rapid Capsule</div>
+        <p class="slide-number">12</p>
+    </div>
+
+    <!-- Slide 13: Team (Placeholder) -->
+    <div class="slide dark">
+        <h2>The Team</h2>
+        <div class="columns" style="margin-top: 40px;">
+            <div class="column" style="text-align: center;">
+                <div style="width: 150px; height: 150px; background: rgba(255,255,255,0.2); border-radius: 50%; margin: 0 auto 20px;"></div>
+                <h3 style="color: white;">[Founder Name]</h3>
+                <p style="color: #00a896; font-size: 1.1em;">CEO</p>
+                <p style="opacity: 0.8;">[Background]</p>
+            </div>
+            <div class="column" style="text-align: center;">
+                <div style="width: 150px; height: 150px; background: rgba(255,255,255,0.2); border-radius: 50%; margin: 0 auto 20px;"></div>
+                <h3 style="color: white;">[Founder Name]</h3>
+                <p style="color: #00a896; font-size: 1.1em;">CTO</p>
+                <p style="opacity: 0.8;">[Background]</p>
+            </div>
+            <div class="column" style="text-align: center;">
+                <div style="width: 150px; height: 150px; background: rgba(255,255,255,0.2); border-radius: 50%; margin: 0 auto 20px;"></div>
+                <h3 style="color: white;">[Founder Name]</h3>
+                <p style="color: #00a896; font-size: 1.1em;">[Role]</p>
+                <p style="opacity: 0.8;">[Background]</p>
+            </div>
+        </div>
+        <p style="text-align: center; margin-top: 40px; font-size: 1.2em; opacity: 0.9;">
+            [How you know each other / Why you're the right team]
+        </p>
+        <div class="logo">Rapid Capsule</div>
+        <p class="slide-number">13</p>
+    </div>
+
+    <!-- Slide 14: Ask -->
+    <div class="slide accent">
+        <h2>The Ask</h2>
+        <div class="cta-box">
+            <h3 style="color: white; font-size: 2em; margin-bottom: 30px;">BGV Partnership</h3>
+            <div class="columns">
+                <div class="column">
+                    <h3 style="color: white;">What We Need</h3>
+                    <ul>
+                        <li>Funding to complete development and launch</li>
+                        <li>Access to donor/foundation networks</li>
+                        <li>UK/international expansion guidance</li>
+                        <li>Impact investor introductions</li>
+                    </ul>
+                </div>
+                <div class="column">
+                    <h3 style="color: white;">Why BGV</h3>
+                    <ul>
+                        <li>Tech for good alignment</li>
+                        <li>Healthcare/impact expertise</li>
+                        <li>Foundation and NGO connections</li>
+                        <li>Credibility signal for fundraising</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="logo">Rapid Capsule</div>
+        <p class="slide-number">14</p>
+    </div>
+
+    <!-- Slide 15: Contact -->
+    <div class="slide cover">
+        <h1>Rapid Capsule</h1>
+        <p class="subtitle">AI-Powered Healthcare for Africa</p>
+        <div style="margin-top: 60px;">
+            <p style="font-size: 1.5em; margin-bottom: 20px;">[Contact Email]</p>
+            <p style="font-size: 1.2em; opacity: 0.8;">[Website]</p>
+        </div>
+        <div style="margin-top: 60px; opacity: 0.7;">
+            <p>Access + Authenticity + Accountability</p>
+            <p style="margin-top: 10px;">Saving lives through transparent healthcare</p>
+        </div>
+        <p class="slide-number">15</p>
+    </div>
+
+</body>
+</html>

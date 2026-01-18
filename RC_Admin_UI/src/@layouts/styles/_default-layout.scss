@@ -1,0 +1,145 @@
+// These are styles which are both common in layout w/ vertical nav & horizontal nav
+@use "@layouts/styles/rtl";
+@use "@layouts/styles/placeholders";
+@use "@layouts/styles/mixins";
+@use "@configured-variables" as variables;
+
+html,
+body {
+  min-block-size: 100%;
+}
+
+
+
+.layout-page-content {
+  @include mixins.boxed-content(true);
+
+  flex-grow: 1;
+
+  // TODO: Use grid gutter variable here
+  padding-block: 1.5rem;
+}
+
+.layout-footer {
+  .footer-content-container {
+    block-size: variables.$layout-vertical-nav-footer-height;
+  }
+
+  .layout-footer-sticky & {
+    position: sticky;
+    inset-block-end: 0;
+    will-change: transform;
+  }
+
+  .layout-footer-hidden & {
+    display: none;
+  }
+}
+
+
+.sec-color {
+  color: #008C99;
+}
+
+.filter-section-card {
+
+  @media screen and (max-width: 1060px) {
+    padding: 1.5rem 0 !important;
+  }
+
+  .filter-section {
+    .search-adv-filter-cover {
+      margin-left: 15px;
+      display: grid;
+      gap: 10px;
+      grid-template-columns: auto auto auto auto;
+    }
+
+    @media screen and (max-width: 1060px) {
+      .search-adv-filter-cover {
+        .adv-filter-btn-text,
+        .table-download-btn-text{
+          display: none;
+        }
+      }
+    }
+
+    @media screen and (max-width: 800px) {
+      flex-wrap: wrap !important;
+
+      &-simple-filter {
+        order: 1;
+      }
+
+      .search-adv-filter-cover {
+        margin-left: 0;
+        margin-bottom: 30px;
+
+        .adv-filter-btn-text,
+        .table-download-btn-text{
+          display: inline;
+        }
+      }
+    }
+
+    @media screen and (max-width: 600px) {
+      &-simple-filter {
+        .filter-tabs-item {
+          padding: 6px 12px !important;
+          font-size: 14px !important;
+        }
+      }
+
+      .search-adv-filter-cover {
+        .adv-filter-btn-text,
+        .table-download-btn-text{
+          display: none;
+        }
+      }
+    }
+  }
+}
+
+.app-user-search-filter {
+  inline-size: 385px;
+}
+
+.text-capitalize {
+  text-transform: capitalize;
+}
+
+.user-list-name:not(:hover) {
+  color: rgba(var(--v-theme-on-background), var(--v-high-emphasis-opacity));
+}
+
+.long-txt-ellipsis { 
+overflow: hidden; 
+color: #008C99;
+  max-inline-size: 200px; 
+text-overflow: ellipsis; 
+  white-space: nowrap;
+}
+
+.per-page-select {
+  margin-block: auto;
+
+  .v-field__input {
+    align-items: center;
+    padding: 2px;
+    font-size: 14px;
+  }
+
+  .v-field__append-inner {
+    align-items: center;
+    padding: 0;
+    margin-inline-start: -2.5rem;
+
+    .v-icon {
+      margin-inline-start: 0 !important;
+    }
+  }
+}
+
+.simple-filter-container {
+  max-width: 100%;
+}

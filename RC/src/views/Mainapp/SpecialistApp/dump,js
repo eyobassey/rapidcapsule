@@ -1,0 +1,16 @@
+const createFiles = async (documentLists)  => {
+        const toBase64 = doc => new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(doc);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+        });
+        [...documentLists].forEach(async (item) => {
+            certificationDocs.value.push({
+                original_name: item.name?.replace(/\.[^/.]+$/, ''),
+                url: await toBase64(item),
+                type_of_document: item.type,
+                file_size: item.size
+            })
+        })
+    }

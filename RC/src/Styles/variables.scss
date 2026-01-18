@@ -1,0 +1,128 @@
+/*
+    COLORS
+    Color variables for the entire product (primary, secondary, denotive and greys).
+*/
+//  Primary Colors
+$color-pri-s4: hsl(14, 87, 18, 1);
+$color-pri-s3: hsl(14, 87, 28);
+$color-pri-s3-50: hsla(14, 87, 28, 0.5);
+$color-pri-s2: hsl(14, 87, 45);
+$color-pri-s2-50: hsla(14, 87, 45, 0.5);
+$color-pri-s1: hsl(14, 87, 50);
+$color-pri-s1-50: hsla(14, 87, 50, 0.5);
+$color-pri: hsl(14, 87, 58);
+$color-pri-main: hsl(14, 87, 58);
+$color-pri-t1: hsl(14, 87, 66);
+$color-pri-t1-50: hsla(14, 87, 66, 0.5);
+$color-pri-t2: hsl(14, 87, 74);
+$color-pri-t2-50: hsl(14, 87, 74, 0.5);
+$color-pri-t3: hsl(14, 90, 84);
+$color-pri-t3-50: hsla(14, 90, 84, 0.5);
+$color-pri-t4: hsl(14, 90, 93);
+$color-pri-t4-50: hsla(14, 90, 84, 0.5);
+$color-pri-t5: hsl(14, 90, 96);
+$color-pri-t5-50: hsla(14, 90, 96, 0.5);
+$color-pri-t6: hsl(12, 71, 99);
+$color-ter-error: hsla(360, 80%, 47%, 1);
+
+//  Secondary Colors
+$color-sec-s3: hsl(185, 100, 20);
+$color-sec-s2: hsl(185, 100, 30);
+$color-sec-s1: hsl(185, 100, 37);
+$color-sec: hsl(185, 100, 42);
+$color-sec-t1: hsl(185, 88, 54);
+$color-sec-t2: hsl(185, 85, 70);
+$color-sec-t3: hsl(185, 93, 81);
+$color-sec-t4: hsl(185, 90, 93);
+
+//  Denotive Colors
+$color-denote-red: hsl(360, 80, 47);
+$color-denote-red-light: hsl(360, 92, 95);
+$color-denote-green: hsl(121, 48, 46);
+$color-denote-yellow: hsl(45, 93, 47);
+$color-denote-yellow-light: hsl(45, 93, 95);
+
+//  Grey Colors
+$color-black: hsl(0, 0, 8);
+$color-g-21: hsl(0, 0, 21);
+$color-g-36: hsla(36, 7%, 47%, 1);
+$color-g-44: hsl(0, 0, 44);
+$color-g-54: hsl(0, 0, 54);
+$color-g-67: hsl(0, 0, 67);
+$color-g-77: hsl(0, 0, 77);
+$color-g-80: hsl(0, 0, 80);
+$color-g-85: hsl(0, 0, 85);
+$color-g-90: hsl(0, 0, 90);
+$color-g-92: hsl(0, 0, 92);
+$color-g-95: hsl(0, 0, 95);
+$color-g-97: hsl(0, 0, 97);
+$color-white: hsl(0, 0, 100);
+$color-whiteAlpha: hsl(0, 0, 99);
+$color-white-90: hsla(0, 0, 100, 0.9);
+
+/* 
+    GENERAL SIZES
+    1rem = 15px : 93.75% of browser font-size on base screen resolution 
+    Can be used for any size related style (margins, paddings, borders, gap, etc.) aside font sizes.
+*/
+$size-0: 0; // 0px
+$size-1: 0.0625rem; // 1px
+$size-2: 0.125rem; // 2px
+$size-3: 0.1875rem; // 3px
+$size-4: 0.25rem; // 4px
+$size-5: 0.3125rem; // 5px
+$size-6: 0.375rem; // 6px
+$size-7: 0.4375rem; // 7px
+$size-8: 0.5rem; // 8px
+$size-9: 0.5625rem; // 9px
+$size-10: 0.625rem; // 10px
+$size-11: 0.6875rem; // 11px
+$size-12: 0.75rem; // 12px
+$size-13: 0.8125rem; // 13px
+$size-14: 0.875rem; // 14px
+$size-15: 0.9375rem; // 15px
+$size-16: 1rem; // 16px
+$size-18: 1.125rem; // 18px
+$size-19: 1.1875rem; // 19px
+$size-20: 1.25rem; // 20px
+$size-22: 1.375rem; // 22px
+$size-24: 1.5rem; // 24px
+$size-26: 1.625rem; // 26px
+$size-28: 1.75rem; // 28px
+$size-32: 2rem; // 32px
+$size-36: 2.25rem; // 36px
+$size-38: 2.375rem; // 38px
+$size-40: 2.5rem; // 40px
+$size-44: 2.75rem; // 44px
+$size-48: 3rem; // 48px
+$size-54: 3.375rem; // 54px
+$size-56: 3.5rem; // 56px
+$size-60: 3.75rem; // 60px
+$size-64: 4rem; // 64px
+$size-72: 4.5rem; // 72px
+$size-76: 4.75rem; // 76px
+$size-80: 5rem; // 80px
+$size-86: 5.375rem; // 86px
+$size-88: 5.5rem; // 88px
+$size-96: 6rem; // 96px
+$size-100: 6.25rem; // 100px
+$size-120: 7.5rem; // 120px
+$size-649: 40.5625rem; // 649px
+
+// FONT WEIGHT VARIABLES
+$fw-thin: 300;
+$fw-regular: 400;
+$fw-medium: 500;
+$fw-semi-bold: 600;
+$fw-bold: 700;
+
+// FONT SIZE VARIABLES
+$fs-medium: 16px;
+$fs-large: 18px;
+$fs-small: 14px;
+$fs-xsmall: 12px;
+$fs-xxsmall: 10px;
+$fs-xlarge: 20px;
+$fs-xxlarge: 24px;
+$fs-xxxlarge: 26px;
+$fs-2xl: 48px;

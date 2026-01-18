@@ -1,0 +1,113 @@
+const timezones = [
+  // Africa
+  { timezone: "Africa/Abidjan", offset: "+00:00", locations: ["Abidjan", "Accra", "Bamako", "Banjul", "Bissau", "Conakry", "Dakar", "Freetown"] },
+  { timezone: "Africa/Addis_Ababa", offset: "+03:00", locations: ["Addis Ababa", "Asmara", "Dar es Salaam", "Djibouti", "Juba", "Kampala", "Mogadishu", "Nairobi"] },
+  { timezone: "Africa/Algiers", offset: "+01:00", locations: ["Algiers", "Ceuta", "Tunis"] },
+  { timezone: "Africa/Bangui", offset: "+01:00", locations: ["Bangui", "Brazzaville", "Douala", "Kinshasa", "Lagos", "Libreville", "Luanda", "Malabo", "Ndjamena", "Porto-Novo"] },
+  { timezone: "Africa/Blantyre", offset: "+02:00", locations: ["Blantyre", "Bujumbura", "Gaborone", "Harare", "Kigali", "Lubumbashi", "Lusaka", "Maputo", "Maseru", "Mbabane"] },
+  { timezone: "Africa/Cairo", offset: "+02:00", locations: ["Cairo"] },
+  { timezone: "Africa/Casablanca", offset: "+01:00", locations: ["Casablanca", "El Aaiun"] },
+  { timezone: "Africa/Khartoum", offset: "+02:00", locations: ["Khartoum"] },
+  { timezone: "Africa/Lagos", offset: "+01:00", locations: ["Lagos"] },
+  { timezone: "Africa/Monrovia", offset: "+00:00", locations: ["Monrovia"] },
+  { timezone: "Africa/Nairobi", offset: "+03:00", locations: ["Nairobi"] },
+  { timezone: "Africa/Tripoli", offset: "+02:00", locations: ["Tripoli"] },
+  { timezone: "Africa/Windhoek", offset: "+02:00", locations: ["Windhoek"] },
+
+  // Americas
+  { timezone: "America/Adak", offset: "-10:00", locations: ["Adak"] },
+  { timezone: "America/Anchorage", offset: "-08:00", locations: ["Anchorage"] },
+  { timezone: "America/Argentina/Buenos_Aires", offset: "-03:00", locations: ["Buenos Aires"] },
+  { timezone: "America/Bogota", offset: "-05:00", locations: ["Bogota"] },
+  { timezone: "America/Caracas", offset: "-04:00", locations: ["Caracas"] },
+  { timezone: "America/Chicago", offset: "-05:00", locations: ["Chicago", "Mexico City"] },
+  { timezone: "America/Denver", offset: "-06:00", locations: ["Denver"] },
+  { timezone: "America/Godthab", offset: "-02:00", locations: ["Godthab"] },
+  { timezone: "America/Guatemala", offset: "-06:00", locations: ["Guatemala"] },
+  { timezone: "America/Halifax", offset: "-03:00", locations: ["Halifax"] },
+  { timezone: "America/Los_Angeles", offset: "-07:00", locations: ["Los Angeles", "Vancouver"] },
+  { timezone: "America/New_York", offset: "-04:00", locations: ["New York", "Toronto"] },
+  { timezone: "America/Phoenix", offset: "-07:00", locations: ["Phoenix"] },
+  { timezone: "America/Santiago", offset: "-04:00", locations: ["Santiago"] },
+  { timezone: "America/Sao_Paulo", offset: "-03:00", locations: ["Sao Paulo"] },
+  { timezone: "America/St_Johns", offset: "-02:30", locations: ["St. John's"] },
+
+  // Asia
+  { timezone: "Asia/Almaty", offset: "+06:00", locations: ["Almaty"] },
+  { timezone: "Asia/Amman", offset: "+03:00", locations: ["Amman"] },
+  { timezone: "Asia/Baghdad", offset: "+03:00", locations: ["Baghdad"] },
+  { timezone: "Asia/Baku", offset: "+04:00", locations: ["Baku"] },
+  { timezone: "Asia/Bangkok", offset: "+07:00", locations: ["Bangkok", "Hanoi", "Jakarta"] },
+  { timezone: "Asia/Beirut", offset: "+03:00", locations: ["Beirut"] },
+  { timezone: "Asia/Colombo", offset: "+05:30", locations: ["Colombo"] },
+  { timezone: "Asia/Damascus", offset: "+03:00", locations: ["Damascus"] },
+  { timezone: "Asia/Dhaka", offset: "+06:00", locations: ["Dhaka"] },
+  { timezone: "Asia/Dubai", offset: "+04:00", locations: ["Dubai"] },
+  { timezone: "Asia/Hong_Kong", offset: "+08:00", locations: ["Hong Kong"] },
+  { timezone: "Asia/Irkutsk", offset: "+09:00", locations: ["Irkutsk"] },
+  { timezone: "Asia/Jerusalem", offset: "+03:00", locations: ["Jerusalem"] },
+  { timezone: "Asia/Kabul", offset: "+04:30", locations: ["Kabul"] },
+  { timezone: "Asia/Karachi", offset: "+05:00", locations: ["Karachi"] },
+  { timezone: "Asia/Kathmandu", offset: "+05:45", locations: ["Kathmandu"] },
+  { timezone: "Asia/Kolkata", offset: "+05:30", locations: ["Kolkata"] },
+  { timezone: "Asia/Kuala_Lumpur", offset: "+08:00", locations: ["Kuala Lumpur", "Singapore"] },
+  { timezone: "Asia/Muscat", offset: "+04:00", locations: ["Muscat"] },
+  { timezone: "Asia/Riyadh", offset: "+03:00", locations: ["Riyadh"] },
+  { timezone: "Asia/Seoul", offset: "+09:00", locations: ["Seoul"] },
+  { timezone: "Asia/Shanghai", offset: "+08:00", locations: ["Beijing", "Shanghai"] },
+  { timezone: "Asia/Taipei", offset: "+08:00", locations: ["Taipei"] },
+
+
+  { timezone: "Asia/Tehran", offset: "+04:30", locations: ["Tehran"] },
+  { timezone: "Asia/Tokyo", offset: "+09:00", locations: ["Tokyo"] },
+  { timezone: "Asia/Ulaanbaatar", offset: "+08:00", locations: ["Ulaanbaatar"] },
+
+  // Europe
+  { timezone: "Europe/Amsterdam", offset: "+02:00", locations: ["Amsterdam", "Berlin", "Brussels", "Madrid", "Paris", "Rome", "Vienna", "Warsaw", "Zurich"] },
+  { timezone: "Europe/Athens", offset: "+03:00", locations: ["Athens"] },
+  { timezone: "Europe/Belgrade", offset: "+02:00", locations: ["Belgrade"] },
+  { timezone: "Europe/Bratislava", offset: "+02:00", locations: ["Bratislava"] },
+  { timezone: "Europe/Bucharest", offset: "+03:00", locations: ["Bucharest"] },
+  { timezone: "Europe/Budapest", offset: "+02:00", locations: ["Budapest"] },
+  { timezone: "Europe/Chisinau", offset: "+03:00", locations: ["Chisinau"] },
+  { timezone: "Europe/Copenhagen", offset: "+02:00", locations: ["Copenhagen"] },
+  { timezone: "Europe/Dublin", offset: "+01:00", locations: ["Dublin", "Edinburgh", "Lisbon", "London"] },
+  { timezone: "Europe/Helsinki", offset: "+03:00", locations: ["Helsinki"] },
+  { timezone: "Europe/Istanbul", offset: "+03:00", locations: ["Istanbul"] },
+  { timezone: "Europe/Kiev", offset: "+03:00", locations: ["Kiev"] },
+  { timezone: "Europe/Lisbon", offset: "+01:00", locations: ["Azores", "Madeira"] },
+  { timezone: "Europe/Ljubljana", offset: "+02:00", locations: ["Ljubljana"] },
+  { timezone: "Europe/Luxembourg", offset: "+02:00", locations: ["Luxembourg"] },
+  { timezone: "Europe/Madrid", offset: "+02:00", locations: ["Canary Islands"] },
+  { timezone: "Europe/Minsk", offset: "+03:00", locations: ["Minsk"] },
+  { timezone: "Europe/Moscow", offset: "+03:00", locations: ["Moscow"] },
+  { timezone: "Europe/Oslo", offset: "+02:00", locations: ["Oslo"] },
+  { timezone: "Europe/Prague", offset: "+02:00", locations: ["Prague"] },
+  { timezone: "Europe/Riga", offset: "+03:00", locations: ["Riga"] },
+  { timezone: "Europe/Sarajevo", offset: "+02:00", locations: ["Sarajevo"] },
+  { timezone: "Europe/Skopje", offset: "+02:00", locations: ["Skopje"] },
+  { timezone: "Europe/Sofia", offset: "+03:00", locations: ["Sofia"] },
+  { timezone: "Europe/Stockholm", offset: "+02:00", locations: ["Stockholm"] },
+  { timezone: "Europe/Tallinn", offset: "+03:00", locations: ["Tallinn"]
+
+ },
+  { timezone: "Europe/Vienna", offset: "+02:00", locations: ["Vienna"] },
+  { timezone: "Europe/Vilnius", offset: "+03:00", locations: ["Vilnius"] },
+  { timezone: "Europe/Warsaw", offset: "+02:00", locations: ["Warsaw"] },
+  { timezone: "Europe/Zagreb", offset: "+02:00", locations: ["Zagreb"] },
+
+  // Oceania
+  { timezone: "Pacific/Auckland", offset: "+12:00", locations: ["Auckland"] },
+  { timezone: "Pacific/Fiji", offset: "+12:00", locations: ["Fiji"] },
+  { timezone: "Pacific/Guam", offset: "+10:00", locations: ["Guam"] },
+  { timezone: "Pacific/Honolulu", offset: "-10:00", locations: ["Honolulu"] },
+  { timezone: "Pacific/Port_Moresby", offset: "+10:00", locations: ["Port Moresby"] },
+  { timezone: "Pacific/Sydney", offset: "+10:00", locations: ["Sydney", "Melbourne"] },
+  { timezone: "Pacific/Tongatapu", offset: "+13:00", locations: ["Tongatapu"] },
+];
+
+const Timezones = timezones.map(timezone => ({
+  ...timezone, name: `${timezone.timezone} (${timezone.offset})`
+  }));
+  
+  export default Timezones;
