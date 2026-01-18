@@ -1,0 +1,1111 @@
+{
+  "info": {
+    "_postman_id": "rapid-capsule-api-v2",
+    "name": "Rapid Capsule API Collection v2.0",
+    "description": "Complete API documentation for Rapid Capsule Telemedicine Platform with sample responses.\n\n**Patient API**: https://api.rapidcapsule.com/api\n**Admin API**: https://admin.rapidcapsule.com/admin-api\n\nCreated by Bassey Eyo (Founder & CTO)\nEmail: eyobassey@gmail.com",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {"key": "patient_base_url", "value": "https://api.rapidcapsule.com/api"},
+    {"key": "admin_base_url", "value": "https://admin.rapidcapsule.com/admin-api"},
+    {"key": "patient_token", "value": ""},
+    {"key": "admin_token", "value": ""},
+    {"key": "user_id", "value": ""},
+    {"key": "patient_id", "value": ""},
+    {"key": "specialist_id", "value": ""},
+    {"key": "appointment_id", "value": ""},
+    {"key": "prescription_id", "value": ""},
+    {"key": "checkup_id", "value": ""},
+    {"key": "order_id", "value": ""},
+    {"key": "pharmacy_id", "value": ""},
+    {"key": "drug_id", "value": ""}
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{"key": "token", "value": "{{patient_token}}", "type": "string"}]
+  },
+  "item": [
+    {
+      "name": "Patient API",
+      "description": "Endpoints for patient users - authentication, profile, appointments, health checkups, prescriptions, pharmacy orders, and more.",
+      "item": [
+        {
+          "name": "Auth",
+          "description": "Authentication endpoints for login, registration, password reset, and 2FA",
+          "item": [
+            {
+              "name": "Login",
+              "request": {
+                "method": "POST",
+                "header": [{"key": "Content-Type", "value": "application/json"}],
+                "url": {"raw": "{{patient_base_url}}/auth/login", "host": ["{{patient_base_url}}"], "path": ["auth", "login"]},
+                "body": {"mode": "raw", "raw": "{\n  \"email\": \"patient@example.com\",\n  \"password\": \"SecurePassword123!\"\n}"}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"message\": \"Login successful\",\n  \"data\": {\n    \"access_token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n    \"user\": {\n      \"_id\": \"507f1f77bcf86cd799439011\",\n      \"profile\": {\n        \"first_name\": \"John\",\n        \"last_name\": \"Doe\",\n        \"contact\": {\n          \"email\": \"patient@example.com\",\n          \"phone\": {\n            \"country_code\": \"+234\",\n            \"number\": \"8012345678\"\n          }\n        }\n      },\n      \"user_type\": \"Patient\",\n      \"is_email_verified\": true,\n      \"is_phone_verified\": true,\n      \"created_at\": \"2024-01-15T10:30:00.000Z\"\n    }\n  }\n}"
+              }]
+            },
+            {
+              "name": "Register User",
+              "request": {
+                "method": "POST",
+                "header": [{"key": "Content-Type", "value": "application/json"}],
+                "url": {"raw": "{{patient_base_url}}/users", "host": ["{{patient_base_url}}"], "path": ["users"]},
+                "body": {"mode": "raw", "raw": "{\n  \"email\": \"newpatient@example.com\",\n  \"password\": \"SecurePassword123!\",\n  \"first_name\": \"Jane\",\n  \"last_name\": \"Smith\",\n  \"phone\": {\n    \"country_code\": \"+234\",\n    \"number\": \"8098765432\"\n  }\n}"}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "Created",
+                "code": 201,
+                "body": "{\n  \"success\": true,\n  \"message\": \"Registration successful. Please verify your email.\",\n  \"data\": {\n    \"_id\": \"507f1f77bcf86cd799439012\",\n    \"profile\": {\n      \"first_name\": \"Jane\",\n      \"last_name\": \"Smith\",\n      \"contact\": {\n        \"email\": \"newpatient@example.com\"\n      }\n    },\n    \"user_type\": \"Patient\",\n    \"is_email_verified\": false,\n    \"created_at\": \"2024-01-20T14:00:00.000Z\"\n  }\n}"
+              }]
+            },
+            {
+              "name": "Google Login",
+              "request": {
+                "method": "POST",
+                "header": [{"key": "Content-Type", "value": "application/json"}],
+                "url": {"raw": "{{patient_base_url}}/auth/google/alt-login", "host": ["{{patient_base_url}}"], "path": ["auth", "google", "alt-login"]},
+                "body": {"mode": "raw", "raw": "{\n  \"id_token\": \"eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...\"\n}"}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"message\": \"Login successful\",\n  \"data\": {\n    \"access_token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n    \"user\": {\n      \"_id\": \"507f1f77bcf86cd799439011\",\n      \"reg_medium\": \"GOOGLE\",\n      \"is_email_verified\": true\n    }\n  }\n}"
+              }]
+            },
+            {
+              "name": "Apple Login",
+              "request": {
+                "method": "POST",
+                "header": [{"key": "Content-Type", "value": "application/json"}],
+                "url": {"raw": "{{patient_base_url}}/auth/apple", "host": ["{{patient_base_url}}"], "path": ["auth", "apple"]},
+                "body": {"mode": "raw", "raw": "{\n  \"id_token\": \"eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...\",\n  \"user\": {\n    \"name\": {\n      \"firstName\": \"John\",\n      \"lastName\": \"Doe\"\n    }\n  }\n}"}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"message\": \"Login successful\",\n  \"data\": {\n    \"access_token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n    \"user\": {\n      \"_id\": \"507f1f77bcf86cd799439011\",\n      \"reg_medium\": \"APPLE\"\n    }\n  }\n}"
+              }]
+            },
+            {
+              "name": "Verify Email OTP",
+              "request": {
+                "method": "POST",
+                "header": [{"key": "Content-Type", "value": "application/json"}],
+                "url": {"raw": "{{patient_base_url}}/auth/otp/verify", "host": ["{{patient_base_url}}"], "path": ["auth", "otp", "verify"]},
+                "body": {"mode": "raw", "raw": "{\n  \"email\": \"patient@example.com\",\n  \"otp\": \"123456\"\n}"}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"message\": \"OTP verified successfully\",\n  \"data\": {\n    \"access_token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\"\n  }\n}"
+              }]
+            },
+            {
+              "name": "Forgot Password",
+              "request": {
+                "method": "POST",
+                "header": [{"key": "Content-Type", "value": "application/json"}],
+                "url": {"raw": "{{patient_base_url}}/auth/forgot-password", "host": ["{{patient_base_url}}"], "path": ["auth", "forgot-password"]},
+                "body": {"mode": "raw", "raw": "{\n  \"email\": \"patient@example.com\"\n}"}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"message\": \"Password reset link sent to your email\"\n}"
+              }]
+            },
+            {
+              "name": "Reset Password",
+              "request": {
+                "method": "POST",
+                "header": [{"key": "Content-Type", "value": "application/json"}],
+                "url": {"raw": "{{patient_base_url}}/auth/reset-password", "host": ["{{patient_base_url}}"], "path": ["auth", "reset-password"]},
+                "body": {"mode": "raw", "raw": "{\n  \"token\": \"reset_token_from_email\",\n  \"password\": \"NewSecurePassword123!\"\n}"}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"message\": \"Password reset successful\"\n}"
+              }]
+            }
+          ]
+        },
+        {
+          "name": "Users",
+          "description": "User profile management endpoints",
+          "item": [
+            {
+              "name": "Get Current User",
+              "request": {
+                "method": "GET",
+                "url": {"raw": "{{patient_base_url}}/users/me", "host": ["{{patient_base_url}}"], "path": ["users", "me"]}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"message\": \"User retrieved successfully\",\n  \"data\": {\n    \"_id\": \"507f1f77bcf86cd799439011\",\n    \"profile\": {\n      \"first_name\": \"John\",\n      \"last_name\": \"Doe\",\n      \"gender\": \"Male\",\n      \"date_of_birth\": \"1990-05-15\",\n      \"marital_status\": \"Single\",\n      \"contact\": {\n        \"email\": \"john.doe@example.com\",\n        \"phone\": {\n          \"country_code\": \"+234\",\n          \"number\": \"8012345678\"\n        },\n        \"address1\": \"123 Main Street\",\n        \"city\": \"Lagos\",\n        \"state\": \"Lagos\",\n        \"country\": \"Nigeria\"\n      },\n      \"basic_health_info\": {\n        \"height\": { \"value\": 175, \"unit\": \"cm\" },\n        \"weight\": { \"value\": 70, \"unit\": \"kg\" }\n      },\n      \"profile_photo\": \"https://s3.amazonaws.com/rapidcapsule/profiles/user123.jpg\"\n    },\n    \"user_type\": \"Patient\",\n    \"is_email_verified\": true,\n    \"is_phone_verified\": true,\n    \"emergency_contacts\": [\n      {\n        \"first_name\": \"Jane\",\n        \"last_name\": \"Doe\",\n        \"phone\": { \"country_code\": \"+234\", \"number\": \"8098765432\" },\n        \"relationship\": \"Spouse\"\n      }\n    ],\n    \"pre_existing_conditions\": [],\n    \"dependants\": [],\n    \"created_at\": \"2024-01-15T10:30:00.000Z\",\n    \"updated_at\": \"2024-01-20T14:00:00.000Z\"\n  }\n}"
+              }]
+            },
+            {
+              "name": "Update Profile",
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "Content-Type", "value": "application/json"}],
+                "url": {"raw": "{{patient_base_url}}/users/:id", "host": ["{{patient_base_url}}"], "path": ["users", ":id"], "variable": [{"key": "id", "value": "{{user_id}}"}]},
+                "body": {"mode": "raw", "raw": "{\n  \"first_name\": \"John\",\n  \"last_name\": \"Doe\",\n  \"date_of_birth\": \"1990-05-15\",\n  \"gender\": \"Male\",\n  \"marital_status\": \"Single\"\n}"}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"message\": \"Profile updated successfully\",\n  \"data\": {\n    \"_id\": \"507f1f77bcf86cd799439011\",\n    \"profile\": {\n      \"first_name\": \"John\",\n      \"last_name\": \"Doe\"\n    },\n    \"updated_at\": \"2024-01-20T15:00:00.000Z\"\n  }\n}"
+              }]
+            },
+            {
+              "name": "Get Presigned URL",
+              "request": {
+                "method": "GET",
+                "url": {"raw": "{{patient_base_url}}/users/file/presigned-url?filename=profile.jpg&content_type=image/jpeg", "host": ["{{patient_base_url}}"], "path": ["users", "file", "presigned-url"], "query": [{"key": "filename", "value": "profile.jpg"}, {"key": "content_type", "value": "image/jpeg"}]}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"data\": {\n    \"presigned_url\": \"https://s3.amazonaws.com/rapidcapsule/...\",\n    \"file_url\": \"https://s3.amazonaws.com/rapidcapsule/profiles/abc123.jpg\"\n  }\n}"
+              }]
+            }
+          ]
+        },
+        {
+          "name": "Appointments",
+          "description": "Patient appointment booking and management",
+          "item": [
+            {
+              "name": "Create Appointment",
+              "request": {
+                "method": "POST",
+                "header": [{"key": "Content-Type", "value": "application/json"}],
+                "url": {"raw": "{{patient_base_url}}/appointments", "host": ["{{patient_base_url}}"], "path": ["appointments"]},
+                "body": {"mode": "raw", "raw": "{\n  \"specialist_id\": \"507f1f77bcf86cd799439099\",\n  \"start_time\": \"2024-02-15T10:00:00.000Z\",\n  \"timezone\": \"Africa/Lagos\",\n  \"category\": \"General Medicine\",\n  \"appointment_type\": \"Consultation\",\n  \"meeting_type\": \"Video and audio\",\n  \"patient_notes\": \"I have been experiencing headaches for the past week\"\n}"}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "Created",
+                "code": 201,
+                "body": "{\n  \"success\": true,\n  \"message\": \"Appointment created successfully\",\n  \"data\": {\n    \"_id\": \"507f1f77bcf86cd799439100\",\n    \"category\": \"General Medicine\",\n    \"start_time\": \"2024-02-15T10:00:00.000Z\",\n    \"timezone\": \"Africa/Lagos\",\n    \"duration_minutes\": 30,\n    \"appointment_type\": \"Consultation\",\n    \"meeting_type\": \"Video and audio\",\n    \"meeting_channel\": \"zoom\",\n    \"patient\": {\n      \"_id\": \"507f1f77bcf86cd799439011\",\n      \"profile\": {\n        \"first_name\": \"John\",\n        \"last_name\": \"Doe\"\n      }\n    },\n    \"specialist\": {\n      \"_id\": \"507f1f77bcf86cd799439099\",\n      \"profile\": {\n        \"first_name\": \"Dr. Sarah\",\n        \"last_name\": \"Johnson\"\n      },\n      \"professional_practice\": {\n        \"category\": \"Medical Doctor\",\n        \"area_of_specialty\": \"General Medicine\"\n      }\n    },\n    \"appointment_fee\": 5000,\n    \"payment_status\": \"PENDING\",\n    \"status\": \"OPEN\",\n    \"created_at\": \"2024-02-10T08:00:00.000Z\"\n  }\n}"
+              }]
+            },
+            {
+              "name": "Get Patient Appointments",
+              "request": {
+                "method": "GET",
+                "url": {"raw": "{{patient_base_url}}/appointments/patient?status=upcoming", "host": ["{{patient_base_url}}"], "path": ["appointments", "patient"], "query": [{"key": "status", "value": "upcoming"}]}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"message\": \"Appointments retrieved\",\n  \"data\": [\n    {\n      \"_id\": \"507f1f77bcf86cd799439100\",\n      \"category\": \"General Medicine\",\n      \"start_time\": \"2024-02-15T10:00:00.000Z\",\n      \"specialist\": {\n        \"profile\": {\n          \"first_name\": \"Dr. Sarah\",\n          \"last_name\": \"Johnson\"\n        }\n      },\n      \"status\": \"OPEN\",\n      \"meeting_channel\": \"zoom\",\n      \"join_url\": \"https://zoom.us/j/123456789\"\n    }\n  ],\n  \"pagination\": {\n    \"page\": 1,\n    \"limit\": 20,\n    \"total\": 1\n  }\n}"
+              }]
+            },
+            {
+              "name": "Get Available Specialists",
+              "request": {
+                "method": "POST",
+                "header": [{"key": "Content-Type", "value": "application/json"}],
+                "url": {"raw": "{{patient_base_url}}/appointments/available-specialists", "host": ["{{patient_base_url}}"], "path": ["appointments", "available-specialists"]},
+                "body": {"mode": "raw", "raw": "{\n  \"specialty\": \"General Medicine\",\n  \"date\": \"2024-02-15\"\n}"}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"_id\": \"507f1f77bcf86cd799439099\",\n      \"profile\": {\n        \"first_name\": \"Dr. Sarah\",\n        \"last_name\": \"Johnson\",\n        \"profile_photo\": \"https://s3.amazonaws.com/rapidcapsule/profiles/dr-sarah.jpg\"\n      },\n      \"professional_practice\": {\n        \"category\": \"Medical Doctor\",\n        \"area_of_specialty\": \"General Medicine\",\n        \"years_of_practice\": \"10\"\n      },\n      \"average_rating\": 4.8,\n      \"available_slots\": [\"09:00\", \"10:00\", \"14:00\", \"15:00\"]\n    }\n  ]\n}"
+              }]
+            },
+            {
+              "name": "Cancel Appointment",
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "Content-Type", "value": "application/json"}],
+                "url": {"raw": "{{patient_base_url}}/appointments/cancel", "host": ["{{patient_base_url}}"], "path": ["appointments", "cancel"]},
+                "body": {"mode": "raw", "raw": "{\n  \"appointment_id\": \"507f1f77bcf86cd799439100\",\n  \"reason\": \"Schedule conflict\"\n}"}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"message\": \"Appointment cancelled successfully\",\n  \"data\": {\n    \"_id\": \"507f1f77bcf86cd799439100\",\n    \"status\": \"CANCELLED\"\n  }\n}"
+              }]
+            }
+          ]
+        },
+        {
+          "name": "Health Checkup",
+          "description": "AI-powered health checkup using Infermedica API",
+          "item": [
+            {
+              "name": "Begin Checkup",
+              "request": {
+                "method": "POST",
+                "header": [{"key": "Content-Type", "value": "application/json"}],
+                "url": {"raw": "{{patient_base_url}}/health-checkup", "host": ["{{patient_base_url}}"], "path": ["health-checkup"]},
+                "body": {"mode": "raw", "raw": "{\n  \"health_check_for\": \"Self\",\n  \"age\": 30,\n  \"sex\": \"male\"\n}"}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "Created",
+                "code": 201,
+                "body": "{\n  \"success\": true,\n  \"message\": \"Health checkup started\",\n  \"data\": {\n    \"_id\": \"507f1f77bcf86cd799439200\",\n    \"interview_token\": \"d1f5-a2b3-c4d5-e6f7\",\n    \"health_check_for\": \"Self\",\n    \"user\": \"507f1f77bcf86cd799439011\"\n  }\n}"
+              }]
+            },
+            {
+              "name": "Parse Symptoms",
+              "request": {
+                "method": "POST",
+                "header": [{"key": "Content-Type", "value": "application/json"}],
+                "url": {"raw": "{{patient_base_url}}/health-checkup/parse", "host": ["{{patient_base_url}}"], "path": ["health-checkup", "parse"]},
+                "body": {"mode": "raw", "raw": "{\n  \"text\": \"I have a severe headache and fever for 2 days\",\n  \"interview_token\": \"d1f5-a2b3-c4d5-e6f7\"\n}"}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"data\": {\n    \"mentions\": [\n      {\n        \"id\": \"s_21\",\n        \"name\": \"Headache\",\n        \"common_name\": \"Headache\",\n        \"orth\": \"headache\",\n        \"choice_id\": \"present\",\n        \"type\": \"symptom\"\n      },\n      {\n        \"id\": \"s_98\",\n        \"name\": \"Fever\",\n        \"common_name\": \"Fever\",\n        \"orth\": \"fever\",\n        \"choice_id\": \"present\",\n        \"type\": \"symptom\"\n      }\n    ],\n    \"obvious\": true\n  }\n}"
+              }]
+            },
+            {
+              "name": "Get Diagnosis",
+              "request": {
+                "method": "POST",
+                "header": [{"key": "Content-Type", "value": "application/json"}],
+                "url": {"raw": "{{patient_base_url}}/health-checkup/diagnosis", "host": ["{{patient_base_url}}"], "path": ["health-checkup", "diagnosis"]},
+                "body": {"mode": "raw", "raw": "{\n  \"interview_token\": \"d1f5-a2b3-c4d5-e6f7\",\n  \"evidence\": [\n    { \"id\": \"s_21\", \"choice_id\": \"present\" },\n    { \"id\": \"s_98\", \"choice_id\": \"present\" }\n  ]\n}"}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"data\": {\n    \"question\": {\n      \"type\": \"single\",\n      \"text\": \"Do you have a runny nose?\",\n      \"items\": [\n        {\n          \"id\": \"s_13\",\n          \"name\": \"Runny nose\",\n          \"choices\": [\n            { \"id\": \"present\", \"label\": \"Yes\" },\n            { \"id\": \"absent\", \"label\": \"No\" },\n            { \"id\": \"unknown\", \"label\": \"Don't know\" }\n          ]\n        }\n      ]\n    },\n    \"conditions\": [\n      {\n        \"id\": \"c_87\",\n        \"name\": \"Common cold\",\n        \"common_name\": \"Common cold\",\n        \"probability\": 0.72\n      },\n      {\n        \"id\": \"c_23\",\n        \"name\": \"Influenza\",\n        \"common_name\": \"Flu\",\n        \"probability\": 0.58\n      }\n    ],\n    \"should_stop\": false,\n    \"has_emergency_evidence\": false,\n    \"triage_level\": \"consultation_24\"\n  }\n}"
+              }]
+            },
+            {
+              "name": "Get Checkup History",
+              "request": {
+                "method": "GET",
+                "url": {"raw": "{{patient_base_url}}/health-checkup/history?page=1&limit=10", "host": ["{{patient_base_url}}"], "path": ["health-checkup", "history"], "query": [{"key": "page", "value": "1"}, {"key": "limit", "value": "10"}]}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"_id\": \"507f1f77bcf86cd799439200\",\n      \"health_check_for\": \"Self\",\n      \"response\": {\n        \"data\": {\n          \"conditions\": [\n            {\n              \"id\": \"c_87\",\n              \"name\": \"Common cold\",\n              \"probability\": 0.72\n            }\n          ],\n          \"triage_level\": \"consultation_24\",\n          \"has_emergency_evidence\": false\n        }\n      },\n      \"claude_summary\": {\n        \"generated_at\": \"2024-02-10T10:00:00.000Z\",\n        \"content\": {\n          \"overview\": \"Based on your symptoms, you may have a common cold.\",\n          \"recommendations\": [\"Rest\", \"Stay hydrated\", \"Monitor symptoms\"]\n        }\n      },\n      \"created_at\": \"2024-02-10T09:00:00.000Z\"\n    }\n  ],\n  \"pagination\": {\n    \"page\": 1,\n    \"limit\": 10,\n    \"total\": 5\n  }\n}"
+              }]
+            },
+            {
+              "name": "Generate Claude Summary",
+              "request": {
+                "method": "POST",
+                "url": {"raw": "{{patient_base_url}}/health-checkup/:checkupId/generate-claude-summary", "host": ["{{patient_base_url}}"], "path": ["health-checkup", ":checkupId", "generate-claude-summary"], "variable": [{"key": "checkupId", "value": "{{checkup_id}}"}]}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"message\": \"Claude summary generated\",\n  \"data\": {\n    \"claude_summary\": {\n      \"generated_at\": \"2024-02-10T10:00:00.000Z\",\n      \"model\": \"claude-3-sonnet\",\n      \"content\": {\n        \"overview\": \"Based on your reported symptoms of headache and fever lasting 2 days, the analysis suggests you may be experiencing a common viral infection.\",\n        \"key_findings\": [\n          \"Headache - moderate severity\",\n          \"Fever - present for 2 days\"\n        ],\n        \"possible_conditions_explained\": [\n          {\n            \"condition\": \"Common Cold\",\n            \"explanation\": \"A viral infection affecting the upper respiratory tract\",\n            \"urgency\": \"low\"\n          }\n        ],\n        \"recommendations\": [\n          \"Rest and adequate sleep\",\n          \"Stay well hydrated\",\n          \"Over-the-counter pain relievers if needed\"\n        ],\n        \"when_to_seek_care\": \"If fever persists beyond 3 days or symptoms worsen significantly\",\n        \"lifestyle_tips\": [\n          \"Wash hands frequently\",\n          \"Avoid close contact with others\"\n        ]\n      }\n    }\n  }\n}"
+              }]
+            }
+          ]
+        },
+        {
+          "name": "Vitals",
+          "description": "Patient vital signs tracking",
+          "item": [
+            {
+              "name": "Create Vital",
+              "request": {
+                "method": "POST",
+                "header": [{"key": "Content-Type", "value": "application/json"}],
+                "url": {"raw": "{{patient_base_url}}/vitals", "host": ["{{patient_base_url}}"], "path": ["vitals"]},
+                "body": {"mode": "raw", "raw": "{\n  \"body_temp\": { \"value\": \"36.6\", \"unit\": \"°C\" },\n  \"blood_pressure\": { \"value\": \"120/80\", \"unit\": \"mmHg\" },\n  \"pulse_rate\": { \"value\": \"72\", \"unit\": \"bpm\" },\n  \"body_weight\": { \"value\": \"70\", \"unit\": \"kg\" },\n  \"blood_sugar_level\": { \"value\": \"95\", \"unit\": \"mg/dL\" }\n}"}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "Created",
+                "code": 201,
+                "body": "{\n  \"success\": true,\n  \"message\": \"Vitals recorded successfully\",\n  \"data\": {\n    \"_id\": \"507f1f77bcf86cd799439300\",\n    \"userId\": \"507f1f77bcf86cd799439011\",\n    \"body_temp\": { \"value\": \"36.6\", \"unit\": \"°C\", \"updatedAt\": \"2024-02-10T10:00:00.000Z\" },\n    \"blood_pressure\": { \"value\": \"120/80\", \"unit\": \"mmHg\", \"updatedAt\": \"2024-02-10T10:00:00.000Z\" },\n    \"pulse_rate\": { \"value\": \"72\", \"unit\": \"bpm\", \"updatedAt\": \"2024-02-10T10:00:00.000Z\" },\n    \"body_weight\": { \"value\": \"70\", \"unit\": \"kg\", \"updatedAt\": \"2024-02-10T10:00:00.000Z\" },\n    \"blood_sugar_level\": { \"value\": \"95\", \"unit\": \"mg/dL\", \"updatedAt\": \"2024-02-10T10:00:00.000Z\" },\n    \"created_at\": \"2024-02-10T10:00:00.000Z\"\n  }\n}"
+              }]
+            },
+            {
+              "name": "Get Vitals",
+              "request": {
+                "method": "GET",
+                "url": {"raw": "{{patient_base_url}}/vitals", "host": ["{{patient_base_url}}"], "path": ["vitals"]}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"_id\": \"507f1f77bcf86cd799439300\",\n      \"body_temp\": { \"value\": \"36.6\", \"unit\": \"°C\" },\n      \"blood_pressure\": { \"value\": \"120/80\", \"unit\": \"mmHg\" },\n      \"pulse_rate\": { \"value\": \"72\", \"unit\": \"bpm\" },\n      \"created_at\": \"2024-02-10T10:00:00.000Z\"\n    }\n  ]\n}"
+              }]
+            },
+            {
+              "name": "Get Chart Data",
+              "request": {
+                "method": "GET",
+                "url": {"raw": "{{patient_base_url}}/vitals/chart", "host": ["{{patient_base_url}}"], "path": ["vitals", "chart"]}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"data\": {\n    \"blood_pressure\": {\n      \"labels\": [\"Jan\", \"Feb\", \"Mar\"],\n      \"systolic\": [120, 118, 122],\n      \"diastolic\": [80, 78, 82]\n    },\n    \"pulse_rate\": {\n      \"labels\": [\"Jan\", \"Feb\", \"Mar\"],\n      \"values\": [72, 70, 74]\n    },\n    \"body_weight\": {\n      \"labels\": [\"Jan\", \"Feb\", \"Mar\"],\n      \"values\": [70, 69.5, 70.2]\n    }\n  }\n}"
+              }]
+            }
+          ]
+        },
+        {
+          "name": "Patient Prescriptions",
+          "description": "View and manage prescriptions received from specialists",
+          "item": [
+            {
+              "name": "Get My Prescriptions",
+              "request": {
+                "method": "GET",
+                "url": {"raw": "{{patient_base_url}}/patient/prescriptions?page=1&limit=20", "host": ["{{patient_base_url}}"], "path": ["patient", "prescriptions"], "query": [{"key": "page", "value": "1"}, {"key": "limit", "value": "20"}]}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"_id\": \"507f1f77bcf86cd799439400\",\n      \"prescription_number\": \"RX-20240210-0001\",\n      \"specialist_id\": {\n        \"profile\": {\n          \"first_name\": \"Dr. Sarah\",\n          \"last_name\": \"Johnson\"\n        }\n      },\n      \"items\": [\n        {\n          \"drug_name\": \"Paracetamol\",\n          \"generic_name\": \"Acetaminophen\",\n          \"quantity\": 20,\n          \"dosage\": \"500mg\",\n          \"frequency\": \"3 times daily\",\n          \"duration\": \"7 days\",\n          \"unit_price\": 50,\n          \"total_price\": 1000\n        }\n      ],\n      \"total_amount\": 1500,\n      \"status\": \"pending_acceptance\",\n      \"payment_status\": \"pending\",\n      \"created_at\": \"2024-02-10T10:00:00.000Z\"\n    }\n  ],\n  \"pagination\": { \"page\": 1, \"limit\": 20, \"total\": 1 }\n}"
+              }]
+            },
+            {
+              "name": "Accept Prescription",
+              "request": {
+                "method": "POST",
+                "header": [{"key": "Content-Type", "value": "application/json"}],
+                "url": {"raw": "{{patient_base_url}}/patient/prescriptions/:id/accept", "host": ["{{patient_base_url}}"], "path": ["patient", "prescriptions", ":id", "accept"], "variable": [{"key": "id", "value": "{{prescription_id}}"}]},
+                "body": {"mode": "raw", "raw": "{\n  \"accepted_items\": []\n}"}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"message\": \"Prescription accepted\",\n  \"data\": {\n    \"_id\": \"507f1f77bcf86cd799439400\",\n    \"status\": \"pending_payment\",\n    \"patient_response\": \"accepted\",\n    \"patient_responded_at\": \"2024-02-10T11:00:00.000Z\"\n  }\n}"
+              }]
+            },
+            {
+              "name": "Pay with Wallet",
+              "request": {
+                "method": "POST",
+                "url": {"raw": "{{patient_base_url}}/patient/prescriptions/:id/pay/wallet", "host": ["{{patient_base_url}}"], "path": ["patient", "prescriptions", ":id", "pay", "wallet"], "variable": [{"key": "id", "value": "{{prescription_id}}"}]}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"message\": \"Payment successful\",\n  \"data\": {\n    \"_id\": \"507f1f77bcf86cd799439400\",\n    \"payment_status\": \"paid\",\n    \"paid_at\": \"2024-02-10T11:30:00.000Z\",\n    \"status\": \"processing\"\n  }\n}"
+              }]
+            },
+            {
+              "name": "Get PDF",
+              "request": {
+                "method": "GET",
+                "url": {"raw": "{{patient_base_url}}/patient/prescriptions/:id/pdf", "host": ["{{patient_base_url}}"], "path": ["patient", "prescriptions", ":id", "pdf"], "variable": [{"key": "id", "value": "{{prescription_id}}"}]}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"data\": {\n    \"pdf_url\": \"https://s3.amazonaws.com/rapidcapsule/prescriptions/RX-20240210-0001.pdf\"\n  }\n}"
+              }]
+            }
+          ]
+        },
+        {
+          "name": "Pharmacy",
+          "description": "Browse pharmacies and drugs, place orders",
+          "item": [
+            {
+              "name": "Search Pharmacies",
+              "request": {
+                "method": "GET",
+                "url": {"raw": "{{patient_base_url}}/pharmacy/pharmacies/search?query=lagos", "host": ["{{patient_base_url}}"], "path": ["pharmacy", "pharmacies", "search"], "query": [{"key": "query", "value": "lagos"}]}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"_id\": \"507f1f77bcf86cd799439500\",\n      \"name\": \"HealthPlus Pharmacy\",\n      \"trading_name\": \"HealthPlus\",\n      \"address\": {\n        \"street\": \"123 Victoria Island\",\n        \"city\": \"Lagos\",\n        \"state\": \"Lagos\"\n      },\n      \"phone\": \"+234801234567\",\n      \"is_online\": true,\n      \"offers_delivery\": true,\n      \"delivery_fee\": 500,\n      \"average_rating\": 4.5,\n      \"verification_status\": \"VERIFIED\"\n    }\n  ]\n}"
+              }]
+            },
+            {
+              "name": "Search Drugs",
+              "request": {
+                "method": "GET",
+                "url": {"raw": "{{patient_base_url}}/pharmacy/drugs/search?query=paracetamol", "host": ["{{patient_base_url}}"], "path": ["pharmacy", "drugs", "search"], "query": [{"key": "query", "value": "paracetamol"}]}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"_id\": \"507f1f77bcf86cd799439600\",\n      \"name\": \"Paracetamol 500mg\",\n      \"generic_name\": \"Acetaminophen\",\n      \"manufacturer\": \"Emzor Pharmaceuticals\",\n      \"dosage_form\": \"tablet\",\n      \"strength\": \"500mg\",\n      \"selling_price\": 50,\n      \"requires_prescription\": false,\n      \"purchase_type\": \"OTC_GENERAL\",\n      \"categories\": [\"Pain Relief\"],\n      \"is_available\": true,\n      \"images\": [\n        { \"url\": \"https://s3.amazonaws.com/rapidcapsule/drugs/paracetamol.jpg\", \"is_primary\": true }\n      ]\n    }\n  ]\n}"
+              }]
+            },
+            {
+              "name": "Get Drug Details",
+              "request": {
+                "method": "GET",
+                "url": {"raw": "{{patient_base_url}}/pharmacy/drugs/:id", "host": ["{{patient_base_url}}"], "path": ["pharmacy", "drugs", ":id"], "variable": [{"key": "id", "value": "{{drug_id}}"}]}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"data\": {\n    \"_id\": \"507f1f77bcf86cd799439600\",\n    \"name\": \"Paracetamol 500mg\",\n    \"generic_name\": \"Acetaminophen\",\n    \"manufacturer\": \"Emzor Pharmaceuticals\",\n    \"description\": \"Pain reliever and fever reducer\",\n    \"dosage_form\": \"tablet\",\n    \"strength\": \"500mg\",\n    \"pack_size\": 20,\n    \"selling_price\": 50,\n    \"requires_prescription\": false,\n    \"contraindications\": [\"Liver disease\", \"Alcohol dependence\"],\n    \"side_effects\": [\"Nausea\", \"Allergic reactions (rare)\"],\n    \"dosage_guidance\": {\n      \"adult\": {\n        \"min_dose\": \"500mg\",\n        \"max_dose\": \"1000mg\",\n        \"frequency\": \"Every 4-6 hours\",\n        \"instructions\": \"Do not exceed 4g in 24 hours\"\n      }\n    }\n  }\n}"
+              }]
+            }
+          ]
+        },
+        {
+          "name": "Pharmacy Orders",
+          "description": "Place and track pharmacy orders",
+          "item": [
+            {
+              "name": "Create OTC Order",
+              "request": {
+                "method": "POST",
+                "header": [{"key": "Content-Type", "value": "application/json"}],
+                "url": {"raw": "{{patient_base_url}}/pharmacy-orders/otc", "host": ["{{patient_base_url}}"], "path": ["pharmacy-orders", "otc"]},
+                "body": {"mode": "raw", "raw": "{\n  \"items\": [\n    { \"drug_id\": \"507f1f77bcf86cd799439600\", \"quantity\": 2 }\n  ],\n  \"delivery_method\": \"DELIVERY\",\n  \"delivery_address\": {\n    \"recipient_name\": \"John Doe\",\n    \"phone\": \"+2348012345678\",\n    \"address_line1\": \"123 Main Street\",\n    \"city\": \"Lagos\",\n    \"state\": \"Lagos\"\n  }\n}"}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "Created",
+                "code": 201,
+                "body": "{\n  \"success\": true,\n  \"message\": \"Order created successfully\",\n  \"data\": {\n    \"_id\": \"507f1f77bcf86cd799439700\",\n    \"order_number\": \"ORD-20240210-0001\",\n    \"order_type\": \"OTC\",\n    \"items\": [\n      {\n        \"drug_name\": \"Paracetamol 500mg\",\n        \"quantity\": 2,\n        \"unit_price\": 50,\n        \"total_price\": 100\n      }\n    ],\n    \"subtotal\": 100,\n    \"delivery_fee\": 500,\n    \"total_amount\": 600,\n    \"status\": \"PENDING\",\n    \"payment_status\": \"PENDING\",\n    \"created_at\": \"2024-02-10T12:00:00.000Z\"\n  }\n}"
+              }]
+            },
+            {
+              "name": "Get My Orders",
+              "request": {
+                "method": "GET",
+                "url": {"raw": "{{patient_base_url}}/pharmacy-orders/my-orders", "host": ["{{patient_base_url}}"], "path": ["pharmacy-orders", "my-orders"]}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"_id\": \"507f1f77bcf86cd799439700\",\n      \"order_number\": \"ORD-20240210-0001\",\n      \"order_type\": \"OTC\",\n      \"total_amount\": 600,\n      \"status\": \"PROCESSING\",\n      \"payment_status\": \"PAID\",\n      \"estimated_delivery_date\": \"2024-02-12T12:00:00.000Z\",\n      \"created_at\": \"2024-02-10T12:00:00.000Z\"\n    }\n  ]\n}"
+              }]
+            },
+            {
+              "name": "Track Order",
+              "request": {
+                "method": "GET",
+                "url": {"raw": "{{patient_base_url}}/pharmacy-orders/track/:orderNumber", "host": ["{{patient_base_url}}"], "path": ["pharmacy-orders", "track", ":orderNumber"], "variable": [{"key": "orderNumber", "value": "ORD-20240210-0001"}]}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"data\": {\n    \"order_number\": \"ORD-20240210-0001\",\n    \"status\": \"OUT_FOR_DELIVERY\",\n    \"status_history\": [\n      { \"status\": \"PENDING\", \"timestamp\": \"2024-02-10T12:00:00.000Z\" },\n      { \"status\": \"CONFIRMED\", \"timestamp\": \"2024-02-10T12:30:00.000Z\" },\n      { \"status\": \"PROCESSING\", \"timestamp\": \"2024-02-10T14:00:00.000Z\" },\n      { \"status\": \"OUT_FOR_DELIVERY\", \"timestamp\": \"2024-02-11T09:00:00.000Z\" }\n    ],\n    \"delivery_tracking_number\": \"TRK123456\",\n    \"estimated_delivery_date\": \"2024-02-11T14:00:00.000Z\"\n  }\n}"
+              }]
+            }
+          ]
+        },
+        {
+          "name": "Wallets",
+          "description": "Patient wallet management",
+          "item": [
+            {
+              "name": "Get Balance",
+              "request": {
+                "method": "GET",
+                "url": {"raw": "{{patient_base_url}}/wallets/balance", "host": ["{{patient_base_url}}"], "path": ["wallets", "balance"]}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"data\": {\n    \"available_balance\": 15000,\n    \"ledger_balance\": 15000,\n    \"currency\": \"NGN\"\n  }\n}"
+              }]
+            },
+            {
+              "name": "Get Transactions",
+              "request": {
+                "method": "GET",
+                "url": {"raw": "{{patient_base_url}}/wallets?page=1&limit=20", "host": ["{{patient_base_url}}"], "path": ["wallets"], "query": [{"key": "page", "value": "1"}, {"key": "limit", "value": "20"}]}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"_id\": \"507f1f77bcf86cd799439800\",\n      \"amount\": 5000,\n      \"type\": \"Credit\",\n      \"narration\": \"Wallet top-up\",\n      \"reference\": \"TXN-20240210-001\",\n      \"created_at\": \"2024-02-10T10:00:00.000Z\"\n    },\n    {\n      \"_id\": \"507f1f77bcf86cd799439801\",\n      \"amount\": 1500,\n      \"type\": \"Debit\",\n      \"narration\": \"Prescription payment - RX-20240210-0001\",\n      \"reference\": \"TXN-20240210-002\",\n      \"created_at\": \"2024-02-10T11:30:00.000Z\"\n    }\n  ]\n}"
+              }]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Specialist API",
+      "description": "Endpoints for healthcare specialists - prescriptions, pharmacy, wallet, appointments, and clinical notes",
+      "item": [
+        {
+          "name": "Specialist Prescriptions",
+          "description": "Create and manage prescriptions for patients",
+          "item": [
+            {
+              "name": "Create Prescription",
+              "request": {
+                "method": "POST",
+                "header": [{"key": "Content-Type", "value": "application/json"}],
+                "url": {"raw": "{{patient_base_url}}/specialist/prescriptions", "host": ["{{patient_base_url}}"], "path": ["specialist", "prescriptions"]},
+                "body": {"mode": "raw", "raw": "{\n  \"patient_id\": \"507f1f77bcf86cd799439011\",\n  \"items\": [\n    {\n      \"drug_name\": \"Amoxicillin\",\n      \"generic_name\": \"Amoxicillin\",\n      \"drug_strength\": \"500mg\",\n      \"quantity\": 21,\n      \"dosage\": \"1 capsule\",\n      \"frequency\": \"3 times daily\",\n      \"duration\": \"7 days\",\n      \"instructions\": \"Take with food\",\n      \"unit_price\": 100\n    }\n  ],\n  \"delivery_type\": \"delivery\",\n  \"clinical_notes\": \"Patient diagnosed with bacterial infection\"\n}"}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "Created",
+                "code": 201,
+                "body": "{\n  \"success\": true,\n  \"message\": \"Prescription created successfully\",\n  \"data\": {\n    \"_id\": \"507f1f77bcf86cd799439900\",\n    \"prescription_number\": \"RX-20240210-0002\",\n    \"specialist_id\": \"507f1f77bcf86cd799439099\",\n    \"patient_id\": {\n      \"_id\": \"507f1f77bcf86cd799439011\",\n      \"profile\": {\n        \"first_name\": \"John\",\n        \"last_name\": \"Doe\"\n      }\n    },\n    \"items\": [\n      {\n        \"drug_name\": \"Amoxicillin\",\n        \"generic_name\": \"Amoxicillin\",\n        \"drug_strength\": \"500mg\",\n        \"quantity\": 21,\n        \"unit_price\": 100,\n        \"total_price\": 2100\n      }\n    ],\n    \"subtotal\": 2100,\n    \"delivery_fee\": 500,\n    \"total_amount\": 2600,\n    \"status\": \"draft\",\n    \"payment_status\": \"pending\",\n    \"created_at\": \"2024-02-10T14:00:00.000Z\"\n  }\n}"
+              }]
+            },
+            {
+              "name": "Get Prescriptions",
+              "request": {
+                "method": "GET",
+                "url": {"raw": "{{patient_base_url}}/specialist/prescriptions?page=1&limit=20&status=all", "host": ["{{patient_base_url}}"], "path": ["specialist", "prescriptions"], "query": [{"key": "page", "value": "1"}, {"key": "limit", "value": "20"}, {"key": "status", "value": "all"}]}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"_id\": \"507f1f77bcf86cd799439900\",\n      \"prescription_number\": \"RX-20240210-0002\",\n      \"patient_id\": {\n        \"profile\": { \"first_name\": \"John\", \"last_name\": \"Doe\" }\n      },\n      \"item_count\": 1,\n      \"total_amount\": 2600,\n      \"status\": \"pending_acceptance\",\n      \"payment_status\": \"pending\",\n      \"created_at\": \"2024-02-10T14:00:00.000Z\"\n    }\n  ],\n  \"pagination\": { \"page\": 1, \"limit\": 20, \"total\": 15 }\n}"
+              }]
+            },
+            {
+              "name": "Get Stats",
+              "request": {
+                "method": "GET",
+                "url": {"raw": "{{patient_base_url}}/specialist/prescriptions/stats", "host": ["{{patient_base_url}}"], "path": ["specialist", "prescriptions", "stats"]}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"data\": {\n    \"total_prescriptions\": 150,\n    \"pending\": 12,\n    \"paid\": 98,\n    \"delivered\": 85,\n    \"cancelled\": 5,\n    \"total_revenue\": 450000,\n    \"this_month\": {\n      \"prescriptions\": 25,\n      \"revenue\": 75000\n    }\n  }\n}"
+              }]
+            },
+            {
+              "name": "Send to Patient",
+              "request": {
+                "method": "POST",
+                "url": {"raw": "{{patient_base_url}}/specialist/prescriptions/:id/send-to-patient", "host": ["{{patient_base_url}}"], "path": ["specialist", "prescriptions", ":id", "send-to-patient"], "variable": [{"key": "id", "value": "{{prescription_id}}"}]}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"message\": \"Prescription sent to patient\",\n  \"data\": {\n    \"_id\": \"507f1f77bcf86cd799439900\",\n    \"status\": \"pending_acceptance\",\n    \"sent_to_patient_at\": \"2024-02-10T14:30:00.000Z\"\n  }\n}"
+              }]
+            },
+            {
+              "name": "Pay from Wallet",
+              "request": {
+                "method": "POST",
+                "url": {"raw": "{{patient_base_url}}/specialist/prescriptions/:id/pay/wallet", "host": ["{{patient_base_url}}"], "path": ["specialist", "prescriptions", ":id", "pay", "wallet"], "variable": [{"key": "id", "value": "{{prescription_id}}"}]}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"message\": \"Payment successful from specialist wallet\",\n  \"data\": {\n    \"_id\": \"507f1f77bcf86cd799439900\",\n    \"payment_status\": \"paid\",\n    \"paid_by\": \"specialist\",\n    \"paid_at\": \"2024-02-10T15:00:00.000Z\",\n    \"status\": \"processing\"\n  }\n}"
+              }]
+            },
+            {
+              "name": "Mark as Dispensed",
+              "request": {
+                "method": "POST",
+                "header": [{"key": "Content-Type", "value": "application/json"}],
+                "url": {"raw": "{{patient_base_url}}/specialist/prescriptions/:id/dispense", "host": ["{{patient_base_url}}"], "path": ["specialist", "prescriptions", ":id", "dispense"], "variable": [{"key": "id", "value": "{{prescription_id}}"}]},
+                "body": {"mode": "raw", "raw": "{\n  \"notes\": \"All items dispensed and packaged\"\n}"}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"message\": \"Prescription marked as dispensed\",\n  \"data\": {\n    \"_id\": \"507f1f77bcf86cd799439900\",\n    \"status\": \"dispensed\",\n    \"dispensed_at\": \"2024-02-10T16:00:00.000Z\"\n  }\n}"
+              }]
+            }
+          ]
+        },
+        {
+          "name": "Specialist Wallet",
+          "description": "Manage specialist wallet for prescription payments",
+          "item": [
+            {
+              "name": "Get Wallet",
+              "request": {
+                "method": "GET",
+                "url": {"raw": "{{patient_base_url}}/specialist/wallet", "host": ["{{patient_base_url}}"], "path": ["specialist", "wallet"]}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"data\": {\n    \"_id\": \"507f1f77bcf86cd799440000\",\n    \"specialist_id\": \"507f1f77bcf86cd799439099\",\n    \"available_balance\": 50000,\n    \"held_balance\": 5000,\n    \"total_credited\": 200000,\n    \"total_debited\": 150000,\n    \"currency\": \"NGN\",\n    \"is_active\": true,\n    \"last_transaction_at\": \"2024-02-10T15:00:00.000Z\"\n  }\n}"
+              }]
+            },
+            {
+              "name": "Get Stats",
+              "request": {
+                "method": "GET",
+                "url": {"raw": "{{patient_base_url}}/specialist/wallet/stats", "host": ["{{patient_base_url}}"], "path": ["specialist", "wallet", "stats"]}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"data\": {\n    \"available_balance\": 50000,\n    \"this_month\": {\n      \"credited\": 25000,\n      \"debited\": 15000\n    },\n    \"this_week\": {\n      \"credited\": 8000,\n      \"debited\": 5000\n    },\n    \"pending_payouts\": 5000\n  }\n}"
+              }]
+            },
+            {
+              "name": "Initialize Top-up",
+              "request": {
+                "method": "POST",
+                "header": [{"key": "Content-Type", "value": "application/json"}],
+                "url": {"raw": "{{patient_base_url}}/specialist/wallet/topup", "host": ["{{patient_base_url}}"], "path": ["specialist", "wallet", "topup"]},
+                "body": {"mode": "raw", "raw": "{\n  \"amount\": 20000\n}"}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"message\": \"Payment initialized\",\n  \"data\": {\n    \"authorization_url\": \"https://checkout.paystack.com/abc123\",\n    \"reference\": \"TOPUP-20240210-001\",\n    \"amount\": 20000\n  }\n}"
+              }]
+            },
+            {
+              "name": "Get Transactions",
+              "request": {
+                "method": "GET",
+                "url": {"raw": "{{patient_base_url}}/specialist/wallet/transactions?page=1&limit=20", "host": ["{{patient_base_url}}"], "path": ["specialist", "wallet", "transactions"], "query": [{"key": "page", "value": "1"}, {"key": "limit", "value": "20"}]}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"_id\": \"507f1f77bcf86cd799440001\",\n      \"amount\": 2600,\n      \"type\": \"debit\",\n      \"narration\": \"Prescription payment - RX-20240210-0002\",\n      \"reference\": \"SPEC-TXN-001\",\n      \"balance_after\": 47400,\n      \"created_at\": \"2024-02-10T15:00:00.000Z\"\n    },\n    {\n      \"_id\": \"507f1f77bcf86cd799440002\",\n      \"amount\": 20000,\n      \"type\": \"credit\",\n      \"narration\": \"Wallet top-up\",\n      \"reference\": \"TOPUP-20240210-001\",\n      \"balance_after\": 50000,\n      \"created_at\": \"2024-02-10T10:00:00.000Z\"\n    }\n  ]\n}"
+              }]
+            }
+          ]
+        },
+        {
+          "name": "Specialist Pharmacy",
+          "description": "Access patient info and drug catalog for prescriptions",
+          "item": [
+            {
+              "name": "Get Dashboard",
+              "request": {
+                "method": "GET",
+                "url": {"raw": "{{patient_base_url}}/specialist/pharmacy/dashboard", "host": ["{{patient_base_url}}"], "path": ["specialist", "pharmacy", "dashboard"]}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"data\": {\n    \"total_patients\": 250,\n    \"active_prescriptions\": 45,\n    \"prescriptions_this_month\": 28,\n    \"revenue_this_month\": 85000,\n    \"recent_prescriptions\": [\n      {\n        \"prescription_number\": \"RX-20240210-0002\",\n        \"patient_name\": \"John Doe\",\n        \"status\": \"pending_acceptance\",\n        \"created_at\": \"2024-02-10T14:00:00.000Z\"\n      }\n    ]\n  }\n}"
+              }]
+            },
+            {
+              "name": "Search Patients",
+              "request": {
+                "method": "GET",
+                "url": {"raw": "{{patient_base_url}}/specialist/pharmacy/patients?search=john", "host": ["{{patient_base_url}}"], "path": ["specialist", "pharmacy", "patients"], "query": [{"key": "search", "value": "john"}]}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"_id\": \"507f1f77bcf86cd799439011\",\n      \"profile\": {\n        \"first_name\": \"John\",\n        \"last_name\": \"Doe\",\n        \"gender\": \"Male\",\n        \"date_of_birth\": \"1990-05-15\",\n        \"contact\": {\n          \"email\": \"john.doe@example.com\",\n          \"phone\": { \"country_code\": \"+234\", \"number\": \"8012345678\" }\n        }\n      },\n      \"last_appointment\": \"2024-02-10T10:00:00.000Z\",\n      \"total_prescriptions\": 5\n    }\n  ]\n}"
+              }]
+            },
+            {
+              "name": "Get Patient Medical History",
+              "request": {
+                "method": "GET",
+                "url": {"raw": "{{patient_base_url}}/specialist/pharmacy/patients/:id/medical-history", "host": ["{{patient_base_url}}"], "path": ["specialist", "pharmacy", "patients", ":id", "medical-history"], "variable": [{"key": "id", "value": "{{patient_id}}"}]}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"data\": {\n    \"pre_existing_conditions\": [\n      {\n        \"name\": \"Hypertension\",\n        \"description\": \"Mild hypertension, controlled with medication\",\n        \"start_date\": \"2022-01-15\",\n        \"is_condition_exists\": true\n      }\n    ],\n    \"allergies\": [\"Penicillin\"],\n    \"current_medications\": [\"Lisinopril 10mg daily\"],\n    \"health_risk_factors\": {\n      \"is_smoker\": \"No\",\n      \"weight_status\": \"Normal\"\n    }\n  }\n}"
+              }]
+            },
+            {
+              "name": "Search Drugs",
+              "request": {
+                "method": "GET",
+                "url": {"raw": "{{patient_base_url}}/specialist/pharmacy/drugs?search=amoxicillin", "host": ["{{patient_base_url}}"], "path": ["specialist", "pharmacy", "drugs"], "query": [{"key": "search", "value": "amoxicillin"}]}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"_id\": \"507f1f77bcf86cd799439650\",\n      \"name\": \"Amoxicillin 500mg\",\n      \"generic_name\": \"Amoxicillin\",\n      \"manufacturer\": \"GlaxoSmithKline\",\n      \"dosage_form\": \"capsule\",\n      \"strength\": \"500mg\",\n      \"selling_price\": 100,\n      \"is_available\": true,\n      \"stock_quantity\": 500,\n      \"requires_prescription\": true\n    }\n  ]\n}"
+              }]
+            }
+          ]
+        },
+        {
+          "name": "Specialist Appointments",
+          "description": "View and manage specialist appointments",
+          "item": [
+            {
+              "name": "Get Appointments",
+              "request": {
+                "method": "GET",
+                "url": {"raw": "{{patient_base_url}}/appointments/specialist?status=upcoming", "host": ["{{patient_base_url}}"], "path": ["appointments", "specialist"], "query": [{"key": "status", "value": "upcoming"}]}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"_id\": \"507f1f77bcf86cd799439100\",\n      \"patient\": {\n        \"profile\": { \"first_name\": \"John\", \"last_name\": \"Doe\" }\n      },\n      \"category\": \"General Medicine\",\n      \"start_time\": \"2024-02-15T10:00:00.000Z\",\n      \"meeting_type\": \"Video and audio\",\n      \"status\": \"OPEN\",\n      \"start_url\": \"https://zoom.us/s/123456789\"\n    }\n  ]\n}"
+              }]
+            },
+            {
+              "name": "Add Meeting Notes",
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "Content-Type", "value": "application/json"}],
+                "url": {"raw": "{{patient_base_url}}/appointments/meeting-notes", "host": ["{{patient_base_url}}"], "path": ["appointments", "meeting-notes"]},
+                "body": {"mode": "raw", "raw": "{\n  \"appointment_id\": \"507f1f77bcf86cd799439100\",\n  \"notes\": \"Patient presents with symptoms of upper respiratory infection. Prescribed antibiotics.\"\n}"}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"message\": \"Notes added successfully\",\n  \"data\": {\n    \"_id\": \"507f1f77bcf86cd799439100\",\n    \"notes\": [{ \"content\": \"Patient presents with symptoms...\", \"createdAt\": \"2024-02-15T10:45:00.000Z\" }]\n  }\n}"
+              }]
+            }
+          ]
+        },
+        {
+          "name": "Clinical Notes",
+          "description": "Manage clinical notes for appointments",
+          "item": [
+            {
+              "name": "Get Specialist Notes",
+              "request": {
+                "method": "GET",
+                "url": {"raw": "{{patient_base_url}}/clinical-notes/specialist", "host": ["{{patient_base_url}}"], "path": ["clinical-notes", "specialist"]}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"appointment_id\": \"507f1f77bcf86cd799439100\",\n      \"patient\": { \"first_name\": \"John\", \"last_name\": \"Doe\" },\n      \"clinical_notes\": [\n        {\n          \"note_id\": \"note-001\",\n          \"content\": \"SOAP Note: Patient presents with...\",\n          \"created_at\": \"2024-02-15T10:45:00.000Z\",\n          \"completed\": true\n        }\n      ]\n    }\n  ]\n}"
+              }]
+            },
+            {
+              "name": "Create Note",
+              "request": {
+                "method": "POST",
+                "header": [{"key": "Content-Type", "value": "application/json"}],
+                "url": {"raw": "{{patient_base_url}}/clinical-notes", "host": ["{{patient_base_url}}"], "path": ["clinical-notes"]},
+                "body": {"mode": "raw", "raw": "{\n  \"appointment_id\": \"507f1f77bcf86cd799439100\",\n  \"content\": \"Subjective: Patient reports headache and fever for 2 days.\\nObjective: Temp 38.2°C, BP 120/80\\nAssessment: Upper respiratory infection\\nPlan: Prescribed antibiotics, follow-up in 7 days\",\n  \"type\": \"soap\"\n}"}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "Created",
+                "code": 201,
+                "body": "{\n  \"success\": true,\n  \"message\": \"Clinical note created\",\n  \"data\": {\n    \"note_id\": \"note-002\",\n    \"content\": \"Subjective: Patient reports...\",\n    \"type\": \"soap\",\n    \"created_at\": \"2024-02-15T11:00:00.000Z\",\n    \"completed\": false\n  }\n}"
+              }]
+            }
+          ]
+        },
+        {
+          "name": "Dashboard",
+          "description": "Specialist dashboard and analytics",
+          "item": [
+            {
+              "name": "Get Specialist Dashboard",
+              "request": {
+                "method": "GET",
+                "url": {"raw": "{{patient_base_url}}/dashboard/specialist", "host": ["{{patient_base_url}}"], "path": ["dashboard", "specialist"]}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"data\": {\n    \"total_appointments\": 350,\n    \"completed_appointments\": 320,\n    \"upcoming_appointments\": 15,\n    \"total_patients\": 250,\n    \"average_rating\": 4.8,\n    \"total_reviews\": 180,\n    \"earnings\": {\n      \"total\": 1500000,\n      \"this_month\": 150000,\n      \"pending_payout\": 50000\n    },\n    \"today_schedule\": [\n      {\n        \"_id\": \"507f1f77bcf86cd799439100\",\n        \"patient_name\": \"John Doe\",\n        \"start_time\": \"2024-02-15T10:00:00.000Z\",\n        \"category\": \"General Medicine\"\n      }\n    ]\n  }\n}"
+              }]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Admin API",
+      "description": "Administrative endpoints for platform management - dashboard, patients, specialists, pharmacy, analytics, and settings",
+      "auth": {
+        "type": "bearer",
+        "bearer": [{"key": "token", "value": "{{admin_token}}", "type": "string"}]
+      },
+      "item": [
+        {
+          "name": "Auth",
+          "item": [
+            {
+              "name": "Admin Login",
+              "request": {
+                "method": "POST",
+                "header": [{"key": "Content-Type", "value": "application/json"}],
+                "url": {"raw": "{{admin_base_url}}/auth/login", "host": ["{{admin_base_url}}"], "path": ["auth", "login"]},
+                "body": {"mode": "raw", "raw": "{\n  \"email\": \"admin@rapidcapsule.com\",\n  \"password\": \"AdminPassword123!\"\n}"}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"message\": \"Login successful\",\n  \"data\": {\n    \"access_token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n    \"user\": {\n      \"_id\": \"507f1f77bcf86cd799440100\",\n      \"email\": \"admin@rapidcapsule.com\",\n      \"user_type\": \"Admin\",\n      \"profile\": { \"first_name\": \"Admin\", \"last_name\": \"User\" }\n    }\n  }\n}"
+              }]
+            }
+          ]
+        },
+        {
+          "name": "Dashboard",
+          "description": "Admin dashboard metrics and patient management",
+          "item": [
+            {
+              "name": "Get Metrics",
+              "request": {
+                "method": "GET",
+                "url": {"raw": "{{admin_base_url}}/dashboard/metrics", "host": ["{{admin_base_url}}"], "path": ["dashboard", "metrics"]}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"data\": {\n    \"total_patients\": 5000,\n    \"total_specialists\": 150,\n    \"total_appointments\": 25000,\n    \"total_health_checkups\": 18000,\n    \"total_prescriptions\": 12000,\n    \"total_revenue\": 75000000,\n    \"active_subscriptions\": 2500,\n    \"growth\": {\n      \"patients_this_month\": 250,\n      \"patients_last_month\": 220,\n      \"growth_percentage\": 13.6\n    }\n  }\n}"
+              }]
+            },
+            {
+              "name": "Get Trends",
+              "request": {
+                "method": "GET",
+                "url": {"raw": "{{admin_base_url}}/dashboard/trends?start_date=2024-01-01&end_date=2024-01-31", "host": ["{{admin_base_url}}"], "path": ["dashboard", "trends"], "query": [{"key": "start_date", "value": "2024-01-01"}, {"key": "end_date", "value": "2024-01-31"}]}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"data\": {\n    \"registrations\": [\n      { \"date\": \"2024-01-01\", \"count\": 15 },\n      { \"date\": \"2024-01-02\", \"count\": 22 }\n    ],\n    \"appointments\": [\n      { \"date\": \"2024-01-01\", \"count\": 45 },\n      { \"date\": \"2024-01-02\", \"count\": 52 }\n    ],\n    \"revenue\": [\n      { \"date\": \"2024-01-01\", \"amount\": 250000 },\n      { \"date\": \"2024-01-02\", \"amount\": 320000 }\n    ]\n  }\n}"
+              }]
+            },
+            {
+              "name": "Get Patient Health Checkups",
+              "request": {
+                "method": "GET",
+                "url": {"raw": "{{admin_base_url}}/dashboard/patient/:patientId/health-checkups", "host": ["{{admin_base_url}}"], "path": ["dashboard", "patient", ":patientId", "health-checkups"], "variable": [{"key": "patientId", "value": "{{patient_id}}"}]}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"_id\": \"507f1f77bcf86cd799439200\",\n      \"health_check_for\": \"Self\",\n      \"response\": {\n        \"data\": {\n          \"conditions\": [{ \"name\": \"Common cold\", \"probability\": 0.72 }],\n          \"triage_level\": \"consultation_24\"\n        }\n      },\n      \"claude_summary\": {\n        \"content\": { \"overview\": \"Patient may have a common cold...\" }\n      },\n      \"created_at\": \"2024-02-10T09:00:00.000Z\"\n    }\n  ]\n}"
+              }]
+            },
+            {
+              "name": "Suspend Patient",
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "Content-Type", "value": "application/json"}],
+                "url": {"raw": "{{admin_base_url}}/dashboard/patient/:patientId/suspend", "host": ["{{admin_base_url}}"], "path": ["dashboard", "patient", ":patientId", "suspend"], "variable": [{"key": "patientId", "value": "{{patient_id}}"}]},
+                "body": {"mode": "raw", "raw": "{\n  \"reason\": \"Violation of terms of service\"\n}"}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"message\": \"Patient suspended successfully\",\n  \"data\": {\n    \"_id\": \"507f1f77bcf86cd799439011\",\n    \"status\": \"Suspended\",\n    \"is_suspended\": true,\n    \"suspension_reason\": \"Violation of terms of service\"\n  }\n}"
+              }]
+            }
+          ]
+        },
+        {
+          "name": "Patients",
+          "item": [
+            {
+              "name": "Get All Patients",
+              "request": {
+                "method": "GET",
+                "url": {"raw": "{{admin_base_url}}/patients?page=1&limit=20", "host": ["{{admin_base_url}}"], "path": ["patients"], "query": [{"key": "page", "value": "1"}, {"key": "limit", "value": "20"}]}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"_id\": \"507f1f77bcf86cd799439011\",\n      \"profile\": {\n        \"first_name\": \"John\",\n        \"last_name\": \"Doe\",\n        \"contact\": { \"email\": \"john.doe@example.com\" }\n      },\n      \"status\": \"Active\",\n      \"is_email_verified\": true,\n      \"total_appointments\": 15,\n      \"total_health_checkups\": 8,\n      \"created_at\": \"2024-01-15T10:30:00.000Z\"\n    }\n  ],\n  \"pagination\": { \"page\": 1, \"limit\": 20, \"total\": 5000 }\n}"
+              }]
+            }
+          ]
+        },
+        {
+          "name": "Specialists",
+          "item": [
+            {
+              "name": "Get All Specialists",
+              "request": {
+                "method": "GET",
+                "url": {"raw": "{{admin_base_url}}/specialists?page=1&limit=20", "host": ["{{admin_base_url}}"], "path": ["specialists"], "query": [{"key": "page", "value": "1"}, {"key": "limit", "value": "20"}]}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"_id\": \"507f1f77bcf86cd799439099\",\n      \"profile\": {\n        \"first_name\": \"Dr. Sarah\",\n        \"last_name\": \"Johnson\"\n      },\n      \"professional_practice\": {\n        \"category\": \"Medical Doctor\",\n        \"area_of_specialty\": \"General Medicine\",\n        \"license_number\": \"MD-123456\"\n      },\n      \"verification_status\": \"Verified\",\n      \"average_rating\": 4.8,\n      \"total_appointments\": 350,\n      \"created_at\": \"2023-06-15T10:00:00.000Z\"\n    }\n  ],\n  \"pagination\": { \"page\": 1, \"limit\": 20, \"total\": 150 }\n}"
+              }]
+            },
+            {
+              "name": "Verify Specialist",
+              "request": {
+                "method": "PATCH",
+                "header": [{"key": "Content-Type", "value": "application/json"}],
+                "url": {"raw": "{{admin_base_url}}/specialists/:id", "host": ["{{admin_base_url}}"], "path": ["specialists", ":id"], "variable": [{"key": "id", "value": "{{specialist_id}}"}]},
+                "body": {"mode": "raw", "raw": "{\n  \"verification_status\": \"Verified\"\n}"}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"message\": \"Specialist verified successfully\",\n  \"data\": {\n    \"_id\": \"507f1f77bcf86cd799439099\",\n    \"verification_status\": \"Verified\"\n  }\n}"
+              }]
+            }
+          ]
+        },
+        {
+          "name": "Analytics",
+          "item": [
+            {
+              "name": "Get Patients Analytics",
+              "request": {
+                "method": "GET",
+                "url": {"raw": "{{admin_base_url}}/analytics/patients", "host": ["{{admin_base_url}}"], "path": ["analytics", "patients"]}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"data\": {\n    \"total\": 5000,\n    \"active\": 4500,\n    \"suspended\": 50,\n    \"deactivated\": 450,\n    \"by_gender\": { \"male\": 2800, \"female\": 2200 },\n    \"by_age_group\": {\n      \"18-25\": 800,\n      \"26-35\": 1500,\n      \"36-45\": 1200,\n      \"46-55\": 900,\n      \"56+\": 600\n    },\n    \"registrations_trend\": [\n      { \"month\": \"Jan\", \"count\": 220 },\n      { \"month\": \"Feb\", \"count\": 250 }\n    ]\n  }\n}"
+              }]
+            },
+            {
+              "name": "Get Appointments Analytics",
+              "request": {
+                "method": "GET",
+                "url": {"raw": "{{admin_base_url}}/analytics/appointments", "host": ["{{admin_base_url}}"], "path": ["analytics", "appointments"]}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"data\": {\n    \"total\": 25000,\n    \"completed\": 22000,\n    \"cancelled\": 2500,\n    \"no_show\": 500,\n    \"by_category\": {\n      \"General Medicine\": 8000,\n      \"Cardiology\": 3500,\n      \"Dermatology\": 2800\n    },\n    \"average_duration_minutes\": 28,\n    \"average_rating\": 4.6\n  }\n}"
+              }]
+            }
+          ]
+        },
+        {
+          "name": "Pharmacy Management",
+          "item": [
+            {
+              "name": "Get Dashboard",
+              "request": {
+                "method": "GET",
+                "url": {"raw": "{{admin_base_url}}/pharmacy/dashboard", "host": ["{{admin_base_url}}"], "path": ["pharmacy", "dashboard"]}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"data\": {\n    \"total_drugs\": 2500,\n    \"total_pharmacies\": 50,\n    \"total_orders\": 8500,\n    \"orders_today\": 45,\n    \"revenue_today\": 250000,\n    \"low_stock_alerts\": 15,\n    \"expiring_soon\": 8\n  }\n}"
+              }]
+            },
+            {
+              "name": "Get Orders",
+              "request": {
+                "method": "GET",
+                "url": {"raw": "{{admin_base_url}}/pharmacy/orders?page=1&limit=20&status=PENDING", "host": ["{{admin_base_url}}"], "path": ["pharmacy", "orders"], "query": [{"key": "page", "value": "1"}, {"key": "limit", "value": "20"}, {"key": "status", "value": "PENDING"}]}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"_id\": \"507f1f77bcf86cd799439700\",\n      \"order_number\": \"ORD-20240210-0001\",\n      \"patient\": { \"profile\": { \"first_name\": \"John\", \"last_name\": \"Doe\" } },\n      \"pharmacy\": { \"name\": \"HealthPlus Pharmacy\" },\n      \"total_amount\": 600,\n      \"status\": \"PENDING\",\n      \"payment_status\": \"PAID\",\n      \"created_at\": \"2024-02-10T12:00:00.000Z\"\n    }\n  ],\n  \"pagination\": { \"page\": 1, \"limit\": 20, \"total\": 45 }\n}"
+              }]
+            },
+            {
+              "name": "Verify Pharmacy",
+              "request": {
+                "method": "PATCH",
+                "url": {"raw": "{{admin_base_url}}/pharmacy/pharmacies/:id/verify", "host": ["{{admin_base_url}}"], "path": ["pharmacy", "pharmacies", ":id", "verify"], "variable": [{"key": "id", "value": "{{pharmacy_id}}"}]}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"message\": \"Pharmacy verified successfully\",\n  \"data\": {\n    \"_id\": \"507f1f77bcf86cd799439500\",\n    \"verification_status\": \"VERIFIED\",\n    \"verified_at\": \"2024-02-10T15:00:00.000Z\"\n  }\n}"
+              }]
+            }
+          ]
+        },
+        {
+          "name": "Settings",
+          "item": [
+            {
+              "name": "Get Settings",
+              "request": {
+                "method": "GET",
+                "url": {"raw": "{{admin_base_url}}/settings", "host": ["{{admin_base_url}}"], "path": ["settings"]}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"data\": {\n    \"platform_name\": \"Rapid Capsule\",\n    \"support_email\": \"support@rapidcapsule.com\",\n    \"appointment_duration_minutes\": 30,\n    \"commission_rate\": 15,\n    \"enable_claude_summaries\": true,\n    \"enable_whatsapp_integration\": true\n  }\n}"
+              }]
+            },
+            {
+              "name": "Get Rates",
+              "request": {
+                "method": "GET",
+                "url": {"raw": "{{admin_base_url}}/settings/rates", "host": ["{{admin_base_url}}"], "path": ["settings", "rates"]}
+              },
+              "response": [{
+                "name": "Success",
+                "status": "OK",
+                "code": 200,
+                "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"_id\": \"rate-001\",\n      \"type\": \"consultation\",\n      \"category\": \"General Medicine\",\n      \"amount\": 5000,\n      \"currency\": \"NGN\"\n    },\n    {\n      \"_id\": \"rate-002\",\n      \"type\": \"consultation\",\n      \"category\": \"Specialist\",\n      \"amount\": 10000,\n      \"currency\": \"NGN\"\n    }\n  ]\n}"
+              }]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

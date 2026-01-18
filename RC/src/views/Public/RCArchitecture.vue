@@ -712,6 +712,229 @@
               </div>
             </div>
 
+            <!-- API Documentation Section -->
+            <div v-else-if="activeSection === 'apidoc'" class="section-content apidoc-section">
+              <div class="section-header">
+                <h2 class="gradient-text-cyan">API Documentation</h2>
+                <p class="section-desc">Complete REST API reference for the Rapid Capsule platform</p>
+              </div>
+
+              <!-- Postman Hero -->
+              <div class="apidoc-hero">
+                <div class="postman-logo">
+                  <svg width="48" height="48" viewBox="0 0 256 256" fill="none">
+                    <circle cx="128" cy="128" r="128" fill="#FF6C37"/>
+                    <path d="M152.7 96.3l-43.2 43.2-11.8-11.8c-2.9-2.9-7.7-2.9-10.6 0-2.9 2.9-2.9 7.7 0 10.6l17.1 17.1c1.5 1.5 3.4 2.2 5.3 2.2s3.8-.7 5.3-2.2l48.5-48.5c2.9-2.9 2.9-7.7 0-10.6-2.9-2.9-7.7-2.9-10.6 0z" fill="#fff"/>
+                  </svg>
+                </div>
+                <div class="hero-text">
+                  <h3>Rapid Capsule API Collection</h3>
+                  <p>Interactive API documentation hosted on Postman</p>
+                </div>
+                <a
+                  href="https://www.postman.com/eyobassey-a7ce0a56-2594020/rapid-capsule/collection/51609967-e16995aa-e4f8-4453-819a-d5b01a386cd2"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="view-docs-btn"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                    <polyline points="15 3 21 3 21 9"></polyline>
+                    <line x1="10" y1="14" x2="21" y2="3"></line>
+                  </svg>
+                  View API Documentation
+                </a>
+              </div>
+
+              <!-- API Stats -->
+              <div class="api-stats-grid">
+                <div class="api-stat-card">
+                  <div class="stat-icon blue">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                  </div>
+                  <div class="stat-value">300+</div>
+                  <div class="stat-label">API Endpoints</div>
+                </div>
+                <div class="api-stat-card">
+                  <div class="stat-icon green">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                      <line x1="3" y1="9" x2="21" y2="9"></line>
+                      <line x1="9" y1="21" x2="9" y2="9"></line>
+                    </svg>
+                  </div>
+                  <div class="stat-value">3</div>
+                  <div class="stat-label">API Categories</div>
+                </div>
+                <div class="api-stat-card">
+                  <div class="stat-icon purple">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                      <polyline points="14 2 14 8 20 8"></polyline>
+                    </svg>
+                  </div>
+                  <div class="stat-value">100%</div>
+                  <div class="stat-label">Documented</div>
+                </div>
+                <div class="api-stat-card">
+                  <div class="stat-icon orange">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                    </svg>
+                  </div>
+                  <div class="stat-value">JSON</div>
+                  <div class="stat-label">Response Format</div>
+                </div>
+              </div>
+
+              <!-- API Categories -->
+              <h3 class="subsection-title">API Categories</h3>
+              <div class="api-categories-grid">
+                <div class="api-category-card border-blue">
+                  <div class="category-header">
+                    <div class="category-icon bg-blue">
+                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                      </svg>
+                    </div>
+                    <div>
+                      <h4>Patient API</h4>
+                      <span class="endpoint-count">150+ endpoints</span>
+                    </div>
+                  </div>
+                  <ul class="category-features">
+                    <li>Authentication & User Management</li>
+                    <li>Health Checkups & AI Diagnosis</li>
+                    <li>Appointments & Video Calls</li>
+                    <li>Prescriptions & Pharmacy Orders</li>
+                    <li>Vitals & Health Monitoring</li>
+                    <li>Wallet & Payment Processing</li>
+                  </ul>
+                </div>
+
+                <div class="api-category-card border-green">
+                  <div class="category-header">
+                    <div class="category-icon bg-green">
+                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2">
+                        <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <h4>Specialist API</h4>
+                      <span class="endpoint-count">80+ endpoints</span>
+                    </div>
+                  </div>
+                  <ul class="category-features">
+                    <li>Prescription Management</li>
+                    <li>Specialist Wallet & Earnings</li>
+                    <li>Patient Records Access</li>
+                    <li>Drug Catalog & Inventory</li>
+                    <li>Clinical Notes & Templates</li>
+                    <li>Appointment Management</li>
+                  </ul>
+                </div>
+
+                <div class="api-category-card border-purple">
+                  <div class="category-header">
+                    <div class="category-icon bg-purple">
+                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                      </svg>
+                    </div>
+                    <div>
+                      <h4>Admin API</h4>
+                      <span class="endpoint-count">70+ endpoints</span>
+                    </div>
+                  </div>
+                  <ul class="category-features">
+                    <li>Dashboard & Analytics</li>
+                    <li>Patient & Specialist Management</li>
+                    <li>Pharmacy Administration</li>
+                    <li>Settings & Configuration</li>
+                    <li>Compliance & Audit Logs</li>
+                    <li>Revenue & Reports</li>
+                  </ul>
+                </div>
+              </div>
+
+              <!-- Authentication Info -->
+              <h3 class="subsection-title">Authentication</h3>
+              <div class="auth-info-card">
+                <div class="auth-method">
+                  <div class="auth-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="2">
+                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                    </svg>
+                  </div>
+                  <div class="auth-details">
+                    <h4>JWT Bearer Token</h4>
+                    <p>All authenticated endpoints require a valid JWT token in the Authorization header</p>
+                    <code>Authorization: Bearer &lt;your_token&gt;</code>
+                  </div>
+                </div>
+                <div class="auth-methods-list">
+                  <div class="auth-type">
+                    <span class="auth-badge">Email/Password</span>
+                    <span>Standard login with OTP verification</span>
+                  </div>
+                  <div class="auth-type">
+                    <span class="auth-badge google">Google OAuth</span>
+                    <span>Social login with Google account</span>
+                  </div>
+                  <div class="auth-type">
+                    <span class="auth-badge apple">Apple Sign-In</span>
+                    <span>Social login with Apple ID</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Base URLs -->
+              <h3 class="subsection-title">Base URLs</h3>
+              <div class="base-urls-grid">
+                <div class="url-card">
+                  <div class="url-label">Patient API</div>
+                  <code class="url-value">https://api.rapidcapsule.com/api</code>
+                  <span class="port-badge">Port 5020</span>
+                </div>
+                <div class="url-card">
+                  <div class="url-label">Admin API</div>
+                  <code class="url-value">https://admin.rapidcapsule.com/admin-api</code>
+                  <span class="port-badge">Port 5021</span>
+                </div>
+              </div>
+
+              <!-- Quick Links -->
+              <div class="quick-links-section">
+                <a
+                  href="https://www.postman.com/eyobassey-a7ce0a56-2594020/rapid-capsule/collection/51609967-e16995aa-e4f8-4453-819a-d5b01a386cd2"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="quick-link-btn primary"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                  </svg>
+                  Open Full Documentation
+                </a>
+                <a
+                  href="https://github.com/eyobassey/rapidcapsule"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="quick-link-btn secondary"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+                  </svg>
+                  View Source Code
+                </a>
+              </div>
+            </div>
+
           </div>
         </main>
       </div>
@@ -752,7 +975,8 @@ export default {
       { id: 'flows', label: 'Data Flows', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>' },
       { id: 'tech', label: 'Tech Stack', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>' },
       { id: 'readme', label: 'Read Me', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>' },
-      { id: 'github', label: 'GitHub', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>' }
+      { id: 'github', label: 'GitHub', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>' },
+      { id: 'apidoc', label: 'API Doc', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path><line x1="8" y1="6" x2="16" y2="6"></line><line x1="8" y1="10" x2="16" y2="10"></line><line x1="8" y1="14" x2="12" y2="14"></line></svg>' }
     ];
 
     const users = [
@@ -1669,5 +1893,381 @@ svg {
   .content-card { padding: 1rem; }
   .stats-grid { grid-template-columns: repeat(2, 1fr); }
   .creator-credit { justify-content: center; }
+}
+
+/* ============ API Documentation Section ============ */
+.apidoc-section {
+  .section-header {
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+
+  .section-desc {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 1.1rem;
+    margin-top: 0.5rem;
+  }
+}
+
+.apidoc-hero {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 2rem;
+  background: linear-gradient(135deg, rgba(255, 108, 55, 0.15) 0%, rgba(255, 108, 55, 0.05) 100%);
+  border: 1px solid rgba(255, 108, 55, 0.3);
+  border-radius: 1rem;
+  margin-bottom: 2rem;
+}
+
+.postman-logo {
+  flex-shrink: 0;
+}
+
+.hero-text {
+  flex: 1;
+
+  h3 {
+    color: #ffffff;
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0 0 0.5rem 0;
+  }
+
+  p {
+    color: rgba(255, 255, 255, 0.7);
+    margin: 0;
+  }
+}
+
+.view-docs-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1.5rem;
+  background: linear-gradient(135deg, #FF6C37 0%, #ff8c5a 100%);
+  color: #ffffff;
+  border-radius: 0.5rem;
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 0.3s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(255, 108, 55, 0.4);
+  }
+}
+
+.api-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.api-stat-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.stat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1rem auto;
+
+  &.blue { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
+  &.green { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+  &.purple { background: rgba(168, 85, 247, 0.2); color: #a855f7; }
+  &.orange { background: rgba(255, 108, 55, 0.2); color: #ff6c37; }
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 0.25rem;
+}
+
+.stat-label {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.875rem;
+}
+
+.subsection-title {
+  color: #ffffff;
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 2rem 0 1rem 0;
+}
+
+.api-categories-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.api-category-card {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  border: 1px solid;
+
+  &.border-blue { border-color: rgba(59, 130, 246, 0.4); }
+  &.border-green { border-color: rgba(34, 197, 94, 0.4); }
+  &.border-purple { border-color: rgba(168, 85, 247, 0.4); }
+}
+
+.category-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+
+  h4 {
+    color: #ffffff;
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin: 0;
+  }
+}
+
+.category-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  &.bg-blue { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); }
+  &.bg-green { background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); }
+  &.bg-purple { background: linear-gradient(135deg, #a855f7 0%, #9333ea 100%); }
+}
+
+.endpoint-count {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.category-features {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+
+  li {
+    padding: 0.5rem 0;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.9rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    &::before {
+      content: '•';
+      color: #22d3ee;
+    }
+
+    &:last-child {
+      border-bottom: none;
+    }
+  }
+}
+
+.auth-info-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(34, 211, 238, 0.2);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.auth-method {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 1rem;
+}
+
+.auth-icon {
+  width: 48px;
+  height: 48px;
+  background: rgba(34, 211, 238, 0.1);
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.auth-details {
+  h4 {
+    color: #ffffff;
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem 0;
+  }
+
+  p {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.875rem;
+    margin: 0 0 0.75rem 0;
+  }
+
+  code {
+    display: inline-block;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.375rem;
+    font-family: 'Fira Code', monospace;
+    font-size: 0.8rem;
+    color: #22d3ee;
+  }
+}
+
+.auth-methods-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.auth-type {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+
+  span:last-child {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.875rem;
+  }
+}
+
+.auth-badge {
+  padding: 0.375rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+
+  &.google { background: rgba(234, 67, 53, 0.2); color: #ea4335; }
+  &.apple { background: rgba(255, 255, 255, 0.15); color: #ffffff; }
+}
+
+.base-urls-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.url-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+}
+
+.url-label {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+}
+
+.url-value {
+  display: block;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 0.625rem 0.875rem;
+  border-radius: 0.375rem;
+  font-family: 'Fira Code', monospace;
+  font-size: 0.85rem;
+  color: #22d3ee;
+  margin-bottom: 0.75rem;
+  word-break: break-all;
+}
+
+.port-badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+  border-radius: 0.25rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.quick-links-section {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  padding-top: 1rem;
+}
+
+.quick-link-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1.5rem;
+  border-radius: 0.5rem;
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 0.3s ease;
+
+  &.primary {
+    background: linear-gradient(135deg, #FF6C37 0%, #ff8c5a 100%);
+    color: #ffffff;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 20px rgba(255, 108, 55, 0.4);
+    }
+  }
+
+  &.secondary {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.15);
+      transform: translateY(-2px);
+    }
+  }
+}
+
+/* API Doc Responsive */
+@media (max-width: 1024px) {
+  .api-stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .api-categories-grid { grid-template-columns: 1fr; }
+  .base-urls-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 640px) {
+  .apidoc-hero {
+    flex-direction: column;
+    text-align: center;
+  }
+  .api-stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .quick-links-section {
+    flex-direction: column;
+  }
+  .quick-link-btn {
+    justify-content: center;
+  }
 }
 </style>
