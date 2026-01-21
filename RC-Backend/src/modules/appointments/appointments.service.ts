@@ -64,6 +64,25 @@ import {
 } from './dto/available-specialist.dto';
 import { AvailableTimesDto } from './dto/available-times.dto';
 import { RescheduleAppointmentDto } from './dto/reschedule-appointment.dto';
+import { HealthCheckupService } from '../health-checkup/health-checkup.service';
+import { AdvancedHealthScoreService } from '../advanced-health-score/advanced-health-score.service';
+import { VitalsService } from '../vitals/vitals.service';
+import { FileUploadHelper } from '../../common/helpers/file-upload.helpers';
+import {
+  SpecialistPrescription,
+  SpecialistPrescriptionDocument,
+} from '../prescriptions/entities/specialist-prescription.entity';
+import {
+  PatientPrescriptionUpload,
+  PatientPrescriptionUploadDocument,
+  VerificationStatus,
+} from '../pharmacy/entities/patient-prescription-upload.entity';
+import {
+  PharmacyOrder,
+  PharmacyOrderDocument,
+  PharmacyOrderStatus,
+  PharmacyOrderType,
+} from '../pharmacy/entities/pharmacy-order.entity';
 
 @Injectable()
 export class AppointmentsService {
@@ -73,6 +92,12 @@ export class AppointmentsService {
     private appointmentModel: Model<AppointmentDocument>,
     @InjectModel(AppointmentReferral.name)
     private referralModel: Model<AppointmentReferralDocument>,
+    @InjectModel(SpecialistPrescription.name)
+    private specialistPrescriptionModel: Model<SpecialistPrescriptionDocument>,
+    @InjectModel(PatientPrescriptionUpload.name)
+    private patientPrescriptionUploadModel: Model<PatientPrescriptionUploadDocument>,
+    @InjectModel(PharmacyOrder.name)
+    private pharmacyOrderModel: Model<PharmacyOrderDocument>,
     private readonly zoom: Zoom,
     private readonly usersService: UsersService,
     private readonly generalHelpers: GeneralHelpers,
@@ -82,6 +107,10 @@ export class AppointmentsService {
     private readonly paymentService: PaymentsService,
     private readonly subscriptionsService: SubscriptionsService,
     private readonly clinicalNotesService: ClinicalNotesService,
+    private readonly healthCheckupService: HealthCheckupService,
+    private readonly advancedHealthScoreService: AdvancedHealthScoreService,
+    private readonly vitalsService: VitalsService,
+    private readonly fileUploadHelper: FileUploadHelper,
   ) {}
   async createAppointment(
     createAppointmentDto: CreateAppointmentDto,
@@ -808,9 +837,29 @@ export class AppointmentsService {
     queryStatus: QueryStatus,
   ) {
     const { status } = queryStatus || {};
+    const now = new Date();
+
+    // MISSED: appointments with OPEN status but start_time in the past
+    if (status === 'MISSED') {
+      return await find(this.appointmentModel, {
+        patient: userId,
+        status: 'OPEN',
+        start_time: { $lt: now },
+      });
+    }
+
+    // For OPEN status, filter to only show future appointments (upcoming)
+    // For COMPLETED/CANCELLED, show past appointments (history)
+    const dateFilter = status === 'OPEN'
+      ? { start_time: { $gte: now } }
+      : status === 'COMPLETED' || status === 'CANCELLED'
+        ? { start_time: { $lt: now } }
+        : {};
+
     return await find(this.appointmentModel, {
       patient: userId,
       ...(!isEmpty(status) && { status }),
+      ...dateFilter,
     });
   }
 
@@ -819,14 +868,83 @@ export class AppointmentsService {
     queryStatus: QueryStatus,
   ) {
     const { status } = queryStatus || {};
-    return await this.appointmentModel
-      .find({
-        specialist: userId,
-        ...(status && { status }),
+    const now = new Date();
+
+    let appointments: AppointmentDocument[];
+
+    // MISSED: appointments with OPEN status but start_time in the past
+    if (status === 'MISSED') {
+      appointments = await this.appointmentModel
+        .find({
+          specialist: userId,
+          status: 'OPEN',
+          start_time: { $lt: now },
+        })
+        .populate('patient', 'profile email')
+        .populate('specialist', 'profile email')
+        .exec();
+    } else {
+      // For OPEN status, filter to only show future appointments (upcoming)
+      // For COMPLETED/CANCELLED, show past appointments (history)
+      const dateFilter = status === 'OPEN'
+        ? { start_time: { $gte: now } }
+        : status === 'COMPLETED' || status === 'CANCELLED'
+          ? { start_time: { $lt: now } }
+          : {};
+
+      appointments = await this.appointmentModel
+        .find({
+          specialist: userId,
+          ...(status && { status }),
+          ...dateFilter,
+        })
+        .populate('patient', 'profile email')
+        .populate('specialist', 'profile email')
+        .exec();
+    }
+
+    // Presign patient profile photos from S3
+    return await this.presignAppointmentProfilePhotos(appointments);
+  }
+
+  /**
+   * Presign S3 profile photos for populated appointments
+   */
+  private async presignAppointmentProfilePhotos(appointments: AppointmentDocument[]): Promise<any[]> {
+    const presignedAppointments = await Promise.all(
+      appointments.map(async (appointment) => {
+        const appointmentObj: any = appointment.toObject ? appointment.toObject() : appointment;
+
+        // Presign patient profile photo if it exists and is an S3 URL
+        if (appointmentObj.patient?.profile?.profile_photo) {
+          const photoUrl = appointmentObj.patient.profile.profile_photo;
+          // Check if it's an S3 URL (not a Google/OAuth URL)
+          if (photoUrl.includes('amazonaws.com') || photoUrl.includes('s3.')) {
+            try {
+              appointmentObj.patient.profile.profile_photo = await this.fileUploadHelper.getPresignedUrl(photoUrl, 3600);
+            } catch (e) {
+              this.logger.error(`Error presigning patient profile photo: ${e.message}`);
+            }
+          }
+        }
+
+        // Also check profile_image field
+        if (appointmentObj.patient?.profile?.profile_image) {
+          const photoUrl = appointmentObj.patient.profile.profile_image;
+          if (photoUrl.includes('amazonaws.com') || photoUrl.includes('s3.')) {
+            try {
+              appointmentObj.patient.profile.profile_image = await this.fileUploadHelper.getPresignedUrl(photoUrl, 3600);
+            } catch (e) {
+              this.logger.error(`Error presigning patient profile image: ${e.message}`);
+            }
+          }
+        }
+
+        return appointmentObj;
       })
-      .populate('patient', 'profile email')
-      .populate('specialist', 'profile email')
-      .exec();
+    );
+
+    return presignedAppointments;
   }
 
   async getAppointments(query) {
@@ -1257,5 +1375,1203 @@ export class AppointmentsService {
       )
       .populate('patient', 'profile email')
       .exec();
+  }
+
+  /**
+   * Get patient health profile for specialist view
+   * Includes health checkups, health scores, and recent vitals
+   */
+  async getPatientHealthProfile(patientId: string) {
+    const userIdObj = new Types.ObjectId(patientId);
+
+    try {
+      // Fetch health data in parallel
+      const [healthCheckups, advancedScores, vitals, user] = await Promise.all([
+        this.healthCheckupService.getHealthCheckupHistory(patientId, 1, 5),
+        this.advancedHealthScoreService.getAssessmentHistory(patientId, 1, 5),
+        this.vitalsService.getMostRecentVitals(userIdObj),
+        this.usersService.findById(userIdObj),
+      ]);
+
+      // Extract the most recent advanced score
+      const latestAdvancedScore = advancedScores.assessments?.[0] || null;
+
+      // Format health checkups for display
+      const formattedCheckups = healthCheckups.checkups?.map((checkup: any) => ({
+        id: checkup._id,
+        date: checkup.created_at,
+        health_check_for: checkup.health_check_for,
+        symptoms: this.extractSymptoms(checkup),
+        conditions: this.extractConditions(checkup),
+        triage_level: checkup.response?.data?.triage_level,
+        has_emergency_evidence: checkup.response?.data?.has_emergency_evidence,
+      })) || [];
+
+      const userProfile = user?.profile as any;
+
+      return {
+        patient: {
+          id: user?._id,
+          name: user ? `${userProfile?.first_name || ''} ${userProfile?.last_name || ''}`.trim() : 'Unknown',
+          profile_image: userProfile?.profile_image || userProfile?.profile_photo,
+          age: userProfile?.date_of_birth ? this.calculateAge(userProfile.date_of_birth) : null,
+          gender: userProfile?.gender,
+        },
+        health_scores: {
+          basic_score: null, // Basic score is calculated client-side from vitals
+          advanced_score: latestAdvancedScore?.report?.overall_score || null,
+          advanced_status: latestAdvancedScore?.report?.overall_status || null,
+          advanced_summary: latestAdvancedScore?.report?.overall_summary || null,
+          domain_scores: latestAdvancedScore?.report?.domain_scores || null,
+          last_assessment_date: latestAdvancedScore?.created_at || null,
+        },
+        health_checkups: formattedCheckups,
+        checkup_count: healthCheckups.pagination?.total_count || 0,
+        vitals: this.formatVitals(vitals),
+        medical_history: {
+          conditions: userProfile?.medical_history?.conditions || [],
+          allergies: userProfile?.medical_history?.allergies || [],
+          medications: userProfile?.medical_history?.medications || [],
+        },
+        has_health_data: formattedCheckups.length > 0 || latestAdvancedScore !== null,
+      };
+    } catch (error) {
+      this.logger.error(`Error fetching patient health profile: ${error.message}`);
+      throw new InternalServerErrorException('Failed to fetch patient health profile');
+    }
+  }
+
+  /**
+   * Get comprehensive patient health records for specialist full-page view
+   * Includes all health checkups, advanced scores, vitals history, and appointment history
+   */
+  async getPatientFullHealthRecords(
+    patientId: string,
+    pagination: {
+      checkupsPage: number;
+      checkupsLimit: number;
+      scoresPage: number;
+      scoresLimit: number;
+      appointmentsPage: number;
+      appointmentsLimit: number;
+    },
+  ) {
+    const userIdObj = new Types.ObjectId(patientId);
+
+    try {
+      // Fetch all health data in parallel
+      const [
+        healthCheckups,
+        advancedScores,
+        vitals,
+        user,
+        appointments,
+        appointmentCount,
+      ] = await Promise.all([
+        this.healthCheckupService.getHealthCheckupHistory(
+          patientId,
+          pagination.checkupsPage,
+          pagination.checkupsLimit,
+        ),
+        this.advancedHealthScoreService.getAssessmentHistory(
+          patientId,
+          pagination.scoresPage,
+          pagination.scoresLimit,
+        ),
+        this.vitalsService.findUserVitals(userIdObj),
+        this.usersService.findById(userIdObj),
+        this.appointmentModel
+          .find({ patient: userIdObj })
+          .sort({ start_time: -1 })
+          .skip((pagination.appointmentsPage - 1) * pagination.appointmentsLimit)
+          .limit(pagination.appointmentsLimit)
+          .populate('specialist', 'profile email')
+          .exec(),
+        countDocuments(this.appointmentModel, { patient: userIdObj }),
+      ]);
+
+      const userProfile = user?.profile as any;
+
+      // Format health checkups with full details
+      const formattedCheckups = healthCheckups.checkups?.map((checkup: any) => ({
+        id: checkup._id,
+        date: checkup.created_at,
+        health_check_for: checkup.health_check_for,
+        symptoms: this.extractSymptoms(checkup),
+        conditions: checkup.response?.data?.conditions?.map((c: any) => ({
+          name: c.common_name || c.name,
+          probability: c.probability,
+          category: c.category,
+        })) || [],
+        triage_level: checkup.response?.data?.triage_level,
+        has_emergency_evidence: checkup.response?.data?.has_emergency_evidence,
+        specialist_recommendations: checkup.response?.data?.specialist_recommendations || [],
+        question_count: checkup.response?.data?.question?.items?.length || 0,
+        // Include AI summary if available
+        ai_summary: checkup.claude_summary?.content ? {
+          overview: checkup.claude_summary.content.overview,
+          key_findings: checkup.claude_summary.content.key_findings || [],
+          recommendations: checkup.claude_summary.content.recommendations || [],
+          when_to_seek_care: checkup.claude_summary.content.when_to_seek_care,
+          conditions_explained: checkup.claude_summary.content.possible_conditions_explained || [],
+        } : null,
+        interview_duration: checkup.interview_duration,
+      })) || [];
+
+      // Format advanced health scores with full reports
+      const formattedAdvancedScores = advancedScores.assessments?.map((score: any) => ({
+        id: score._id,
+        date: score.created_at,
+        status: score.status,
+        overall_score: score.report?.overall_score,
+        overall_status: score.report?.overall_status,
+        overall_summary: score.report?.overall_summary,
+        domain_scores: score.report?.domain_scores,
+        key_findings: score.report?.key_findings || [],
+        recommendations: score.report?.recommendations || [],
+      })) || [];
+
+      // Format appointments with notes
+      const formattedAppointments = appointments.map((apt: any) => {
+        const specialistProfile = apt.specialist?.profile as any;
+        return {
+          id: apt._id,
+          date: apt.start_time,
+          status: apt.status,
+          appointment_type: apt.appointment_type,
+          specialist: {
+            name: specialistProfile
+              ? `${specialistProfile.first_name || ''} ${specialistProfile.last_name || ''}`.trim()
+              : 'Unknown',
+            specialty: specialistProfile?.specialty || 'General',
+          },
+          notes: apt.notes || null,
+          call_duration: apt.call_duration || null,
+          cancellation_reason: apt.cancellation_reason || null,
+        };
+      });
+
+      // Get basic health score from stored value
+      const storedBasicScore = user?.basic_health_score;
+
+      return {
+        patient: {
+          id: user?._id,
+          name: user
+            ? `${userProfile?.first_name || ''} ${userProfile?.last_name || ''}`.trim()
+            : 'Unknown',
+          email: (user as any)?.email,
+          profile_image: userProfile?.profile_image || userProfile?.profile_photo,
+          age: userProfile?.date_of_birth ? this.calculateAge(userProfile.date_of_birth) : null,
+          gender: userProfile?.gender,
+          phone: userProfile?.phone_number,
+          date_of_birth: userProfile?.date_of_birth,
+        },
+        health_scores: {
+          basic: {
+            score: storedBasicScore?.score ?? null,
+            status: storedBasicScore?.status ?? null,
+            breakdown: storedBasicScore?.breakdown ?? null,
+            updated_at: storedBasicScore?.updated_at ?? null,
+          },
+          advanced: {
+            latest_score: advancedScores.assessments?.[0]?.report?.overall_score ?? null,
+            latest_status: advancedScores.assessments?.[0]?.report?.overall_status ?? null,
+            total_assessments: advancedScores.total || 0,
+          },
+        },
+        health_checkups: {
+          items: formattedCheckups,
+          pagination: {
+            page: pagination.checkupsPage,
+            limit: pagination.checkupsLimit,
+            total: healthCheckups.pagination?.total_count || 0,
+            total_pages: healthCheckups.pagination?.total_pages || 0,
+          },
+        },
+        advanced_scores: {
+          items: formattedAdvancedScores,
+          pagination: {
+            page: pagination.scoresPage,
+            limit: pagination.scoresLimit,
+            total: advancedScores.total || 0,
+            total_pages: advancedScores.total_pages || 0,
+          },
+        },
+        appointments: {
+          items: formattedAppointments,
+          pagination: {
+            page: pagination.appointmentsPage,
+            limit: pagination.appointmentsLimit,
+            total: appointmentCount,
+            total_pages: Math.ceil(appointmentCount / pagination.appointmentsLimit),
+          },
+        },
+        vitals: this.formatVitalsForFrontend(vitals),
+        medical_profile: {
+          height: userProfile?.basic_health_info?.height || null,
+          weight: userProfile?.basic_health_info?.weight || null,
+          blood_type: userProfile?.basic_health_info?.blood_type || null,
+          pre_existing_conditions: user?.pre_existing_conditions || [],
+          allergies: userProfile?.medical_history?.allergies || [],
+          medications: userProfile?.medical_history?.medications || [],
+          is_smoker: userProfile?.health_risk_factors?.is_smoker || 'Unknown',
+          has_recent_injuries: userProfile?.health_risk_factors?.has_recent_injuries || 'Unknown',
+        },
+      };
+    } catch (error) {
+      this.logger.error(`Error fetching patient full health records: ${error.message}`);
+      throw new InternalServerErrorException('Failed to fetch patient health records');
+    }
+  }
+
+  /**
+   * Get patient prescriptions for specialist view
+   */
+  async getPatientPrescriptions(
+    patientId: string,
+    page: number = 1,
+    limit: number = 10,
+  ) {
+    const patientIdObj = new Types.ObjectId(patientId);
+    const skip = (page - 1) * limit;
+
+    try {
+      // Fetch prescriptions for this patient (exclude drafts)
+      const [prescriptions, total] = await Promise.all([
+        this.specialistPrescriptionModel
+          .find({
+            patient_id: patientIdObj,
+            status: { $ne: 'draft' }, // Exclude drafts
+          })
+          .sort({ created_at: -1 })
+          .skip(skip)
+          .limit(limit)
+          .populate('specialist_id', 'profile email')
+          .populate('pharmacy_id', 'name address')
+          .lean(),
+        this.specialistPrescriptionModel.countDocuments({
+          patient_id: patientIdObj,
+          status: { $ne: 'draft' },
+        }),
+      ]);
+
+      // Format prescriptions for display
+      const formattedPrescriptions = prescriptions.map((rx: any) => {
+        const specialist = rx.specialist_id;
+        const specialistProfile = specialist?.profile as any;
+
+        return {
+          id: rx._id,
+          prescription_number: rx.prescription_number,
+          date: rx.created_at,
+          status: rx.status,
+          payment_status: rx.payment_status,
+          // Specialist info
+          specialist: {
+            id: specialist?._id,
+            name: specialistProfile
+              ? `${specialistProfile.first_name || ''} ${specialistProfile.last_name || ''}`.trim()
+              : 'Unknown',
+            specialty: specialistProfile?.specialty || 'General',
+          },
+          // Items summary
+          items: rx.items?.map((item: any) => ({
+            drug_name: item.drug_name,
+            generic_name: item.generic_name,
+            drug_strength: item.drug_strength,
+            quantity: item.quantity,
+            dosage: item.dosage,
+            frequency: item.frequency,
+            duration: item.duration,
+            instructions: item.instructions,
+            unit_price: item.unit_price,
+            total_price: item.total_price,
+          })) || [],
+          item_count: rx.items?.length || 0,
+          // Pricing
+          subtotal: rx.subtotal,
+          delivery_fee: rx.delivery_fee,
+          total_amount: rx.total_amount,
+          currency: rx.currency || 'NGN',
+          // Fulfillment info
+          pharmacy: rx.pharmacy_id ? {
+            id: rx.pharmacy_id._id,
+            name: rx.pharmacy_id.name,
+          } : null,
+          // Dates
+          paid_at: rx.paid_at,
+          dispensed_at: rx.dispensed_at,
+          delivered_at: rx.delivered_at,
+          // Refill info
+          is_refillable: rx.is_refillable,
+          refill_count: rx.refill_count,
+          refills_used: rx.refills_used,
+          next_refill_date: rx.next_refill_date,
+          // Notes
+          clinical_notes: rx.clinical_notes,
+          patient_notes: rx.patient_notes,
+        };
+      });
+
+      // Calculate summary stats
+      const activePrescriptions = prescriptions.filter((rx: any) =>
+        ['pending_payment', 'paid', 'processing', 'dispensed', 'shipped'].includes(rx.status)
+      ).length;
+
+      const completedPrescriptions = prescriptions.filter((rx: any) =>
+        rx.status === 'delivered'
+      ).length;
+
+      return {
+        prescriptions: formattedPrescriptions,
+        stats: {
+          total: total,
+          active: activePrescriptions,
+          completed: completedPrescriptions,
+        },
+        pagination: {
+          page,
+          limit,
+          total,
+          total_pages: Math.ceil(total / limit),
+        },
+      };
+    } catch (error) {
+      this.logger.error(`Error fetching patient prescriptions: ${error.message}`);
+      throw new InternalServerErrorException('Failed to fetch patient prescriptions');
+    }
+  }
+
+  /**
+   * Get patient's uploaded prescriptions (external prescriptions from other doctors)
+   * For specialist view
+   */
+  async getPatientUploadedPrescriptions(
+    patientId: string,
+    page: number = 1,
+    limit: number = 10,
+  ) {
+    const patientIdObj = new Types.ObjectId(patientId);
+    const skip = (page - 1) * limit;
+
+    try {
+      const [uploads, total] = await Promise.all([
+        this.patientPrescriptionUploadModel
+          .find({
+            patient: patientIdObj,
+            is_deleted: { $ne: true },
+          })
+          .sort({ created_at: -1 })
+          .skip(skip)
+          .limit(limit)
+          .lean(),
+        this.patientPrescriptionUploadModel.countDocuments({
+          patient: patientIdObj,
+          is_deleted: { $ne: true },
+        }),
+      ]);
+
+      // Format uploads for display
+      const formattedUploads = uploads.map((upload: any) => ({
+        id: upload._id,
+        prescription_number: upload.prescription_number,
+        date: upload.created_at,
+        // File info
+        filename: upload.original_filename,
+        file_url: upload.s3_url,
+        file_type: upload.mimetype,
+        upload_source: upload.upload_source,
+        // Status
+        processing_status: upload.processing_status,
+        verification_status: upload.verification_status,
+        // OCR extracted data
+        doctor_name: upload.ocr_data?.doctor_name,
+        clinic_name: upload.ocr_data?.clinic_name,
+        prescription_date: upload.ocr_data?.prescription_date,
+        medications: upload.ocr_data?.medications || [],
+        // Verified medications
+        verified_medications: upload.verified_medications || [],
+        // Validity
+        valid_from: upload.valid_from,
+        valid_until: upload.valid_until,
+        is_expired: upload.is_expired,
+        // Usage
+        usage_count: upload.usage_count || 0,
+        max_usage: upload.max_usage,
+        // Review info
+        review_notes: upload.review_notes,
+        rejection_reason: upload.rejection_reason,
+        reviewed_at: upload.reviewed_at,
+        // Fraud detection (for specialist awareness)
+        fraud_score: upload.fraud_score,
+        has_fraud_flags: upload.fraud_flags?.length > 0,
+      }));
+
+      // Calculate stats
+      const approved = uploads.filter((u: any) => u.verification_status === VerificationStatus.APPROVED).length;
+      const pending = uploads.filter((u: any) =>
+        [VerificationStatus.PENDING, VerificationStatus.TIER1_PROCESSING, VerificationStatus.TIER2_PROCESSING, VerificationStatus.PHARMACIST_REVIEW].includes(u.verification_status)
+      ).length;
+      const rejected = uploads.filter((u: any) => u.verification_status === VerificationStatus.REJECTED).length;
+
+      return {
+        uploads: formattedUploads,
+        stats: {
+          total,
+          approved,
+          pending,
+          rejected,
+        },
+        pagination: {
+          page,
+          limit,
+          total,
+          total_pages: Math.ceil(total / limit),
+        },
+      };
+    } catch (error) {
+      this.logger.error(`Error fetching patient uploaded prescriptions: ${error.message}`);
+      throw new InternalServerErrorException('Failed to fetch patient uploaded prescriptions');
+    }
+  }
+
+  /**
+   * Get patient's pharmacy orders (medication purchases)
+   * For specialist view - includes both prescription and OTC orders
+   */
+  async getPatientPharmacyOrders(
+    patientId: string,
+    page: number = 1,
+    limit: number = 10,
+  ) {
+    const patientIdObj = new Types.ObjectId(patientId);
+    const skip = (page - 1) * limit;
+
+    try {
+      const [orders, total] = await Promise.all([
+        this.pharmacyOrderModel
+          .find({ patient: patientIdObj })
+          .sort({ created_at: -1 })
+          .skip(skip)
+          .limit(limit)
+          .populate('pharmacy', 'name address phone')
+          .lean(),
+        this.pharmacyOrderModel.countDocuments({ patient: patientIdObj }),
+      ]);
+
+      // Format orders for display
+      const formattedOrders = orders.map((order: any) => ({
+        id: order._id,
+        order_number: order.order_number,
+        date: order.created_at,
+        order_type: order.order_type,
+        status: order.status,
+        payment_status: order.payment_status,
+        // Pharmacy info
+        pharmacy: order.pharmacy ? {
+          id: order.pharmacy._id,
+          name: order.pharmacy.name,
+          address: order.pharmacy.address,
+        } : null,
+        // Items
+        items: order.items?.map((item: any) => ({
+          drug_name: item.drug_name,
+          generic_name: item.generic_name,
+          strength: item.strength,
+          dosage_form: item.dosage_form,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          total_price: item.total_price,
+          requires_prescription: item.requires_prescription,
+          dosage_instructions: item.dosage_instructions,
+        })) || [],
+        item_count: order.items?.length || 0,
+        // Pricing
+        subtotal: order.subtotal,
+        discount_amount: order.discount_amount,
+        delivery_fee: order.delivery_fee,
+        total_amount: order.total_amount,
+        currency: 'NGN',
+        // Delivery
+        delivery_method: order.delivery_method,
+        delivery_address: order.delivery_address ? {
+          address: order.delivery_address.address,
+          city: order.delivery_address.city,
+          state: order.delivery_address.state,
+        } : null,
+        estimated_delivery: order.estimated_delivery_date,
+        actual_delivery: order.actual_delivery_date,
+        tracking_number: order.delivery_tracking_number,
+        // Pickup
+        is_pickup: order.is_pickup_order,
+        pickup_code: order.pickup_code,
+        picked_up_at: order.picked_up_at,
+        // Dates
+        paid_at: order.paid_at,
+        shipped_at: order.shipped_at,
+        delivered_at: order.delivered_at || order.actual_delivery_date,
+        // Notes
+        patient_notes: order.patient_notes,
+        special_instructions: order.special_instructions,
+      }));
+
+      // Calculate stats
+      const prescriptionOrders = orders.filter((o: any) =>
+        o.order_type === PharmacyOrderType.PRESCRIPTION || o.order_type === PharmacyOrderType.MIXED
+      ).length;
+      const otcOrders = orders.filter((o: any) => o.order_type === PharmacyOrderType.OTC).length;
+      const completed = orders.filter((o: any) =>
+        [PharmacyOrderStatus.DELIVERED, PharmacyOrderStatus.COMPLETED].includes(o.status)
+      ).length;
+      const active = orders.filter((o: any) =>
+        [PharmacyOrderStatus.PENDING, PharmacyOrderStatus.CONFIRMED, PharmacyOrderStatus.PROCESSING,
+         PharmacyOrderStatus.READY_FOR_PICKUP, PharmacyOrderStatus.OUT_FOR_DELIVERY].includes(o.status)
+      ).length;
+
+      return {
+        orders: formattedOrders,
+        stats: {
+          total,
+          prescription_orders: prescriptionOrders,
+          otc_orders: otcOrders,
+          completed,
+          active,
+        },
+        pagination: {
+          page,
+          limit,
+          total,
+          total_pages: Math.ceil(total / limit),
+        },
+      };
+    } catch (error) {
+      this.logger.error(`Error fetching patient pharmacy orders: ${error.message}`);
+      throw new InternalServerErrorException('Failed to fetch patient pharmacy orders');
+    }
+  }
+
+  /**
+   * Get appointment statistics for admin dashboard
+   */
+  async getAppointmentStats() {
+    const now = new Date();
+    const startOfToday = moment().startOf('day').toDate();
+    const endOfToday = moment().endOf('day').toDate();
+    const startOfWeek = moment().startOf('week').toDate();
+    const endOfWeek = moment().endOf('week').toDate();
+
+    try {
+      const [
+        liveNow,
+        todayCount,
+        thisWeekCount,
+        totalCount,
+        cancelledThisMonth,
+        totalThisMonth,
+      ] = await Promise.all([
+        // Live appointments (ONGOING status)
+        countDocuments(this.appointmentModel, {
+          status: AppointmentStatus.ONGOING,
+        }),
+        // Today's appointments
+        countDocuments(this.appointmentModel, {
+          start_time: { $gte: startOfToday, $lte: endOfToday },
+        }),
+        // This week's appointments
+        countDocuments(this.appointmentModel, {
+          start_time: { $gte: startOfWeek, $lte: endOfWeek },
+        }),
+        // Total appointments
+        countDocuments(this.appointmentModel, {}),
+        // Cancelled this month
+        countDocuments(this.appointmentModel, {
+          status: AppointmentStatus.CANCELLED,
+          created_at: {
+            $gte: moment().startOf('month').toDate(),
+            $lte: moment().endOf('month').toDate(),
+          },
+        }),
+        // Total this month
+        countDocuments(this.appointmentModel, {
+          created_at: {
+            $gte: moment().startOf('month').toDate(),
+            $lte: moment().endOf('month').toDate(),
+          },
+        }),
+      ]);
+
+      // Calculate cancellation rate
+      const cancellationRate = totalThisMonth > 0
+        ? ((cancelledThisMonth / totalThisMonth) * 100).toFixed(1)
+        : '0';
+
+      return {
+        live_now: liveNow,
+        today: todayCount,
+        this_week: thisWeekCount,
+        total: totalCount,
+        cancellation_rate: parseFloat(cancellationRate),
+        cancelled_this_month: cancelledThisMonth,
+        total_this_month: totalThisMonth,
+      };
+    } catch (error) {
+      this.logger.error(`Error fetching appointment stats: ${error.message}`);
+      throw new InternalServerErrorException('Failed to fetch appointment statistics');
+    }
+  }
+
+  /**
+   * Get health scores for a patient (for patient entry page in booking flow)
+   */
+  async getPatientHealthScores(patientId: string) {
+    try {
+      const [healthCheckups, advancedScores] = await Promise.all([
+        this.healthCheckupService.getHealthCheckupHistory(patientId, 1, 10),
+        this.advancedHealthScoreService.getAssessmentHistory(patientId, 1, 1),
+      ]);
+
+      const latestAdvancedScore = advancedScores.assessments?.[0] || null;
+
+      return {
+        has_checkups: (healthCheckups.pagination?.total_count || 0) > 0,
+        checkup_count: healthCheckups.pagination?.total_count || 0,
+        has_basic_score: false, // Basic score is calculated client-side
+        basic_score: null,
+        has_advanced_score: latestAdvancedScore !== null,
+        advanced_score: latestAdvancedScore?.report?.overall_score || null,
+      };
+    } catch (error) {
+      this.logger.error(`Error fetching patient health scores: ${error.message}`);
+      return {
+        has_checkups: false,
+        checkup_count: 0,
+        has_basic_score: false,
+        basic_score: null,
+        has_advanced_score: false,
+        advanced_score: null,
+      };
+    }
+  }
+
+  // Helper methods for health profile
+
+  private extractSymptoms(checkup: any): Array<{ name: string; duration?: string; source?: string }> {
+    const evidence = checkup?.request?.evidence || [];
+    return evidence
+      .filter((e: any) => e.choice_id === 'present')
+      .slice(0, 8)
+      .map((e: any) => {
+        // Try to get the symptom name from various possible fields
+        let name = e.common_name || e.name;
+
+        // If no name, try to format the ID into readable text
+        if (!name && e.id) {
+          // Convert IDs like "s_21" or "p_17" to more readable format
+          // Or try to extract meaningful text from underscore-separated IDs
+          name = e.id
+            .replace(/^[sp]_\d+$/, '') // Remove pure ID patterns like s_21, p_17
+            .replace(/_/g, ' ')
+            .trim();
+        }
+
+        // If still no name, mark as unknown
+        if (!name) {
+          name = 'Reported symptom';
+        }
+
+        // Format duration if available
+        let duration: string | undefined;
+        if (e.duration) {
+          if (typeof e.duration === 'object' && e.duration.value && e.duration.unit) {
+            duration = `${e.duration.value} ${e.duration.unit}${e.duration.value > 1 ? 's' : ''}`;
+          } else if (typeof e.duration === 'string') {
+            duration = e.duration;
+          }
+        }
+
+        return {
+          name,
+          duration,
+          source: e.source || undefined,
+        };
+      })
+      .filter((s: any) => s.name && s.name !== 'Reported symptom' || true); // Keep all but prioritize named ones
+  }
+
+  private extractConditions(checkup: any): Array<{ name: string; probability: number }> {
+    const conditions = checkup?.response?.data?.conditions || [];
+    return conditions.slice(0, 3).map((c: any) => ({
+      name: c.common_name || c.name || 'Unknown condition',
+      probability: Math.round((c.probability || 0) * 100),
+    }));
+  }
+
+  private calculateAge(dateOfBirth: Date | string): number {
+    return moment().diff(moment(dateOfBirth), 'years');
+  }
+
+  private formatVitals(vitals: any): any {
+    if (!vitals || Object.keys(vitals).length === 0) {
+      return null;
+    }
+
+    const formatted: any = {};
+
+    if (vitals.blood_pressure) {
+      formatted.blood_pressure = {
+        systolic: vitals.blood_pressure.systolic,
+        diastolic: vitals.blood_pressure.diastolic,
+        unit: 'mmHg',
+        updated_at: vitals.blood_pressure.updatedAt,
+      };
+    }
+
+    if (vitals.pulse_rate) {
+      formatted.heart_rate = {
+        value: vitals.pulse_rate.rate,
+        unit: 'bpm',
+        updated_at: vitals.pulse_rate.updatedAt,
+      };
+    }
+
+    if (vitals.body_temp) {
+      formatted.temperature = {
+        value: vitals.body_temp.temp,
+        unit: vitals.body_temp.unit || '°C',
+        updated_at: vitals.body_temp.updatedAt,
+      };
+    }
+
+    if (vitals.body_weight) {
+      formatted.weight = {
+        value: vitals.body_weight.weight,
+        unit: vitals.body_weight.unit || 'kg',
+        updated_at: vitals.body_weight.updatedAt,
+      };
+    }
+
+    if (vitals.blood_sugar_level) {
+      formatted.blood_sugar = {
+        value: vitals.blood_sugar_level.level,
+        unit: 'mg/dL',
+        updated_at: vitals.blood_sugar_level.updatedAt,
+      };
+    }
+
+    return Object.keys(formatted).length > 0 ? formatted : null;
+  }
+
+  /**
+   * Get comprehensive appointment details for specialist view
+   * Includes patient info with presigned photo, vitals, health checkups, scores, and previous appointments
+   */
+  async getAppointmentDetailsForSpecialist(appointmentId: string, specialistId: Types.ObjectId) {
+    try {
+      const appointmentIdObj = new Types.ObjectId(appointmentId);
+
+      // Get appointment with populated data (include basic_health_score from User)
+      const appointment = await this.appointmentModel
+        .findOne({ _id: appointmentIdObj })
+        .populate('patient', 'profile email full_name pre_existing_conditions basic_health_score')
+        .populate('specialist', 'profile email')
+        .exec();
+
+      if (!appointment) {
+        throw new NotFoundException('Appointment not found');
+      }
+
+      const patientId = appointment.patient._id.toString();
+      const patientProfile = (appointment.patient as any).profile;
+
+      // Fetch all data in parallel
+      const [vitals, healthCheckups, advancedScores, previousAppointments] = await Promise.all([
+        this.vitalsService.findUserVitals(appointment.patient._id as any),
+        this.healthCheckupService.getHealthCheckupHistory(patientId, 1, 10),
+        this.advancedHealthScoreService.getAssessmentHistory(patientId, 1, 1),
+        this.appointmentModel.find({
+          patient: appointment.patient._id,
+          specialist: specialistId,
+          _id: { $ne: appointmentIdObj },
+          status: 'COMPLETED',
+        }).sort({ start_time: -1 }).limit(5).exec(),
+      ]);
+
+      // Presign profile photo if it's from S3
+      let presignedProfilePhoto = patientProfile?.profile_photo || patientProfile?.profile_image || null;
+      if (presignedProfilePhoto && (presignedProfilePhoto.includes('amazonaws.com') || presignedProfilePhoto.includes('s3.'))) {
+        try {
+          presignedProfilePhoto = await this.fileUploadHelper.getPresignedUrl(presignedProfilePhoto, 3600);
+        } catch (e) {
+          this.logger.error(`Error presigning profile photo: ${e.message}`);
+        }
+      }
+
+      // Get basic health score from stored value in User document (single source of truth)
+      // This is updated automatically when vitals, profile, or health checkups change
+      const storedBasicScore = (appointment.patient as any).basic_health_score;
+      const basicHealthScore = storedBasicScore?.score ?? null;
+
+      // Format vitals for frontend
+      const formattedVitals = this.formatVitalsForFrontend(vitals);
+
+      // Get latest advanced score
+      const latestAdvancedScore = advancedScores.assessments?.[0] || null;
+
+      // Format health checkups - filter out incomplete ones (no conditions/diagnosis)
+      const formattedCheckups = healthCheckups.checkups
+        ?.filter((checkup: any) => {
+          // Only include checkups that have conditions in the response
+          const conditions = checkup.response?.data?.conditions;
+          return conditions && conditions.length > 0;
+        })
+        ?.map((checkup: any) => ({
+          _id: checkup._id,
+          created_at: checkup.created_at,
+          health_check_for: checkup.health_check_for,
+          request: checkup.request,
+          response: checkup.response,
+          symptoms: this.extractSymptoms(checkup),
+          conditions: this.extractConditions(checkup),
+          triage_level: checkup.response?.data?.triage_level,
+          has_emergency_evidence: checkup.response?.data?.has_emergency_evidence,
+        })) || [];
+
+      return {
+        appointment: {
+          _id: appointment._id,
+          start_time: appointment.start_time,
+          status: appointment.status,
+          meeting_channel: appointment.meeting_channel,
+          meeting_type: appointment.appointment_type || 'Video and audio',
+          join_url: appointment.join_url,
+          start_url: appointment.start_url,
+          patient_notes: appointment.patient_notes,
+          notes: appointment.notes,
+        },
+        patient: {
+          _id: appointment.patient._id,
+          full_name: (appointment.patient as any).full_name,
+          first_name: patientProfile?.first_name || '',
+          last_name: patientProfile?.last_name || '',
+          profile_image: presignedProfilePhoto,
+          gender: patientProfile?.gender || 'Unknown',
+          date_of_birth: patientProfile?.date_of_birth,
+          age: patientProfile?.date_of_birth ? this.calculateAge(patientProfile.date_of_birth) : null,
+          height: patientProfile?.basic_health_info?.height || null,
+          weight: patientProfile?.basic_health_info?.weight || null,
+          weight_status: patientProfile?.health_risk_factors?.weight_status || null,
+          is_smoker: patientProfile?.health_risk_factors?.is_smoker || 'Unknown',
+          medical_history: (appointment.patient as any).pre_existing_conditions || [],
+        },
+        health_scores: {
+          basic: basicHealthScore,
+          basic_status: storedBasicScore?.status || null,
+          basic_breakdown: storedBasicScore?.breakdown || null,
+          basic_updated_at: storedBasicScore?.updated_at || null,
+          advanced: latestAdvancedScore?.report?.overall_score || null,
+          advanced_status: latestAdvancedScore?.report?.overall_status || null,
+          advanced_details: latestAdvancedScore?.report ? {
+            ...latestAdvancedScore.report,
+            created_at: latestAdvancedScore.created_at,
+            _id: latestAdvancedScore._id,
+          } : null,
+        },
+        vitals: formattedVitals,
+        health_checkups: formattedCheckups,
+        checkup_count: formattedCheckups.length,
+        previous_appointments: previousAppointments.map(apt => ({
+          _id: apt._id,
+          start_time: apt.start_time,
+          status: apt.status,
+          notes: apt.notes,
+          call_duration: apt.call_duration,
+        })),
+        has_health_data: formattedCheckups.length > 0 || basicHealthScore !== null || latestAdvancedScore !== null,
+      };
+    } catch (error) {
+      this.logger.error(`Error fetching appointment details: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Calculate basic health score from vitals, profile, and health checkups
+   * This matches the client-side calculation logic exactly
+   */
+  private calculateBasicHealthScore(vitals: any, profile: any, healthCheckups: any[] = []): number | null {
+    // Helper to get most recent vital by updatedAt
+    const getMostRecent = (arr: any[]) => {
+      if (!arr || arr.length === 0) return null;
+      return arr.reduce((a, b) => {
+        const dateA = new Date(a.updatedAt || 0).getTime();
+        const dateB = new Date(b.updatedAt || 0).getTime();
+        return dateA > dateB ? a : b;
+      });
+    };
+
+    // Check data completeness (need at least 2 items to show a score)
+    const hasVitals = vitals && (
+      vitals.blood_pressure?.length > 0 ||
+      vitals.body_temp?.length > 0 ||
+      vitals.pulse_rate?.length > 0 ||
+      vitals.blood_sugar_level?.length > 0
+    );
+    const hasHeightWeight = profile?.basic_health_info?.height?.value && profile?.basic_health_info?.weight?.value;
+    const hasCheckups = healthCheckups && healthCheckups.length > 0;
+
+    let completedItems = 0;
+    if (hasHeightWeight) completedItems++;
+    if (hasVitals) completedItems++;
+    if (hasCheckups) completedItems++;
+
+    // Need at least 2 items to calculate score (matching frontend logic)
+    if (completedItems < 2) {
+      return null;
+    }
+
+    let score = 100;
+
+    // 1. BMI scoring (matching frontend: -15 severe, -10 obese, -5 overweight, -8 underweight)
+    const weight = profile?.basic_health_info?.weight?.value;
+    const height = profile?.basic_health_info?.height?.value;
+    if (weight && height) {
+      const heightM = height > 3 ? height / 100 : height;
+      const bmi = weight / (heightM * heightM);
+      if (bmi >= 35) {
+        score -= 15; // Severe obesity
+      } else if (bmi >= 30) {
+        score -= 10; // Obesity
+      } else if (bmi >= 25) {
+        score -= 5; // Overweight
+      } else if (bmi < 18.5) {
+        score -= 8; // Underweight
+      }
+    }
+
+    // 2. Blood Pressure scoring (matching frontend thresholds)
+    if (vitals?.blood_pressure?.length > 0) {
+      const bp = getMostRecent(vitals.blood_pressure);
+      const bpValue = bp?.value || '';
+      const parts = bpValue.split('/');
+      if (parts.length === 2) {
+        const systolic = parseInt(parts[0]);
+        const diastolic = parseInt(parts[1]);
+        if (!isNaN(systolic) && !isNaN(diastolic)) {
+          if (systolic >= 180 || diastolic >= 120) {
+            score -= 15; // Hypertensive crisis
+          } else if (systolic >= 140 || diastolic >= 90) {
+            score -= 12; // High Stage 2
+          } else if (systolic >= 130 || diastolic > 80) {
+            score -= 7; // High Stage 1
+          } else if (systolic >= 120 || diastolic === 80) {
+            score -= 3; // Elevated
+          } else if (systolic < 90 || diastolic < 60) {
+            score -= 5; // Low
+          }
+        }
+      }
+    }
+
+    // 3. Pulse Rate scoring (matching frontend)
+    if (vitals?.pulse_rate?.length > 0) {
+      const pr = getMostRecent(vitals.pulse_rate);
+      const pulse = pr?.rate || pr?.value;
+      if (pulse) {
+        const rate = parseInt(pulse);
+        if (!isNaN(rate)) {
+          if (rate < 40 || rate > 120) {
+            score -= 10; // Severe
+          } else if (rate < 50 || rate > 110) {
+            score -= 7; // Moderate
+          } else if (rate < 60 || rate > 100) {
+            score -= 3; // Mild
+          }
+        }
+      }
+    }
+
+    // 4. Body Temperature scoring (matching frontend)
+    if (vitals?.body_temp?.length > 0) {
+      const bt = getMostRecent(vitals.body_temp);
+      let tempC = bt?.temp || bt?.value;
+      if (tempC) {
+        tempC = parseFloat(tempC);
+        // Convert Fahrenheit to Celsius if needed (assume F if > 50)
+        if (tempC > 50) {
+          tempC = (tempC - 32) * 5 / 9;
+        }
+        if (!isNaN(tempC)) {
+          if (tempC < 35 || tempC > 39) {
+            score -= 10; // Severe
+          } else if (tempC > 38) {
+            score -= 7; // Fever
+          } else if (tempC > 37.2) {
+            score -= 3; // Low-grade fever
+          } else if (tempC < 36.1) {
+            score -= 2; // Slightly low
+          }
+        }
+      }
+    }
+
+    // 5. Blood Sugar scoring (matching frontend)
+    if (vitals?.blood_sugar_level?.length > 0) {
+      const bs = getMostRecent(vitals.blood_sugar_level);
+      let sugarMgDl = bs?.level || bs?.value;
+      if (sugarMgDl) {
+        sugarMgDl = parseFloat(sugarMgDl);
+        // Convert mmol/L to mg/dL if value is too low (mmol/L is typically < 30)
+        if (sugarMgDl < 30) {
+          sugarMgDl = sugarMgDl * 18;
+        }
+        if (!isNaN(sugarMgDl)) {
+          if (sugarMgDl < 54 || sugarMgDl > 200) {
+            score -= 10; // Severe
+          } else if (sugarMgDl < 70 || sugarMgDl > 125) {
+            score -= 7; // High/Low
+          } else if (sugarMgDl > 100) {
+            score -= 4; // Pre-diabetic
+          }
+        }
+      }
+    }
+
+    // 6. Triage Score from Health Checkups (matching frontend logic)
+    if (healthCheckups && healthCheckups.length > 0) {
+      const recentCheckup = healthCheckups.find(c =>
+        c.response?.data?.triage_level || c.triage_level
+      );
+      if (recentCheckup) {
+        const triageLevel = recentCheckup.response?.data?.triage_level || recentCheckup.triage_level;
+        const checkupDate = new Date(recentCheckup.created_at || recentCheckup.createdAt);
+        const daysSinceCheckup = (Date.now() - checkupDate.getTime()) / (1000 * 60 * 60 * 24);
+
+        // Recovery detection: self_care = no penalty
+        // If checkup is older than 14 days, assume recovered
+        if (triageLevel !== 'self_care' && daysSinceCheckup <= 14) {
+          if (triageLevel === 'emergency' || triageLevel === 'emergency_ambulance') {
+            score -= 20;
+          } else if (triageLevel === 'consultation_24') {
+            score -= 12;
+          } else if (triageLevel === 'consultation') {
+            score -= 7;
+          } else {
+            score -= 3;
+          }
+        }
+      }
+    }
+
+    // 7. Risk Factors scoring (matching frontend)
+    const healthRiskFactors = profile?.health_risk_factors || {};
+
+    // Smoking
+    if (healthRiskFactors.is_smoker && healthRiskFactors.is_smoker !== 'No') {
+      score -= 5;
+    }
+
+    // Recent injuries
+    if (healthRiskFactors.has_recent_injuries && healthRiskFactors.has_recent_injuries !== 'No') {
+      score -= 3;
+    }
+
+    // Age-based risk
+    if (profile?.date_of_birth) {
+      const birthDate = new Date(profile.date_of_birth);
+      const age = Math.floor((Date.now() - birthDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
+      if (age >= 65) {
+        score -= 3;
+      } else if (age >= 45) {
+        score -= 1;
+      }
+    }
+
+    // Pre-existing conditions
+    const conditions = profile?.pre_existing_conditions || [];
+    if (conditions.length > 0) {
+      const conditionPoints = Math.min(conditions.length * 2, 6); // Max -6 points
+      score -= conditionPoints;
+    }
+
+    // 8. Data Completeness Bonus (matching frontend)
+    let bonusPoints = 0;
+    if (hasVitals) bonusPoints += 2;
+    if (hasCheckups) {
+      const recentCheckup = healthCheckups[0];
+      const checkupDate = new Date(recentCheckup?.created_at || recentCheckup?.createdAt);
+      const daysSinceCheckup = (Date.now() - checkupDate.getTime()) / (1000 * 60 * 60 * 24);
+      if (daysSinceCheckup <= 90) {
+        bonusPoints += 2;
+      }
+    }
+    if (hasHeightWeight) bonusPoints += 1;
+    score += bonusPoints;
+
+    // Ensure score is between 0 and 100
+    return Math.max(0, Math.min(100, Math.round(score)));
+  }
+
+  /**
+   * Format vitals data for frontend consumption (array format)
+   * Sorts each vital type by updatedAt descending (most recent first)
+   */
+  private formatVitalsForFrontend(vitals: any): any {
+    if (!vitals || Object.keys(vitals).length === 0) {
+      return {};
+    }
+
+    const formatted: any = {};
+
+    // Helper to sort by updatedAt descending (most recent first)
+    const sortByDateDesc = (arr: any[]) => {
+      return [...arr].sort((a, b) => {
+        const dateA = new Date(a.updatedAt || 0).getTime();
+        const dateB = new Date(b.updatedAt || 0).getTime();
+        return dateB - dateA;
+      });
+    };
+
+    if (vitals.blood_pressure?.length > 0) {
+      formatted.blood_pressure = sortByDateDesc(vitals.blood_pressure).map((bp: any) => ({
+        value: bp.systolic && bp.diastolic ? `${bp.systolic}/${bp.diastolic}` : bp.value,
+        unit: 'mmHg',
+        updatedAt: bp.updatedAt,
+      }));
+    }
+
+    if (vitals.pulse_rate?.length > 0) {
+      formatted.pulse_rate = sortByDateDesc(vitals.pulse_rate).map((pr: any) => ({
+        value: pr.rate || pr.value,
+        unit: 'bpm',
+        updatedAt: pr.updatedAt,
+      }));
+    }
+
+    if (vitals.blood_sugar_level?.length > 0) {
+      formatted.blood_sugar_level = sortByDateDesc(vitals.blood_sugar_level).map((bs: any) => ({
+        value: bs.level || bs.value,
+        unit: 'mg/dL',
+        updatedAt: bs.updatedAt,
+      }));
+    }
+
+    if (vitals.body_temp?.length > 0) {
+      formatted.body_temp = sortByDateDesc(vitals.body_temp).map((bt: any) => ({
+        value: bt.temp || bt.value,
+        unit: bt.unit || '°C',
+        updatedAt: bt.updatedAt,
+      }));
+    }
+
+    if (vitals.body_weight?.length > 0) {
+      formatted.body_weight = sortByDateDesc(vitals.body_weight).map((bw: any) => ({
+        value: bw.value || bw.weight,
+        unit: bw.unit || 'kg',
+        updatedAt: bw.updatedAt,
+      }));
+    }
+
+    return formatted;
   }
 }

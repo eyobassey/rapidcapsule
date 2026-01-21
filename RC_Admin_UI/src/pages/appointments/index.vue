@@ -5,7 +5,7 @@ import TableDownload from '@/components/Table/TableDownload.vue'
 import TableIndex from '@/components/Table/TableIndex.vue'
 import TableSearch from '@/components/Table/TableSearch.vue'
 import { useAppointmentStore } from '@/stores/appointment'
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import moment from 'moment'
 import { useRouter } from 'vue-router'
 
@@ -31,6 +31,57 @@ const cancelledTableElementId = 'rc-cancelled-appointment-table'
 const completedTableElementId = 'rc-completed-appointment-table'
 const currentTableElementId = ref(ongoingTableElementId)
 const currentTableDownloadName = ref('RC-upcoming-appointments-data')
+
+// Stats for hero banner
+const stats = ref({
+  liveNow: 0,
+  today: 0,
+  thisWeek: 0,
+  total: 0,
+  cancellationRate: 0,
+})
+const statsLoading = ref(true)
+
+// Tab counts
+const tabCounts = ref({
+  ONGOING: 0,
+  UPCOMING: 0,
+  COMPLETED: 0,
+  CANCELLED: 0,
+  MISSED: 0,
+})
+
+// Fetch stats for hero banner
+const fetchStats = async () => {
+  statsLoading.value = true
+  try {
+    const response = await appointmentStore.fetchAppointmentStats?.()
+    if (response?.data) {
+      stats.value = {
+        liveNow: response.data.live_now || 0,
+        today: response.data.today || 0,
+        thisWeek: response.data.this_week || 0,
+        total: response.data.total || 0,
+        cancellationRate: response.data.cancellation_rate || 0,
+      }
+      tabCounts.value = {
+        ONGOING: response.data.ongoing_count || 0,
+        UPCOMING: response.data.upcoming_count || 0,
+        COMPLETED: response.data.completed_count || 0,
+        CANCELLED: response.data.cancelled_count || 0,
+        MISSED: response.data.missed_count || 0,
+      }
+    }
+  } catch (error) {
+    console.error('Error fetching stats:', error)
+  } finally {
+    statsLoading.value = false
+  }
+}
+
+onMounted(() => {
+  fetchStats()
+})
 
 const mediumCheckers = ref([
   {
@@ -330,82 +381,113 @@ const goToSpecialistDetail = (specialistId) => {
 
 
 <template>
-  <section>
+  <section class="appointments-page">
+    <!-- Hero Banner -->
+    <div class="hero-banner">
+      <div class="hero-content">
+        <div class="hero-text">
+          <h1 class="hero-title">Appointments Overview</h1>
+          <p class="hero-subtitle">Monitor and manage all platform consultations</p>
+        </div>
+        <div class="hero-stats">
+          <div class="stat-card live">
+            <div class="stat-icon">
+              <VIcon icon="bx-broadcast" size="24" />
+            </div>
+            <div class="stat-info">
+              <span class="stat-value">{{ stats.liveNow }}</span>
+              <span class="stat-label">Live Now</span>
+            </div>
+            <div v-if="stats.liveNow > 0" class="live-indicator"></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">
+              <VIcon icon="bx-calendar-check" size="24" />
+            </div>
+            <div class="stat-info">
+              <span class="stat-value">{{ stats.today }}</span>
+              <span class="stat-label">Today</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">
+              <VIcon icon="bx-calendar-week" size="24" />
+            </div>
+            <div class="stat-info">
+              <span class="stat-value">{{ stats.thisWeek }}</span>
+              <span class="stat-label">This Week</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">
+              <VIcon icon="bx-line-chart" size="24" />
+            </div>
+            <div class="stat-info">
+              <span class="stat-value">{{ stats.total }}</span>
+              <span class="stat-label">Total</span>
+            </div>
+          </div>
+          <div class="stat-card cancellation">
+            <div class="stat-icon">
+              <VIcon icon="bx-x-circle" size="24" />
+            </div>
+            <div class="stat-info">
+              <span class="stat-value">{{ stats.cancellationRate }}%</span>
+              <span class="stat-label">Cancellation Rate</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <VRow>
       <VCol cols="12">
-        <h2
-          class="head-title text-h6 mbs-20"
-        >
-          Appointments
-        </h2>
         <VCardText
           class="d-flex flex-wrap gap-4 mbs-10 filter-section-card"
         >
-          <!-- 👉 simple filter -->
-
+          <!-- Tabs and Filters -->
           <div class="d-flex w-100 filter-section">
             <div class="mr-auto filter-section-simple-filter simple-filter-container">
-              <SimpleFilter
-                v-model:selectabledTab="filteredTab" 
-                :tabs="filterTabs"
-                :default-tab="filteredTab"
-              />
+              <div class="modern-tabs">
+                <button
+                  v-for="tab in filterTabs"
+                  :key="tab.value"
+                  :class="['tab-btn', { active: filteredTab.value === tab.value }]"
+                  @click="filteredTab = tab"
+                >
+                  <span class="tab-label">{{ tab.label }}</span>
+                  <span v-if="tabCounts[tab.value]" class="tab-count">{{ tabCounts[tab.value] }}</span>
+                </button>
+              </div>
             </div>
             <div>
-              <div
-                class="search-adv-filter-cover"
-              >
-                <!-- 👉 Search  -->
-                <TableSearch 
-                  v-model:searchQuery="searchQuery" 
+              <div class="search-adv-filter-cover">
+                <!-- Search  -->
+                <TableSearch
+                  v-model:searchQuery="searchQuery"
                 />
 
-                <!-- 👉 Download button  -->
+                <!-- Download button  -->
                 <TableDownload
                   :items="downloadOptions"
                   :item-element-id="currentTableElementId"
                   :item-name="currentTableDownloadName"
                 />
-                
-                <!-- 👉 Advance fliter button -->
+
+                <!-- Advance filter button -->
                 <VBtn
                   color="#EAEAEA"
                   class="table-filter-btn"
                   @click="isTableAdvancedFilterVisible = true"
                 >
-                  <svg
-                    width="15"
-                    height="15"
-                    viewBox="0 0 18 18"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      fill-rule="evenodd"
-                      clip-rule="evenodd"
-                      d="M2.5 13C1.11929 13 0 14.1193 0 15.5C0 16.8807 1.11929 18 2.5 18C3.70948 18 4.71836 17.1411 4.94999 16H17.4615C17.7589 16 18 15.7761 18 15.5C18 15.2239 17.7589 15 17.4615 15H4.94999C4.71836 13.8589 3.70948 13 2.5 13ZM4 15.5C4 14.6715 3.32843 14 2.5 14C1.67157 14 1 14.6715 1 15.5C1 16.3285 1.67157 17 2.5 17C3.32843 17 4 16.3285 4 15.5Z"
-                      fill="#151515"
-                    />
-                    <path
-                      fill-rule="evenodd"
-                      clip-rule="evenodd"
-                      d="M13.05 10H0.538462C0.241077 10 0 9.77614 0 9.5C0 9.22386 0.241077 9 0.538462 9H13.05C13.2816 7.85886 14.2905 7 15.5 7C16.8807 7 18 8.11926 18 9.5C18 10.8807 16.8807 12 15.5 12C14.2905 12 13.2816 11.1411 13.05 10ZM14 9.5C14 10.3285 14.6715 11 15.5 11C16.3285 11 17 10.3285 17 9.5C17 8.67154 16.3285 8 15.5 8C14.6715 8 14 8.67154 14 9.5Z"
-                      fill="#151515"
-                    />
-                    <path
-                      fill-rule="evenodd"
-                      clip-rule="evenodd"
-                      d="M6.05001 3H0.5C0.223858 3 0 2.77614 0 2.5C0 2.22386 0.223858 2 0.5 2H6.05001C6.28164 0.858883 7.29049 0 8.5 0C9.70951 0 10.7184 0.858883 10.95 2H17.4286C17.7442 2 18 2.22386 18 2.5C18 2.77614 17.7442 3 17.4286 3H10.95C10.7184 4.14112 9.70951 5 8.5 5C7.29049 5 6.28164 4.14112 6.05001 3ZM10 2.5C10 1.67157 9.32845 1 8.5 1C7.67155 1 7 1.67157 7 2.5C7 3.32843 7.67155 4 8.5 4C9.32845 4 10 3.32843 10 2.5Z"
-                      fill="#151515"
-                    />
-                  </svg>
+                  <VIcon icon="bx-filter-alt" size="18" />
                   &nbsp;
-                  <span class="adv-filter-btn-text">Advanced Filter</span>
+                  <span class="adv-filter-btn-text">Filters</span>
                 </VBtn>
               </div>
             </div>
           </div>
-          
+
           <VSpacer />
         </VCardText>
 
@@ -783,16 +865,365 @@ const goToSpecialistDetail = (specialistId) => {
 </template>
 
 <style scoped>
+.appointments-page {
+  padding: 0;
+}
+
+/* Hero Banner */
+.hero-banner {
+  background: linear-gradient(135deg, #0EAEC4 0%, #0891b2 50%, #0e7490 100%);
+  border-radius: 24px;
+  padding: 32px 40px;
+  margin-bottom: 24px;
+  box-shadow: 0 10px 40px rgba(14, 174, 196, 0.3);
+}
+
+.hero-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 32px;
+}
+
+.hero-text {
+  flex-shrink: 0;
+}
+
+.hero-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: white;
+  margin: 0 0 8px 0;
+}
+
+.hero-subtitle {
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.85);
+  margin: 0;
+}
+
+.hero-stats {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.stat-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  padding: 16px 20px;
+  border-radius: 12px;
+  min-width: 140px;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.stat-card:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+.stat-card.live {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.stat-card.cancellation .stat-value {
+  color: #fbbf24;
+}
+
+.live-indicator {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 8px;
+  height: 8px;
+  background: #ef4444;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.2);
+  }
+}
+
+.stat-icon {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  color: white;
+}
+
+.stat-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stat-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: white;
+  line-height: 1.2;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* Modern Tabs */
+.modern-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border: none;
+  border-radius: 10px;
+  background: #f5f5f5;
+  color: #666;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tab-btn:hover {
+  background: #e8e8e8;
+}
+
+.tab-btn.active {
+  background: linear-gradient(135deg, #0EAEC4 0%, #0891b2 100%);
+  color: white;
+}
+
+.tab-btn.active .tab-count {
+  background: rgba(255, 255, 255, 0.25);
+  color: white;
+}
+
+.tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 22px;
+  padding: 0 8px;
+  background: rgba(14, 174, 196, 0.1);
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #0EAEC4;
+}
+
+/* Enhanced Table Links */
 .patient-name-link,
 .specialist-name-link {
   cursor: pointer;
   transition: all 0.2s;
+  color: #333;
+  font-weight: 500;
 }
 
 .patient-name-link:hover,
 .specialist-name-link:hover {
-  color: #1976d2 !important;
+  color: #0EAEC4 !important;
   text-decoration: underline;
+}
+
+/* Health Data Badge */
+.health-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.health-badge.has-data {
+  background: rgba(16, 185, 129, 0.1);
+  color: #059669;
+}
+
+.health-badge.no-data {
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+}
+
+/* Status Badges */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.status-badge.ongoing {
+  background: rgba(14, 174, 196, 0.1);
+  color: #0EAEC4;
+}
+
+.status-badge.upcoming {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+}
+
+.status-badge.completed {
+  background: rgba(16, 185, 129, 0.1);
+  color: #059669;
+}
+
+.status-badge.cancelled {
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+}
+
+.status-badge.missed {
+  background: rgba(249, 115, 22, 0.1);
+  color: #ea580c;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .hero-content {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .hero-stats {
+    width: 100%;
+  }
+
+  .stat-card {
+    flex: 1;
+    min-width: calc(50% - 8px);
+  }
+}
+
+@media (max-width: 768px) {
+  .hero-banner {
+    padding: 24px 20px;
+    border-radius: 16px;
+    margin: 0 -16px 24px;
+    width: calc(100% + 32px);
+  }
+
+  .hero-title {
+    font-size: 22px;
+  }
+
+  .hero-stats {
+    gap: 10px;
+  }
+
+  .stat-card {
+    min-width: calc(50% - 5px);
+    padding: 12px 14px;
+  }
+
+  .stat-value {
+    font-size: 18px;
+  }
+
+  .modern-tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 8px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+
+  .tab-btn {
+    padding: 8px 14px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero-banner {
+    padding: 20px 16px;
+    border-radius: 12px;
+  }
+
+  .hero-title {
+    font-size: 18px;
+  }
+
+  .hero-subtitle {
+    font-size: 13px;
+  }
+
+  .hero-stats {
+    gap: 8px;
+  }
+
+  .stat-card {
+    min-width: calc(50% - 4px);
+    padding: 10px 12px;
+  }
+
+  .stat-value {
+    font-size: 16px;
+  }
+
+  .stat-label {
+    font-size: 10px;
+  }
+
+  .stat-icon-wrap {
+    width: 28px;
+    height: 28px;
+  }
+
+  .stat-icon-wrap .v-icon {
+    font-size: 14px !important;
+  }
+
+  .modern-tabs {
+    gap: 6px;
+    margin-bottom: 16px;
+  }
+
+  .tab-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+    border-radius: 16px;
+  }
+
+  .tab-count {
+    padding: 2px 6px;
+    font-size: 10px;
+  }
 }
 </style>
 

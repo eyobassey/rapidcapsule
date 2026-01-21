@@ -117,6 +117,16 @@ export class AdvancedHealthScoreController {
   }
 
   /**
+   * Get a specific assessment report (for specialists viewing patient data)
+   * GET /advanced-health-score/view/:id
+   */
+  @Get('view/:id')
+  async getAssessmentForSpecialist(@Param('id') id: string) {
+    const result = await this.advancedHealthScoreService.getAssessmentByIdForSpecialist(id);
+    return sendSuccessResponse('Assessment retrieved', result);
+  }
+
+  /**
    * Get a specific assessment report
    * GET /advanced-health-score/:id
    */

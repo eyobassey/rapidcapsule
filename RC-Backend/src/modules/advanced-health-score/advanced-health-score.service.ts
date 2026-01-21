@@ -628,6 +628,13 @@ Important:
           'report.overall_status': 1,
           'report.overall_summary': 1,
           'report.domain_scores': 1,
+          'report.priority_actions': 1,
+          'report.detailed_analysis': 1,
+          'report.lifestyle_tips': 1,
+          'report.when_to_see_doctor': 1,
+          'report.disclaimer': 1,
+          'report.confidence_level': 1,
+          'report.data_sources_used': 1,
           status: 1,
           credits_used: 1,
           created_at: 1,
@@ -662,6 +669,45 @@ Important:
     const assessment = await this.scoreModel.findOne({
       _id: assessmentIdObj,
       user_id: userIdObj,
+    });
+
+    if (!assessment) {
+      throw new NotFoundException('Assessment not found');
+    }
+
+    // Generate presigned URLs for documents
+    if (assessment.documents?.length) {
+      for (const doc of assessment.documents) {
+        if (doc.s3_url) {
+          try {
+            doc.s3_url = await this.fileUploadHelper.getPresignedUrl(
+              doc.s3_url,
+              3600, // 1 hour
+            );
+          } catch (e) {
+            this.logger.error('Error generating presigned URL for document:', e);
+          }
+        }
+      }
+    }
+
+    return assessment;
+  }
+
+  /**
+   * Get assessment by ID for specialists viewing patient data
+   * Does not check ownership - specialists can view any assessment they have the ID for
+   */
+  async getAssessmentByIdForSpecialist(
+    assessmentId: string | Types.ObjectId,
+  ): Promise<AdvancedHealthScoreDocument> {
+    const assessmentIdObj =
+      typeof assessmentId === 'string'
+        ? new Types.ObjectId(assessmentId)
+        : assessmentId;
+
+    const assessment = await this.scoreModel.findOne({
+      _id: assessmentIdObj,
     });
 
     if (!assessment) {

@@ -457,8 +457,13 @@ export class HealthCheckupService {
     const sortDirection = sortOrder === 'desc' ? -1 : 1;
     const sortOptions: any = { [sortBy]: sortDirection };
 
-    // Filter to exclude soft-deleted records
-    const filter = { user: userId, deleted_at: { $exists: false } };
+    // Filter to exclude soft-deleted records and incomplete checkups (no diagnosis result)
+    const filter = {
+      user: userId,
+      deleted_at: { $exists: false },
+      // Only include checkups that have completed with a diagnosis result
+      'response.data.conditions': { $exists: true, $ne: [] }
+    };
 
     const [checkups, total] = await Promise.all([
       this.healthCheckupModel
@@ -479,6 +484,21 @@ export class HealthCheckupService {
         per_page: limit
       }
     };
+  }
+
+  async getHealthCheckupById(checkupId: string) {
+    const checkup = await this.healthCheckupModel
+      .findOne({
+        _id: checkupId,
+        deleted_at: { $exists: false }
+      })
+      .populate('user', 'email full_name profile');
+
+    if (!checkup) {
+      throw new Error('Health checkup not found');
+    }
+
+    return checkup;
   }
 
   async deleteHealthCheckup(checkupId: string, userId: string) {

@@ -10,6 +10,8 @@ import {
   HttpCode,
   HttpStatus,
   Delete,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { HealthCheckupService } from './health-checkup.service';
 import { ClaudeHealthSummaryService } from './services/claude-health-summary.service';
@@ -29,6 +31,8 @@ import { ExtendedDiagnosisDto } from './dto/extended-diagnosis.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { User, UserDocument } from '../users/entities/user.entity';
+import { BasicHealthScoreService } from '../basic-health-score/basic-health-score.service';
+import { ScoreChangeTrigger } from '../basic-health-score/entities/basic-health-score-history.entity';
 
 @UseGuards(JwtAuthGuard)
 @Controller('health-checkup')
@@ -38,6 +42,8 @@ export class HealthCheckupController {
     private readonly claudeHealthSummaryService: ClaudeHealthSummaryService,
     private readonly claudeSummaryCreditsService: ClaudeSummaryCreditsService,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
+    @Inject(forwardRef(() => BasicHealthScoreService))
+    private readonly basicHealthScoreService: BasicHealthScoreService,
   ) {}
 
   @Post()
@@ -114,6 +120,15 @@ export class HealthCheckupController {
       checkDiagnosisDto,
       req.user.sub,
     );
+
+    // If checkup is complete (has triage_level), update basic health score
+    if (result?.data?.triage_level) {
+      const triageLevel = result.data.triage_level;
+      this.basicHealthScoreService
+        .calculateAndStoreScore(req.user.sub, ScoreChangeTrigger.HEALTH_CHECKUP_COMPLETED, `Health checkup completed with triage: ${triageLevel}`)
+        .catch(err => console.error('Error updating basic health score:', err));
+    }
+
     return sendSuccessResponse(Messages.RETRIEVED, result?.data);
   }
 
@@ -126,12 +141,21 @@ export class HealthCheckupController {
     console.log('=== ENHANCED CONTROLLER CALLED ===');
     console.log('Enhanced diagnosis controller hit with user:', req.user?.sub);
     console.log('Evidence count:', checkDiagnosisDto.evidence?.length);
-    
+
     const result = await this.healthCheckupService.diagnosisWithDuration(
       checkDiagnosisDto,
       req.user.sub,
       true // Enable duration support
     );
+
+    // If checkup is complete (has triage_level), update basic health score
+    if (result?.data?.triage_level) {
+      const triageLevel = result.data.triage_level;
+      this.basicHealthScoreService
+        .calculateAndStoreScore(req.user.sub, ScoreChangeTrigger.HEALTH_CHECKUP_COMPLETED, `Health checkup completed with triage: ${triageLevel}`)
+        .catch(err => console.error('Error updating basic health score:', err));
+    }
+
     return sendSuccessResponse(Messages.RETRIEVED, result?.data);
   }
 
@@ -194,6 +218,15 @@ export class HealthCheckupController {
       historyQueryDto.sortBy,
       historyQueryDto.sortOrder
     );
+    return sendSuccessResponse(Messages.RETRIEVED, result);
+  }
+
+  @Get(':checkupId')
+  async getHealthCheckupById(
+    @Param('checkupId') checkupId: string,
+    @Request() req
+  ) {
+    const result = await this.healthCheckupService.getHealthCheckupById(checkupId);
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 

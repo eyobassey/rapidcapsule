@@ -34,6 +34,12 @@ export class AppointmentsController {
     return sendSuccessResponse('Appointment created successfully', result);
   }
 
+  @Get('stats')
+  async getAppointmentStats() {
+    const result = await this.appointmentsService.getAppointmentStats();
+    return sendSuccessResponse(Messages.RETRIEVED, result);
+  }
+
   @Get()
   async getAppointments(@Query() appointmentsQueryDto: AppointmentsQueryDto) {
     const result = await this.appointmentsService.getAppointments(

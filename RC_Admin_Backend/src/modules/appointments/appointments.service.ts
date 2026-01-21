@@ -459,4 +459,92 @@ export class AppointmentsService {
         return {};
     }
   }
+
+  /**
+   * Get appointment statistics for admin dashboard hero banner
+   */
+  async getAppointmentStats() {
+    const startOfToday = moment().startOf('day').toDate();
+    const endOfToday = moment().endOf('day').toDate();
+    const startOfWeek = moment().startOf('week').toDate();
+    const endOfWeek = moment().endOf('week').toDate();
+    const startOfMonth = moment().startOf('month').toDate();
+    const endOfMonth = moment().endOf('month').toDate();
+
+    try {
+      const [
+        liveNow,
+        todayCount,
+        thisWeekCount,
+        totalCount,
+        cancelledThisMonth,
+        totalThisMonth,
+        openCount,
+        completedCount,
+        cancelledCount,
+      ] = await Promise.all([
+        // Live appointments (ONGOING status)
+        countDocuments(this.appointmentModel, {
+          status: AppointmentStatus.ONGOING,
+        }),
+        // Today's appointments
+        countDocuments(this.appointmentModel, {
+          start_time: { $gte: startOfToday, $lte: endOfToday },
+        }),
+        // This week's appointments
+        countDocuments(this.appointmentModel, {
+          start_time: { $gte: startOfWeek, $lte: endOfWeek },
+        }),
+        // Total appointments
+        countDocuments(this.appointmentModel, {}),
+        // Cancelled this month
+        countDocuments(this.appointmentModel, {
+          status: AppointmentStatus.CANCELLED,
+          created_at: { $gte: startOfMonth, $lte: endOfMonth },
+        }),
+        // Total this month
+        countDocuments(this.appointmentModel, {
+          created_at: { $gte: startOfMonth, $lte: endOfMonth },
+        }),
+        // Open/Upcoming appointments
+        countDocuments(this.appointmentModel, {
+          status: AppointmentStatus.OPEN,
+        }),
+        // Completed appointments
+        countDocuments(this.appointmentModel, {
+          status: AppointmentStatus.COMPLETED,
+        }),
+        // Cancelled appointments (all time)
+        countDocuments(this.appointmentModel, {
+          status: AppointmentStatus.CANCELLED,
+        }),
+      ]);
+
+      // Calculate cancellation rate
+      const cancellationRate = totalThisMonth > 0
+        ? ((cancelledThisMonth / totalThisMonth) * 100).toFixed(1)
+        : '0';
+
+      return {
+        live_now: liveNow,
+        today: todayCount,
+        this_week: thisWeekCount,
+        total: totalCount,
+        cancellation_rate: parseFloat(cancellationRate),
+        cancelled_this_month: cancelledThisMonth,
+        total_this_month: totalThisMonth,
+        // Status counts for tabs
+        status_counts: {
+          all: totalCount,
+          open: openCount,
+          completed: completedCount,
+          cancelled: cancelledCount,
+          ongoing: liveNow,
+        },
+      };
+    } catch (error) {
+      this.logger.error(`Error fetching appointment stats: ${error.message}`);
+      throw error;
+    }
+  }
 }

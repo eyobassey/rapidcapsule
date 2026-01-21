@@ -361,6 +361,29 @@ const routes = [
             "@/views/Mainapp/SpecialistApp/Appointments/AppointmentDetails"
           ),
       },
+      // Specialist Patient Dashboard Routes
+      {
+        path: "patients",
+        name: "SpecialistPatients",
+        component: () => import("@/views/Mainapp/SpecialistApp/Patients/index.vue"),
+      },
+      {
+        path: "patients/all",
+        name: "SpecialistPatientsAll",
+        component: () => import("@/views/Mainapp/SpecialistApp/Patients/index.vue"),
+        props: { defaultFilter: 'all' },
+      },
+      {
+        path: "patients/starred",
+        name: "SpecialistPatientsStarred",
+        component: () => import("@/views/Mainapp/SpecialistApp/Patients/index.vue"),
+        props: { defaultFilter: 'starred' },
+      },
+      {
+        path: "patients/:patientId",
+        name: "SpecialistPatientDashboard",
+        component: () => import("@/views/Mainapp/SpecialistApp/Patients/PatientDashboard.vue"),
+      },
       {
         path: "clinical-notes",
         name: "ClinicalNotesDashboard",
@@ -453,6 +476,22 @@ const routes = [
         path: "pharmacy/prescriptions/:id",
         name: "SpecialistPharmacyPrescriptionDetails",
         component: () => import("@/views/Mainapp/SpecialistApp/Pharmacy/PrescriptionDetails.vue"),
+      },
+      // Patient Health Views (for specialists viewing patient data)
+      {
+        path: "patient-health/checkup/:appointmentId/:checkupId",
+        name: "SpecialistPatientCheckupDetail",
+        component: () => import("@/views/Mainapp/SpecialistApp/PatientHealth/CheckupDetail.vue"),
+      },
+      {
+        path: "patient-health/score/:appointmentId/:type/:scoreId?",
+        name: "SpecialistPatientHealthScoreReport",
+        component: () => import("@/views/Mainapp/SpecialistApp/PatientHealth/HealthScoreReport.vue"),
+      },
+      {
+        path: "patient/:patientId/health-records",
+        name: "SpecialistPatientHealthRecords",
+        component: () => import("@/views/Mainapp/SpecialistApp/PatientHealth/PatientHealthRecords.vue"),
       },
     ],
   },

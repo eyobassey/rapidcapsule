@@ -38,6 +38,8 @@ import { CommonModule } from './common/common.module';
 import { WhatsAppModule } from './modules/whatsapp/whatsapp.module';
 import { ClaudeSummaryCreditsModule } from './modules/claude-summary-credits/claude-summary-credits.module';
 import { AdvancedHealthScoreModule } from './modules/advanced-health-score/advanced-health-score.module';
+import { BasicHealthScoreModule } from './modules/basic-health-score/basic-health-score.module';
+import { SpecialistPatientsModule } from './modules/specialist-patients/specialist-patients.module';
 
 dotenv.config();
 
@@ -79,6 +81,8 @@ dotenv.config();
     WhatsAppModule,
     ClaudeSummaryCreditsModule,
     AdvancedHealthScoreModule,
+    BasicHealthScoreModule,
+    SpecialistPatientsModule,
   ],
   controllers: [AppController],
   providers: [AppService, WebsocketGateway],

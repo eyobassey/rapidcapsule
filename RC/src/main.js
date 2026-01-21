@@ -120,6 +120,22 @@ import {
 	GiTrophy,
 	GiCrown,
 	HiClipboardCopy,
+	// Specialist Appointments vitals icons
+	BiActivity,
+	GiDrop,
+	HiGlobeAlt,
+	HiExternalLink,
+	HiMinus,
+	HiClipboard,
+	// Prescriptions tab icons
+	RiCapsuleLine,
+	HiCreditCard,
+	HiAnnotation,
+	HiUserCircle,
+	HiTruck,
+	GiMedicines,
+	HiUpload,
+	HiLocationMarker,
 } from "oh-vue-icons/icons";
 addIcons(
 	BiCreditCard2Back,
@@ -228,6 +244,22 @@ addIcons(
 	GiTrophy,
 	GiCrown,
 	HiClipboardCopy,
+	// Specialist Appointments vitals icons
+	BiActivity,
+	GiDrop,
+	HiGlobeAlt,
+	HiExternalLink,
+	HiMinus,
+	HiClipboard,
+	// Prescriptions tab icons
+	RiCapsuleLine,
+	HiCreditCard,
+	HiAnnotation,
+	HiUserCircle,
+	HiTruck,
+	GiMedicines,
+	HiUpload,
+	HiLocationMarker,
 );
 
 require("@/store/subscriber");

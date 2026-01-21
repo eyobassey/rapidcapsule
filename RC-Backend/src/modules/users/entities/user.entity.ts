@@ -453,6 +453,30 @@ export class User {
 
   @Prop({ type: Boolean, default: false })
   enable_claude_health_summary: boolean;
+
+  @Prop(
+    raw({
+      score: { type: Number },
+      status: { type: String }, // 'excellent', 'good', 'fair', 'poor', 'incomplete'
+      breakdown: {
+        bmi: { points: { type: Number }, status: { type: String }, message: { type: String } },
+        bloodPressure: { points: { type: Number }, status: { type: String }, message: { type: String } },
+        pulseRate: { points: { type: Number }, status: { type: String }, message: { type: String } },
+        temperature: { points: { type: Number }, status: { type: String }, message: { type: String } },
+        bloodSugar: { points: { type: Number }, status: { type: String }, message: { type: String } },
+        triage: { points: { type: Number }, status: { type: String }, message: { type: String } },
+        riskFactors: { points: { type: Number }, factors: [{ type: Object }], message: { type: String } },
+        dataCompleteness: { points: { type: Number }, completeness: { type: Number }, message: { type: String } },
+      },
+      updated_at: { type: Date },
+    }),
+  )
+  basic_health_score?: {
+    score: number | null;
+    status: string;
+    breakdown: any;
+    updated_at: Date;
+  };
 }
 
 export interface DeliveryAddressEntry {

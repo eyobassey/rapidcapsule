@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UsersController } from './users.controller';
 import { MongooseModule } from '@nestjs/mongoose';
@@ -15,6 +15,7 @@ import {
 } from './entities/specialist-preferences.entity';
 import { ReferralsModule } from '../referrals/referrals.module';
 import { WalletsModule } from "../wallets/wallets.module";
+import { BasicHealthScoreModule } from '../basic-health-score/basic-health-score.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { WalletsModule } from "../wallets/wallets.module";
       { name: User.name, schema: UserSchema },
       { name: SpecialistPreferences.name, schema: SpecialistPreferencesSchema },
     ]),
+    forwardRef(() => BasicHealthScoreModule),
   ],
   controllers: [UsersController],
   providers: [

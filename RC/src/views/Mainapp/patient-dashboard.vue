@@ -694,6 +694,7 @@ export default {
 			loading: false,
 			healthCheckups: [],
 			latestPremiumScore: null,
+			storedBasicScore: null, // Basic health score from backend (single source of truth)
 			selectedScoreView: 'premium', // 'basic' or 'premium'
 			loadingPremiumScore: false,
 			dropList: [
@@ -811,6 +812,18 @@ export default {
 		},
 
 		healthScoreData() {
+			// Use stored score from backend (single source of truth)
+			// This ensures patient and specialist see the same score
+			if (this.storedBasicScore) {
+				return {
+					score: this.storedBasicScore.score,
+					status: this.storedBasicScore.status,
+					statusMessage: this.storedBasicScore.statusMessage,
+					breakdown: this.storedBasicScore.breakdown,
+					isComplete: this.storedBasicScore.isComplete !== false
+				};
+			}
+			// Fallback to client-side calculation while loading
 			return calculateHealthScore({
 				bmi: this.userBmi,
 				vitals: this.vitals,
@@ -887,6 +900,7 @@ export default {
 		if (this.userProfile?._id) {
 			this.fetchHealthCheckups();
 			this.fetchLatestPremiumScore();
+			this.syncBasicHealthScore();
 		}
 	},
 
@@ -896,6 +910,7 @@ export default {
 				if (newId) {
 					this.fetchHealthCheckups();
 					this.fetchLatestPremiumScore();
+					this.syncBasicHealthScore();
 				}
 			},
 			immediate: false
@@ -947,6 +962,20 @@ export default {
 				console.error('Error fetching premium score:', error);
 			} finally {
 				this.loadingPremiumScore = false;
+			}
+		},
+
+		async syncBasicHealthScore() {
+			// Calculate and fetch basic health score from backend (single source of truth)
+			try {
+				const response = await apiFactory.$_calculateBasicHealthScore();
+				const data = response.data?.data || response.data;
+				if (data) {
+					this.storedBasicScore = data;
+				}
+			} catch (error) {
+				// Silent fail - this is a background sync, don't disrupt user experience
+				console.error('Error syncing basic health score:', error);
 			}
 		},
 

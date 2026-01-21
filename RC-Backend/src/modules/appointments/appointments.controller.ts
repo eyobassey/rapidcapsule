@@ -188,4 +188,125 @@ export class AppointmentsController {
     );
     return sendSuccessResponse(Messages.UPDATED, result);
   }
+
+  @Get('stats')
+  async getAppointmentStats() {
+    const result = await this.appointmentsService.getAppointmentStats();
+    return sendSuccessResponse(Messages.RETRIEVED, result);
+  }
+
+  @Get('patient/:patientId/health-profile')
+  async getPatientHealthProfile(@Param('patientId') patientId: string) {
+    const result = await this.appointmentsService.getPatientHealthProfile(
+      patientId,
+    );
+    return sendSuccessResponse(Messages.RETRIEVED, result);
+  }
+
+  /**
+   * Get comprehensive patient health records for specialist view
+   * Includes all health checkups, advanced scores, vitals, and appointment history
+   */
+  @Get('patient/:patientId/full-health-records')
+  async getPatientFullHealthRecords(
+    @Param('patientId') patientId: string,
+    @Query('checkupsPage') checkupsPage: string = '1',
+    @Query('checkupsLimit') checkupsLimit: string = '10',
+    @Query('scoresPage') scoresPage: string = '1',
+    @Query('scoresLimit') scoresLimit: string = '10',
+    @Query('appointmentsPage') appointmentsPage: string = '1',
+    @Query('appointmentsLimit') appointmentsLimit: string = '10',
+  ) {
+    const result = await this.appointmentsService.getPatientFullHealthRecords(
+      patientId,
+      {
+        checkupsPage: parseInt(checkupsPage),
+        checkupsLimit: parseInt(checkupsLimit),
+        scoresPage: parseInt(scoresPage),
+        scoresLimit: parseInt(scoresLimit),
+        appointmentsPage: parseInt(appointmentsPage),
+        appointmentsLimit: parseInt(appointmentsLimit),
+      },
+    );
+    return sendSuccessResponse(Messages.RETRIEVED, result);
+  }
+
+  @Get('patient/:patientId/health-scores')
+  async getPatientHealthScores(@Param('patientId') patientId: string) {
+    const result = await this.appointmentsService.getPatientHealthScores(
+      patientId,
+    );
+    return sendSuccessResponse(Messages.RETRIEVED, result);
+  }
+
+  @Get('health-scores')
+  async getMyHealthScores(@Request() req) {
+    const result = await this.appointmentsService.getPatientHealthScores(
+      req.user.sub,
+    );
+    return sendSuccessResponse(Messages.RETRIEVED, result);
+  }
+
+  /**
+   * Get patient prescriptions for specialist view
+   */
+  @Get('patient/:patientId/prescriptions')
+  async getPatientPrescriptions(
+    @Param('patientId') patientId: string,
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '10',
+  ) {
+    const result = await this.appointmentsService.getPatientPrescriptions(
+      patientId,
+      parseInt(page),
+      parseInt(limit),
+    );
+    return sendSuccessResponse(Messages.RETRIEVED, result);
+  }
+
+  /**
+   * Get patient's uploaded prescriptions (external prescriptions)
+   */
+  @Get('patient/:patientId/uploaded-prescriptions')
+  async getPatientUploadedPrescriptions(
+    @Param('patientId') patientId: string,
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '10',
+  ) {
+    const result = await this.appointmentsService.getPatientUploadedPrescriptions(
+      patientId,
+      parseInt(page),
+      parseInt(limit),
+    );
+    return sendSuccessResponse(Messages.RETRIEVED, result);
+  }
+
+  /**
+   * Get patient's pharmacy orders (medication purchases)
+   */
+  @Get('patient/:patientId/pharmacy-orders')
+  async getPatientPharmacyOrders(
+    @Param('patientId') patientId: string,
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '10',
+  ) {
+    const result = await this.appointmentsService.getPatientPharmacyOrders(
+      patientId,
+      parseInt(page),
+      parseInt(limit),
+    );
+    return sendSuccessResponse(Messages.RETRIEVED, result);
+  }
+
+  @Get(':appointmentId/specialist-details')
+  async getAppointmentDetailsForSpecialist(
+    @Param('appointmentId') appointmentId: string,
+    @Request() req,
+  ) {
+    const result = await this.appointmentsService.getAppointmentDetailsForSpecialist(
+      appointmentId,
+      req.user.sub,
+    );
+    return sendSuccessResponse(Messages.RETRIEVED, result);
+  }
 }

@@ -9,6 +9,8 @@ import {
   Post,
   Query,
   Param,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { sendSuccessResponse } from '../../core/responses/success.responses';
@@ -26,12 +28,16 @@ import { SpecialistPreferencesDto } from './dto/specialist-preferences.dto';
 import { CreateAwardDto } from './dto/create-award.dto';
 import { CreateCertificationsDto } from './dto/create-certifications.dto';
 import { FileUploadHelper } from '../../common/helpers/file-upload.helpers';
+import { BasicHealthScoreService } from '../basic-health-score/basic-health-score.service';
+import { ScoreChangeTrigger } from '../basic-health-score/entities/basic-health-score-history.entity';
 
 @Controller('users')
 export class UsersController {
   constructor(
     private readonly usersService: UsersService,
     private readonly fileUploadHelper: FileUploadHelper,
+    @Inject(forwardRef(() => BasicHealthScoreService))
+    private readonly basicHealthScoreService: BasicHealthScoreService,
   ) {}
 
   @UseGuards(DoesUserExist)
@@ -66,6 +72,19 @@ export class UsersController {
       req.user.sub,
       profileSetupDto,
     );
+
+    // Check if any health-affecting fields were updated and trigger score recalculation
+    const healthAffectingFields = ['basic_health_info', 'health_risk_factors', 'date_of_birth', 'pre_existing_conditions'];
+    const updatedFields = Object.keys(profileSetupDto);
+    const hasHealthUpdates = updatedFields.some(field => healthAffectingFields.includes(field));
+
+    if (hasHealthUpdates) {
+      const changedFields = updatedFields.filter(f => healthAffectingFields.includes(f)).join(', ');
+      this.basicHealthScoreService
+        .calculateAndStoreScore(req.user.sub, ScoreChangeTrigger.PROFILE_UPDATED, `Profile updated: ${changedFields}`)
+        .catch(err => console.error('Error updating basic health score:', err));
+    }
+
     return sendSuccessResponse(Messages.UPDATED, result);
   }
 
@@ -122,6 +141,19 @@ export class UsersController {
       updateUserProfileDto,
       id,
     );
+
+    // Check if any health-affecting fields were updated and trigger score recalculation
+    const healthAffectingFields = ['basic_health_info', 'health_risk_factors', 'date_of_birth', 'pre_existing_conditions'];
+    const updatedFields = Object.keys(updateUserProfileDto);
+    const hasHealthUpdates = updatedFields.some(field => healthAffectingFields.includes(field));
+
+    if (hasHealthUpdates) {
+      const changedFields = updatedFields.filter(f => healthAffectingFields.includes(f)).join(', ');
+      this.basicHealthScoreService
+        .calculateAndStoreScore(id, ScoreChangeTrigger.PROFILE_UPDATED, `Profile updated: ${changedFields}`)
+        .catch(err => console.error('Error updating basic health score:', err));
+    }
+
     return sendSuccessResponse(Messages.UPDATED, result);
   }
 

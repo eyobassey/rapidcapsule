@@ -2,43 +2,121 @@
 	<div class="loader-container" v-if="isLoading">
 		<loader :useOverlay="false" style="position: relative" />
 	</div>
-	<div v-else class="appointments-container">
-		<div class="appointments_root">
-			<template v-if="Object.keys(appointmentItems).length">
-				<div v-for="(appointments, timestamp, index) in appointmentItems" :key="timestamp + index">
-					<div class="appointments_container">
-						<p class="appointment_timestamp">{{ timestamp }}</p>
-						<template v-for="appointment in appointments" :key="appointment.id">
-							<div class="appointments_items">
-								<div class="appointments_items-container">
-									<p class="appointments_items-title">
-										{{ appointment.specialist.full_name }}
-									</p>
-									<p class="appointments_items-timestamp">
-										{{ format(new Date(appointment.start_time), 'HH:mm') }}
-										({{ format(new Date(appointment.start_time), 'hh:mm a') }})
-									</p>
+	<div v-else class="upcoming-appointments">
+		<div class="appointments-list" v-if="Object.keys(appointmentItems).length">
+			<div
+				v-for="(appointments, timestamp, index) in appointmentItems"
+				:key="timestamp + index"
+				class="date-group"
+			>
+				<div class="date-header">
+					<v-icon name="hi-calendar" scale="0.9" class="date-icon" />
+					<span class="date-text">{{ timestamp }}</span>
+				</div>
+
+				<div class="appointments-cards">
+					<div
+						v-for="appointment in appointments"
+						:key="appointment.id"
+						class="appointment-card"
+						:class="{
+							'status-confirmed': appointment.status === 'OPEN',
+							'status-pending': appointment.status === 'PENDING'
+						}"
+					>
+						<div class="card-main">
+							<div class="specialist-section">
+								<div class="specialist-avatar">
+									<rc-avatar
+										size="md"
+										:firstName="appointment.specialist.profile?.first_name || ''"
+										:lastName="appointment.specialist.profile?.last_name || ''"
+										:modelValue="appointment.specialist?.profile?.profile_image"
+									/>
 								</div>
-								<div class="appointment_actions" @click="onShow(appointment)">
-									<p class="appointment_actions-title desktop-visible">View Details</p>
-									<rc-iconbutton icon="icon-carrot-right" size="xs" />
+								<div class="specialist-info">
+									<h3 class="specialist-name">{{ appointment.specialist.full_name }}</h3>
+									<p class="specialist-category">{{ appointment.category }}</p>
+									<div class="appointment-meta">
+										<span class="meeting-type" :class="getMeetingTypeClass(appointment.appointment_type)">
+											<v-icon
+												:name="appointment.appointment_type === 'video' ? 'hi-video-camera' : 'hi-phone'"
+												scale="0.7"
+											/>
+											{{ formatMeetingType(appointment.appointment_type) }}
+										</span>
+										<span class="status-badge" :class="getStatusClass(appointment.status)">
+											{{ formatStatus(appointment.status) }}
+										</span>
+									</div>
 								</div>
 							</div>
-						</template>
+
+							<div class="time-section">
+								<div class="time-display">
+									<v-icon name="hi-clock" scale="0.85" class="time-icon" />
+									<div class="time-info">
+										<span class="time-main">{{ format(new Date(appointment.start_time), 'h:mm a') }}</span>
+										<span class="time-duration">{{ appointment.duration || 30 }} min</span>
+									</div>
+								</div>
+							</div>
+						</div>
+
+						<div class="card-actions">
+							<button
+								class="action-btn calendar-btn"
+								@click.stop="addToCalendar(appointment)"
+								title="Add to Calendar"
+							>
+								<v-icon name="bi-calendar-4-event" scale="0.85" />
+								<span class="btn-text">Add to Calendar</span>
+							</button>
+
+							<div class="action-divider"></div>
+
+							<button
+								class="action-btn details-btn"
+								@click.stop="onShow(appointment)"
+							>
+								<v-icon name="hi-information-circle" scale="0.9" />
+								<span class="btn-text">Details</span>
+							</button>
+
+							<button
+								class="action-btn reschedule-btn"
+								@click.stop="openRescheduleConfirm(appointment)"
+							>
+								<v-icon name="hi-refresh" scale="0.85" />
+								<span class="btn-text">Reschedule</span>
+							</button>
+
+							<button
+								class="action-btn cancel-btn"
+								@click.stop="openCancelConfirm(appointment)"
+							>
+								<v-icon name="hi-x-circle" scale="0.85" />
+								<span class="btn-text">Cancel</span>
+							</button>
+						</div>
 					</div>
 				</div>
-			</template>
-			<template v-else>
-				<div class="empty-appointment-container">
-					<div class="empty-appointment-content">
-						<h1 class="empty-appointment-title">You have no appointments yet</h1>
-						<p class="empty-appointment-description">
-							Appointment will show up here when they are booked.
-						</p>
-					</div>
-				</div>
-			</template>
+			</div>
 		</div>
+
+		<!-- Empty State -->
+		<div v-else class="empty-state">
+			<div class="empty-illustration">
+				<v-icon name="hi-calendar" scale="4" class="empty-icon" />
+			</div>
+			<h2 class="empty-title">No Upcoming Appointments</h2>
+			<p class="empty-description">
+				Your upcoming appointments will appear here once booked.
+				Schedule a consultation with a specialist today.
+			</p>
+		</div>
+
+		<!-- Appointment Details Modal -->
 		<dialog-modal
 			v-if="isOpen"
 			title="Appointment Details"
@@ -47,99 +125,90 @@
 			class="appointment-details-modal"
 		>
 			<template v-slot:body>
-				<div class="loader-container" v-if="isFetching">
+				<div class="loader-container modal-loader" v-if="isFetching">
 					<loader :useOverlay="false" style="position: relative" />
 				</div>
-				<div v-else class="modal-details-container">
-					<div class="details-container__body">
-						<div class="top_container">
-							<div class="spacialist-details__container">
-								<div class="spacialist_details">
-									<div class="specialist_details-container">
-										<div class="specialist_details-avatar">
-											<rc-avatar
-												size="lg"
-												:firstName="specialistInfo.firstName"
-												:lastName="specialistInfo.lastName"
-												v-model="specialistInfo.photo"
-											/>
-										</div>
-										<div class="specialist_details-info-container">
-											<div class="specialist-details-heading">
-												<h2 class="specialist_details-name">{{ specialistInfo.fullName }}</h2>
-												<div class="specialist_details-rating-container desktop-visible">
-													<span class="specialist_details-rating">{{ specialistInfo.rating?.toFixed(1) }}</span>
-													<rc-icon icon-name="icon-star-rating" size="xms" />
-												</div>
-											</div>
-											<div class="specialist-details__patient">
-												<div class="specialist-details__icon mobile-visible">
-													<template v-if="specialistInfo.rating">
-														<span v-for="i in specialistInfo.rating" :key="i">
-															<rc-icon icon="star" size="xs" viewBox="0 0 12 12"   />
-														</span>
-													</template>
-													<div v-else class="specialist-details__no-rating mobile-visible">
-														<span class="specialist_details-rating">{{ specialistInfo.rating?.toFixed(1) }}</span>
-														<rc-icon icon="star" size="xs" viewBox="0 0 12 12"   />
-													</div>
-												</div>
-												<p class="specialist_details-specialty">{{ specialistInfo.category }}</p>
-												<p class="specialist_details-specialty">0yrs experience</p>
-											</div>
-										</div>
-									</div>
-								</div>
-								<div class="specialist-appointment-details">
-									<div class="specialist-appointment-details__container">
-										<p class="specialist-appointment-details__title">Date & Time</p>
-										<div class="specialist-appointment-details__content">
-											<p class="specialist-appointment-details__item">
-												{{ format(new Date(specialistInfo.startTime), 'MMMM dd, yyyy') }}
-											</p>
-											<p class="specialist-appointment-details__item">
-												{{ format(new Date(specialistInfo.startTime), 'HH:mm') }}
-												({{ format(new Date(specialistInfo.startTime), 'HH:mm a') }})
-												{{ specialistInfo.timezone }}
-											</p>
-										</div>
-									</div>
-									<div class="specialist-appointment-details__container">
-										<p class="specialist-appointment-details__title">Appointment Type</p>
-										<div class="specialist-appointment-details__content">
-											<p class="specialist-appointment-details__item">
-												{{ specialistInfo.appointmentType }}
-											</p>
-										</div>
-									</div>
+				<div v-else class="modal-content">
+					<div class="modal-specialist-card">
+						<div class="modal-specialist-header">
+							<rc-avatar
+								size="lg"
+								:firstName="specialistInfo.firstName"
+								:lastName="specialistInfo.lastName"
+								v-model="specialistInfo.photo"
+							/>
+							<div class="modal-specialist-info">
+								<h2 class="modal-specialist-name">{{ specialistInfo.fullName }}</h2>
+								<p class="modal-specialist-category">{{ specialistInfo.category }}</p>
+								<div class="modal-specialist-rating" v-if="specialistInfo.rating">
+									<v-icon name="bi-star-fill" scale="0.75" class="rating-star" />
+									<span>{{ specialistInfo.rating?.toFixed(1) }}</span>
 								</div>
 							</div>
 						</div>
 					</div>
+
+					<div class="modal-details-grid">
+						<div class="detail-item">
+							<div class="detail-label">
+								<v-icon name="hi-calendar" scale="0.85" />
+								<span>Date</span>
+							</div>
+							<p class="detail-value">
+								{{ format(new Date(specialistInfo.startTime), 'EEEE, MMMM dd, yyyy') }}
+							</p>
+						</div>
+
+						<div class="detail-item">
+							<div class="detail-label">
+								<v-icon name="hi-clock" scale="0.85" />
+								<span>Time</span>
+							</div>
+							<p class="detail-value">
+								{{ format(new Date(specialistInfo.startTime), 'h:mm a') }}
+								<span class="timezone-text">{{ specialistInfo.timezone }}</span>
+							</p>
+						</div>
+
+						<div class="detail-item">
+							<div class="detail-label">
+								<v-icon name="hi-video-camera" scale="0.85" />
+								<span>Type</span>
+							</div>
+							<p class="detail-value">{{ specialistInfo.appointmentType }}</p>
+						</div>
+					</div>
+
+					<div class="modal-calendar-action">
+						<button class="add-calendar-btn" @click="addToCalendar(appointment)">
+							<v-icon name="bi-calendar-4-event" scale="0.9" />
+							<span>Add to Calendar</span>
+						</button>
+					</div>
 				</div>
 			</template>
 			<template v-slot:foot>
-				<div class="modal-appointment-actions" v-if="!isFetching">
+				<div class="modal-actions" v-if="!isFetching">
 					<rc-button
 						type="tertiary"
-						style="border:0"
+						style="border:0; color: #ef4444;"
 						label="Cancel Appointment"
-						class="reschedule_action"
+						class="modal-cancel-btn"
 						:disabled="isFetching || !appointment.start_url"
 						@click="isOpenCancelAppointment = true"
 					/>
-					<div class="modal-appointment-actions__meeting">
+					<div class="modal-meeting-actions">
 						<rc-button
 							type="tertiary"
 							label="Reschedule"
-							class="reschedule_action"
+							class="modal-reschedule-btn"
 							@click="isOpenScheduleAppointment = true"
 							:disabled="isFetching || !appointment.start_url"
 						/>
 						<rc-button
 							type="primary"
 							label="Start Meeting"
-							class="start_meeting_action"
+							class="modal-start-btn"
 							:disabled="isFetching || !appointment.start_url"
 							@click="onStartMeetings(appointment)"
 						/>
@@ -147,34 +216,40 @@
 				</div>
 			</template>
 		</dialog-modal>
+
+		<!-- Cancel Confirmation Modal -->
 		<dialog-modal
 			v-if="isOpenCancelAppointment"
 			@closeModal="isOpenCancelAppointment = false"
 			:has-footer="true"
 			title="Cancel Appointment"
-			class="caution-message-modal"
+			class="confirm-modal"
 		>
 			<template v-slot:body>
-				<div class="caution-container">
-					<p class="caution-content">
-						Canceling your appointment less than 12 hours before the scheduled 
+				<div class="confirm-content">
+					<div class="confirm-icon warning">
+						<v-icon name="hi-exclamation-circle" scale="2" />
+					</div>
+					<p class="confirm-message">
+						Canceling your appointment less than 12 hours before the scheduled
 						time will result in a surcharge fee. Are you sure you want to proceed?
 					</p>
 				</div>
 			</template>
 			<template v-slot:foot>
-				<div class="caution-actions">
+				<div class="confirm-actions">
 					<rc-button
-						label="No"
+						label="Keep Appointment"
 						type="tertiary"
 						size="small"
 						:disabled="isLoadingCancelAppointment"
 						@click="isOpenCancelAppointment = false"
 					/>
 					<rc-button
-						label="Yes"
+						label="Yes, Cancel"
 						type="primary"
 						size="small"
+						style="background: #ef4444; border-color: #ef4444;"
 						:loading="isLoadingCancelAppointment"
 						:disabled="isLoadingCancelAppointment"
 						@click="onSubmitCancelAppointment(appointment)"
@@ -182,34 +257,38 @@
 				</div>
 			</template>
 		</dialog-modal>
+
+		<!-- Reschedule Confirmation Modal -->
 		<dialog-modal
 			v-if="isOpenScheduleAppointment"
 			@closeModal="isOpenScheduleAppointment = false"
 			:has-footer="true"
 			title="Reschedule Appointment"
-			class="caution-message-modal"
+			class="confirm-modal"
 		>
 			<template v-slot:body>
-				<div class="caution-container">
-					<p class="caution-content">
-						Rescheduling your appointment less than 12 hours before 
-						the scheduled time will result in a surcharge fee. 
+				<div class="confirm-content">
+					<div class="confirm-icon info">
+						<v-icon name="hi-information-circle" scale="2" />
+					</div>
+					<p class="confirm-message">
+						Rescheduling your appointment less than 12 hours before
+						the scheduled time will result in a surcharge fee.
 						Are you sure you want to proceed?
 					</p>
 				</div>
-				
 			</template>
 			<template v-slot:foot>
-				<div class="caution-actions">
+				<div class="confirm-actions">
 					<rc-button
-						label="No"
+						label="Keep Current Time"
 						type="tertiary"
 						size="small"
 						:disabled="isLoadingScheduleAppointment"
 						@click="isOpenScheduleAppointment = false"
 					/>
 					<rc-button
-						label="Yes"
+						label="Yes, Reschedule"
 						type="primary"
 						size="small"
 						:loading="isLoadingScheduleAppointment"
@@ -219,7 +298,7 @@
 				</div>
 			</template>
 		</dialog-modal>
-		
+
 		<reschedule ref="rescheduleAppointmentRef" />
 	</div>
 </template>
@@ -230,8 +309,6 @@ import { format } from "date-fns";
 import { useRouter } from 'vue-router';
 import { ref, inject, onMounted } from 'vue'
 import { useToast } from "vue-toast-notification";
-import RcIcon from "@/components/RCIcon";
-import RcIconbutton from "@/components/RCIconButton";
 import RcAvatar from "@/components/RCAvatar";
 import RcButton from "@/components/buttons/button-primary.vue";
 import Loader from "@/components/Loader/main-loader.vue";
@@ -248,7 +325,6 @@ const isLoadingCancelAppointment = ref(false);
 const isOpenScheduleAppointment = ref(false);
 const isLoadingScheduleAppointment = ref(false);
 
-const profile = ref({});
 const appointments = ref([]);
 const appointment = ref({});
 const isLoading = ref(true);
@@ -260,11 +336,50 @@ const rescheduleAppointmentRef = ref();
 
 onMounted(() => getUserAppointments());
 
-const calculateAge = (birthday) => {
-	var ageDifMs = Date.now() - new Date(birthday).getTime();
-	var ageDate = new Date(ageDifMs);
-	return Math.abs(ageDate.getUTCFullYear() - 1970);
-}
+const formatMeetingType = (type) => {
+	if (!type) return 'Video';
+	return type.charAt(0).toUpperCase() + type.slice(1);
+};
+
+const getMeetingTypeClass = (type) => {
+	return type === 'video' ? 'type-video' : 'type-audio';
+};
+
+const formatStatus = (status) => {
+	const statusMap = {
+		'OPEN': 'Confirmed',
+		'PENDING': 'Pending',
+		'CONFIRMED': 'Confirmed'
+	};
+	return statusMap[status] || status;
+};
+
+const getStatusClass = (status) => {
+	const classMap = {
+		'OPEN': 'status-confirmed',
+		'PENDING': 'status-pending',
+		'CONFIRMED': 'status-confirmed'
+	};
+	return classMap[status] || '';
+};
+
+const addToCalendar = (appt) => {
+	const startDate = new Date(appt.start_time);
+	const endDate = new Date(startDate.getTime() + (appt.duration || 30) * 60000);
+
+	const formatDate = (date) => {
+		return date.toISOString().replace(/-|:|\.\d\d\d/g, '');
+	};
+
+	const title = encodeURIComponent(`Appointment with ${appt.specialist.full_name}`);
+	const details = encodeURIComponent(`Medical consultation - ${appt.category}\n\nMeeting type: ${formatMeetingType(appt.appointment_type)}`);
+	const dates = `${formatDate(startDate)}/${formatDate(endDate)}`;
+
+	// Google Calendar URL
+	const googleUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&details=${details}&dates=${dates}`;
+
+	window.open(googleUrl, '_blank');
+};
 
 const onStartMeetings = (appointment) => {
 	router.push({
@@ -274,21 +389,22 @@ const onStartMeetings = (appointment) => {
 			meetingId: appointment.meeting_id
 		}
 	});
-}
+};
 
 async function getUserAppointments() {
 	isLoading.value = true;
 	const queryParams = {
 		currentPage: 1,
-		pageLimit: 10,
+		pageLimit: 20,
 		status: 'OPEN'
-	}
+	};
 
 	await $http.$_getPatientAppointments(queryParams).then(({ data }) => {
-		console.log('toDateString', data)
 		appointmentItems.value = groupBy(data.data?.map((item) => ({
-			...item, startTime: new Date(item.start_time).toDateString()
+			...item, startTime: format(new Date(item.start_time), 'EEEE, MMMM dd, yyyy')
 		})), 'startTime');
+		isLoading.value = false;
+	}).catch(() => {
 		isLoading.value = false;
 	});
 }
@@ -304,6 +420,7 @@ const onShow = async (activeItem) => {
 			fullName: data.data?.full_name,
 			firstName: data.data?.profile?.first_name,
 			lastName: data.data?.profile?.last_name,
+			photo: data.data?.profile?.profile_image,
 			rating: data.data.average_rating,
 			category: activeItem.category,
 			startTime: activeItem.start_time,
@@ -311,256 +428,535 @@ const onShow = async (activeItem) => {
 			timezone: activeItem.timezone
 		};
 		isFetching.value = false;
+	}).catch(() => {
+		isFetching.value = false;
 	});
-}
+};
 
-const onSubmitCancelAppointment = async (appointment) => {
+const openCancelConfirm = (appt) => {
+	appointment.value = appt;
+	isOpenCancelAppointment.value = true;
+};
+
+const openRescheduleConfirm = (appt) => {
+	appointment.value = appt;
+	isOpenScheduleAppointment.value = true;
+};
+
+const onSubmitCancelAppointment = async (appt) => {
 	isLoadingCancelAppointment.value = true;
-	const payload = { appointmentId: appointment._id, status: 'CANCELLED' };
+	const payload = { appointmentId: appt._id, status: 'CANCELLED' };
 
-	await $http.$_cancelAppointments(payload).then(({ data }) => {
+	await $http.$_cancelAppointments(payload).then(() => {
 		$toast.success('Appointment cancelled successfully!');
 		isLoadingCancelAppointment.value = false;
+		isOpenCancelAppointment.value = false;
 		isOpen.value = false;
 		getUserAppointments();
 	}).catch((error) => {
 		$toast.error(error.message);
 		isLoadingCancelAppointment.value = false;
 	});
-}
+};
 
-const onSubmitRescheduleAppointment = (appointment) => {
-	useBookingInfo({ payload: { ...bookingInfo.value.payload, appointment } });
-	rescheduleAppointmentRef.value.onOpen(appointment || {});
+const onSubmitRescheduleAppointment = (appt) => {
+	useBookingInfo({ payload: { ...bookingInfo.value.payload, appointment: appt } });
+	rescheduleAppointmentRef.value.onOpen(appt || {});
 	isOpenScheduleAppointment.value = false;
 	isOpen.value = false;
-}
+};
 </script>
 
 <style scoped lang="scss">
-.appointments-container {
+.upcoming-appointments {
 	height: 100%;
+	overflow-y: auto;
+	padding-bottom: 100px;
+
+	&::-webkit-scrollbar {
+		display: none;
+	}
+}
+
+.appointments-list {
 	display: flex;
-	justify-content: space-between;
-	align-items: flex-start;
+	flex-direction: column;
 	gap: $size-32;
-	position: relative;
-
-	&::-webkit-scrollbar {
-		display: none;
-		width: 12px;
-		background-color: $color-g-97;
-	}
 }
-.appointments_root {
+
+.date-group {
 	display: flex;
 	flex-direction: column;
-	gap: $size-24;
-	height: 100vh;
-	width: 100%;
-	overflow-y: scroll;
-	padding-bottom: 200px;
-
-	&::-webkit-scrollbar {
-		display: none;
-		width: 12px;
-		background-color: $color-g-97;
-	}
+	gap: $size-16;
 }
-.appointments_container {
+
+.date-header {
 	display: flex;
-	flex-direction: column;
-	justify-content: start;
+	align-items: center;
 	gap: $size-10;
+	padding: $size-8 $size-16;
+	background: linear-gradient(135deg, rgba(14, 174, 196, 0.1) 0%, rgba(14, 174, 196, 0.05) 100%);
+	border-radius: $size-12;
+	border-left: 3px solid #0EAEC4;
 
-	&::-webkit-scrollbar {
-		display: none;
-		width: 12px;
-		background-color: $color-g-97;
+	.date-icon {
+		color: #0EAEC4;
 	}
 
-	.appointment_timestamp {
-		font-size: $size-14;
-		line-height: $size-18;
-		color: $color-g-44;
-	}
-	.appointments_items {
-		background: $color-white;
-		border-radius: $size-8;
-		padding: $size-16 $size-24;
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-
-		@include responsive(phone) {
-			gap: $size-16;
-		}
-	}
-}
-.appointments_items-container {
-	display: flex;
-	flex-direction: column;
-	justify-content: flex-start;
-	align-items: flex-start;
-	gap: $size-10;
-
-	&::-webkit-scrollbar {
-		display: none;
-		width: 12px;
-		background-color: $color-g-97;
-	}
-
-	.appointments_items-title {
-		font-weight: $fw-semi-bold;
-		font-size: $size-20;
-		line-height: $size-22;
-		color: $color-black;
-	}
-	.appointments_items-timestamp {
-		font-weight: $fw-regular;
+	.date-text {
 		font-size: $size-16;
-		color: $color-g-44;
+		font-weight: $fw-semi-bold;
+		color: $color-g-21;
 	}
 }
-.appointment-actions {
+
+.appointments-cards {
+	display: flex;
+	flex-direction: column;
+	gap: $size-16;
+}
+
+.appointment-card {
+	background: white;
+	border-radius: $size-16;
+	padding: $size-24;
+	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+	transition: all 0.3s ease;
+	border-left: 4px solid #0EAEC4;
+
+	&:hover {
+		transform: translateY(-2px);
+		box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+	}
+
+	&.status-pending {
+		border-left-color: #f59e0b;
+	}
+
+	@media (max-width: 768px) {
+		padding: $size-16;
+		border-radius: $size-12;
+	}
+}
+
+.card-main {
 	display: flex;
 	justify-content: space-between;
-	align-items: center;
+	align-items: flex-start;
+	gap: $size-20;
+	margin-bottom: $size-20;
 
-	.reschedule_action {
-		background: transparent;
-		cursor: pointer;
-		padding: $size-10 $size-16;
-		border-radius: $size-8;
-		&:hover {
-			background: $color-pri-t4;
-		}
-	}
-	.appointment-actions__right {
-		display: flex;
-		justify-content: flex-start;
-		align-items: center;
+	@media (max-width: 768px) {
+		flex-direction: column;
 		gap: $size-16;
 	}
 }
-.appointment_actions {
-	display: flex;
-	justify-content: start;
-	align-items: center;
-	gap: $size-10;
-	cursor: pointer;
-	padding: $size-6 $size-10;
-	border-radius: $size-8;
-	&:hover {
-		background: $color-pri-t4;
-	}
 
-	.appointment_actions-title {
-		font-weight: $fw-regular;
-		font-size: $size-16;
-		color: $color-pri-main;
-	}
+.specialist-section {
+	display: flex;
+	align-items: flex-start;
+	gap: $size-16;
+	flex: 1;
 }
-.empty-appointment-container {
+
+.specialist-avatar {
+	flex-shrink: 0;
+}
+
+.specialist-info {
 	display: flex;
 	flex-direction: column;
-	justify-content: center;
-	align-items: center;
-	gap: $size-36;
-	padding: $size-32;
-
-	.empty-appointment-content {
-		display: flex;
-		flex-direction: column;
-		justify-content: center;
-		align-items: center;
-		gap: $size-10;
-
-		.empty-appointment-title {
-			font-weight: $fw-semi-bold;
-			font-size: $size-20;
-			color: $color-g-21;
-			text-align: center;
-		}
-		.empty-appointment-description {
-			font-weight: $fw-regular;
-			font-size: $size-16;
-			color: $color-g-44;
-			text-align: center;
-		}
-	}
-	.empty-appointment-button {
-		background: $color-white;
-		border: $size-1 solid $color-pri;
-	}
-	
+	gap: $size-6;
 }
-</style>
 
-<style scoped lang="scss">
+.specialist-name {
+	font-size: $size-18;
+	font-weight: $fw-semi-bold;
+	color: $color-g-21;
+	margin: 0;
+
+	@media (max-width: 768px) {
+		font-size: $size-16;
+	}
+}
+
+.specialist-category {
+	font-size: $size-14;
+	color: $color-g-44;
+	margin: 0;
+}
+
+.appointment-meta {
+	display: flex;
+	align-items: center;
+	gap: $size-12;
+	margin-top: $size-4;
+	flex-wrap: wrap;
+}
+
+.meeting-type {
+	display: inline-flex;
+	align-items: center;
+	gap: $size-4;
+	padding: $size-4 $size-10;
+	border-radius: $size-6;
+	font-size: $size-12;
+	font-weight: $fw-medium;
+
+	&.type-video {
+		background: rgba(14, 174, 196, 0.1);
+		color: #0EAEC4;
+	}
+
+	&.type-audio {
+		background: rgba(139, 92, 246, 0.1);
+		color: #8b5cf6;
+	}
+}
+
+.status-badge {
+	display: inline-flex;
+	align-items: center;
+	padding: $size-4 $size-10;
+	border-radius: $size-6;
+	font-size: $size-12;
+	font-weight: $fw-medium;
+
+	&.status-confirmed {
+		background: #dcfce7;
+		color: #16a34a;
+	}
+
+	&.status-pending {
+		background: #fef3c7;
+		color: #d97706;
+	}
+}
+
+.time-section {
+	flex-shrink: 0;
+
+	@media (max-width: 768px) {
+		width: 100%;
+	}
+}
+
+.time-display {
+	display: flex;
+	align-items: center;
+	gap: $size-10;
+	padding: $size-12 $size-16;
+	background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+	border-radius: $size-10;
+
+	.time-icon {
+		color: #0EAEC4;
+	}
+
+	@media (max-width: 768px) {
+		justify-content: center;
+	}
+}
+
+.time-info {
+	display: flex;
+	flex-direction: column;
+	gap: $size-2;
+}
+
+.time-main {
+	font-size: $size-16;
+	font-weight: $fw-semi-bold;
+	color: $color-g-21;
+}
+
+.time-duration {
+	font-size: $size-12;
+	color: $color-g-44;
+}
+
+.card-actions {
+	display: flex;
+	align-items: center;
+	gap: $size-8;
+	padding-top: $size-16;
+	border-top: 1px solid $color-g-90;
+
+	@media (max-width: 768px) {
+		flex-wrap: wrap;
+		justify-content: center;
+	}
+}
+
+.action-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: $size-6;
+	padding: $size-8 $size-14;
+	border: none;
+	border-radius: $size-8;
+	font-size: $size-13;
+	font-weight: $fw-medium;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	background: transparent;
+
+	&:hover {
+		transform: translateY(-1px);
+	}
+
+	.btn-text {
+		@media (max-width: 480px) {
+			display: none;
+		}
+	}
+
+	@media (max-width: 480px) {
+		padding: $size-10;
+	}
+}
+
+.calendar-btn {
+	color: #0EAEC4;
+	background: rgba(14, 174, 196, 0.1);
+
+	&:hover {
+		background: rgba(14, 174, 196, 0.2);
+	}
+}
+
+.details-btn {
+	color: $color-g-44;
+
+	&:hover {
+		background: $color-g-90;
+		color: $color-g-21;
+	}
+}
+
+.reschedule-btn {
+	color: #f59e0b;
+
+	&:hover {
+		background: rgba(245, 158, 11, 0.1);
+	}
+}
+
+.cancel-btn {
+	color: #ef4444;
+
+	&:hover {
+		background: rgba(239, 68, 68, 0.1);
+	}
+}
+
+.action-divider {
+	width: 1px;
+	height: $size-20;
+	background: $color-g-90;
+
+	@media (max-width: 768px) {
+		display: none;
+	}
+}
+
+// Empty State
+.empty-state {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: $size-64 $size-32;
+	text-align: center;
+}
+
+.empty-illustration {
+	width: 120px;
+	height: 120px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: linear-gradient(135deg, rgba(14, 174, 196, 0.1) 0%, rgba(14, 174, 196, 0.05) 100%);
+	border-radius: 50%;
+	margin-bottom: $size-24;
+
+	.empty-icon {
+		color: #0EAEC4;
+		opacity: 0.6;
+	}
+}
+
+.empty-title {
+	font-size: $size-24;
+	font-weight: $fw-semi-bold;
+	color: $color-g-21;
+	margin: 0 0 $size-12;
+}
+
+.empty-description {
+	font-size: $size-16;
+	color: $color-g-44;
+	max-width: 400px;
+	line-height: 1.6;
+	margin: 0;
+}
+
+// Modal Styles
 .loader-container {
 	width: 100%;
 	height: 50vh;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+
+	&.modal-loader {
+		height: 200px;
+	}
 }
-.details-container {
+
+.modal-content {
+	padding: $size-24;
+
+	@media (max-width: 768px) {
+		padding: $size-16;
+	}
+}
+
+.modal-specialist-card {
+	margin-bottom: $size-24;
+}
+
+.modal-specialist-header {
+	display: flex;
+	align-items: center;
+	gap: $size-20;
+
+	@media (max-width: 768px) {
+		flex-direction: column;
+		text-align: center;
+	}
+}
+
+.modal-specialist-info {
 	display: flex;
 	flex-direction: column;
-	justify-content: space-between;
-	height: 100%;
-	width: 70%;
-	padding-bottom: 70px;
+	gap: $size-4;
+}
 
-	@include responsive(phone) {
-		display: none !important;
+.modal-specialist-name {
+	font-size: $size-22;
+	font-weight: $fw-semi-bold;
+	color: $color-g-21;
+	margin: 0;
+}
+
+.modal-specialist-category {
+	font-size: $size-14;
+	color: $color-g-44;
+	margin: 0;
+}
+
+.modal-specialist-rating {
+	display: flex;
+	align-items: center;
+	gap: $size-4;
+	margin-top: $size-4;
+
+	.rating-star {
+		color: #fbbf24;
 	}
-	@include responsive(tab-landscape) {
-		display: none !important;
-		position: absolute;
-		background: $color-g-97;
-		width: 100% !important;
+
+	span {
+		font-size: $size-14;
+		font-weight: $fw-medium;
+		color: $color-g-44;
 	}
 }
-.modal-details-container {
-	display: flex !important;
+
+.modal-details-grid {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: $size-20;
+	margin-bottom: $size-24;
+
+	@media (max-width: 768px) {
+		grid-template-columns: 1fr;
+	}
+}
+
+.detail-item {
+	display: flex;
 	flex-direction: column;
-	justify-content: space-between;
-	height: 100%;
-	width: 100%;
-	padding: $size-44 $size-32;
+	gap: $size-8;
+}
 
-	@include responsive(tab-landscape) {
-		display: flex !important;
-		padding: $size-32;
-	}
-	@include responsive(phone) {
-		display: flex !important;
-		padding: $size-24;
+.detail-label {
+	display: flex;
+	align-items: center;
+	gap: $size-6;
+	font-size: $size-12;
+	color: $color-g-44;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+}
+
+.detail-value {
+	font-size: $size-15;
+	font-weight: $fw-medium;
+	color: $color-g-21;
+	margin: 0;
+
+	.timezone-text {
+		font-size: $size-12;
+		color: $color-g-44;
+		margin-left: $size-4;
 	}
 }
-.modal-appointment-actions {
+
+.modal-calendar-action {
+	display: flex;
+	justify-content: center;
+}
+
+.add-calendar-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: $size-8;
+	padding: $size-12 $size-24;
+	background: linear-gradient(135deg, #0EAEC4 0%, #0891b2 100%);
+	color: white;
+	border: none;
+	border-radius: $size-10;
+	font-size: $size-14;
+	font-weight: $fw-medium;
+	cursor: pointer;
+	transition: all 0.2s ease;
+
+	&:hover {
+		transform: translateY(-1px);
+		box-shadow: 0 4px 12px rgba(14, 174, 196, 0.3);
+	}
+}
+
+.modal-actions {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
 	width: 100%;
 	gap: $size-16;
 
-	.modal-appointment-actions__meeting {
-		display: flex;
-		justify-content: flex-end;
-		align-items: center;
-		gap: $size-16;
-
-		@include responsive(phone) {
-			width: 100%;
-			flex-direction: column-reverse;
-
-			button {
-				width: 100% !important;
-			}
-		}
+	@media (max-width: 768px) {
+		flex-direction: column-reverse;
 	}
+}
 
-	@include responsive(phone) {
+.modal-meeting-actions {
+	display: flex;
+	align-items: center;
+	gap: $size-12;
+
+	@media (max-width: 768px) {
+		width: 100%;
 		flex-direction: column-reverse;
 
 		button {
@@ -568,368 +964,82 @@ const onSubmitRescheduleAppointment = (appointment) => {
 		}
 	}
 }
-:deep(.appointment-details-modal .modal__footer) {
-	padding-top: $size-24;
-	padding-bottom: $size-24;
-}
-:deep(.appointment-details-modal .modal__body) {
-	width: 636px !important;
 
-	@include responsive(tab-landscape) {
-	}
-	@include responsive(phone) {
-		width: 100% !important;
-	}
-}
-
-.details-container__body {
-	width: 100%;
-	height: 100%;
+// Confirmation Modal
+.confirm-content {
+	padding: $size-24;
 	display: flex;
 	flex-direction: column;
-	justify-content: space-between;
-	overflow: scroll;
-	gap: $size-64;
-}
-.top_container {
-	width: 100%;
-	height: 100%;
-	display: flex;
-	flex-direction: column;
+	align-items: center;
+	text-align: center;
 	gap: $size-20;
+	max-width: 400px;
+
+	@media (max-width: 768px) {
+		padding: $size-16;
+	}
 }
-.header {
+
+.confirm-icon {
+	width: 64px;
+	height: 64px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 50%;
+
+	&.warning {
+		background: rgba(239, 68, 68, 0.1);
+		color: #ef4444;
+	}
+
+	&.info {
+		background: rgba(14, 174, 196, 0.1);
+		color: #0EAEC4;
+	}
+}
+
+.confirm-message {
+	font-size: $size-15;
+	color: $color-g-21;
+	line-height: 1.6;
+	margin: 0;
+}
+
+.confirm-actions {
+	width: 100%;
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
+	gap: $size-12;
 
-	.heading {
-		font-weight: $fw-semi-bold;
-		font-size: $size-28;
-		color: $color-black;
-	}
-	.close-container {
-		cursor: pointer;
-	}
-}
-.spacialist-details__container {
-	display: flex;
-	flex-direction: column;
-	justify-content: space-between;
-	gap: $size-32;
-
-	@include responsive(phone) {
-		justify-content: flex-start;
-	}
-
-	.spacialist_details {
-		display: flex;
+	@media (max-width: 768px) {
 		flex-direction: column;
-		gap: $size-20;
 
-		.specialist_details-heading {
-			font-weight: $fw-regular;
-			font-size: $size-14;
-			color: $color-g-44;
-			border-bottom: $size-1 solid $color-g-90;
-			padding-bottom: $size-5;
-		}
-	}
-	.specialist-details__actions {
-		width: 100%;
-		display: flex;
-		flex-direction: column;
-		gap: $size-8;
-
-		.specialist-details__actions--diagnosis {
-			background: $color-white;
-			border: $size-1 solid $color-pri;
-		}
-	}
-	.specialist-details__health_info {
-		display: flex;
-		justify-content: space-between;
-		align-items: flex-start;
-
-		.specialist-details__health_info--items {
-			display: flex;
-			flex-direction: column;
-			justify-content: flex-start;
-			gap: $size-8;
-
-			.specialist-details__health_info--item {
-				display: flex;
-				justify-content: flex-start;
-				align-items: center;
-				gap: $size-8;
-
-				.specialist-details__health_info--item-key {
-					font-size: $size-16;
-					font-weight: $fw-regular;
-					color: $color-g-44;
-				}
-				.specialist-details__health_info--item-value {
-					font-size: $size-16;
-					font-weight: $fw-regular;
-					color: $color-g-21;
-				}
-			}
-
-			
-		}
-	}
-	.specialist_details-container {
-		display: flex;
-		justify-content: start;
-		align-items: flex-start;
-		gap: $size-20;
-
-		@include responsive(phone) {
-			flex-direction: column;
-			justify-content: flex-start;
-			align-items: center;
-		}
-	}
-	.specialist_details-info-container {
-		width: 100%;
-		display: flex;
-		flex-direction: column;
-		justify-content: start;
-		align-items: flex-start;
-		gap: $size-5;
-
-		.specialist-details-heading {
-			display: flex;
-			justify-content: flex-start;
-			align-items: center;
-			gap: $size-16;
-
-			.specialist_details-rating-container {
-				display: flex;
-				justify-content: flex-start;
-				align-items: center;
-				gap: 0;
-
-				.specialist_details-rating {
-					font-weight: $fw-bold;
-					font-size: $size-16;
-					line-height: 24px;
-					color: $color-g-44;
-				}
-			}
-		}
-
-		.specialist_details-info {
-			display: flex;
-			justify-content: start;
-			align-items: flex-start;
-			gap: $size-10;
-
-			.specialist_details-name {
-				font-weight: $fw-semi-bold;
-				font-size: $size-26;
-				color: $color-black;
-			}
-			.specialist_details-rating-container {
-				display: flex;
-				justify-content: start;
-				align-items: center;
-				gap: $size-5;
-
-				.specialist_details-rating {
-					font-size: $size-12;
-					font-weight: $fw-regular;
-					color: $color-g-44;
-				}
-			}
-		}
-		.specialist-details__patient {
-			display: flex;
-			flex-direction: column;
-			justify-content: flex-start;
-			align-items: flex-start;
-			gap: $size-4;
-
-			.specialist-details__icon {
-
-				.specialist-details__no-rating span {
-					font-weight: $fw-bold;
-					font-size: $size-16;
-					line-height: 24px;
-					color: $color-g-44;
-				}
-			}
-
-			@include responsive(phone) {
-				flex-direction: column;
-				justify-content: flex-start;
-				align-items: flex-start;
-				gap: $size-4;
-			}
-
-			.specialist_details-specialty {
-				font-size: $size-14;
-				font-weight: $fw-regular;
-				color: $color-g-44;
-			}
-		}
-	}
-	.specialist-appointment-details {
-		width: 100%;
-		display: flex;
-		flex-direction: column;
-		justify-content: flex-start;
-		align-items: flex-start;
-		gap: $size-24;
-		padding-left: 100px !important;
-
-		@include responsive(tab-landscape) {
-			padding-left: 100px !important;
-		}
-		@include responsive(phone) {
-			padding-left: 0 !important;
-		}
-
-		.specialist_details-heading {
-			width: 100%;
-			font-weight: $fw-regular;
-			font-size: $size-14;
-			color: $color-g-44;
-			border-bottom: $size-1 solid $color-g-90;
-			padding-bottom: $size-5;
-		}
-
-		.specialist-appointment-details__container {
-			display: flex;
-			flex-direction: column;
-			justify-content: start;
-			align-content: center;
-			gap: $size-10;
-
-			@include responsive(phone) {
-				flex-direction: column;
-			}
-
-			.specialist-appointment-details__title {
-				font-size: $size-16;
-				font-weight: $fw-regular;
-				color: $color-g-44;
-
-				@include responsive(phone) {
-					font-size: $size-14;
-					font-weight: $fw-regular;
-					color: $color-g-44;
-				}
-			}
-			.specialist-appointment-details__item {
-				font-size: $size-16;
-				font-weight: $fw-regular;
-				color: $color-black;
-				padding-bottom: $size-4;
-
-				@include responsive(phone) {
-					font-size: $size-14;
-					font-weight: $fw-regular;
-					color: $color-black;
-					padding-bottom: $size-4;
-				}
-			}
-		}
-	}
-}
-.appointment_actions {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-
-	.reschedule_action {
-		font-weight: $fw-regular;
-		font-size: $size-16;
-		color: $color-pri-main;
-		padding: $size-6 $size-10;
-		border-radius: $size-8;
-		cursor: pointer;
-		&:hover {
-			background: $color-pri-t4;
+		button {
+			width: 100% !important;
 		}
 	}
 }
 
-.caution-container {
-    width: 468px;
-    padding: $size-24;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: $size-24;
+// Modal deep styles
+:deep(.appointment-details-modal .modal__body) {
+	width: 580px !important;
 
-    @include responsive(phone) {
-        width: 100% !important;
-    }
-
-    .caution-content {
-        font-weight: $fw-regular;
-        font-size: $size-16;
-        color: $color-g-21;
-    }
-}
-.caution-actions {
-    width: 100%;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-
-    @include responsive(phone) {
-        flex-direction: column;
-        gap: $size-16;
-        width: 100%;
-        padding-top: 0;
-        padding-bottom: 0;
-
-        button {
-            width: 100% !important;
-        }
-    }
-}
-
-:deep(.caution-message-modal .modal) {
-	// width: 100% !important;
-
-	@include responsive(tab-landscape) {
-		width: 90% !important;
-	}
-	@include responsive(phone) {
+	@media (max-width: 768px) {
 		width: 100% !important;
-		height: 100% !important;
 	}
 }
-:deep(.caution-message-modal .modal__body) {
-	width: 400px !important;
-	height: 100% !important;
 
-	@include responsive(tab-landscape) {
-		height: 100% !important;
-		width: 90% !important;
-	}
-	@include responsive(phone) {
+:deep(.appointment-details-modal .modal__footer) {
+	padding: $size-20 $size-24;
+}
+
+:deep(.confirm-modal .modal__body) {
+	width: auto !important;
+
+	@media (max-width: 768px) {
 		width: 100% !important;
-		height: 100% !important;
-	}
-}
-
-.desktop-visible {
-	display: flex !important;
-
-	@include responsive(phone) {
-		display: none !important;
-	}
-}
-.mobile-visible {
-	display: none !important;
-
-	@include responsive(phone) {
-		display: flex !important;
 	}
 }
 </style>

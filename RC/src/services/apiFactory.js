@@ -52,6 +52,9 @@ const apiFactory = {
   $_getOnetAppointments(appointmentId) {
     return http.get(`/appointments/${appointmentId}`);
   },
+  $_getAppointmentDetailsForSpecialist(appointmentId) {
+    return http.get(`/appointments/${appointmentId}/specialist-details`);
+  },
   $_getPaymentCards() {
     return http.get("/cards");
   },
@@ -185,6 +188,23 @@ const apiFactory = {
     return http.post("/health-checkup/extended-diagnosis", payload);
   },
 
+  // Health Scores APIs (for appointment booking flow)
+  $_getHealthScores(patientId = null) {
+    if (patientId) {
+      return http.get(`/appointments/patient/${patientId}/health-scores`);
+    }
+    return http.get("/appointments/health-scores");
+  },
+  $_getHealthCheckups(params = {}) {
+    return http.get("/health-checkup/history", { params });
+  },
+  $_getHealthCheckupById(checkupId) {
+    return http.get(`/health-checkup/${checkupId}`);
+  },
+  $_getPatientHealthProfile(patientId) {
+    return http.get(`/appointments/patient/${patientId}/health-profile`);
+  },
+
   // Claude AI Health Summary APIs
   $_getClaudeSummaryStatus() {
     return http.get("/health-checkup/claude-summary/status");
@@ -241,6 +261,40 @@ const apiFactory = {
   },
   $_getAdvancedHealthScoreById(assessmentId) {
     return http.get(`/advanced-health-score/${assessmentId}`);
+  },
+  $_getAdvancedHealthScoreByIdForSpecialist(assessmentId) {
+    return http.get(`/advanced-health-score/view/${assessmentId}`);
+  },
+
+  // Basic Health Score APIs
+  $_calculateBasicHealthScore() {
+    return http.post('/basic-health-score/calculate');
+  },
+  $_getBasicHealthScore() {
+    return http.get('/basic-health-score');
+  },
+  $_getBasicHealthScoreHistory(params) {
+    return http.get('/basic-health-score/history', { params });
+  },
+
+  // Patient Health Records for Specialist
+  $_getPatientFullHealthRecords(patientId, params = {}) {
+    return http.get(`/appointments/patient/${patientId}/full-health-records`, { params });
+  },
+
+  // Patient Prescriptions for Specialist
+  $_getPatientPrescriptionsForSpecialist(patientId, params = {}) {
+    return http.get(`/appointments/patient/${patientId}/prescriptions`, { params });
+  },
+
+  // Patient Uploaded Prescriptions (external prescriptions) for Specialist
+  $_getPatientUploadedPrescriptions(patientId, params = {}) {
+    return http.get(`/appointments/patient/${patientId}/uploaded-prescriptions`, { params });
+  },
+
+  // Patient Pharmacy Orders (medication purchases) for Specialist
+  $_getPatientPharmacyOrders(patientId, params = {}) {
+    return http.get(`/appointments/patient/${patientId}/pharmacy-orders`, { params });
   },
 
   $_getOrder(orderId) {
@@ -671,6 +725,101 @@ const apiFactory = {
 
   test(params) {
     console.log("PARAMS", params);
+  },
+
+  // ============ Specialist Patient Dashboard APIs ============
+
+  /**
+   * Get specialist's patients with filters and search
+   * @param {Object} params - { filter: 'my_patients'|'recent'|'starred'|'all', search, sort, page, limit }
+   */
+  $_getSpecialistPatients(params) {
+    return http.get("/specialist/patients", { params });
+  },
+
+  /**
+   * Get patient statistics for specialist
+   */
+  $_getSpecialistPatientStats() {
+    return http.get("/specialist/patients/stats");
+  },
+
+  /**
+   * Get detailed patient information
+   * @param {string} patientId - The patient ID
+   */
+  $_getSpecialistPatientDetails(patientId) {
+    return http.get(`/specialist/patients/${patientId}`);
+  },
+
+  /**
+   * Get patient overview (vitals, recent activity, stats)
+   * @param {string} patientId - The patient ID
+   */
+  $_getSpecialistPatientOverview(patientId) {
+    return http.get(`/specialist/patients/${patientId}/overview`);
+  },
+
+  /**
+   * Get patient health records (checkups, scores, vitals)
+   * @param {string} patientId - The patient ID
+   * @param {Object} params - { page, limit }
+   */
+  $_getSpecialistPatientHealthRecords(patientId, params = {}) {
+    return http.get(`/specialist/patients/${patientId}/health-records`, { params });
+  },
+
+  /**
+   * Get patient prescriptions (written and uploaded)
+   * @param {string} patientId - The patient ID
+   * @param {Object} params - { type: 'all'|'written'|'uploaded', page, limit }
+   */
+  $_getSpecialistPatientPrescriptions(patientId, params = {}) {
+    return http.get(`/specialist/patients/${patientId}/prescriptions`, { params });
+  },
+
+  /**
+   * Get patient appointments with this specialist
+   * @param {string} patientId - The patient ID
+   * @param {Object} params - { status, page, limit }
+   */
+  $_getSpecialistPatientAppointments(patientId, params = {}) {
+    return http.get(`/specialist/patients/${patientId}/appointments`, { params });
+  },
+
+  /**
+   * Get patient pharmacy purchases
+   * @param {string} patientId - The patient ID
+   * @param {Object} params - { page, limit }
+   */
+  $_getSpecialistPatientPurchases(patientId, params = {}) {
+    return http.get(`/specialist/patients/${patientId}/purchases`, { params });
+  },
+
+  /**
+   * Get patient activity timeline
+   * @param {string} patientId - The patient ID
+   * @param {Object} params - { page, limit }
+   */
+  $_getSpecialistPatientTimeline(patientId, params = {}) {
+    return http.get(`/specialist/patients/${patientId}/timeline`, { params });
+  },
+
+  /**
+   * Get patient dependents
+   * @param {string} patientId - The patient ID
+   */
+  $_getSpecialistPatientDependents(patientId) {
+    return http.get(`/specialist/patients/${patientId}/dependents`);
+  },
+
+  /**
+   * Toggle star/flag status for a patient
+   * @param {string} patientId - The patient ID
+   * @param {Object} payload - { starred: boolean, notes?: string, categories?: string[] }
+   */
+  $_togglePatientStar(patientId, payload) {
+    return http.post(`/specialist/patients/${patientId}/star`, payload);
   },
 };
 export default apiFactory;

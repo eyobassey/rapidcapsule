@@ -22,6 +22,21 @@ import {
 import { ClinicalNotesModule } from '../clinical-notes/clinical-notes.module';
 import { JwtModule } from '@nestjs/jwt';
 import { AdminOrJwtGuard } from './guards/admin-or-jwt.guard';
+import { HealthCheckupModule } from '../health-checkup/health-checkup.module';
+import { AdvancedHealthScoreModule } from '../advanced-health-score/advanced-health-score.module';
+import { VitalsModule } from '../vitals/vitals.module';
+import {
+  SpecialistPrescription,
+  SpecialistPrescriptionSchema,
+} from '../prescriptions/entities/specialist-prescription.entity';
+import {
+  PatientPrescriptionUpload,
+  PatientPrescriptionUploadSchema,
+} from '../pharmacy/entities/patient-prescription-upload.entity';
+import {
+  PharmacyOrder,
+  PharmacyOrderSchema,
+} from '../pharmacy/entities/pharmacy-order.entity';
 
 @Module({
   imports: [
@@ -31,6 +46,9 @@ import { AdminOrJwtGuard } from './guards/admin-or-jwt.guard';
     CardsModule,
     SubscriptionsModule,
     ClinicalNotesModule,
+    HealthCheckupModule,
+    AdvancedHealthScoreModule,
+    VitalsModule,
     JwtModule.register({
       secret: process.env.JWTKEY || 'theBestKepSecret',
       signOptions: { expiresIn: '24h' },
@@ -38,6 +56,9 @@ import { AdminOrJwtGuard } from './guards/admin-or-jwt.guard';
     MongooseModule.forFeature([
       { name: Appointment.name, schema: AppointmentSchema },
       { name: AppointmentReferral.name, schema: AppointmentReferralSchema },
+      { name: SpecialistPrescription.name, schema: SpecialistPrescriptionSchema },
+      { name: PatientPrescriptionUpload.name, schema: PatientPrescriptionUploadSchema },
+      { name: PharmacyOrder.name, schema: PharmacyOrderSchema },
     ]),
   ],
   controllers: [AppointmentsController],

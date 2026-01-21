@@ -90,6 +90,17 @@ export default {
 				},
 				{
 					link: "",
+					label: "Patients",
+					children: [
+						{ link: "/app/specialist/patients", label: "My Patients" },
+						{ link: "/app/specialist/patients/all", label: "All Patients" },
+						{ link: "/app/specialist/patients/starred", label: "Starred" }
+					],
+					icon: "users",
+					isExpanded: false
+				},
+				{
+					link: "",
 					label: "Clinical Notes",
 					children: [
 						{ link: "/app/specialist/clinical-notes", label: "All Notes" },

@@ -2,243 +2,332 @@
 	<div class="loader-container" v-if="isLoading">
 		<loader :useOverlay="false" style="position: relative" />
 	</div>
-	<div v-else class="appointments-container">
-		<div class="appointments_root">
-			<template v-if="Object.keys(appointmentItems).length">
-				<div v-for="(appointments, timestamp, index) in appointmentItems" :key="timestamp + index">
-					<div class="appointments_container">
-						<p class="appointment_timestamp">{{ timestamp }}</p>
-						<template v-for="appointment in appointments" :key="appointment.id">
-							<div class="appointments_items">
-								<div class="appointments_items-container">
-									<p class="appointments_items-title">
-										{{ appointment.specialist.full_name }}
-									</p>
-									<p class="appointments_items-timestamp">
-										{{ format(new Date(appointment.start_time), 'HH:mm') }}
-										({{ format(new Date(appointment.start_time), 'hh:mm a') }})
-									</p>
-								</div>
-								<div class="appointment_actions" @click="onShow(appointment)">
-									<p class="appointment_actions-title desktop-visible">View Details</p>
-									<rc-iconbutton icon="icon-carrot-right" size="xs" />
-
-								</div>
-							</div>
-						</template>
-					</div>
-				</div>
-			</template>
-			<template v-else>
-				<div class="empty-appointment-container">
-					<div class="empty-appointment-content">
-						<h1 class="empty-appointment-title">
-							You have no completed appointments yet
-						</h1>
-						<p class="empty-appointment-description">
-							Appointments will show up here when they are closed or completed.
-						</p>
-					</div>
-				</div>
-			</template>
+	<div v-else class="history-appointments">
+		<!-- Filter Pills -->
+		<div class="filter-section" v-if="Object.keys(appointmentItems).length || activeFilter !== 'all'">
+			<button
+				v-for="filter in filters"
+				:key="filter.value"
+				class="filter-pill"
+				:class="{ active: activeFilter === filter.value }"
+				@click="setFilter(filter.value)"
+			>
+				<span class="filter-count" v-if="filter.count > 0">{{ filter.count }}</span>
+				{{ filter.label }}
+			</button>
 		</div>
-		<template v-if="false">
-			<div class="details-container">
-				<div class="details-container__body">
-					<div class="top_container">
-						<div class="header">
-							<h1 class="heading">Appointment Details</h1>
-							<div @click="isOpen = false">
-								<div class="close-container">
-									<rc-iconbutton icon="icon-close" size="md" />
+
+		<!-- Appointments List -->
+		<div class="appointments-list" v-if="Object.keys(filteredAppointments).length">
+			<div
+				v-for="(appointments, timestamp, index) in filteredAppointments"
+				:key="timestamp + index"
+				class="date-group"
+			>
+				<div class="date-header">
+					<v-icon name="hi-calendar" scale="0.9" class="date-icon" />
+					<span class="date-text">{{ timestamp }}</span>
+				</div>
+
+				<div class="appointments-cards">
+					<div
+						v-for="appointment in appointments"
+						:key="appointment.id"
+						class="appointment-card"
+						:class="getCardClass(appointment.status)"
+					>
+						<div class="card-main">
+							<div class="specialist-section">
+								<div class="specialist-avatar">
+									<rc-avatar
+										size="md"
+										:firstName="appointment.specialist.profile?.first_name || ''"
+										:lastName="appointment.specialist.profile?.last_name || ''"
+										:modelValue="appointment.specialist?.profile?.profile_image"
+									/>
+								</div>
+								<div class="specialist-info">
+									<h3 class="specialist-name">{{ appointment.specialist.full_name }}</h3>
+									<p class="specialist-category">{{ appointment.category }}</p>
+									<div class="appointment-meta">
+										<span class="meeting-type" :class="getMeetingTypeClass(appointment.appointment_type)">
+											<v-icon
+												:name="appointment.appointment_type === 'video' ? 'hi-video-camera' : 'hi-phone'"
+												scale="0.7"
+											/>
+											{{ formatMeetingType(appointment.appointment_type) }}
+										</span>
+										<span class="status-badge" :class="getStatusClass(appointment.status)">
+											<v-icon :name="getStatusIcon(appointment.status)" scale="0.7" />
+											{{ formatStatus(appointment.status) }}
+										</span>
+									</div>
 								</div>
 							</div>
-						</div>
-						<div class="loader-container" v-if="isFetching">
-							<loader :useOverlay="false" style="position: relative" />
-						</div>
-						<div v-else class="spacialist-details__container">
-							<div class="spacialist_details">
-								<p class="specialist_details-heading">Specialist Information</p>
-								<div class="specialist_details-container">
-									<div class="specialist_details-avatar">
-										<rc-avatar
-											size="md"
-											:firstName="specialistInfo.firstName"
-											:lastName="specialistInfo.lastName"
-											v-model="specialistInfo.photo"
+
+							<div class="time-section">
+								<div class="time-display">
+									<div class="time-info">
+										<span class="time-date">{{ format(new Date(appointment.start_time), 'MMM dd, yyyy') }}</span>
+										<span class="time-main">{{ format(new Date(appointment.start_time), 'h:mm a') }}</span>
+									</div>
+								</div>
+
+								<!-- Rating Display -->
+								<div class="rating-display" v-if="appointment.rating && appointment.status === 'CLOSED'">
+									<div class="rating-stars">
+										<v-icon
+											v-for="star in 5"
+											:key="star"
+											:name="star <= appointment.rating.score ? 'bi-star-fill' : 'hi-star'"
+											scale="0.7"
+											:class="star <= appointment.rating.score ? 'star-filled' : 'star-empty'"
 										/>
 									</div>
-									<div class="specialist_details-info-container">
-										<div class="specialist-details-heading">
-											<h2 class="specialist_details-name">{{ specialistInfo.fullName }}</h2>
-											<div class="specialist_details-rating-container">
-												<span class="specialist_details-rating">{{ specialistInfo.rating }}</span>
-												<rc-icon icon-name="icon-star-rating" size="xms" />
-											</div>
-										</div>
-										<div class="specialist-details__patient">
-											<p class="specialist_details-specialty">{{ specialistInfo.category }}</p>
-											<p class="specialist_details-specialty">₦200 - ₦500/hour</p>
-										</div>
-									</div>
-								</div>
-							</div>
-							<div class="specialist-appointment-details">
-								<p class="specialist_details-heading">Appointment Details</p>
-								<div class="specialist-appointment-details__container">
-									<p class="specialist-appointment-details__title">Date & Time</p>
-									<div class="specialist-appointment-details__content">
-										<p class="specialist-appointment-details__item">
-											{{ format(new Date(specialistInfo.startTime), 'MMMM dd, yyyy') }}
-										</p>
-										<p class="specialist-appointment-details__item">
-											{{ format(new Date(specialistInfo.startTime), 'HH:mm') }}
-											({{ format(new Date(specialistInfo.startTime), 'HH:mm a') }})
-											{{ specialistInfo.timezone }}
-										</p>
-									</div>
-								</div>
-								<div class="specialist-appointment-details__container">
-									<p class="specialist-appointment-details__title">Appointment Type</p>
-									<div class="specialist-appointment-details__content">
-										<p class="specialist-appointment-details__item">
-											{{ specialistInfo.appointmentType }}
-										</p>
-									</div>
+									<span class="rating-text">Your rating</span>
 								</div>
 							</div>
 						</div>
-					</div>
-					<div class="appointment-actions" v-if="!isFetching">
-						<rc-button
-							type="secondary"
-							label="Cancel"
-							class="reschedule_action"
-							:disabled="isFetching || !appointment.start_url"
-						/>
-						<div class="appointment-actions__right">
-							<rc-button
-								type="secondary"
-								label="Reschedule"
-								:disabled="isFetching || !appointment.start_url"
-							/>
-							<rc-button
-								type="primary"
-								label="Start Meeting"
-								:disabled="isFetching || !appointment.start_url"
-								@click="onStartMeetings(appointment)"
-							/>
+
+						<div class="card-actions">
+							<button
+								class="action-btn details-btn"
+								@click.stop="onShow(appointment)"
+							>
+								<v-icon name="hi-information-circle" scale="0.9" />
+								<span class="btn-text">View Details</span>
+							</button>
+
+							<!-- Rate button for completed appointments without rating -->
+							<button
+								v-if="appointment.status === 'CLOSED' && !appointment.rating"
+								class="action-btn rate-btn"
+								@click.stop="openRatingModal(appointment)"
+							>
+								<v-icon name="bi-star-fill" scale="0.85" />
+								<span class="btn-text">Rate Appointment</span>
+							</button>
+
+							<!-- Book Follow-up for completed appointments -->
+							<button
+								v-if="appointment.status === 'CLOSED'"
+								class="action-btn followup-btn"
+								@click.stop="bookFollowUp(appointment)"
+							>
+								<v-icon name="hi-refresh" scale="0.85" />
+								<span class="btn-text">Book Follow-up</span>
+							</button>
 						</div>
 					</div>
 				</div>
 			</div>
-		</template>
-		<DialogModal
+		</div>
+
+		<!-- Empty State -->
+		<div v-else class="empty-state">
+			<div class="empty-illustration">
+				<v-icon name="hi-clipboard-check" scale="4" class="empty-icon" />
+			</div>
+			<h2 class="empty-title">No Appointment History</h2>
+			<p class="empty-description">
+				{{ activeFilter !== 'all'
+					? `You have no ${activeFilter.toLowerCase()} appointments.`
+					: 'Your completed, cancelled, and missed appointments will appear here.'
+				}}
+			</p>
+			<button v-if="activeFilter !== 'all'" class="clear-filter-btn" @click="setFilter('all')">
+				<v-icon name="hi-x" scale="0.85" />
+				Clear Filter
+			</button>
+		</div>
+
+		<!-- Details Modal -->
+		<dialog-modal
 			v-if="isOpen"
 			title="Appointment Details"
 			@closeModal="isOpen = false"
-			:has-footer="false"
+			:has-footer="true"
+			class="history-details-modal"
 		>
 			<template v-slot:body>
-				<div class="loader-container" v-if="isFetching">
+				<div class="loader-container modal-loader" v-if="isFetching">
 					<loader :useOverlay="false" style="position: relative" />
 				</div>
-				<div v-else class="modal-details-container">
-					<div class="details-container__body">
-						<div class="top_container">
-							<div class="spacialist-details__container">
-								<div class="spacialist_details">
-									<div class="specialist_details-container">
-										<div class="specialist_details-avatar">
-											<rc-avatar
-												size="lg"
-												:firstName="specialistInfo.firstName"
-												:lastName="specialistInfo.lastName"
-												v-model="specialistInfo.photo"
-											/>
-										</div>
-										<div class="specialist_details-info-container">
-											<div class="specialist-details-heading">
-												<h2 class="specialist_details-name">{{ specialistInfo.fullName }}</h2>
-												<div class="specialist_details-rating-container desktop-visible">
-													<span class="specialist_details-rating">{{ specialistInfo.rating?.toFixed(1) }}</span>
-													<rc-icon icon-name="icon-star-rating" size="xms" />
-												</div>
-											</div>
-											<div class="specialist-details__patient">
-												<div class="specialist-details__icon mobile-visible">
-													<template v-if="specialistInfo.rating">
-														<span v-for="i in specialistInfo.rating" :key="i">
-															<rc-icon icon="star" size="xs" viewBox="0 0 12 12"   />
-														</span>
-													</template>
-													<div v-else class="specialist-details__no-rating mobile-visible">
-														<span class="specialist_details-rating">{{ specialistInfo.rating?.toFixed(1) }}</span>
-														<rc-icon icon="star" size="xs" viewBox="0 0 12 12"   />
-													</div>
-												</div>
-												<p class="specialist_details-specialty">{{ specialistInfo.category }}</p>
-												<p class="specialist_details-specialty">0yrs experience</p>
-											</div>
-										</div>
-									</div>
-								</div>
-								<div class="specialist-appointment-details">
-									<div class="specialist-appointment-details__container">
-										<p class="specialist-appointment-details__title">Date & Time</p>
-										<div class="specialist-appointment-details__content">
-											<p class="specialist-appointment-details__item">
-												{{ format(new Date(specialistInfo.startTime), 'MMMM dd, yyyy') }}
-											</p>
-											<p class="specialist-appointment-details__item">
-												{{ format(new Date(specialistInfo.startTime), 'HH:mm') }}
-												({{ format(new Date(specialistInfo.startTime), 'HH:mm a') }})
-												{{ specialistInfo.timezone }}
-											</p>
-										</div>
-									</div>
-									<div class="specialist-appointment-details__container">
-										<p class="specialist-appointment-details__title">Appointment Type</p>
-										<div class="specialist-appointment-details__content">
-											<p class="specialist-appointment-details__item">
-												{{ specialistInfo.appointmentType }}
-											</p>
-										</div>
-									</div>
+				<div v-else class="modal-content">
+					<!-- Status Banner -->
+					<div class="status-banner" :class="getStatusClass(appointment.status)">
+						<v-icon :name="getStatusIcon(appointment.status)" scale="1" />
+						<span>{{ formatStatus(appointment.status) }}</span>
+					</div>
+
+					<div class="modal-specialist-card">
+						<div class="modal-specialist-header">
+							<rc-avatar
+								size="lg"
+								:firstName="specialistInfo.firstName"
+								:lastName="specialistInfo.lastName"
+								v-model="specialistInfo.photo"
+							/>
+							<div class="modal-specialist-info">
+								<h2 class="modal-specialist-name">{{ specialistInfo.fullName }}</h2>
+								<p class="modal-specialist-category">{{ specialistInfo.category }}</p>
+								<div class="modal-specialist-rating" v-if="specialistInfo.rating">
+									<v-icon name="bi-star-fill" scale="0.75" class="rating-star" />
+									<span>{{ specialistInfo.rating?.toFixed(1) }}</span>
 								</div>
 							</div>
 						</div>
 					</div>
-				</div>
-			</template>
-			<template v-slot:foot>
-				<div class="modal-appointment-actions" v-if="!isFetching">
-					<rc-button
-						type="tertiary"
-						style="border:0"
-						label="Cancel Appointment"
-						class="reschedule_action"
-						:disabled="isFetching || !appointment.start_url"
-					/>
-					<div class="modal-appointment-actions__meeting">
-						<rc-button
-							type="tertiary"
-							label="Reschedule"
-							class="reschedule_action"
-							:disabled="isFetching || !appointment.start_url"
-						/>
-						<rc-button
-							type="primary"
-							label="Start Meeting"
-							class="start_meeting_action"
-							:disabled="isFetching || !appointment.start_url"
-							@click="onStartMeetings(appointment)"
-						/>
+
+					<div class="modal-details-grid">
+						<div class="detail-item">
+							<div class="detail-label">
+								<v-icon name="hi-calendar" scale="0.85" />
+								<span>Date</span>
+							</div>
+							<p class="detail-value">
+								{{ format(new Date(specialistInfo.startTime), 'EEEE, MMMM dd, yyyy') }}
+							</p>
+						</div>
+
+						<div class="detail-item">
+							<div class="detail-label">
+								<v-icon name="hi-clock" scale="0.85" />
+								<span>Time</span>
+							</div>
+							<p class="detail-value">
+								{{ format(new Date(specialistInfo.startTime), 'h:mm a') }}
+								<span class="timezone-text">{{ specialistInfo.timezone }}</span>
+							</p>
+						</div>
+
+						<div class="detail-item">
+							<div class="detail-label">
+								<v-icon name="hi-video-camera" scale="0.85" />
+								<span>Type</span>
+							</div>
+							<p class="detail-value">{{ specialistInfo.appointmentType }}</p>
+						</div>
+					</div>
+
+					<!-- Your Rating Section -->
+					<div class="rating-section" v-if="appointment.rating">
+						<h4 class="section-title">Your Rating</h4>
+						<div class="rating-content">
+							<div class="rating-stars-large">
+								<v-icon
+									v-for="star in 5"
+									:key="star"
+									:name="star <= appointment.rating.score ? 'bi-star-fill' : 'hi-star'"
+									scale="1.2"
+									:class="star <= appointment.rating.score ? 'star-filled' : 'star-empty'"
+								/>
+							</div>
+							<p class="rating-review" v-if="appointment.rating.review">
+								"{{ appointment.rating.review }}"
+							</p>
+						</div>
+					</div>
+
+					<!-- Rate Prompt -->
+					<div class="rate-prompt" v-else-if="appointment.status === 'CLOSED'">
+						<v-icon name="bi-star-fill" scale="1.2" class="prompt-icon" />
+						<div class="prompt-content">
+							<h4>How was your experience?</h4>
+							<p>Help others by rating this consultation</p>
+						</div>
+						<button class="rate-now-btn" @click="openRatingModal(appointment)">
+							Rate Now
+						</button>
 					</div>
 				</div>
 			</template>
-		</DialogModal>
+			<template v-slot:foot>
+				<div class="modal-actions" v-if="!isFetching">
+					<button class="modal-close-btn" @click="isOpen = false">
+						Close
+					</button>
+					<button
+						v-if="appointment.status === 'CLOSED'"
+						class="modal-followup-btn"
+						@click="bookFollowUp(appointment)"
+					>
+						<v-icon name="hi-refresh" scale="0.9" />
+						Book Follow-up
+					</button>
+				</div>
+			</template>
+		</dialog-modal>
+
+		<!-- Rating Modal -->
+		<dialog-modal
+			v-if="isRatingModalOpen"
+			title="Rate Your Appointment"
+			@closeModal="isRatingModalOpen = false"
+			:has-footer="true"
+			class="rating-modal"
+		>
+			<template v-slot:body>
+				<div class="rating-modal-content">
+					<div class="rating-specialist">
+						<rc-avatar
+							size="md"
+							:firstName="ratingAppointment?.specialist?.profile?.first_name || ''"
+							:lastName="ratingAppointment?.specialist?.profile?.last_name || ''"
+						/>
+						<div class="rating-specialist-info">
+							<h3>{{ ratingAppointment?.specialist?.full_name }}</h3>
+							<p>{{ ratingAppointment?.category }}</p>
+						</div>
+					</div>
+
+					<div class="rating-input">
+						<p class="rating-question">How would you rate this consultation?</p>
+						<div class="rating-stars-input">
+							<button
+								v-for="star in 5"
+								:key="star"
+								class="star-btn"
+								:class="{ active: star <= ratingScore }"
+								@click="ratingScore = star"
+							>
+								<v-icon
+									:name="star <= ratingScore ? 'bi-star-fill' : 'hi-star'"
+									scale="1.5"
+								/>
+							</button>
+						</div>
+						<p class="rating-label">{{ getRatingLabel(ratingScore) }}</p>
+					</div>
+
+					<div class="review-input">
+						<label for="review">Add a review (optional)</label>
+						<textarea
+							id="review"
+							v-model="ratingReview"
+							placeholder="Share your experience with this specialist..."
+							rows="4"
+						></textarea>
+					</div>
+				</div>
+			</template>
+			<template v-slot:foot>
+				<div class="rating-modal-actions">
+					<rc-button
+						type="tertiary"
+						label="Cancel"
+						@click="isRatingModalOpen = false"
+					/>
+					<rc-button
+						type="primary"
+						label="Submit Rating"
+						:loading="isSubmittingRating"
+						:disabled="ratingScore === 0 || isSubmittingRating"
+						@click="submitRating"
+					/>
+				</div>
+			</template>
+		</dialog-modal>
 	</div>
 </template>
 
@@ -246,59 +335,148 @@
 import { groupBy } from "lodash";
 import { format } from "date-fns";
 import { useRouter } from 'vue-router';
-import { ref, inject, onMounted } from 'vue'
-import RcIcon from "@/components/RCIcon";
-import RcIconbutton from "@/components/RCIconButton";
+import { ref, inject, onMounted, computed } from 'vue'
+import { useToast } from "vue-toast-notification";
 import RcAvatar from "@/components/RCAvatar";
 import RcButton from "@/components/buttons/button-primary.vue";
 import Loader from "@/components/Loader/main-loader.vue";
-import Avatar from "@/components/Avatars/avatar-fixed.vue";
 import DialogModal from "@/components/modals/dialog-modal.vue";
 
 const $http = inject('$http');
+const { bookingInfo, useBookingInfo } = inject('$_BOOKING_INFO');
 const router = useRouter();
+const $toast = useToast();
 
-const profile = ref({});
 const appointments = ref([]);
 const appointment = ref({});
-const isLoading = ref(false);
+const isLoading = ref(true);
 const isFetching = ref(true);
 const isOpen = ref(false);
 const appointmentItems = ref([]);
 const specialistInfo = ref({});
+const activeFilter = ref('all');
+
+// Rating modal state
+const isRatingModalOpen = ref(false);
+const ratingAppointment = ref(null);
+const ratingScore = ref(0);
+const ratingReview = ref('');
+const isSubmittingRating = ref(false);
+
+const filters = computed(() => [
+	{ label: 'All', value: 'all', count: getTotalCount() },
+	{ label: 'Completed', value: 'CLOSED', count: getStatusCount('CLOSED') },
+	{ label: 'Cancelled', value: 'CANCELLED', count: getStatusCount('CANCELLED') },
+	{ label: 'Missed', value: 'MISSED', count: getStatusCount('MISSED') },
+]);
+
+const filteredAppointments = computed(() => {
+	if (activeFilter.value === 'all') return appointmentItems.value;
+
+	const filtered = {};
+	Object.entries(appointmentItems.value).forEach(([date, appts]) => {
+		const filteredAppts = appts.filter(a => a.status === activeFilter.value);
+		if (filteredAppts.length > 0) {
+			filtered[date] = filteredAppts;
+		}
+	});
+	return filtered;
+});
 
 onMounted(() => getUserAppointments());
 
-const calculateAge = (birthday) => {
-	var ageDifMs = Date.now() - new Date(birthday).getTime();
-	var ageDate = new Date(ageDifMs);
-	return Math.abs(ageDate.getUTCFullYear() - 1970);
+function getTotalCount() {
+	let count = 0;
+	Object.values(appointmentItems.value).forEach(appts => {
+		count += appts.length;
+	});
+	return count;
 }
 
-const onStartMeetings = (appointment) => {
-	router.push({
-		name: 'SpecialistMeetings',
-		params: {
-			patientId: appointment.patient.id,
-			meetingId: appointment.meeting_id
-		}
+function getStatusCount(status) {
+	let count = 0;
+	Object.values(appointmentItems.value).forEach(appts => {
+		count += appts.filter(a => a.status === status).length;
 	});
+	return count;
 }
+
+function setFilter(filter) {
+	activeFilter.value = filter;
+}
+
+const formatMeetingType = (type) => {
+	if (!type) return 'Video';
+	return type.charAt(0).toUpperCase() + type.slice(1);
+};
+
+const getMeetingTypeClass = (type) => {
+	return type === 'video' ? 'type-video' : 'type-audio';
+};
+
+const formatStatus = (status) => {
+	const statusMap = {
+		'CLOSED': 'Completed',
+		'CANCELLED': 'Cancelled',
+		'MISSED': 'Missed',
+		'NO_SHOW': 'No Show'
+	};
+	return statusMap[status] || status;
+};
+
+const getStatusClass = (status) => {
+	const classMap = {
+		'CLOSED': 'status-completed',
+		'CANCELLED': 'status-cancelled',
+		'MISSED': 'status-missed',
+		'NO_SHOW': 'status-missed'
+	};
+	return classMap[status] || '';
+};
+
+const getCardClass = (status) => {
+	const classMap = {
+		'CLOSED': 'card-completed',
+		'CANCELLED': 'card-cancelled',
+		'MISSED': 'card-missed',
+		'NO_SHOW': 'card-missed'
+	};
+	return classMap[status] || '';
+};
+
+const getStatusIcon = (status) => {
+	const iconMap = {
+		'CLOSED': 'hi-check-circle',
+		'CANCELLED': 'hi-x-circle',
+		'MISSED': 'hi-exclamation-circle',
+		'NO_SHOW': 'hi-exclamation-circle'
+	};
+	return iconMap[status] || 'hi-information-circle';
+};
+
+const getRatingLabel = (score) => {
+	const labels = ['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'];
+	return labels[score] || '';
+};
 
 async function getUserAppointments() {
 	isLoading.value = true;
 	const queryParams = {
 		currentPage: 1,
-		pageLimit: 10,
-		status: 'CLOSED'
-	}
+		pageLimit: 50,
+		status: 'COMPLETED'
+	};
 
-	await $http.$_getPatientAppointments(queryParams).then(({ data }) => {
+	try {
+		const { data } = await $http.$_getPatientAppointments(queryParams);
 		appointmentItems.value = groupBy(data.data?.map((item) => ({
-			...item, startTime: new Date(item.start_time).toDateString()
+			...item, startTime: format(new Date(item.start_time), 'EEEE, MMMM dd, yyyy')
 		})), 'startTime');
+	} catch (error) {
+		console.error('Error fetching appointments:', error);
+	} finally {
 		isLoading.value = false;
-	});
+	}
 }
 
 const onShow = async (activeItem) => {
@@ -307,247 +485,902 @@ const onShow = async (activeItem) => {
 	appointment.value = activeItem;
 	const userId = activeItem.specialist.id;
 
-	await $http.$_getOneUser(userId).then(({ data }) => {
+	try {
+		const { data } = await $http.$_getOneUser(userId);
 		specialistInfo.value = {
 			fullName: data.data?.full_name,
 			firstName: data.data?.profile?.first_name,
 			lastName: data.data?.profile?.last_name,
+			photo: data.data?.profile?.profile_image,
 			rating: data.data.average_rating,
 			category: activeItem.category,
 			startTime: activeItem.start_time,
 			appointmentType: activeItem.appointment_type,
 			timezone: activeItem.timezone
 		};
-
+	} catch (error) {
+		console.error('Error fetching specialist:', error);
+	} finally {
 		isFetching.value = false;
+	}
+};
+
+const bookFollowUp = (appt) => {
+	// Pre-fill booking info with the same specialist
+	useBookingInfo({
+		payload: {
+			...bookingInfo.value?.payload,
+			specialist: appt.specialist,
+			category: appt.category,
+			isFollowUp: true,
+			previousAppointmentId: appt._id
+		}
 	});
-}
+
+	router.push({ name: 'PatientBookAppointment' });
+};
+
+const openRatingModal = (appt) => {
+	ratingAppointment.value = appt;
+	ratingScore.value = 0;
+	ratingReview.value = '';
+	isRatingModalOpen.value = true;
+};
+
+const submitRating = async () => {
+	if (ratingScore.value === 0) return;
+
+	isSubmittingRating.value = true;
+	try {
+		const payload = {
+			appointmentId: ratingAppointment.value._id,
+			rating: {
+				score: ratingScore.value,
+				review: ratingReview.value
+			}
+		};
+
+		await $http.$_rateAppointment(payload);
+		$toast.success('Rating submitted successfully!');
+		isRatingModalOpen.value = false;
+
+		// Update local data
+		const appt = ratingAppointment.value;
+		appt.rating = payload.rating;
+
+		// Refresh list
+		getUserAppointments();
+	} catch (error) {
+		$toast.error(error.message || 'Failed to submit rating');
+	} finally {
+		isSubmittingRating.value = false;
+	}
+};
 </script>
 
 <style scoped lang="scss">
-.appointments-container {
+.history-appointments {
 	height: 100%;
-	display: flex;
-	justify-content: space-between;
-	align-items: flex-start;
-	gap: $size-32;
-	position: relative;
+	overflow-y: auto;
+	padding-bottom: 100px;
 
 	&::-webkit-scrollbar {
 		display: none;
-		width: 12px;
-		background-color: $color-g-97;
 	}
 }
-.appointments_root {
+
+.filter-section {
 	display: flex;
-	flex-direction: column;
-	gap: $size-24;
-	height: 100vh;
-	width: 100%;
-	overflow-y: scroll;
-	padding-bottom: 200px;
-
-	&::-webkit-scrollbar {
-		display: none;
-		width: 12px;
-		background-color: $color-g-97;
-	}
-}
-.appointments_container {
-	display: flex;
-	flex-direction: column;
-	justify-content: start;
-	gap: $size-10;
-
-	&::-webkit-scrollbar {
-		display: none;
-		width: 12px;
-		background-color: $color-g-97;
-	}
-
-	.appointment_timestamp {
-		font-size: $size-14;
-		line-height: $size-18;
-		color: $color-g-44;
-	}
-	.appointments_items {
-		background: $color-white;
-		border-radius: $size-8;
-		padding: $size-16 $size-24;
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-
-		@include responsive(phone) {
-			gap: $size-16;
-		}
-	}
-}
-.appointments_items-container {
-	display: flex;
-	flex-direction: column;
-	justify-content: flex-start;
-	align-items: flex-start;
-	gap: $size-10;
-
-	&::-webkit-scrollbar {
-		display: none;
-		width: 12px;
-		background-color: $color-g-97;
-	}
-
-	.appointments_items-title {
-		font-weight: $fw-semi-bold;
-		font-size: $size-20;
-		line-height: $size-22;
-		color: $color-black;
-	}
-	.appointments_items-timestamp {
-		font-weight: $fw-regular;
-		font-size: $size-16;
-		color: $color-g-44;
-	}
-}
-.appointment-actions {
-	display: flex;
-	justify-content: space-between;
 	align-items: center;
+	gap: $size-10;
+	margin-bottom: $size-24;
+	flex-wrap: wrap;
+}
 
-	.reschedule_action {
-		background: transparent;
-		cursor: pointer;
-		padding: $size-10 $size-16;
-		border-radius: $size-8;
-		&:hover {
-			background: $color-pri-t4;
+.filter-pill {
+	display: inline-flex;
+	align-items: center;
+	gap: $size-6;
+	padding: $size-8 $size-16;
+	border: 1px solid $color-g-90;
+	border-radius: $size-24;
+	background: white;
+	font-size: $size-14;
+	font-weight: $fw-medium;
+	color: $color-g-44;
+	cursor: pointer;
+	transition: all 0.2s ease;
+
+	&:hover {
+		border-color: #0EAEC4;
+		color: #0EAEC4;
+	}
+
+	&.active {
+		background: linear-gradient(135deg, #0EAEC4 0%, #0891b2 100%);
+		border-color: transparent;
+		color: white;
+
+		.filter-count {
+			background: rgba(255, 255, 255, 0.2);
+			color: white;
 		}
 	}
-	.appointment-actions__right {
-		display: flex;
-		justify-content: flex-start;
-		align-items: center;
+
+	.filter-count {
+		background: $color-g-90;
+		color: $color-g-44;
+		padding: 2px 8px;
+		border-radius: 12px;
+		font-size: $size-12;
+	}
+}
+
+.appointments-list {
+	display: flex;
+	flex-direction: column;
+	gap: $size-32;
+}
+
+.date-group {
+	display: flex;
+	flex-direction: column;
+	gap: $size-16;
+}
+
+.date-header {
+	display: flex;
+	align-items: center;
+	gap: $size-10;
+	padding: $size-8 $size-16;
+	background: linear-gradient(135deg, rgba(14, 174, 196, 0.1) 0%, rgba(14, 174, 196, 0.05) 100%);
+	border-radius: $size-12;
+	border-left: 3px solid #0EAEC4;
+
+	.date-icon {
+		color: #0EAEC4;
+	}
+
+	.date-text {
+		font-size: $size-16;
+		font-weight: $fw-semi-bold;
+		color: $color-g-21;
+	}
+}
+
+.appointments-cards {
+	display: flex;
+	flex-direction: column;
+	gap: $size-16;
+}
+
+.appointment-card {
+	background: white;
+	border-radius: $size-16;
+	padding: $size-24;
+	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+	transition: all 0.3s ease;
+	border-left: 4px solid #10b981;
+
+	&:hover {
+		transform: translateY(-2px);
+		box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+	}
+
+	&.card-completed {
+		border-left-color: #10b981;
+	}
+
+	&.card-cancelled {
+		border-left-color: #ef4444;
+	}
+
+	&.card-missed {
+		border-left-color: #f97316;
+	}
+
+	@media (max-width: 768px) {
+		padding: $size-16;
+		border-radius: $size-12;
+	}
+}
+
+.card-main {
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-start;
+	gap: $size-20;
+	margin-bottom: $size-20;
+
+	@media (max-width: 768px) {
+		flex-direction: column;
 		gap: $size-16;
 	}
 }
-.appointment_actions {
-	display: flex;
-	justify-content: start;
-	align-items: center;
-	gap: $size-10;
-	cursor: pointer;
-	padding: $size-6 $size-10;
-	border-radius: $size-8;
-	&:hover {
-		background: $color-pri-t4;
-	}
 
-	.appointment_actions-title {
-		font-weight: $fw-regular;
-		font-size: $size-16;
-		color: $color-pri-main;
-	}
+.specialist-section {
+	display: flex;
+	align-items: flex-start;
+	gap: $size-16;
+	flex: 1;
 }
-.empty-appointment-container {
+
+.specialist-avatar {
+	flex-shrink: 0;
+}
+
+.specialist-info {
 	display: flex;
 	flex-direction: column;
-	justify-content: center;
-	align-items: center;
-	gap: $size-36;
-	padding: $size-32;
-
-	.empty-appointment-content {
-		display: flex;
-		flex-direction: column;
-		justify-content: center;
-		align-items: center;
-		gap: $size-10;
-
-		.empty-appointment-title {
-			font-weight: $fw-semi-bold;
-			font-size: $size-20;
-			color: $color-g-21;
-			text-align: center;
-		}
-		.empty-appointment-description {
-			font-weight: $fw-regular;
-			font-size: $size-16;
-			color: $color-g-44;
-			text-align: center;
-		}
-	}
-	.empty-appointment-button {
-		background: $color-white;
-		border: $size-1 solid $color-pri;
-	}
-	
+	gap: $size-6;
 }
-</style>
 
-<style scoped lang="scss">
+.specialist-name {
+	font-size: $size-18;
+	font-weight: $fw-semi-bold;
+	color: $color-g-21;
+	margin: 0;
+
+	@media (max-width: 768px) {
+		font-size: $size-16;
+	}
+}
+
+.specialist-category {
+	font-size: $size-14;
+	color: $color-g-44;
+	margin: 0;
+}
+
+.appointment-meta {
+	display: flex;
+	align-items: center;
+	gap: $size-12;
+	margin-top: $size-4;
+	flex-wrap: wrap;
+}
+
+.meeting-type {
+	display: inline-flex;
+	align-items: center;
+	gap: $size-4;
+	padding: $size-4 $size-10;
+	border-radius: $size-6;
+	font-size: $size-12;
+	font-weight: $fw-medium;
+
+	&.type-video {
+		background: rgba(14, 174, 196, 0.1);
+		color: #0EAEC4;
+	}
+
+	&.type-audio {
+		background: rgba(139, 92, 246, 0.1);
+		color: #8b5cf6;
+	}
+}
+
+.status-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: $size-4;
+	padding: $size-4 $size-10;
+	border-radius: $size-6;
+	font-size: $size-12;
+	font-weight: $fw-medium;
+
+	&.status-completed {
+		background: #dcfce7;
+		color: #16a34a;
+	}
+
+	&.status-cancelled {
+		background: #fef2f2;
+		color: #ef4444;
+	}
+
+	&.status-missed {
+		background: #fff7ed;
+		color: #f97316;
+	}
+}
+
+.time-section {
+	flex-shrink: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	gap: $size-12;
+
+	@media (max-width: 768px) {
+		width: 100%;
+		flex-direction: row;
+		justify-content: space-between;
+		align-items: center;
+	}
+}
+
+.time-display {
+	text-align: right;
+
+	@media (max-width: 768px) {
+		text-align: left;
+	}
+}
+
+.time-info {
+	display: flex;
+	flex-direction: column;
+	gap: $size-2;
+}
+
+.time-date {
+	font-size: $size-12;
+	color: $color-g-44;
+}
+
+.time-main {
+	font-size: $size-16;
+	font-weight: $fw-semi-bold;
+	color: $color-g-21;
+}
+
+.rating-display {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	gap: $size-4;
+
+	@media (max-width: 768px) {
+		align-items: flex-start;
+	}
+}
+
+.rating-stars {
+	display: flex;
+	gap: 2px;
+
+	.star-filled {
+		color: #fbbf24;
+	}
+
+	.star-empty {
+		color: $color-g-90;
+	}
+}
+
+.rating-text {
+	font-size: $size-11;
+	color: $color-g-44;
+}
+
+.card-actions {
+	display: flex;
+	align-items: center;
+	gap: $size-8;
+	padding-top: $size-16;
+	border-top: 1px solid $color-g-90;
+
+	@media (max-width: 768px) {
+		flex-wrap: wrap;
+		justify-content: center;
+	}
+}
+
+.action-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: $size-6;
+	padding: $size-8 $size-14;
+	border: none;
+	border-radius: $size-8;
+	font-size: $size-13;
+	font-weight: $fw-medium;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	background: transparent;
+
+	&:hover {
+		transform: translateY(-1px);
+	}
+
+	.btn-text {
+		@media (max-width: 480px) {
+			display: none;
+		}
+	}
+
+	@media (max-width: 480px) {
+		padding: $size-10;
+	}
+}
+
+.details-btn {
+	color: $color-g-44;
+
+	&:hover {
+		background: $color-g-90;
+		color: $color-g-21;
+	}
+}
+
+.rate-btn {
+	color: #fbbf24;
+	background: rgba(251, 191, 36, 0.1);
+
+	&:hover {
+		background: rgba(251, 191, 36, 0.2);
+	}
+}
+
+.followup-btn {
+	color: #0EAEC4;
+	background: rgba(14, 174, 196, 0.1);
+
+	&:hover {
+		background: rgba(14, 174, 196, 0.2);
+	}
+}
+
+// Empty State
+.empty-state {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: $size-64 $size-32;
+	text-align: center;
+}
+
+.empty-illustration {
+	width: 120px;
+	height: 120px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: linear-gradient(135deg, rgba(14, 174, 196, 0.1) 0%, rgba(14, 174, 196, 0.05) 100%);
+	border-radius: 50%;
+	margin-bottom: $size-24;
+
+	.empty-icon {
+		color: #0EAEC4;
+		opacity: 0.6;
+	}
+}
+
+.empty-title {
+	font-size: $size-24;
+	font-weight: $fw-semi-bold;
+	color: $color-g-21;
+	margin: 0 0 $size-12;
+}
+
+.empty-description {
+	font-size: $size-16;
+	color: $color-g-44;
+	max-width: 400px;
+	line-height: 1.6;
+	margin: 0 0 $size-20;
+}
+
+.clear-filter-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: $size-6;
+	padding: $size-10 $size-20;
+	border: 1px solid $color-g-90;
+	border-radius: $size-8;
+	background: white;
+	color: $color-g-44;
+	font-size: $size-14;
+	cursor: pointer;
+	transition: all 0.2s ease;
+
+	&:hover {
+		border-color: #0EAEC4;
+		color: #0EAEC4;
+	}
+}
+
+// Modal Styles
 .loader-container {
 	width: 100%;
 	height: 50vh;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+
+	&.modal-loader {
+		height: 200px;
+	}
 }
-.details-container {
+
+.modal-content {
+	padding: $size-24;
+
+	@media (max-width: 768px) {
+		padding: $size-16;
+	}
+}
+
+.status-banner {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: $size-8;
+	padding: $size-12;
+	border-radius: $size-10;
+	margin-bottom: $size-24;
+	font-weight: $fw-medium;
+
+	&.status-completed {
+		background: #dcfce7;
+		color: #16a34a;
+	}
+
+	&.status-cancelled {
+		background: #fef2f2;
+		color: #ef4444;
+	}
+
+	&.status-missed {
+		background: #fff7ed;
+		color: #f97316;
+	}
+}
+
+.modal-specialist-card {
+	margin-bottom: $size-24;
+}
+
+.modal-specialist-header {
+	display: flex;
+	align-items: center;
+	gap: $size-20;
+
+	@media (max-width: 768px) {
+		flex-direction: column;
+		text-align: center;
+	}
+}
+
+.modal-specialist-info {
 	display: flex;
 	flex-direction: column;
-	justify-content: space-between;
-	height: 100%;
-	width: 70%;
-	padding-bottom: 70px;
+	gap: $size-4;
+}
 
-	@include responsive(phone) {
-		display: none !important;
+.modal-specialist-name {
+	font-size: $size-22;
+	font-weight: $fw-semi-bold;
+	color: $color-g-21;
+	margin: 0;
+}
+
+.modal-specialist-category {
+	font-size: $size-14;
+	color: $color-g-44;
+	margin: 0;
+}
+
+.modal-specialist-rating {
+	display: flex;
+	align-items: center;
+	gap: $size-4;
+	margin-top: $size-4;
+
+	.rating-star {
+		color: #fbbf24;
 	}
-	@include responsive(tab-landscape) {
-		display: none !important;
-		position: absolute;
-		background: $color-g-97;
-		width: 100% !important;
+
+	span {
+		font-size: $size-14;
+		font-weight: $fw-medium;
+		color: $color-g-44;
 	}
 }
-.modal-details-container {
-	display: flex !important;
+
+.modal-details-grid {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: $size-20;
+	margin-bottom: $size-24;
+
+	@media (max-width: 768px) {
+		grid-template-columns: 1fr;
+	}
+}
+
+.detail-item {
+	display: flex;
 	flex-direction: column;
-	justify-content: space-between;
-	height: 100%;
-	width: 100%;
-	padding: $size-44 $size-32;
+	gap: $size-8;
+}
 
-	@include responsive(tab-landscape) {
-		display: flex !important;
-		padding: $size-32;
-	}
-	@include responsive(phone) {
-		display: flex !important;
-		padding: $size-24;
+.detail-label {
+	display: flex;
+	align-items: center;
+	gap: $size-6;
+	font-size: $size-12;
+	color: $color-g-44;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+}
+
+.detail-value {
+	font-size: $size-15;
+	font-weight: $fw-medium;
+	color: $color-g-21;
+	margin: 0;
+
+	.timezone-text {
+		font-size: $size-12;
+		color: $color-g-44;
+		margin-left: $size-4;
 	}
 }
-.modal-appointment-actions {
+
+.rating-section {
+	background: #fefce8;
+	border-radius: $size-12;
+	padding: $size-20;
+	margin-bottom: $size-20;
+}
+
+.section-title {
+	font-size: $size-14;
+	font-weight: $fw-medium;
+	color: $color-g-44;
+	margin: 0 0 $size-12;
+}
+
+.rating-content {
+	display: flex;
+	flex-direction: column;
+	gap: $size-12;
+}
+
+.rating-stars-large {
+	display: flex;
+	gap: $size-4;
+
+	.star-filled {
+		color: #fbbf24;
+	}
+
+	.star-empty {
+		color: $color-g-90;
+	}
+}
+
+.rating-review {
+	font-size: $size-14;
+	color: $color-g-21;
+	font-style: italic;
+	margin: 0;
+}
+
+.rate-prompt {
+	display: flex;
+	align-items: center;
+	gap: $size-16;
+	background: linear-gradient(135deg, rgba(251, 191, 36, 0.1) 0%, rgba(251, 191, 36, 0.05) 100%);
+	border: 1px solid #fbbf24;
+	border-radius: $size-12;
+	padding: $size-16;
+
+	.prompt-icon {
+		color: #fbbf24;
+	}
+
+	.prompt-content {
+		flex: 1;
+
+		h4 {
+			font-size: $size-15;
+			font-weight: $fw-semi-bold;
+			color: $color-g-21;
+			margin: 0 0 $size-4;
+		}
+
+		p {
+			font-size: $size-13;
+			color: $color-g-44;
+			margin: 0;
+		}
+	}
+
+	.rate-now-btn {
+		padding: $size-10 $size-20;
+		background: #fbbf24;
+		color: white;
+		border: none;
+		border-radius: $size-8;
+		font-size: $size-14;
+		font-weight: $fw-medium;
+		cursor: pointer;
+		transition: all 0.2s ease;
+
+		&:hover {
+			background: #f59e0b;
+		}
+	}
+}
+
+.modal-actions {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
 	width: 100%;
 	gap: $size-16;
 
-	.modal-appointment-actions__meeting {
-		display: flex;
-		justify-content: flex-end;
-		align-items: center;
-		gap: $size-16;
+	@media (max-width: 768px) {
+		flex-direction: column-reverse;
+	}
+}
 
-		@include responsive(phone) {
-			width: 100%;
-			flex-direction: column-reverse;
+.modal-close-btn {
+	padding: $size-12 $size-24;
+	border: 1px solid $color-g-90;
+	border-radius: $size-10;
+	background: white;
+	color: $color-g-44;
+	font-size: $size-14;
+	font-weight: $fw-medium;
+	cursor: pointer;
+	transition: all 0.2s ease;
 
-			button {
-				width: 100% !important;
-			}
-		}
+	&:hover {
+		border-color: $color-g-44;
+		color: $color-g-21;
 	}
 
-	@include responsive(phone) {
+	@media (max-width: 768px) {
+		width: 100%;
+	}
+}
+
+.modal-followup-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: $size-8;
+	padding: $size-12 $size-24;
+	background: linear-gradient(135deg, #0EAEC4 0%, #0891b2 100%);
+	color: white;
+	border: none;
+	border-radius: $size-10;
+	font-size: $size-14;
+	font-weight: $fw-medium;
+	cursor: pointer;
+	transition: all 0.2s ease;
+
+	&:hover {
+		transform: translateY(-1px);
+		box-shadow: 0 4px 12px rgba(14, 174, 196, 0.3);
+	}
+
+	@media (max-width: 768px) {
+		width: 100%;
+		justify-content: center;
+	}
+}
+
+// Rating Modal Styles
+.rating-modal-content {
+	padding: $size-24;
+	display: flex;
+	flex-direction: column;
+	gap: $size-24;
+
+	@media (max-width: 768px) {
+		padding: $size-16;
+	}
+}
+
+.rating-specialist {
+	display: flex;
+	align-items: center;
+	gap: $size-16;
+	padding-bottom: $size-20;
+	border-bottom: 1px solid $color-g-90;
+}
+
+.rating-specialist-info {
+	h3 {
+		font-size: $size-18;
+		font-weight: $fw-semi-bold;
+		color: $color-g-21;
+		margin: 0 0 $size-4;
+	}
+
+	p {
+		font-size: $size-14;
+		color: $color-g-44;
+		margin: 0;
+	}
+}
+
+.rating-input {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: $size-16;
+}
+
+.rating-question {
+	font-size: $size-16;
+	font-weight: $fw-medium;
+	color: $color-g-21;
+	margin: 0;
+}
+
+.rating-stars-input {
+	display: flex;
+	gap: $size-8;
+}
+
+.star-btn {
+	background: none;
+	border: none;
+	cursor: pointer;
+	color: $color-g-90;
+	transition: all 0.2s ease;
+	padding: $size-4;
+
+	&:hover,
+	&.active {
+		color: #fbbf24;
+		transform: scale(1.1);
+	}
+}
+
+.rating-label {
+	font-size: $size-14;
+	font-weight: $fw-medium;
+	color: #fbbf24;
+	min-height: 20px;
+	margin: 0;
+}
+
+.review-input {
+	display: flex;
+	flex-direction: column;
+	gap: $size-8;
+
+	label {
+		font-size: $size-14;
+		font-weight: $fw-medium;
+		color: $color-g-44;
+	}
+
+	textarea {
+		width: 100%;
+		padding: $size-14;
+		border: 1px solid $color-g-90;
+		border-radius: $size-10;
+		font-size: $size-14;
+		font-family: inherit;
+		resize: none;
+		transition: border-color 0.2s ease;
+
+		&:focus {
+			outline: none;
+			border-color: #0EAEC4;
+		}
+
+		&::placeholder {
+			color: $color-g-44;
+		}
+	}
+}
+
+.rating-modal-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: $size-12;
+	width: 100%;
+
+	@media (max-width: 768px) {
 		flex-direction: column-reverse;
 
 		button {
@@ -555,308 +1388,25 @@ const onShow = async (activeItem) => {
 		}
 	}
 }
-:deep(.modal__footer) {
-	padding-top: $size-24;
-	padding-bottom: $size-24;
-}
-:deep(.modal__body) {
-	width: 636px !important;
-	height: 100% !important;
 
-	@include responsive(tab-landscape) {
-		height: 100% !important;
-	}
-	@include responsive(phone) {
+// Modal deep styles
+:deep(.history-details-modal .modal__body) {
+	width: 580px !important;
+
+	@media (max-width: 768px) {
 		width: 100% !important;
-		height: 100% !important;
 	}
 }
 
-.details-container__body {
-	width: 100%;
-	height: 100%;
-	display: flex;
-	flex-direction: column;
-	justify-content: space-between;
-	overflow: scroll;
-	gap: $size-64;
-}
-.top_container {
-	width: 100%;
-	height: 100%;
-	display: flex;
-	flex-direction: column;
-	gap: $size-20;
-}
-.header {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-
-	.heading {
-		font-weight: $fw-semi-bold;
-		font-size: $size-28;
-		color: $color-black;
-	}
-	.close-container {
-		cursor: pointer;
-	}
-}
-.spacialist-details__container {
-	display: flex;
-	flex-direction: column;
-	justify-content: space-between;
-	gap: $size-32;
-
-	@include responsive(phone) {
-		justify-content: flex-start;
-	}
-
-	.spacialist_details {
-		display: flex;
-		flex-direction: column;
-		gap: $size-20;
-
-		.specialist_details-heading {
-			font-weight: $fw-regular;
-			font-size: $size-14;
-			color: $color-g-44;
-			border-bottom: $size-1 solid $color-g-90;
-			padding-bottom: $size-5;
-		}
-	}
-	.specialist-details__actions {
-		width: 100%;
-		display: flex;
-		flex-direction: column;
-		gap: $size-8;
-
-		.specialist-details__actions--diagnosis {
-			background: $color-white;
-			border: $size-1 solid $color-pri;
-		}
-	}
-	.specialist-details__health_info {
-		display: flex;
-		justify-content: space-between;
-		align-items: flex-start;
-
-		.specialist-details__health_info--items {
-			display: flex;
-			flex-direction: column;
-			justify-content: flex-start;
-			gap: $size-8;
-
-			.specialist-details__health_info--item {
-				display: flex;
-				justify-content: flex-start;
-				align-items: center;
-				gap: $size-8;
-
-				.specialist-details__health_info--item-key {
-					font-size: $size-16;
-					font-weight: $fw-regular;
-					color: $color-g-44;
-				}
-				.specialist-details__health_info--item-value {
-					font-size: $size-16;
-					font-weight: $fw-regular;
-					color: $color-g-21;
-				}
-			}
-
-			
-		}
-	}
-	.specialist_details-container {
-		display: flex;
-		justify-content: start;
-		align-items: flex-start;
-		gap: $size-20;
-
-		@include responsive(phone) {
-			flex-direction: column;
-			justify-content: flex-start;
-			align-items: center;
-		}
-	}
-	.specialist_details-info-container {
-		width: 100%;
-		display: flex;
-		flex-direction: column;
-		justify-content: start;
-		align-items: flex-start;
-		gap: $size-5;
-
-		.specialist-details-heading {
-			display: flex;
-			justify-content: flex-start;
-			align-items: center;
-			gap: $size-16;
-
-			.specialist_details-rating-container {
-				display: flex;
-				justify-content: flex-start;
-				align-items: center;
-				gap: 0;
-
-				.specialist_details-rating {
-					font-weight: $fw-bold;
-					font-size: $size-16;
-					line-height: 24px;
-					color: $color-g-44;
-				}
-			}
-		}
-
-		.specialist_details-info {
-			display: flex;
-			justify-content: start;
-			align-items: flex-start;
-			gap: $size-10;
-
-			.specialist_details-name {
-				font-weight: $fw-semi-bold;
-				font-size: $size-26;
-				color: $color-black;
-			}
-			.specialist_details-rating-container {
-				display: flex;
-				justify-content: start;
-				align-items: center;
-				gap: $size-5;
-
-				.specialist_details-rating {
-					font-size: $size-12;
-					font-weight: $fw-regular;
-					color: $color-g-44;
-				}
-			}
-		}
-		.specialist-details__patient {
-			display: flex;
-			flex-direction: column;
-			justify-content: flex-start;
-			align-items: flex-start;
-			gap: $size-4;
-
-			.specialist-details__icon {
-
-				.specialist-details__no-rating span {
-					font-weight: $fw-bold;
-					font-size: $size-16;
-					line-height: 24px;
-					color: $color-g-44;
-				}
-			}
-
-			@include responsive(phone) {
-				flex-direction: column;
-				justify-content: flex-start;
-				align-items: flex-start;
-				gap: $size-4;
-			}
-
-			.specialist_details-specialty {
-				font-size: $size-14;
-				font-weight: $fw-regular;
-				color: $color-g-44;
-			}
-		}
-	}
-	.specialist-appointment-details {
-		width: 100%;
-		display: flex;
-		flex-direction: column;
-		justify-content: flex-start;
-		align-items: flex-start;
-		gap: $size-24;
-		padding-left: 100px !important;
-
-		@include responsive(tab-landscape) {
-			padding-left: 100px !important;
-		}
-		@include responsive(phone) {
-			padding-left: 0 !important;
-		}
-
-		.specialist_details-heading {
-			width: 100%;
-			font-weight: $fw-regular;
-			font-size: $size-14;
-			color: $color-g-44;
-			border-bottom: $size-1 solid $color-g-90;
-			padding-bottom: $size-5;
-		}
-
-		.specialist-appointment-details__container {
-			display: flex;
-			flex-direction: column;
-			justify-content: start;
-			align-content: center;
-			gap: $size-10;
-
-			@include responsive(phone) {
-				flex-direction: column;
-			}
-
-			.specialist-appointment-details__title {
-				font-size: $size-16;
-				font-weight: $fw-regular;
-				color: $color-g-44;
-
-				@include responsive(phone) {
-					font-size: $size-14;
-					font-weight: $fw-regular;
-					color: $color-g-44;
-				}
-			}
-			.specialist-appointment-details__item {
-				font-size: $size-16;
-				font-weight: $fw-regular;
-				color: $color-black;
-				padding-bottom: $size-4;
-
-				@include responsive(phone) {
-					font-size: $size-14;
-					font-weight: $fw-regular;
-					color: $color-black;
-					padding-bottom: $size-4;
-				}
-			}
-		}
-	}
-}
-.appointment_actions {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-
-	.reschedule_action {
-		font-weight: $fw-regular;
-		font-size: $size-16;
-		color: $color-pri-main;
-		padding: $size-6 $size-10;
-		border-radius: $size-8;
-		cursor: pointer;
-		&:hover {
-			background: $color-pri-t4;
-		}
-	}
+:deep(.history-details-modal .modal__footer) {
+	padding: $size-20 $size-24;
 }
 
-.desktop-visible {
-	display: flex !important;
+:deep(.rating-modal .modal__body) {
+	width: 480px !important;
 
-	@include responsive(phone) {
-		display: none !important;
-	}
-}
-.mobile-visible {
-	display: none !important;
-
-	@include responsive(phone) {
-		display: flex !important;
+	@media (max-width: 768px) {
+		width: 100% !important;
 	}
 }
 </style>
