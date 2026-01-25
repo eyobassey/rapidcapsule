@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -839,12 +840,15 @@ export class AppointmentsService {
     const { status } = queryStatus || {};
     const now = new Date();
 
-    // MISSED: appointments with OPEN status but start_time in the past
+    // MISSED: appointments that are explicitly MISSED OR OPEN status with start_time in the past
     if (status === 'MISSED') {
       return await find(this.appointmentModel, {
         patient: userId,
-        status: 'OPEN',
-        start_time: { $lt: now },
+        $or: [
+          { status: 'MISSED' },
+          { status: 'NO_SHOW' },
+          { status: 'OPEN', start_time: { $lt: now } },
+        ],
       });
     }
 
@@ -863,6 +867,53 @@ export class AppointmentsService {
     });
   }
 
+  async rateAppointment(
+    appointmentId: string,
+    patientId: Types.ObjectId,
+    score: number,
+    review?: string,
+  ) {
+    const appointment = await this.appointmentModel.findById(appointmentId);
+    if (!appointment) {
+      throw new NotFoundException('Appointment not found');
+    }
+    if (appointment.patient.toString() !== patientId.toString()) {
+      throw new ForbiddenException('You can only rate your own appointments');
+    }
+    if (appointment.rating?.score) {
+      throw new BadRequestException('Appointment already rated');
+    }
+
+    await this.appointmentModel.findByIdAndUpdate(appointmentId, {
+      $set: {
+        rating: {
+          score,
+          review: review || undefined,
+          rated_at: new Date(),
+        },
+      },
+    });
+
+    // Recalculate specialist's average rating
+    const specialistAppointments = await this.appointmentModel.find({
+      specialist: appointment.specialist,
+      'rating.score': { $exists: true, $gt: 0 },
+    }).select('rating.score').lean();
+
+    if (specialistAppointments.length > 0) {
+      const totalScore = specialistAppointments.reduce(
+        (sum, a: any) => sum + (a.rating?.score || 0), 0,
+      );
+      const avgRating = parseFloat((totalScore / specialistAppointments.length).toFixed(1));
+      await this.usersService.updateOne(
+        appointment.specialist,
+        { average_rating: avgRating },
+      );
+    }
+
+    return appointment;
+  }
+
   async getSpecialistAppointments(
     userId: Types.ObjectId,
     queryStatus: QueryStatus,
@@ -872,13 +923,16 @@ export class AppointmentsService {
 
     let appointments: AppointmentDocument[];
 
-    // MISSED: appointments with OPEN status but start_time in the past
+    // MISSED: appointments that are explicitly MISSED OR OPEN status with start_time in the past
     if (status === 'MISSED') {
       appointments = await this.appointmentModel
         .find({
           specialist: userId,
-          status: 'OPEN',
-          start_time: { $lt: now },
+          $or: [
+            { status: 'MISSED' },
+            { status: 'NO_SHOW' },
+            { status: 'OPEN', start_time: { $lt: now } },
+          ],
         })
         .populate('patient', 'profile email')
         .populate('specialist', 'profile email')
@@ -904,7 +958,30 @@ export class AppointmentsService {
     }
 
     // Presign patient profile photos from S3
-    return await this.presignAppointmentProfilePhotos(appointments);
+    const presignedAppointments = await this.presignAppointmentProfilePhotos(appointments);
+
+    // Batch check which patients have health data
+    const patientIds = [...new Set(
+      presignedAppointments
+        .map((a: any) => a.patient?._id)
+        .filter(Boolean)
+    )];
+
+    if (patientIds.length > 0) {
+      const [patientsWithCheckups, patientsWithVitals] = await Promise.all([
+        this.healthCheckupService.getPatientsWithCheckups(patientIds),
+        this.vitalsService.getPatientsWithVitals(patientIds),
+      ]);
+
+      for (const appointment of presignedAppointments as any[]) {
+        const pid = appointment.patient?._id?.toString();
+        appointment.patient_has_health_data = pid
+          ? (patientsWithCheckups.has(pid) || patientsWithVitals.has(pid))
+          : false;
+      }
+    }
+
+    return presignedAppointments;
   }
 
   /**
@@ -1128,6 +1205,69 @@ export class AppointmentsService {
     );
   }
 
+  async updatePrivateNotes(appointmentId: string, specialistId: string, privateNotes: string) {
+    const appointment = await this.appointmentModel.findById(appointmentId);
+    if (!appointment) throw new NotFoundException('Appointment not found');
+    if (appointment.specialist?.toString() !== specialistId) {
+      throw new BadRequestException('Unauthorized: Not your appointment');
+    }
+    appointment.private_notes = privateNotes;
+    await appointment.save({ validateBeforeSave: false });
+    return { private_notes: appointment.private_notes };
+  }
+
+  async uploadDocument(
+    appointmentId: string,
+    specialistId: string,
+    file: { buffer: Buffer; originalname: string; mimetype: string; size: number },
+  ) {
+    const appointment = await this.appointmentModel.findById(appointmentId);
+    if (!appointment) throw new NotFoundException('Appointment not found');
+    if (appointment.specialist?.toString() !== specialistId) {
+      throw new BadRequestException('Unauthorized: Not your appointment');
+    }
+    const url = await this.fileUploadHelper.uploadToS3(file.buffer, file.originalname);
+    const doc = {
+      name: file.originalname,
+      url,
+      type: file.mimetype.startsWith('image/') ? 'image' : file.mimetype.includes('pdf') ? 'pdf' : 'doc',
+      size: this.formatFileSize(file.size),
+      shared_by: 'specialist',
+      uploaded_at: new Date(),
+    };
+    if (!appointment.shared_documents) {
+      appointment.shared_documents = [];
+    }
+    appointment.shared_documents.push(doc);
+    await appointment.save({ validateBeforeSave: false });
+    // Presign the URL for immediate display
+    try {
+      doc.url = await this.fileUploadHelper.getPresignedUrl(url);
+    } catch (e) {}
+    return doc;
+  }
+
+  async getDocuments(appointmentId: string) {
+    const appointment = await this.appointmentModel.findById(appointmentId);
+    if (!appointment) throw new NotFoundException('Appointment not found');
+    const docs = appointment.shared_documents || [];
+    // Presign all URLs
+    for (const doc of docs) {
+      if (doc.url) {
+        try {
+          doc.url = await this.fileUploadHelper.getPresignedUrl(doc.url);
+        } catch (e) {}
+      }
+    }
+    return docs;
+  }
+
+  private formatFileSize(bytes: number): string {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / 1048576).toFixed(1) + ' MB';
+  }
+
   isTimeInRange(
     preferredTime: moment.MomentInput,
     startTime: moment.MomentInput,
@@ -1174,6 +1314,12 @@ export class AppointmentsService {
       ...(rating && this.ratingsQuery(rating)),
     });
     const specialistIds = specialists.map(({ _id }) => _id);
+
+    // If no availabilityDates provided, return all matching specialists
+    if (!availabilityDates || !availabilityDates.length) {
+      return this.getSpecialistDetails(specialistIds);
+    }
+
     // Use the ids to fetch their preferences
     // If (gender / rating), filter specialists whose preferences those fields
     const preferences = await this.usersService.getPreferences({
@@ -1256,8 +1402,10 @@ export class AppointmentsService {
       [
         'profile.first_name',
         'profile.last_name',
+        'profile.profile_image',
+        'profile.gender',
         'average_rating',
-        'professional_practice.years_of_practice',
+        'professional_practice',
       ],
     );
   }

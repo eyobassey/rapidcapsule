@@ -41,8 +41,9 @@ export class AvailableSpecialistDto {
   @IsOptional()
   time_zone: string;
 
+  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => AvailabilityParam)
-  availabilityDates: AvailabilityParam[];
+  availabilityDates?: AvailabilityParam[];
 }

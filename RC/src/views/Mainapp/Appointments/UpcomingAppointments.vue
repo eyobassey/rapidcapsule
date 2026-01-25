@@ -299,7 +299,6 @@
 			</template>
 		</dialog-modal>
 
-		<reschedule ref="rescheduleAppointmentRef" />
 	</div>
 </template>
 
@@ -313,10 +312,8 @@ import RcAvatar from "@/components/RCAvatar";
 import RcButton from "@/components/buttons/button-primary.vue";
 import Loader from "@/components/Loader/main-loader.vue";
 import DialogModal from "@/components/modals/dialog-modal.vue";
-import Reschedule from "./reschedule";
 
 const $http = inject('$_HTTP');
-const { bookingInfo, useBookingInfo } = inject('$_BOOKING_INFO');
 const router = useRouter();
 const $toast = useToast();
 
@@ -332,7 +329,6 @@ const isFetching = ref(true);
 const isOpen = ref(false);
 const appointmentItems = ref([]);
 const specialistInfo = ref({});
-const rescheduleAppointmentRef = ref();
 
 onMounted(() => getUserAppointments());
 
@@ -460,10 +456,18 @@ const onSubmitCancelAppointment = async (appt) => {
 };
 
 const onSubmitRescheduleAppointment = (appt) => {
-	useBookingInfo({ payload: { ...bookingInfo.value.payload, appointment: appt } });
-	rescheduleAppointmentRef.value.onOpen(appt || {});
 	isOpenScheduleAppointment.value = false;
 	isOpen.value = false;
+	router.push({
+		name: 'BookAppointment',
+		query: {
+			mode: 'reschedule',
+			appointmentId: appt._id,
+			specialistId: appt.specialist?.id || appt.specialist?._id,
+			category: appt.category,
+			step: '3',
+		}
+	});
 };
 </script>
 

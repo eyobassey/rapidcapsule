@@ -198,7 +198,6 @@ import Loader from "@/components/Loader/main-loader.vue";
 import DialogModal from "@/components/modals/dialog-modal.vue";
 
 const $http = inject('$http');
-const { bookingInfo, useBookingInfo } = inject('$_BOOKING_INFO');
 const router = useRouter();
 
 const emit = defineEmits(['create', 'stats-updated']);
@@ -287,19 +286,17 @@ const onShow = async (activeItem) => {
 };
 
 const rescheduleAppointment = (appt) => {
-	// Pre-fill booking info with the same specialist
-	useBookingInfo({
-		payload: {
-			...bookingInfo.value?.payload,
-			specialist: appt.specialist,
+	isOpen.value = false;
+	router.push({
+		name: 'BookAppointment',
+		query: {
+			mode: 'reschedule',
+			appointmentId: appt._id,
+			specialistId: appt.specialist?.id || appt.specialist?._id,
 			category: appt.category,
-			isReschedule: true,
-			previousAppointmentId: appt._id
+			step: '3',
 		}
 	});
-
-	isOpen.value = false;
-	emit('create');
 };
 </script>
 

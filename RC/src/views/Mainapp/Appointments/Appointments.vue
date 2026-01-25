@@ -14,7 +14,7 @@
             <p class="hero-subtitle">Manage your healthcare consultations with ease</p>
           </div>
           <div class="hero-actions desktop-visible">
-            <button class="hero-cta" @click="isOpen = true">
+            <button class="hero-cta" @click="goToBookAppointment">
               <v-icon name="hi-plus" scale="0.9" />
               <span>Book Appointment</span>
             </button>
@@ -43,7 +43,7 @@
       <!-- Mobile Book Button -->
       <div class="button-floating mobile-visible">
         <rc-iconbutton
-          @click="isOpen = true"
+          @click="goToBookAppointment"
           icon="icon-plus-solid"
           size="lg"
           :sx="{
@@ -91,21 +91,21 @@
           <div class="tabs_content">
             <template v-if="currentTab === 'upcoming'">
               <upcoming-appointments
-                @create="isOpen = true"
+                @create="goToBookAppointment"
                 @stats-updated="updateStats"
                 :key="upcomingAppointmentsKey"
               />
             </template>
             <template v-if="currentTab === 'history'">
               <appointment-history
-                @create="isOpen = true"
+                @create="goToBookAppointment"
                 @stats-updated="updateStats"
                 :key="upcomingAppointmentsKey"
               />
             </template>
             <template v-if="currentTab === 'missed'">
               <missed-appointments
-                @create="isOpen = true"
+                @create="goToBookAppointment"
                 @stats-updated="updateStats"
                 :key="upcomingAppointmentsKey"
               />
@@ -114,98 +114,21 @@
         </div>
       </div>
     </div>
-
-    <!-- Booking Modal -->
-    <dialog-modal
-      v-if="isOpen"
-      @closeModal="onClose"
-      :has-footer="bookingInfo.hasFooter"
-      :title="bookingInfo.heading"
-    >
-      <template v-slot:body>
-        <entry v-if="bookingInfo.current === 0" />
-        <agreement v-if="bookingInfo.current === 1" />
-        <category v-if="bookingInfo.current === 2" />
-        <booking v-if="bookingInfo.current === 3" />
-        <professionals v-if="bookingInfo.current === 4" />
-        <bookingsummary v-if="bookingInfo.current === 5" />
-      </template>
-      <template v-slot:foot>
-        <div
-          v-if="bookingInfo.current === 0"
-          class="action-button health-actions"
-        >
-          <rc-button
-            label="Take Health Checkup"
-            type="secondary"
-            size="medium"
-            @click="goToHealthCheckup"
-          />
-          <rc-button
-            label="Continue to Booking"
-            type="primary"
-            size="medium"
-            @click="useBookingInfo({ current: 2 })"
-          />
-        </div>
-        <div v-if="bookingInfo.current === 1" class="action-button">
-          <rc-button
-            label="Accept & Proceed"
-            type="primary"
-            size="medium"
-            @click="useBookingInfo({ current: 2 })"
-          />
-        </div>
-        <div
-          v-if="bookingInfo.current === 3"
-          class="action-button btn-float-right"
-        >
-          <rc-button
-            label="Next"
-            type="primary"
-            size="medium"
-            :disabled="!bookingInfo.proceed"
-            @click="useBookingInfo({ current: 4 })"
-          />
-        </div>
-        <div v-if="bookingInfo.current === 5" class="action-button">
-          <rc-button
-            label="Book Appointment"
-            type="primary"
-            size="medium"
-            :disabled="!bookingInfo.proceed || isSubmitting"
-            :loading="isSubmitting"
-            @click="onSubmitBooking"
-          />
-        </div>
-      </template>
-    </dialog-modal>
   </div>
 </template>
 
 <script setup>
 import { uniqueId } from "lodash";
-import { useToast } from "vue-toast-notification";
-import { ref, inject, provide, watch, onMounted } from "vue";
+import { ref, inject, onMounted } from "vue";
+import { useRouter } from "vue-router";
 import TopBar from "@/components/Navigation/top-bar";
-import RcButton from "@/components/buttons/button-primary";
-import RcTab from "@/components/RCTab";
-import RcModal from "@/components/RCModal";
 import RcIconbutton from "@/components/RCIconButton";
-import DialogModal from "@/components/modals/dialog-modal";
 
 import UpcomingAppointments from "./UpcomingAppointments";
 import AppointmentHistory from "./AppointmentHistory";
 import MissedAppointments from "./MissedAppointments";
 
-import Entry from "./entry";
-import Agreement from "./agreement";
-import Category from "./category";
-import Booking from "./booking";
-import Professionals from "./professionals";
-import Bookingsummary from "./summary";
-
-const $toast = useToast();
+const router = useRouter();
 const $http = inject("$_HTTP");
 
 // Stats
@@ -216,42 +139,24 @@ const stats = ref({
   missed: 0,
 });
 
-const bookingInfo = ref({ current: 0 });
-const navigator = ref({ from: null, to: null, current: 3 });
-const useBookingInfo = (payload) =>
-  (bookingInfo.value = { ...bookingInfo.value, ...payload });
-const useNavigator = ({ current, from, to }) =>
-  (navigator.value = { current: to, from, to: null });
-provide("$_BOOKING_INFO", { bookingInfo, useBookingInfo });
-provide("$_NAVIGATOR", { navigator, useNavigator });
-
-watch(bookingInfo, (value) => {
-  console.log("bookingInfo", bookingInfo.value);
-});
-
 const currentTab = ref("upcoming");
 const upcomingAppointmentsKey = ref(uniqueId(Math.random()));
-const isOpen = ref(false);
-const isSubmitting = ref(false);
 
 // Fetch appointment stats
 const fetchStats = async () => {
   try {
-    // Fetch upcoming appointments count
     const upcomingRes = await $http.$_getPatientAppointments({
       currentPage: 1,
       pageLimit: 1,
       status: 'OPEN'
     });
 
-    // Fetch completed appointments count
     const completedRes = await $http.$_getPatientAppointments({
       currentPage: 1,
       pageLimit: 1,
       status: 'COMPLETED'
     });
 
-    // Fetch missed appointments count
     const missedRes = await $http.$_getPatientAppointments({
       currentPage: 1,
       pageLimit: 1,
@@ -273,7 +178,6 @@ const fetchStats = async () => {
   }
 };
 
-// Update stats from child components
 const updateStats = (newStats) => {
   if (newStats) {
     stats.value = { ...stats.value, ...newStats };
@@ -284,45 +188,8 @@ onMounted(() => {
   fetchStats();
 });
 
-const goToHealthCheckup = () => {
-  isOpen.value = false;
-  bookingInfo.value.current = 0;
-  // Navigate to health checkup
-  window.location.href = '/app/patient/health-checkup';
-};
-
-const onClose = () => {
-  isOpen.value = false;
-  bookingInfo.value.current = 0;
-  // Refresh stats after closing modal (in case a booking was made)
-  fetchStats();
-  upcomingAppointmentsKey.value = uniqueId(Math.random());
-};
-
-const onSubmitBooking = async () => {
-  isSubmitting.value = true;
-
-  const payload = {
-    category: bookingInfo.value.payload.professional_category,
-    date: bookingInfo.value.payload.selectedDate,
-    time: bookingInfo.value.payload.selectedTime,
-    timezone: bookingInfo.value.payload.time_zone,
-    appointment_type: "Initial Appointment",
-    specialist: bookingInfo.value.payload.id,
-    meeting_channel: bookingInfo.value.payload.meeting_channel_value || 'zoom',
-  };
-
-  await $http
-    .$_createAppointments(payload)
-    .then(({ data }) => {
-      $toast.success("Appointment booked successfully!");
-      isSubmitting.value = false;
-      onClose();
-    })
-    .catch((error) => {
-      $toast.error(error.message);
-      isSubmitting.value = false;
-    });
+const goToBookAppointment = () => {
+  router.push({ name: 'BookAppointment' });
 };
 </script>
 
@@ -607,69 +474,6 @@ const onSubmitBooking = async () => {
   bottom: 24px;
   right: 24px;
   z-index: 100;
-}
-
-// Modal Styles
-:deep(.modal) {
-  max-width: 100% !important;
-  max-height: 100% !important;
-
-  @include responsive(tab-portrait) {
-    min-width: 90% !important;
-    max-width: 90% !important;
-  }
-  @include responsive(tab-landscape) {
-    min-width: 90% !important;
-    max-width: 90% !important;
-  }
-  @include responsive(phone) {
-    min-width: 100% !important;
-    max-width: 100% !important;
-  }
-}
-
-:deep(.modal__body) {
-  padding: 0 !important;
-}
-
-:deep(.modal__footer) {
-  position: relative !important;
-  display: flex;
-  justify-content: center !important;
-  align-items: center;
-}
-
-// Action Buttons
-.action-button {
-  display: flex;
-  justify-content: space-between;
-  position: relative;
-
-  @include responsive(phone) {
-    flex-direction: column;
-    margin: 0;
-    gap: $size-16;
-    width: 100%;
-  }
-}
-
-.multiple-btn {
-  width: 100%;
-}
-
-.health-actions {
-  width: 100%;
-  gap: $size-16;
-  justify-content: center;
-
-  @include responsive(phone) {
-    flex-direction: column-reverse;
-  }
-}
-
-.btn-float-right {
-  justify-content: flex-end;
-  width: 100%;
 }
 
 // Visibility Classes

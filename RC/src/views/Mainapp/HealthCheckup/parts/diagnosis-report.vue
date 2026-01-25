@@ -124,7 +124,7 @@
                                 size="medium"
                                 iconRight
                                 iconName="chevron-right"
-                                @click="isOpen = true"
+                                @click="goToBookAppointment"
                             />
                         </div>
                     </div>
@@ -805,49 +805,6 @@
             </div>
         </div>
 
-        <dialog-modal
-            v-if="isOpen"
-            @closeModal="onClose"
-            :has-footer="bookingInfo.hasFooter"
-            :title="bookingInfo.heading"
-        >
-            <template v-slot:body>
-                <agreement v-if="bookingInfo.current === 1" />
-                <category v-if="bookingInfo.current === 2" />
-                <booking v-if="bookingInfo.current === 3" />
-                <professionals v-if="bookingInfo.current === 4" />
-                <bookingsummary v-if="bookingInfo.current === 5" />
-            </template>
-            <template v-slot:foot>
-                <div v-if="bookingInfo.current === 1" class="action-button">
-                    <rc-button
-                        label="Accept & Proceed"
-                        type="primary"
-                        size="medium"
-                        @click="useBookingInfo({ current: 2 })"
-                    />
-                </div>
-                <div v-if="bookingInfo.current === 3" class="action-button btn-float-right">
-                    <rc-button
-                        label="Next"
-                        type="primary"
-                        size="medium"
-                        :disabled="!bookingInfo.proceed"
-                        @click="useBookingInfo({ current: 4 })"
-                    />
-                </div>
-                <div v-if="bookingInfo.current === 5" class="action-button">
-                    <rc-button
-                        label="Book Appointment"
-                        type="primary"
-                        size="medium"
-                        :disabled="!bookingInfo.proceed || isSubmitting"
-                        :loading="isSubmitting"
-                        @click="onSubmitBooking"
-                    />
-                </div>
-            </template>
-        </dialog-modal>
     </div>
 </template>
 
@@ -863,11 +820,7 @@ import RcButton from "@/components/buttons/button-primary";
 import DialogModal from "@/components/modals/dialog-modal";
 import RcModal from "@/components/RCModal";
 
-import Agreement from "@/views/Mainapp/Appointments/agreement";
-import Category from "@/views/Mainapp/Appointments/category";
-import Booking from "@/views/Mainapp/Appointments/booking";
-import Professionals from "@/views/Mainapp/Appointments/professionals";
-import Bookingsummary from "@/views/Mainapp/Appointments/summary";
+import { useRouter } from "vue-router";
 
 const $toast = useToast();
 const $http = inject('$_HTTP');
@@ -877,9 +830,7 @@ const { patientInfo, usePatientInfo } = inject('$_PATIENT_INFO');
 const { recommendation, useRecommendation } = inject('$_RECOMMENDATION');
 const { userprofile } = mapGetters();
 
-const isOpen = ref(false);
-const isSubmitting = ref(false);
-const bookingInfo = ref({ current: 1 });
+const router = useRouter();
 const showDiagnosesList = ref(false);
 const currentPage = ref(1);
 const itemsPerPage = 10;
@@ -913,8 +864,9 @@ const tabs = [
     { title: 'Summary', value: 'summary' },
 ]
 
-const useBookingInfo = (payload) => (bookingInfo.value = {...bookingInfo.value, ...payload});
-provide('$_BOOKING_INFO', { bookingInfo, useBookingInfo });
+const goToBookAppointment = () => {
+    router.push({ name: 'BookAppointment' });
+};
 
 const duration = computed(() => {
     const durationMs = recommendation.value.duration || 0;
@@ -1134,10 +1086,6 @@ const onTakeDiosisAgain = () => {
     useNavigator({ current, from: current, to: 0 });
 }
 
-const onClose = () => {
-	isOpen.value = false;
-	bookingInfo.value.current = 1;
-};
 
 const handleDiagnosisClick = () => {
     showDiagnosesList.value = !showDiagnosesList.value;
@@ -1396,27 +1344,6 @@ const getUrgencyLabel = (urgency) => {
 // Check Claude summary status on mount
 checkClaudeSummaryStatus();
 
-const onSubmitBooking = async () => {
-	isSubmitting.value = true;
-	
-	const payload = {
-		category: bookingInfo.value.payload.professional_category,
-		date: bookingInfo.value.payload.selectedDate,
-		time: bookingInfo.value.payload.selectedTime,
-		timezone: bookingInfo.value.payload.time_zone,
-		appointment_type: "Initial Appointment",
-		specialist: bookingInfo.value.payload.id,
-	}
-
-	await $http.$_createAppointments(payload).then(({ data }) => {
-		$toast.success('Appointments created successfully!');
-		isSubmitting.value = false;
-		onClose();
-	}).catch((error) => {
-		$toast.error(error.message);
-		isSubmitting.value = false;
-	});
-}
 
 // PDF Download functionality
 const downloadPDF = async () => {

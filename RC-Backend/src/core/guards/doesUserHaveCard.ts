@@ -20,6 +20,14 @@ export class DoesUserHaveCard implements CanActivate {
   }
 
   async validateRequest(request) {
+    const paymentMethod = request.body?.paymentMethod;
+
+    // If wallet payment is selected, allow it (charge happens after consultation)
+    if (paymentMethod === 'wallet') {
+      return true;
+    }
+
+    // Otherwise, check for saved cards
     const cards = await this.cardService.getUserCards(request.user.sub);
     if (!cards?.length) {
       throw new ForbiddenException(Messages.NO_CARD_SAVED);
