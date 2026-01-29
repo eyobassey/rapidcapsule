@@ -12,4 +12,6 @@ export type ICalendarType = {
   readonly meeting_channel?: string;
   readonly appointment_type?: string;
   readonly patient_notes?: string;
+  readonly urgency?: string;
+  readonly timezone?: string;
 };

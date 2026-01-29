@@ -84,6 +84,8 @@ import {
   PharmacyOrderStatus,
   PharmacyOrderType,
 } from '../pharmacy/entities/pharmacy-order.entity';
+import { UnifiedWalletService } from '../accounting/services/unified-wallet.service';
+import { WalletOwnerType, TransactionCategory } from '../accounting/enums/account-codes.enum';
 
 @Injectable()
 export class AppointmentsService {
@@ -112,6 +114,7 @@ export class AppointmentsService {
     private readonly advancedHealthScoreService: AdvancedHealthScoreService,
     private readonly vitalsService: VitalsService,
     private readonly fileUploadHelper: FileUploadHelper,
+    private readonly unifiedWalletService: UnifiedWalletService,
   ) {}
   async createAppointment(
     createAppointmentDto: CreateAppointmentDto,
@@ -120,8 +123,30 @@ export class AppointmentsService {
     const subscription = await this.subscriptionsService.getActiveSubscription(
       currentUser.sub,
     );
-    const { date, time, meeting_channel } = createAppointmentDto;
-    const appointmentStartTime = moment(`${date} ${time}`, true).toDate();
+    const { date, time, meeting_channel, paymentMethod, patient_notes, shared_documents, timezone } = createAppointmentDto;
+
+    // Parse the date and time with proper timezone handling
+    // If timezone is provided (e.g., "UTC + 1 (West African Time)"),
+    // we need to interpret the input time as being in that timezone and convert to UTC
+    let appointmentStartTime: Date;
+    const localTime = moment(`${date} ${time}`, 'YYYY-MM-DD HH:mm');
+
+    if (timezone) {
+      // Extract timezone offset from format like "UTC + 1 (West African Time)"
+      const offsetMatch = timezone.match(/UTC\s*([+-])\s*(\d+)/i);
+      if (offsetMatch) {
+        // Parse as UTC offset - subtract the offset to convert local to UTC
+        const sign = offsetMatch[1] === '+' ? -1 : 1; // Negate because we're converting TO UTC
+        const hours = parseInt(offsetMatch[2], 10);
+        appointmentStartTime = localTime.clone().add(sign * hours, 'hours').toDate();
+      } else {
+        // Unknown timezone format - treat as UTC (legacy behavior)
+        appointmentStartTime = localTime.toDate();
+      }
+    } else {
+      // No timezone provided - treat as UTC (legacy behavior)
+      appointmentStartTime = localTime.toDate();
+    }
 
     // Prevent booking appointments in the past
     if (appointmentStartTime < new Date()) {
@@ -130,12 +155,141 @@ export class AppointmentsService {
       );
     }
 
+    // Check for double booking - prevent specialist from having two appointments at the same time
+    const appointmentEndTime = moment(appointmentStartTime).add(1, 'hour').toDate();
+    const specialistId = createAppointmentDto.specialist;
+
+    const conflictingAppointment = await this.appointmentModel.findOne({
+      specialist: specialistId,
+      status: {
+        $in: [
+          AppointmentStatus.OPEN,
+          AppointmentStatus.ONGOING,
+          AppointmentStatus.RESCHEDULED
+        ]
+      },
+      $or: [
+        // New appointment starts during existing appointment
+        {
+          start_time: { $lte: appointmentStartTime },
+          $expr: {
+            $gte: [
+              { $add: ['$start_time', 60 * 60 * 1000] }, // Add 1 hour in milliseconds
+              appointmentStartTime
+            ]
+          }
+        },
+        // Existing appointment starts during new appointment
+        {
+          start_time: { $gte: appointmentStartTime, $lt: appointmentEndTime }
+        }
+      ]
+    }).exec();
+
+    if (conflictingAppointment) {
+      throw new BadRequestException(
+        'This specialist already has an appointment scheduled at this time. Please select a different time slot.'
+      );
+    }
+
+    // Get specialist to determine appointment fee
+    const specialist = await this.usersService.findById(new Types.ObjectId(specialistId.toString()));
+    if (!specialist) {
+      throw new NotFoundException('Specialist not found');
+    }
+
+    // Calculate appointment fee from specialist's consultation rates
+    const urgency = createAppointmentDto.urgency || 'routine';
+    let appointmentFee: number = createAppointmentDto.appointment_fee || 0;
+
+    if (!appointmentFee) {
+      // Get fee from specialist preferences (access via any to avoid type issues)
+      const specialistData = specialist as any;
+      const consultationRates = specialistData.specialist_preferences?.consultation_rates;
+      if (consultationRates) {
+        appointmentFee = urgency === 'urgent'
+          ? consultationRates.urgent_rate || consultationRates.routine_rate || 5000
+          : consultationRates.routine_rate || 5000;
+      } else {
+        appointmentFee = 5000; // Default fee
+      }
+    }
+
+    // Add platform service fee
+    const platformFee = 500;
+    const totalAmount: number = appointmentFee + platformFee;
+
+    // Process payment
+    let paymentStatus = Status.PENDING;
+    let paymentReference: string | null = null;
+
+    if (paymentMethod === 'wallet') {
+      // Debit from patient's wallet
+      try {
+        const patientId = new Types.ObjectId(currentUser.sub);
+
+        // Check wallet balance first
+        const wallet = await this.unifiedWalletService.getWalletByOwner(
+          patientId,
+          WalletOwnerType.PATIENT,
+        );
+
+        if (!wallet || wallet.available_balance < totalAmount) {
+          throw new BadRequestException(
+            `Insufficient wallet balance. Required: ₦${totalAmount.toLocaleString()}, Available: ₦${(wallet?.available_balance || 0).toLocaleString()}`
+          );
+        }
+
+        // Create a temporary appointment ID for reference
+        const tempAppointmentId = new Types.ObjectId();
+
+        // Debit the wallet
+        await this.unifiedWalletService.debit({
+          wallet_id: wallet.wallet_id,
+          amount: totalAmount,
+          description: `Appointment booking with ${specialist.profile?.first_name} ${specialist.profile?.last_name}`,
+          category: TransactionCategory.APPOINTMENT_PAYMENT,
+          reference_type: 'appointment',
+          reference_id: tempAppointmentId,
+          metadata: {
+            specialist_id: specialistId.toString(),
+            appointment_type: createAppointmentDto.appointment_type,
+            urgency,
+            consultation_fee: appointmentFee,
+            platform_fee: platformFee,
+          },
+        });
+
+        paymentStatus = Status.SUCCESSFUL;
+        paymentReference = `WALLET_${tempAppointmentId.toString()}`;
+      } catch (error) {
+        this.logger.error(`Wallet payment failed: ${error.message}`);
+        if (error instanceof BadRequestException) {
+          throw error;
+        }
+        throw new BadRequestException('Payment failed. Please try again or use a different payment method.');
+      }
+    } else if (paymentMethod === 'card') {
+      // For card payments, we'll need to handle Paystack redirect
+      // The payment will be verified via webhook, so set status to pending
+      paymentStatus = Status.PENDING;
+    }
+
+    // Create the appointment with all details
     const appointment = await create(this.appointmentModel, {
       ...createAppointmentDto,
       start_time: appointmentStartTime,
       patient: currentUser.sub,
       meeting_class: subscription?.planId?.name || 'Free',
-      meeting_channel: meeting_channel || 'zoom', // Default to zoom if not specified
+      meeting_channel: meeting_channel || 'zoom',
+      appointment_fee: appointmentFee,
+      payment_status: paymentStatus,
+      patient_notes: patient_notes || '',
+      shared_documents: shared_documents?.map(doc => ({
+        ...doc,
+        shared_by: 'patient',
+        uploaded_at: new Date(),
+      })) || [],
     });
 
     // Handle meeting channel-specific logic
@@ -149,12 +303,14 @@ export class AppointmentsService {
       return await this.scheduleTeamsMeeting(appointment);
     }
 
-    // For phone and in_person, no meeting link needed
-    await updateOne(
-      this.appointmentModel,
-      { _id: appointment._id },
-      { payment_status: Status.SUCCESSFUL },
-    );
+    // For phone and in_person, no meeting link needed but update payment status
+    if (paymentStatus === Status.SUCCESSFUL) {
+      await updateOne(
+        this.appointmentModel,
+        { _id: appointment._id },
+        { payment_status: Status.SUCCESSFUL },
+      );
+    }
 
     return appointment;
   }
@@ -171,6 +327,7 @@ export class AppointmentsService {
       duration_minutes,
       timezone,
       appointment_type,
+      urgency,
       consultation_fee,
       patient_notes,
       private_notes,
@@ -194,7 +351,7 @@ export class AppointmentsService {
 
     const conflictingAppointment = await this.appointmentModel.findOne({
       specialist: specialistId,
-      status: { $in: ['OPEN', 'ONGOING'] },
+      status: { $in: ['OPEN', 'ONGOING', 'RESCHEDULED'] },
       $or: [
         // New appointment starts during existing appointment
         {
@@ -225,7 +382,7 @@ export class AppointmentsService {
 
     if (conflictingAppointment) {
       throw new BadRequestException(
-        `You already have an appointment scheduled at this time. Please choose a different time slot.`
+        `This specialist already has an appointment scheduled at this time. Please choose a different time slot.`
       );
     }
 
@@ -239,6 +396,7 @@ export class AppointmentsService {
       start_time: new Date(start_time),
       timezone: timezone || 'UTC',
       appointment_type,
+      urgency: urgency || 'routine', // Default to routine if not specified
       patient: patient_id,
       specialist: specialistId,
       appointment_fee: consultation_fee || 0,
@@ -285,6 +443,8 @@ export class AppointmentsService {
           meeting_channel: appointment.meeting_channel || 'zoom',
           appointment_type: appointment.appointment_type,
           patient_notes: appointment.patient_notes,
+          urgency: appointment.urgency,
+          timezone: appointment.timezone,
         }),
         `${Date.now()}-sendSpecialistAppointmentMail`,
       );
@@ -363,13 +523,78 @@ export class AppointmentsService {
   ) {
     const { appointmentId, time, date } = rescheduleAppointmentDto;
     const appointment = await this.findOneAppointment(appointmentId);
+
+    // Validate appointment can be rescheduled (must be in OPEN or RESCHEDULED status)
+    if (![AppointmentStatus.OPEN, AppointmentStatus.RESCHEDULED].includes(appointment.status as AppointmentStatus)) {
+      throw new BadRequestException(
+        `Cannot reschedule appointment with status: ${appointment.status}. Only active appointments can be rescheduled.`
+      );
+    }
+
     const [specialist, patient, subscription] = await Promise.all([
       this.usersService.findById(appointment.specialist),
       this.usersService.findById(appointment.patient),
       this.subscriptionsService.getActiveSubscription(appointment.patient),
     ]);
+
+    const newStartTime = moment(`${date} ${time}`, 'YYYY-MM-DD HH:mm', true).toDate();
+    const now = new Date();
+
+    // Validation 1: Cannot reschedule to a time in the past
+    if (newStartTime < now) {
+      throw new BadRequestException(
+        'Cannot reschedule to a past date/time. Please select a future time slot.'
+      );
+    }
+
+    // Validation 2: Minimum 2 hours notice before the original appointment
+    const hoursUntilOriginal = moment(appointment.start_time).diff(moment(), 'hours', true);
+    if (hoursUntilOriginal < 2 && hoursUntilOriginal > 0) {
+      throw new BadRequestException(
+        'Cannot reschedule within 2 hours of the original appointment time. Please contact support for assistance.'
+      );
+    }
+
+    // Validation 3: Minimum 2 hours notice for the new time
+    const hoursUntilNew = moment(newStartTime).diff(moment(), 'hours', true);
+    if (hoursUntilNew < 2) {
+      throw new BadRequestException(
+        'New appointment time must be at least 2 hours from now.'
+      );
+    }
+
+    // Validation 4: Check if specialist is available at the new time
+    const specialistId = appointment.specialist.toString();
+    const availableTimes = await this.getAvailableTimes({
+      preferredDates: [{ date: new Date(date) }],
+      specialistId,
+    });
+
+    const dateKey = moment(date).format('YYYY-MM-DD');
+    const availableSlots = availableTimes[dateKey] || [];
+
+    if (!availableSlots.includes(time)) {
+      throw new BadRequestException(
+        `The specialist is not available at ${time} on ${dateKey}. Please select a different time slot.`
+      );
+    }
+
+    // Validation 5: Double-booking prevention (redundant but explicit check)
+    const existingAppointment = await this.appointmentModel.findOne({
+      specialist: appointment.specialist,
+      _id: { $ne: appointment._id }, // Exclude current appointment
+      start_time: newStartTime,
+      status: { $in: [AppointmentStatus.OPEN, AppointmentStatus.ONGOING, AppointmentStatus.RESCHEDULED] },
+    });
+
+    if (existingAppointment) {
+      throw new BadRequestException(
+        'This time slot has just been booked. Please select a different time.'
+      );
+    }
+
     const topic = `Appointment Rescheduled Between ${specialist.profile.first_name} and ${patient.profile.first_name}`;
-    const startTime = moment(`${date} ${time}`, true).toDate();
+    const startTime = newStartTime;
 
     // Try to reschedule meeting based on channel, but don't fail if service is unavailable
     let meetingRescheduled = false;
@@ -429,6 +654,8 @@ export class AppointmentsService {
         meeting_channel: appointment.meeting_channel || 'zoom',
         appointment_type: appointment.appointment_type,
         patient_notes: appointment.patient_notes,
+        urgency: appointment.urgency,
+        timezone: appointment.timezone,
       }),
       `${Date.now()}-sendRescheduleAppointmentMail`,
     );
@@ -445,10 +672,15 @@ export class AppointmentsService {
       patient.id,
     );
     const topic = `Appointment Between ${specialist.profile.first_name} and ${patient.profile.first_name}`;
+
+    // Get specialist email for alternative host (allows specialist to control meeting)
+    const specialistEmail = specialist.profile?.contact?.email;
+
     const response = await this.zoom.createMeeting({
       start_time: appointment.start_time,
       topic,
       duration: subscription?.planId?.call_duration ?? '5',
+      alternative_hosts: specialistEmail, // Specialist can now host the meeting
     });
 
     if (response.status === SUCCESS) {
@@ -461,6 +693,17 @@ export class AppointmentsService {
           join_url,
           start_url,
           payment_status: Status.SUCCESSFUL,
+          // Initialize meeting platform data with alternative host
+          meeting_platform_data: {
+            alternative_host_email: specialistEmail,
+          },
+          // Initialize attendance tracking
+          attendance: {
+            patient_joined: false,
+            specialist_joined: false,
+            both_joined: false,
+            attendance_status: 'none',
+          },
         },
       );
       await this.taskCron.addCron(
@@ -475,11 +718,20 @@ export class AppointmentsService {
           meeting_channel: 'zoom',
           appointment_type: appointment.appointment_type,
           patient_notes: appointment.patient_notes,
+          urgency: appointment.urgency,
+          timezone: appointment.timezone,
         }),
         `${Date.now()}-sendScheduleAppointmentMail`,
       );
 
-      return appointment;
+      // Return appointment with meeting details included
+      return {
+        ...appointment.toObject(),
+        meeting_id: id,
+        join_url,
+        start_url,
+        payment_status: Status.SUCCESSFUL,
+      };
     }
     return appointment;
   }
@@ -549,6 +801,10 @@ export class AppointmentsService {
         call_duration: subscription?.planId?.call_duration,
         appointmentId: appointment._id,
         meeting_channel: 'whatsapp',
+        appointment_type: appointment.appointment_type,
+        patient_notes: appointment.patient_notes,
+        urgency: appointment.urgency,
+        timezone: appointment.timezone,
       }),
       `${Date.now()}-sendWhatsAppAppointmentMail`,
     );
@@ -643,6 +899,8 @@ export class AppointmentsService {
           meeting_channel: 'google_meet',
           appointment_type: appointment.appointment_type,
           patient_notes: appointment.patient_notes,
+          urgency: appointment.urgency,
+          timezone: appointment.timezone,
         }),
         `${Date.now()}-sendGoogleMeetAppointmentMail`,
       );
@@ -700,9 +958,30 @@ export class AppointmentsService {
     link,
     call_duration,
     appointmentId,
+    timezone,
   }: ICalendarType) {
     const DURATION = call_duration || 5;
     const attendees = this.getAttendees([patient, specialist]);
+
+    // Determine iCal timezone - default to Africa/Lagos if not specified
+    let iCalTimezone = 'Africa/Lagos';
+    if (timezone) {
+      // Map common offset formats to IANA timezone names
+      const offsetMatch = timezone.match(/UTC\s*([+-])\s*(\d+)/i);
+      if (offsetMatch) {
+        const sign = offsetMatch[1];
+        const hours = parseInt(offsetMatch[2], 10);
+        // Map common West African offsets to IANA names
+        if (sign === '+' && hours === 1) {
+          iCalTimezone = 'Africa/Lagos'; // WAT (West Africa Time)
+        } else if (sign === '+' && hours === 0) {
+          iCalTimezone = 'UTC';
+        } else {
+          // Keep default for other offsets
+          iCalTimezone = 'Africa/Lagos';
+        }
+      }
+    }
 
     const cal = ical({
       name: topic,
@@ -714,9 +993,10 @@ export class AppointmentsService {
           end: moment(start_time).add(DURATION, 'm').toDate(),
           summary: `${specialist.full_name} and ${patient.full_name}`,
           location: 'Zoom',
-          timezone: 'Africa/Lagos',
+          timezone: iCalTimezone,
           description: `${topic}\n\n Join the meeting via this zoom link ${link.join_url}`,
           status: ICalEventStatus.CONFIRMED,
+          organizer: 'Rapid Capsule <appointments@rapidcapsule.com>',
           attendees,
         },
       ],
@@ -743,6 +1023,8 @@ export class AppointmentsService {
     meeting_channel,
     appointment_type,
     patient_notes,
+    urgency,
+    timezone,
   }: ICalendarType) {
     this.logger.log(`Getting generated ical attachment`);
     const { attachments, attendees } = this.generateICalendar({
@@ -753,11 +1035,27 @@ export class AppointmentsService {
       link,
       call_duration,
       appointmentId,
+      timezone,
     });
     const { join_url, start_url } = link;
 
-    // Format appointment date for email
-    const appointmentDate = moment(start_time).format('MMMM Do YYYY, h:mm A');
+    // Format appointment date for email - convert UTC to local time if timezone provided
+    let appointmentDate: string;
+    if (timezone) {
+      // Extract offset from timezone string like "UTC + 1 (West African Time)"
+      const offsetMatch = timezone.match(/UTC\s*([+-])\s*(\d+)/i);
+      if (offsetMatch) {
+        const sign = offsetMatch[1] === '+' ? 1 : -1;
+        const hours = parseInt(offsetMatch[2], 10);
+        // Add offset to UTC time to get local time
+        const localTime = moment(start_time).add(sign * hours, 'hours');
+        appointmentDate = localTime.format('MMMM Do YYYY, h:mm A');
+      } else {
+        appointmentDate = moment(start_time).format('MMMM Do YYYY, h:mm A');
+      }
+    } else {
+      appointmentDate = moment(start_time).format('MMMM Do YYYY, h:mm A');
+    }
 
     for (const attendee of attendees) {
       const isPatient = patient.profile.contact.email === attendee.email;
@@ -771,6 +1069,7 @@ export class AppointmentsService {
           appointmentDate,
           appointment_type,
           patient_notes,
+          urgency,
         ),
         attachments,
       });
@@ -1218,21 +1517,27 @@ export class AppointmentsService {
 
   async uploadDocument(
     appointmentId: string,
-    specialistId: string,
+    userId: string,
     file: { buffer: Buffer; originalname: string; mimetype: string; size: number },
   ) {
     const appointment = await this.appointmentModel.findById(appointmentId);
     if (!appointment) throw new NotFoundException('Appointment not found');
-    if (appointment.specialist?.toString() !== specialistId) {
+
+    // Check if user is either the specialist or the patient
+    const isSpecialist = appointment.specialist?.toString() === userId;
+    const isPatient = appointment.patient?.toString() === userId;
+
+    if (!isSpecialist && !isPatient) {
       throw new BadRequestException('Unauthorized: Not your appointment');
     }
+
     const url = await this.fileUploadHelper.uploadToS3(file.buffer, file.originalname);
     const doc = {
       name: file.originalname,
       url,
       type: file.mimetype.startsWith('image/') ? 'image' : file.mimetype.includes('pdf') ? 'pdf' : 'doc',
       size: this.formatFileSize(file.size),
-      shared_by: 'specialist',
+      shared_by: isSpecialist ? 'specialist' : 'patient',
       uploaded_at: new Date(),
     };
     if (!appointment.shared_documents) {
@@ -1305,6 +1610,8 @@ export class AppointmentsService {
       rating,
       time_zone,
       gender,
+      is_diaspora,
+      languages,
     } = availableSpecialistQueryDto || {};
     // find all specialist of that professional category and get their Ids
     const specialists = await this.usersService.findAllUsers({
@@ -1312,6 +1619,8 @@ export class AppointmentsService {
       'professional_practice.category': professional_category,
       'professional_practice.area_of_specialty': specialist_category,
       ...(rating && this.ratingsQuery(rating)),
+      ...(is_diaspora !== undefined && { 'profile.contact.is_diaspora': is_diaspora }),
+      ...(languages?.length && { languages: { $in: languages } }),
     });
     const specialistIds = specialists.map(({ _id }) => _id);
 
@@ -1331,7 +1640,9 @@ export class AppointmentsService {
     /**
      * Fetch the specialists that their preference day and time
      * falls between the patient preferred day and time for the appointment
+     * Also filter by urgency/slot_type - 'both' slots match any urgency
      **/
+    const { urgency } = availableSpecialistQueryDto; // Optional urgency filter
     const result: { [x: string]: UserDocument[] } = {};
     await Promise.all(
       availabilityDates.map(async ({ date, time }) => {
@@ -1340,9 +1651,22 @@ export class AppointmentsService {
         const availablePreferences = preferences.filter(
           ({ time_availability }) =>
             time_availability.find(
-              ({ day, start_time, end_time }) =>
-                day === preferredDay &&
-                this.isTimeInRange(time, start_time, end_time),
+              (slot: any) => {
+                const { day, start_time, end_time } = slot;
+                const slotType = slot.slot_type || 'routine';
+
+                // Check day and time range
+                const matchesDayAndTime = day === preferredDay &&
+                  this.isTimeInRange(time, start_time, end_time);
+
+                // If urgency filter is specified, also check slot_type
+                // 'both' slots are available for both routine and urgent
+                if (urgency && matchesDayAndTime) {
+                  return slotType === urgency || slotType === 'both';
+                }
+
+                return matchesDayAndTime;
+              },
             ),
         );
         const userIds = availablePreferences.map(({ userId }) => userId);
@@ -1367,11 +1691,13 @@ export class AppointmentsService {
   ) {
     const availableSpecialists: Types.ObjectId[] = [];
     for (const userId of userIds) {
+      // Check for all active appointment statuses that block a time slot
       const appointments = await this.getAppointments({
         specialist: userId,
         $or: [
           { status: AppointmentStatus.OPEN },
           { status: AppointmentStatus.ONGOING },
+          { status: AppointmentStatus.RESCHEDULED },
         ],
         start_time: {
           $gte: new Date(new Date(date).setHours(0, 0, 0)),
@@ -1382,8 +1708,10 @@ export class AppointmentsService {
       const isAvailable =
         !appointments?.length ||
         !appointments?.some(({ start_time }) => {
-          const endTime = moment(start_time).add(1, 'hour').format('HH:mm');
-          return this.isTimeInRange(time, start_time, endTime);
+          // Convert start_time to HH:mm format for consistent time-only comparison
+          const appointmentStartTime = moment(start_time).format('HH:mm');
+          const appointmentEndTime = moment(start_time).add(1, 'hour').format('HH:mm');
+          return this.isTimeInRange(time, appointmentStartTime, appointmentEndTime);
         });
 
       if (isAvailable) {
@@ -1395,31 +1723,88 @@ export class AppointmentsService {
   }
 
   async getSpecialistDetails(userIds: Types.ObjectId[]) {
-    return this.usersService.findAllUsers(
+    const specialistDocs = await this.usersService.findAllUsers(
       {
         _id: userIds,
       },
       [
+        'full_name',
         'profile.first_name',
         'profile.last_name',
+        'profile.profile_photo',
         'profile.profile_image',
         'profile.gender',
         'average_rating',
         'professional_practice',
       ],
     );
+
+    // Convert to plain objects and add review counts
+    const specialists = await Promise.all(
+      specialistDocs.map(async (doc: any) => {
+        // Convert Mongoose document to plain object
+        const specialist = doc.toObject ? doc.toObject() : { ...doc };
+
+        // Ensure full_name is set (construct from first/last name if not present)
+        if (!specialist.full_name && specialist.profile) {
+          const firstName = specialist.profile.first_name || '';
+          const lastName = specialist.profile.last_name || '';
+          specialist.full_name = `${firstName} ${lastName}`.trim() || 'Specialist';
+        }
+
+        // Resolve profile photo
+        const photoKey = specialist.profile?.profile_photo || specialist.profile?.profile_image;
+        if (photoKey) {
+          try {
+            specialist.profile.profile_photo = await this.fileUploadHelper.resolveProfileImage(photoKey);
+          } catch (e) {
+            // Silently ignore resolution errors
+          }
+        }
+
+        // Count reviews (appointments with ratings) for this specialist
+        try {
+          const reviewCount = await this.appointmentModel.countDocuments({
+            specialist: specialist._id,
+            'rating.score': { $exists: true, $ne: null },
+          });
+          specialist.review_count = reviewCount;
+        } catch (e) {
+          specialist.review_count = 0;
+        }
+
+        return specialist;
+      }),
+    );
+
+    return specialists;
   }
 
   async getAvailableTimes(availableTimesDto: AvailableTimesDto) {
-    const { preferredDates } = availableTimesDto;
+    const { preferredDates, specialistId, urgency } = availableTimesDto;
     const result: { [x: string]: string[] } = {};
+
     await Promise.all(
       preferredDates.map(async ({ date }) => {
         const daysOfTheWeek = this.generalHelpers.daysOfTheWeek();
         const preferredDay = daysOfTheWeek[moment(date).isoWeekday()];
-        const preferences = await this.usersService.getPreferences({
+        const dateString = moment(date).format('YYYY-MM-DD');
+
+        // Build preferences query - filter by specialist if provided
+        const preferencesQuery: any = {
           'time_availability.day': preferredDay,
-        });
+        };
+        if (specialistId) {
+          preferencesQuery.userId = new Types.ObjectId(specialistId);
+        }
+
+        const preferences = await this.usersService.getPreferences(preferencesQuery);
+
+        // If specialist-specific and no preferences found, return empty
+        if (specialistId && preferences.length === 0) {
+          result[dateString] = [];
+          return;
+        }
 
         const timeSlots = preferences.map(
           ({ time_availability }) => time_availability,
@@ -1429,6 +1814,15 @@ export class AppointmentsService {
         for (const slots of timeSlots) {
           for (const slot of slots) {
             if (slot.day === preferredDay) {
+              // Filter by urgency/slot_type if specified
+              // 'both' slots are available for both routine and urgent appointments
+              if (urgency) {
+                const slotType = (slot as any).slot_type || 'routine';
+                if (slotType !== urgency && slotType !== 'both') {
+                  continue; // Skip slots that don't match the requested urgency
+                }
+              }
+
               const startTime = moment(slot.start_time, 'HH:mm');
               const endTime = moment(slot.end_time, 'HH:mm');
 
@@ -1450,10 +1844,46 @@ export class AppointmentsService {
             }
           }
         }
-        result[moment(date).format('YYYY-MM-DD')] = Array.from(timeIntervals);
+
+        // If specialist-specific, exclude already booked times
+        if (specialistId) {
+          const bookedTimes = await this.getSpecialistBookedTimes(
+            specialistId,
+            dateString,
+          );
+          bookedTimes.forEach((time) => timeIntervals.delete(time));
+        }
+
+        // Sort time intervals chronologically
+        const sortedTimes = Array.from(timeIntervals).sort((a, b) => {
+          return moment(a, 'HH:mm').diff(moment(b, 'HH:mm'));
+        });
+
+        result[dateString] = sortedTimes;
       }),
     );
     return result;
+  }
+
+  /**
+   * Get times that are already booked for a specialist on a specific date
+   */
+  private async getSpecialistBookedTimes(
+    specialistId: string,
+    dateString: string,
+  ): Promise<string[]> {
+    const dayStart = moment(dateString).startOf('day').toDate();
+    const dayEnd = moment(dateString).endOf('day').toDate();
+
+    const bookedAppointments = await find(this.appointmentModel, {
+      specialist: new Types.ObjectId(specialistId),
+      start_time: { $gte: dayStart, $lte: dayEnd },
+      status: { $in: [AppointmentStatus.OPEN, AppointmentStatus.ONGOING, AppointmentStatus.RESCHEDULED] },
+    });
+
+    return bookedAppointments.map((apt) =>
+      moment(apt.start_time).format('HH:mm'),
+    );
   }
 
   async appointmentsDataCount(
@@ -2391,11 +2821,36 @@ export class AppointmentsService {
           start_time: appointment.start_time,
           status: appointment.status,
           meeting_channel: appointment.meeting_channel,
-          meeting_type: appointment.appointment_type || 'Video and audio',
+          meeting_type: appointment.meeting_type || 'Video and audio',
+          appointment_type: appointment.appointment_type || 'General Consultation',
           join_url: appointment.join_url,
           start_url: appointment.start_url,
           patient_notes: appointment.patient_notes,
+          private_notes: appointment.private_notes,
           notes: appointment.notes,
+          clinical_notes: appointment.clinical_notes || [],
+          // Urgency and category
+          urgency: appointment.urgency || 'routine',
+          category: appointment.category,
+          // Payment info
+          appointment_fee: appointment.appointment_fee,
+          payment_status: appointment.payment_status,
+          // Duration and timezone
+          duration_minutes: appointment.duration_minutes || 30,
+          timezone: appointment.timezone,
+          // Shared documents/files
+          shared_documents: appointment.shared_documents || [],
+          // Rating (if completed)
+          rating: appointment.rating,
+          // Call duration (if completed)
+          call_duration: appointment.call_duration,
+          // Zoom meeting data (for completed appointments)
+          attendance: appointment.attendance,
+          participants: appointment.participants,
+          meeting_platform_data: appointment.meeting_platform_data,
+          recording: appointment.recording,
+          transcript: appointment.transcript,
+          meeting_summary: appointment.meeting_summary,
         },
         patient: {
           _id: appointment.patient._id,

@@ -17,6 +17,23 @@ export enum AppointmentStatus {
   FAILED = 'FAILED',
   ONGOING = 'ONGOING',
   RESCHEDULED = 'RESCHEDULED',
+  MISSED = 'MISSED',
+}
+
+export enum AttendanceStatus {
+  NONE = 'none',
+  PATIENT_ONLY = 'patient_only',
+  SPECIALIST_ONLY = 'specialist_only',
+  BOTH = 'both',
+  UNKNOWN = 'unknown', // Meeting happened but couldn't determine who attended
+}
+
+export enum RecordingStatus {
+  PENDING = 'pending',
+  PROCESSING = 'processing',
+  AVAILABLE = 'available',
+  EXPIRED = 'expired',
+  DELETED = 'deleted',
 }
 
 export enum MeetingChannel {
@@ -26,6 +43,11 @@ export enum MeetingChannel {
   WHATSAPP = 'whatsapp',
   PHONE = 'phone',
   IN_PERSON = 'in_person',
+}
+
+export enum AppointmentUrgency {
+  ROUTINE = 'routine',
+  URGENT = 'urgent',
 }
 
 @Schema({ timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } })
@@ -41,6 +63,15 @@ export class Appointment {
 
   @Prop({ type: String, required: true })
   appointment_type: string;
+
+  @Prop({
+    type: String,
+    enum: {
+      values: [AppointmentUrgency.ROUTINE, AppointmentUrgency.URGENT],
+    },
+    default: AppointmentUrgency.ROUTINE,
+  })
+  urgency: AppointmentUrgency;
 
   @Prop(
     raw({
@@ -88,8 +119,139 @@ export class Appointment {
   })
   meeting_channel: MeetingChannel;
 
-  @Prop(raw({}))
-  meeting_platform_data: any; // Platform-specific metadata (Zoom UUID, Google Calendar ID, WhatsApp number, etc.)
+  @Prop(
+    raw({
+      zoom_meeting_uuid: { type: String },
+      alternative_host_email: { type: String },
+      actual_start_time: { type: Date },
+      actual_end_time: { type: Date },
+      actual_duration_minutes: { type: Number },
+    }),
+  )
+  meeting_platform_data: {
+    zoom_meeting_uuid?: string;
+    alternative_host_email?: string;
+    actual_start_time?: Date;
+    actual_end_time?: Date;
+    actual_duration_minutes?: number;
+  };
+
+  @Prop(
+    raw({
+      patient_joined: { type: Boolean, default: false },
+      patient_joined_at: { type: Date },
+      patient_left_at: { type: Date },
+      specialist_joined: { type: Boolean, default: false },
+      specialist_joined_at: { type: Date },
+      specialist_left_at: { type: Date },
+      both_joined: { type: Boolean, default: false },
+      attendance_status: {
+        type: String,
+        enum: [
+          AttendanceStatus.NONE,
+          AttendanceStatus.PATIENT_ONLY,
+          AttendanceStatus.SPECIALIST_ONLY,
+          AttendanceStatus.BOTH,
+          AttendanceStatus.UNKNOWN,
+        ],
+        default: AttendanceStatus.NONE,
+      },
+    }),
+  )
+  attendance: {
+    patient_joined: boolean;
+    patient_joined_at?: Date;
+    patient_left_at?: Date;
+    specialist_joined: boolean;
+    specialist_joined_at?: Date;
+    specialist_left_at?: Date;
+    both_joined: boolean;
+    attendance_status: AttendanceStatus;
+  };
+
+  @Prop(
+    raw([
+      {
+        participant_id: { type: String },
+        name: { type: String },
+        email: { type: String },
+        user_type: { type: String, enum: ['patient', 'specialist', 'unknown'] },
+        join_time: { type: Date },
+        leave_time: { type: Date },
+        duration_minutes: { type: Number },
+      },
+    ]),
+  )
+  participants: Array<{
+    participant_id: string;
+    name: string;
+    email?: string;
+    user_type: 'patient' | 'specialist' | 'unknown';
+    join_time: Date;
+    leave_time?: Date;
+    duration_minutes?: number;
+  }>;
+
+  @Prop(
+    raw({
+      recording_url: { type: String },
+      recording_password: { type: String },
+      recording_download_url: { type: String },
+      recording_duration_minutes: { type: Number },
+      recording_file_size: { type: String },
+      recording_status: {
+        type: String,
+        enum: [
+          RecordingStatus.PENDING,
+          RecordingStatus.PROCESSING,
+          RecordingStatus.AVAILABLE,
+          RecordingStatus.EXPIRED,
+          RecordingStatus.DELETED,
+        ],
+        default: RecordingStatus.PENDING,
+      },
+      recording_expires_at: { type: Date },
+    }),
+  )
+  recording: {
+    recording_url?: string;
+    recording_password?: string;
+    recording_download_url?: string;
+    recording_duration_minutes?: number;
+    recording_file_size?: string;
+    recording_status: RecordingStatus;
+    recording_expires_at?: Date;
+  };
+
+  @Prop(
+    raw({
+      transcript_url: { type: String },
+      transcript_text: { type: String },
+      transcript_status: {
+        type: String,
+        enum: ['pending', 'processing', 'available', 'failed'],
+        default: 'pending',
+      },
+    }),
+  )
+  transcript: {
+    transcript_url?: string;
+    transcript_text?: string;
+    transcript_status?: 'pending' | 'processing' | 'available' | 'failed';
+  };
+
+  @Prop(
+    raw({
+      summary: { type: String },
+      next_steps: [{ type: String }],
+      ai_generated: { type: Boolean, default: false },
+    }),
+  )
+  meeting_summary: {
+    summary?: string;
+    next_steps?: string[];
+    ai_generated?: boolean;
+  };
 
   @Prop(
     raw([
@@ -127,6 +289,7 @@ export class Appointment {
         AppointmentStatus.OPEN,
         AppointmentStatus.ONGOING,
         AppointmentStatus.RESCHEDULED,
+        AppointmentStatus.MISSED,
       ],
     },
     default: AppointmentStatus.OPEN,
@@ -157,6 +320,40 @@ export class Appointment {
 
   @Prop({ type: String })
   private_notes: string;
+
+  @Prop(
+    raw([
+      {
+        name: { type: String },
+        url: { type: String },
+        type: { type: String },
+        size: { type: String },
+        shared_by: { type: String, enum: ['specialist', 'patient'] },
+        uploaded_at: { type: Date, default: Date.now },
+      },
+    ]),
+  )
+  shared_documents: Array<{
+    name: string;
+    url: string;
+    type: string;
+    size: string;
+    shared_by: string;
+    uploaded_at: Date;
+  }>;
+
+  @Prop(
+    raw({
+      score: { type: Number, min: 1, max: 5 },
+      review: { type: String },
+      rated_at: { type: Date },
+    }),
+  )
+  rating: {
+    score: number;
+    review?: string;
+    rated_at?: Date;
+  };
 
   @Prop({ type: Number })
   duration_minutes: number;
