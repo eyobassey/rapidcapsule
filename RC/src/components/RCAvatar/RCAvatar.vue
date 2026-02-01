@@ -1,5 +1,5 @@
 <template>
-  <div :class="['avatar', `avatar-${size}`]">
+  <div :class="['avatar', `avatar-${size}`, { 'avatar-borderless': borderless }]">
     <input
       ref="fileInputRef"
       type="file"
@@ -44,9 +44,13 @@ const props = defineProps({
   size: {
     type: String,
     default: 'md',
-    validator: (value) => ['sm', 'md', 'lg', 'xl'].includes(value)
+    validator: (value) => ['xs', 'sm', 'md', 'lg', 'xl'].includes(value)
   },
   uploadEnabled: {
+    type: Boolean,
+    default: false
+  },
+  borderless: {
     type: Boolean,
     default: false
   }
@@ -64,7 +68,13 @@ const hasInitials = computed(() => {
 });
 
 const photoSrc = computed(() => {
-  return uploadedPhoto.value || props.modelValue;
+  const src = uploadedPhoto.value || props.modelValue;
+  if (!src) return null;
+  // Only use as img src if it's a valid URL or data URI
+  if (src.startsWith('data:') || src.startsWith('http://') || src.startsWith('https://')) {
+    return src;
+  }
+  return null;
 });
 
 function generateInitials() {
@@ -104,9 +114,20 @@ function handleFileUpload(event) {
   padding: 4px;
   border: 1px solid $color-pri-t1;
 
+  &-borderless {
+    border: none;
+    padding: 0;
+  }
+
+  &-xs {
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+  }
+
   &-sm {
-    width: 4rem;
-    height: 4rem;
+    width: 2.5rem;
+    height: 2.5rem;
   }
 
   &-md {
@@ -145,9 +166,14 @@ function handleFileUpload(event) {
     border-radius: 50%;
     font-weight: semibold;
 
+    &.initials-xs {
+      background-color: $color-pri-t1;
+      font-size: 10px;
+    }
+
     &.initials-sm {
       background-color: $color-pri-t1;
-      font-size: 14px;
+      font-size: 12px;
     }
 
     &.initials-md {
@@ -184,9 +210,14 @@ function handleFileUpload(event) {
   }
 
   @media (max-width: 768px) {
+    &-xs {
+      width: 1.75rem;
+      height: 1.75rem;
+    }
+
     &-sm {
-      width: 3rem;
-      height: 3rem;
+      width: 2.25rem;
+      height: 2.25rem;
     }
 
     &-md {

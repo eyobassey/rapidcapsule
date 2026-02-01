@@ -34,6 +34,9 @@ const apiFactory = {
   $_createAppointment(payload) {
     return http.post("/appointments/specialist/create", payload);
   },
+  $_processAppointmentPayment(payload) {
+    return http.post("/appointments/specialist/process-payment", payload);
+  },
   $_cancelAppointments(payload) {
     return http.patch("/appointments/cancel", payload);
   },
@@ -52,8 +55,25 @@ const apiFactory = {
   $_getOnetAppointments(appointmentId) {
     return http.get(`/appointments/${appointmentId}`);
   },
+  $_getAppointmentById(appointmentId) {
+    return http.get(`/appointments/${appointmentId}`);
+  },
   $_getAppointmentDetailsForSpecialist(appointmentId) {
     return http.get(`/appointments/${appointmentId}/specialist-details`);
+  },
+  $_updateAppointmentPrivateNotes(appointmentId, payload) {
+    return http.patch(`/appointments/${appointmentId}/private-notes`, payload);
+  },
+  $_uploadAppointmentDocument(appointmentId, formData) {
+    return http.post(`/appointments/${appointmentId}/documents`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  $_getAppointmentDocuments(appointmentId) {
+    return http.get(`/appointments/${appointmentId}/documents`);
+  },
+  $_rateAppointment(appointmentId, payload) {
+    return http.post(`/appointments/${appointmentId}/rate`, payload);
   },
   $_getPaymentCards() {
     return http.get("/cards");
@@ -75,6 +95,19 @@ const apiFactory = {
   },
   $_getSpecialistEarnings(payload) {
     return http.get("/users/earnings", payload);
+  },
+  // Identity Verification
+  $_getIdentityVerification() {
+    return http.get("/users/identity-verification");
+  },
+  $_updateIdentityVerification(payload) {
+    return http.patch("/users/identity-verification", payload);
+  },
+  $_getConsultationServices() {
+    return http.get("/consultation-services");
+  },
+  $_getDefaultConsultationServices() {
+    return http.get("/consultation-services/defaults");
   },
   $_specialistPreference(payload) {
     return http.post("/users/preferences", payload);
@@ -142,6 +175,12 @@ const apiFactory = {
   $_getSpecialistDashboard() {
     return http.get("/dashboard/specialist");
   },
+  $_getSpecialistDashboardEnhanced() {
+    return http.get("/dashboard/specialist/enhanced");
+  },
+  $_getSpecialistAnalytics(period = '30d') {
+    return http.get(`/dashboard/specialist/analytics?period=${period}`);
+  },
 
   $_changePhoneNumber(payload) {
     return http.patch("/auth/change-phone-number", payload);
@@ -174,6 +213,9 @@ const apiFactory = {
   },
   $_getOneUserVitals(patientId) {
     return http.get(`vitals/${patientId}`);
+  },
+  $_createVitals(payload) {
+    return http.post('/vitals', payload);
   },
   $_getHealthCheckupResult(patientId) {
     return http.get(`/health-checkup/results/${patientId}`)
@@ -320,6 +362,12 @@ const apiFactory = {
   $_fetchZoomClinicalNotes(appointmentId) {
     return http.post(`/clinical-notes/fetch-zoom/${appointmentId}`);
   },
+  $_createStructuredClinicalNote(payload) {
+    return http.post('/clinical-notes/structured', payload);
+  },
+  $_updateStructuredClinicalNote(appointmentId, noteId, payload) {
+    return http.patch(`/clinical-notes/structured/${appointmentId}/${noteId}`, payload);
+  },
 
   // Clinical Note Templates APIs
   $_getTemplates(category) {
@@ -460,6 +508,23 @@ const apiFactory = {
     return http.post(`/specialist/prescriptions/${prescriptionId}/cancel`, payload);
   },
 
+  // Linked Records
+  $_getSpecialistLinkableAppointments(patientId) {
+    return http.get(`/specialist/prescriptions/linkable-appointments/${patientId}`);
+  },
+  $_linkPrescriptionRecords(prescriptionId, payload) {
+    return http.post(`/specialist/prescriptions/${prescriptionId}/link-records`, payload);
+  },
+  $_unlinkPrescriptionRecords(prescriptionId, payload) {
+    return http.post(`/specialist/prescriptions/${prescriptionId}/unlink-records`, payload);
+  },
+  $_getPrescriptionsForAppointment(appointmentId) {
+    return http.get(`/specialist/prescriptions/for-appointment/${appointmentId}`);
+  },
+  $_getPrescriptionsForAppointments(appointmentIds) {
+    return http.post('/specialist/prescriptions/for-appointments', { appointment_ids: appointmentIds });
+  },
+
   // Payment Methods
   $_payPrescriptionFromWallet(prescriptionId) {
     return http.post(`/specialist/prescriptions/${prescriptionId}/pay/wallet`);
@@ -525,6 +590,9 @@ const apiFactory = {
   },
   $_ratePrescription(prescriptionId, payload) {
     return http.post(`/patient/prescriptions/${prescriptionId}/rate`, payload);
+  },
+  $_getPatientPrescriptionsForAppointment(appointmentId) {
+    return http.get(`/patient/prescriptions/for-appointment/${appointmentId}`);
   },
 
   // ============ Patient Prescription Upload APIs ============
@@ -820,6 +888,148 @@ const apiFactory = {
    */
   $_togglePatientStar(patientId, payload) {
     return http.post(`/specialist/patients/${patientId}/star`, payload);
+  },
+
+  // ========================================
+  // Languages API
+  // ========================================
+
+  /**
+   * Get all active languages
+   * @returns {Promise} List of active languages
+   */
+  $_getLanguages() {
+    return http.get('/languages');
+  },
+
+  // ========================================
+  // Specialist Categories API
+  // ========================================
+
+  /**
+   * Get all specialist categories (with popular and others separation)
+   * @param {Object} params - Optional query params { professional_category }
+   * @returns {Promise} Object with { all, popular, others } arrays
+   */
+  $_getSpecialistCategories(params = {}) {
+    return http.get('/specialist-categories', { params });
+  },
+
+  /**
+   * Get popular specialist categories only
+   * @returns {Promise} List of popular categories
+   */
+  $_getPopularSpecialistCategories() {
+    return http.get('/specialist-categories/popular');
+  },
+
+  // ========================================
+  // Specialist Appointments v2 APIs
+  // ========================================
+
+  /**
+   * Search patients for specialist (used in appointment booking)
+   * @param {Object} params - { search, limit }
+   */
+  $_searchPatients(params) {
+    return http.get('/specialist/patients', { params });
+  },
+
+  /**
+   * Get user by ID (for patient details)
+   * @param {string} userId - User ID
+   */
+  $_getUserById(userId) {
+    return http.get(`/users/${userId}`);
+  },
+
+  /**
+   * Get vitals for a patient
+   * @param {Object} params - { user_id, limit }
+   */
+  $_getVitals(params) {
+    return http.get('/vitals', { params });
+  },
+
+  /**
+   * Get health checkup results for a patient
+   * @param {string} patientId - Patient ID
+   */
+  $_getHealthCheckupResults(patientId) {
+    return http.get(`/health-checkup/results/${patientId}`);
+  },
+
+  /**
+   * Get prescriptions with filters
+   * @param {Object} params - { patient_id, status, limit }
+   */
+  $_getPrescriptions(params) {
+    return http.get('/prescriptions', { params });
+  },
+
+  /**
+   * Reschedule appointment (specialist version)
+   * @param {string} appointmentId - Appointment ID
+   * @param {Object} payload - { date, time, reason, notify_patient }
+   */
+  $_rescheduleAppointment(appointmentId, payload) {
+    return http.patch(`/appointments/${appointmentId}/reschedule`, payload);
+  },
+
+  /**
+   * Cancel appointment (specialist version)
+   * @param {string} appointmentId - Appointment ID
+   * @param {Object} payload - { reason, refund_option, offer_reschedule, notify_patient }
+   */
+  $_cancelAppointment(appointmentId, payload) {
+    return http.patch(`/appointments/${appointmentId}/cancel`, payload);
+  },
+
+  /**
+   * Get specialist appointment types/consultation services
+   */
+  $_getSpecialistAppointmentTypes() {
+    return http.get('/consultation-services');
+  },
+
+  /**
+   * Get specialist consultation fees
+   */
+  $_getSpecialistFees() {
+    return http.get('/users/availability');
+  },
+
+  /**
+   * Get appointment filter options (statuses, channels, consultation services, date ranges)
+   */
+  $_getAppointmentFilterOptions() {
+    return http.get('/appointments/filter-options');
+  },
+
+  /**
+   * Create appointment as specialist
+   * @param {Object} payload - Appointment data
+   */
+  $_createSpecialistAppointment(payload) {
+    return http.post('/appointments/specialist/create', payload);
+  },
+
+  /**
+   * Process appointment payment (wallet debit)
+   * @param {Object} payload - Payment data
+   */
+  $_processAppointmentPayment(payload) {
+    return http.post('/appointments/specialist/process-payment', payload);
+  },
+
+  // Note: $_getPatientWalletBalance is already defined above at line 529
+  // using endpoint: /specialist/prescriptions/patient/${patientId}/wallet-balance
+
+  /**
+   * Get specialist wallet balance
+   */
+  $_getSpecialistWallet() {
+    return http.get('/specialist/wallet');
   },
 };
 export default apiFactory;

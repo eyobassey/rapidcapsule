@@ -1,609 +1,527 @@
 <template>
-  <div class="page-content">
-    <TopBar showButtons type="avatar" @open-side-nav="$emit('openSideNav')" />
-    <loader v-if="isLoading" :useOverlay="false" style="position: absolute" />
-    <div v-else class="page-content__body">
-      <div class="container-root">
-        <div class="dashboard-container">
-          <div class="dashboard-earnings">
-            <p class="dashboard-earnings__heading">Total Earnings</p>
-            <div class="dashboard-earnings__content">
-              <p class="dashboard-earnings__earnings">
-                ₦ {{ totalEarnings.totalEarnings }}
-              </p>
-              <div class="dashboard-earnings__footer">
-                <p class="dashboard-earnings__footer--earnings">
-                  ₦ {{ totalEarnings.earningsThisWeek }} this week
-                </p>
-                <div class="dashboard-earnings__analytics">
-                  <span
-                    v-if="totalEarningsAnalytics.changeType === 'increasing'"
-                  >
-                    <rc-icon
-                      icon-name="icon-arrow-up"
-                      size="xs"
-                      class="increasing"
-                    />
-                  </span>
-                  <span
-                    v-if="totalEarningsAnalytics.changeType === 'decreasing'"
-                  >
-                    <rc-icon
-                      icon-name="icon-arrow-down"
-                      size="xs"
-                      class="decreasing"
-                    />
-                  </span>
-                  <span
-                    v-if="totalEarningsAnalytics.changeType === 'unchanged'"
-                  >
-                    <rc-icon
-                      icon-name="minus-solid"
-                      size="xs"
-                      class="unchanged"
-                    />
-                  </span>
-                  <p
-                    class="dashboard-earnings__analytics--analytics"
-                    :class="totalEarningsAnalytics.changeType"
-                  >
-                    {{ totalEarningsAnalytics.percentage }}%
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
+	<div class="page-content">
+		<TopBar showButtons type="title-only" title="Dashboard" @open-side-nav="$emit('openSideNav')" />
 
-          <div class="dashboard-appointments">
-            <div class="completed-appointments">
-              <div class="completed-appointments__heading">
-                <p class="completed-appointments__heading--header">
-                  Completed<br />
-                  Appointments
-                </p>
-                <div class="completed-appointments__heading--icon">
-                  <v-icon
-                    name="hi-trending-up"
-                    style="stroke: #ee4511; height: 18px"
-                  />
-                </div>
-              </div>
-              <div class="completed-appointments__content">
-                <div class="completed-appointments__counter">
-                  <p class="completed-appointments__counter--count">
-                    {{ appointmentsData.completedAppointments }}
-                  </p>
-                  <p class="completed-appointments__counter--month">
-                    this <br />month
-                  </p>
-                </div>
-                <div class="completed-appointments__footer">
-                  <p class="completed-appointments__footer--month">
-                    {{ appointmentsData.completedAppointmentsLastMonth }} last
-                    month
-                  </p>
-                  <div class="completed-appointments__analytics">
-                    <span
-                      v-if="
-                        completedAppointmentsAnalytics.changeType ===
-                        'increasing'
-                      "
-                    >
-                      <rc-icon
-                        icon-name="icon-arrow-up"
-                        size="xs"
-                        class="increasing"
-                      />
-                    </span>
-                    <span
-                      v-if="
-                        completedAppointmentsAnalytics.changeType ===
-                        'decreasing'
-                      "
-                    >
-                      <rc-icon
-                        icon-name="icon-arrow-down"
-                        size="xs"
-                        class="decreasing"
-                      />
-                    </span>
-                    <span
-                      v-if="
-                        completedAppointmentsAnalytics.changeType ===
-                        'unchanged'
-                      "
-                    >
-                      <rc-icon
-                        icon-name="minus-solid"
-                        size="xs"
-                        class="unchanged"
-                      />
-                    </span>
-                    <p
-                      class="completed-appointments__analytics--analytics"
-                      :class="completedAppointmentsAnalytics.changeType"
-                    >
-                      {{ completedAppointmentsAnalytics.percentage }}%
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="rescheduled-appointments">
-              <div class="rescheduled-appointments__heading">
-                <p class="rescheduled-appointments__heading--header">
-                  Rescheduled<br />
-                  Appointments
-                </p>
-                <div class="rescheduled-appointments__heading--icon">
-                  <v-icon
-                    name="hi-trending-up"
-                    style="stroke: #008c99; height: 18px"
-                  />
-                </div>
-              </div>
-              <div class="rescheduled-appointments__content">
-                <div class="rescheduled-appointments__counter">
-                  <p class="rescheduled-appointments__counter--count">
-                    {{ appointmentsData.rescheduledAppointments }}
-                  </p>
-                  <p class="rescheduled-appointments__counter--month">
-                    this <br />month
-                  </p>
-                </div>
-                <div class="rescheduled-appointments__footer">
-                  <p class="rescheduled-appointments__footer--month">
-                    {{ appointmentsData.rescheduledAppointmentsLastMonth }} last
-                    month
-                  </p>
-                  <div class="rescheduled-appointments__analytics">
-                    <span
-                      v-if="rescheduledAppointments.changeType === 'increasing'"
-                    >
-                      <rc-icon
-                        icon-name="icon-arrow-up"
-                        size="xs"
-                        class="increasing"
-                      />
-                    </span>
-                    <span
-                      v-if="rescheduledAppointments.changeType === 'decreasing'"
-                    >
-                      <rc-icon
-                        icon-name="icon-arrow-down"
-                        size="xs"
-                        class="decreasing"
-                      />
-                    </span>
-                    <span
-                      v-if="rescheduledAppointments.changeType === 'unchanged'"
-                    >
-                      <rc-icon
-                        icon-name="minus-solid"
-                        size="xs"
-                        class="unchanged"
-                      />
-                    </span>
-                    <p
-                      class="rescheduled-appointments__analytics--analytics"
-                      :class="rescheduledAppointments.changeType"
-                    >
-                      {{ rescheduledAppointments.percentage }}%
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+		<!-- Skeleton Loading -->
+		<div v-if="isLoading" class="page-content__body">
+			<div class="dashboard-skeleton">
+				<div class="skeleton-hero">
+					<div class="skeleton-line greeting"></div>
+					<div class="skeleton-line subtitle"></div>
+					<div class="skeleton-stats">
+						<div class="skeleton-stat" v-for="n in 3" :key="n"></div>
+					</div>
+				</div>
+				<div class="skeleton-cards">
+					<div class="skeleton-card" v-for="n in 4" :key="n"></div>
+				</div>
+				<div class="skeleton-sections">
+					<div class="skeleton-section"></div>
+					<div class="skeleton-section"></div>
+				</div>
+			</div>
+		</div>
 
-          <div class="next-appointment" v-if="nextAppointment && nextAppointment.patient">
-            <p class="next-appointment__heading">Next Appointment</p>
-            <div class="next-appointment__content">
-              <div>
-                <rc-avatar
-                  size="md"
-                  :firstName="nextAppointment.patient.profile?.first_name"
-                  :lastName="nextAppointment.patient.profile?.last_name"
-                />
-              </div>
-              <div class="next-appointment-content">
-                <p class="next-appointment-content__name">
-                  {{ nextAppointment.patient.full_name }}
-                </p>
-                <div class="next-appointment-content__schedule-container">
-                  <div class="next-appointment-content__shedule">
-                    <v-icon
-                      name="bi-clock"
-                      style="fill: #6f6f6f; height: 15px"
-                    />
-                    <p class="next-appointment-content__shedule--content">
-                      {{
-                        format(new Date(nextAppointment.start_time), "hh:mm a")
-                      }}
-                    </p>
-                  </div>
-                  <div class="next-appointment-content__shedule">
-                    <v-icon
-                      name="bi-calendar4-event"
-                      style="fill: #6f6f6f; height: 14px"
-                    />
-                    <p class="next-appointment-content__shedule--content">
-                      {{
-                        format(
-                          new Date(nextAppointment.start_time),
-                          "dd/MM/yyyy"
-                        )
-                      }}
-                    </p>
-                  </div>
-                </div>
-                <div class="next-appointment-content__actions desktop">
-                  <rc-button
-                    label="View Details"
-                    icon-right
-                    icon-name="arrow-right"
-                    type="secondary"
-                    size="small"
-                    @click="onOpenAppointment(nextAppointment)"
-                  />
-                  <rc-button
-                    label="Reschedule"
-                    type="tertiary"
-                    size="medium"
-                    style="border: 0"
-                    @click="onSubmitRescheduleAppointment(nextAppointment)"
-                  />
-                </div>
-              </div>
-            </div>
-            <div class="next-appointment-content__actions mobile">
-              <rc-button
-                label="View Details"
-                icon-right
-                icon-name="arrow-right"
-                type="secondary"
-                size="small"
-                @click="onOpenAppointment(nextAppointment)"
-              />
-              <rc-button
-                label="Reschedule"
-                type="tertiary"
-                size="medium"
-                style="border: 0"
-                @click="onSubmitRescheduleAppointment(nextAppointment)"
-              />
-            </div>
-          </div>
-          <div class="next-appointment" v-else>
-            <p class="next-appointment__heading">Next Appointment</p>
-            <div class="next-appointment__content" style="justify-content: center; padding: 2rem; text-align: center;">
-              <p style="color: #6f6f6f;">No upcoming appointments scheduled</p>
-            </div>
-          </div>
-        </div>
-        <div class="calendar-container">
-          <div class="calendar-container-header">
-            <div class="calendar-heading">
-              <p class="calendar-heading__heading">Calendar</p>
-              <div class="calendar-heading__actions">
-                <rc-iconbutton
-                  icon="icon-plus-solid"
-                  size="md"
-                  @click="openCreateAppointmentModal"
-                  title="Create new appointment"
-                />
-                <rc-iconbutton icon="icon-menu-solid" size="md" />
-              </div>
-            </div>
-            <div class="calendar-component">
-              <rc-calendar
-                transparent
-                borderless
-                expanded
-                v-model="dateSelector"
-                :appointmentDates="appointmentItems"
-              />
-            </div>
-          </div>
-          <div class="calendar-appointments">
-            <div class="calender-appointments-items">
-              <p class="calendar-appointments-items__heading" v-if="selectedDateFormatted">
-                {{ isSelectedDateToday ? "Today," : "" }}
-                {{ selectedDateFormatted }}
-              </p>
-              <div class="calendar-appointments-items__container">
-                <template v-if="computedAppointments && computedAppointments.length > 0">
-                  <template
-                    v-for="appointment in computedAppointments"
-                    :key="appointment"
-                  >
-                    <div class="calendar-appointments-items__content">
-                      <p class="calendar-appointments-items__content--time">
-                        {{
-                          format(new Date(appointment.start_time), "hh:mm a")
-                        }}
-                      </p>
-                      <p class="calendar-appointments-items__content--desc">
-                        Meeting with {{ appointment.patient.full_name }}
-                      </p>
-                      <div class="calendar-action-button">
-                        <rc-menu left>
-                          <template v-slot:button>
-                            <rc-iconbutton
-                              icon="3dots-solid"
-                              size="sm"
-                              :sx="{ width: '100%' }"
-                            />
-                          </template>
-                          <div class="calendar-action_content">
-                            <span
-                              class="calendar-action_content__item"
-                              @click="onOpenAppointment(appointment)"
-                            >
-                              View Details</span
-                            >
-                            <span
-                              class="calendar-action_content__item"
-                              @click="
-                                onSubmitRescheduleAppointment(appointment)
-                              "
-                            >
-                              Reschedule
-                            </span>
-                          </div>
-                        </rc-menu>
-                      </div>
-                    </div>
-                  </template>
-                </template>
-                <div v-else class="no-appointments-container">
-                  <p class="no-appointments-message">
-                    There are no appointments for this day
-                  </p>
-                  <rc-button
-                    v-if="isFutureDate(dateSelector)"
-                    label="Create Appointment"
-                    type="primary"
-                    size="small"
-                    icon-left
-                    icon-name="icon-plus-solid"
-                    @click="openCreateAppointmentModal"
-                    class="create-appointment-btn"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-  <dialog-modal
-    v-if="isOpenAppointment"
-    title="Appointment Details"
-    @closeModal="isOpenAppointment = false"
-    :has-footer="true"
-    class="appointment-details-modal"
-  >
-    <template v-slot:body>
-      <div class="loader-container" v-if="isFetchingAppointment">
-        <loader :useOverlay="false" style="position: relative" />
-      </div>
-      <div v-else class="modal-details-container">
-        <div class="details-container__body">
-          <div class="top_container">
-            <div class="spacialist-details__container">
-              <div class="spacialist_details">
-                <div class="specialist_details-container">
-                  <div class="specialist_details-avatar">
-                    <rc-avatar
-                      size="lg"
-                      :firstName="patientInfo.firstName"
-                      :lastName="patientInfo.lastName"
-                      v-model="patientInfo.profilePhoto"
-                    />
-                  </div>
-                  <div class="specialist_details-info-container">
-                    <div class="specialist-details-heading">
-                      <h2 class="specialist_details-name">
-                        {{ patientInfo.fullName }}
-                      </h2>
-                      <div
-                        class="specialist_details-rating-container desktop-visible"
-                      >
-                        <span class="specialist_details-rating">{{
-                          patientInfo.rating?.toFixed(1)
-                        }}</span>
-                        <rc-icon icon-name="icon-star-rating" size="xms" />
-                      </div>
-                    </div>
-                    <div class="specialist-details__patient">
-                      <div class="specialist-details__icon mobile-visible">
-                        <template v-if="patientInfo.rating">
-                          <span v-for="i in patientInfo.rating" :key="i">
-                            <rc-icon
-                              icon="star"
-                              size="xs"
-                              viewBox="0 0 12 12"
-                            />
-                          </span>
-                        </template>
-                        <div
-                          v-else
-                          class="specialist-details__no-rating mobile-visible"
-                        >
-                          <span class="specialist_details-rating">{{
-                            patientInfo.rating?.toFixed(1)
-                          }}</span>
-                          <rc-icon icon="star" size="xs" viewBox="0 0 12 12" />
-                        </div>
-                      </div>
-                      <p class="specialist_details-specialty">
-                        {{ patientInfo.category }}
-                      </p>
-                      <p class="specialist_details-specialty">
-                        0yrs experience
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="specialist-appointment-details">
-                <div class="specialist-appointment-details__container">
-                  <p class="specialist-appointment-details__title">
-                    Date & Time
-                  </p>
-                  <div class="specialist-appointment-details__content">
-                    <p class="specialist-appointment-details__item">
-                      {{
-                        format(new Date(patientInfo.startTime), "MMMM dd, yyyy")
-                      }}
-                    </p>
-                    <p class="specialist-appointment-details__item">
-                      {{ format(new Date(patientInfo.startTime), "HH:mm") }}
-                      ({{ format(new Date(patientInfo.startTime), "hh:mm a") }})
-                      {{ patientInfo.timezone }}
-                    </p>
-                  </div>
-                </div>
-                <div class="specialist-appointment-details__container">
-                  <p class="specialist-appointment-details__title">
-                    Appointment Type
-                  </p>
-                  <div class="specialist-appointment-details__content">
-                    <p class="specialist-appointment-details__item">
-                      {{ patientInfo.appointmentType }}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </template>
-    <template v-slot:foot>
-      <div class="modal-appointment-actions" v-if="!isFetchingAppointment">
-        <rc-button
-          type="tertiary"
-          style="border: 0"
-          label="Cancel Appointment"
-          class="reschedule_action"
-          :disabled="isFetchingAppointment"
-          @click="isOpenCancelAppointment = true"
-        />
-        <div class="modal-appointment-actions__meeting">
-          <rc-button
-            type="tertiary"
-            label="Reschedule"
-            class="reschedule_action"
-            @click="isOpenScheduleAppointment = true"
-            :disabled="isFetchingAppointment"
-          />
-          <rc-button
-            type="primary"
-            label="Start Meeting"
-            class="start_meeting_action"
-            :disabled="isFetchingAppointment || !appointmentInfo?.start_url"
-            @click="onStartMeetings(appointmentInfo)"
-          />
-        </div>
-      </div>
-    </template>
-  </dialog-modal>
-  <dialog-modal
-    v-if="isOpenCancelAppointment"
-    @closeModal="isOpenCancelAppointment = false"
-    :has-footer="true"
-    title="Cancel Appointment"
-    class="caution-message-modal"
-  >
-    <template v-slot:body>
-      <div class="caution-container">
-        <p class="caution-content">
-          Canceling your appointment less than 12 hours before the scheduled
-          time will result in a surcharge fee. Are you sure you want to proceed?
-        </p>
-      </div>
-    </template>
-    <template v-slot:foot>
-      <div class="caution-actions">
-        <rc-button
-          label="No"
-          type="tertiary"
-          size="small"
-          :disabled="isLoadingCancelAppointment"
-          @click="isOpenCancelAppointment = false"
-        />
-        <rc-button
-          label="Yes"
-          type="primary"
-          size="small"
-          :loading="isLoadingCancelAppointment"
-          :disabled="isLoadingCancelAppointment"
-          @click="onSubmitCancelAppointment(appointmentInfo)"
-        />
-      </div>
-    </template>
-  </dialog-modal>
-  <dialog-modal
-    v-if="isOpenScheduleAppointment"
-    @closeModal="isOpenScheduleAppointment = false"
-    :has-footer="true"
-    title="Reschedule Appointment"
-    class="caution-message-modal"
-  >
-    <template v-slot:body>
-      <div class="caution-container">
-        <p class="caution-content">
-          Rescheduling your appointment less than 12 hours before the scheduled
-          time will result in a surcharge fee. Are you sure you want to proceed?
-        </p>
-      </div>
-    </template>
-    <template v-slot:foot>
-      <div class="caution-actions">
-        <rc-button
-          label="No"
-          type="tertiary"
-          size="small"
-          :disabled="isLoadingScheduleAppointment"
-          @click="isOpenScheduleAppointment = false"
-        />
-        <rc-button
-          label="Yes"
-          type="primary"
-          size="small"
-          :loading="isLoadingScheduleAppointment"
-          :disabled="isLoadingCancelAppointment"
-          @click="onSubmitRescheduleAppointment(appointmentInfo)"
-        />
-      </div>
-    </template>
-  </dialog-modal>
+		<!-- Main Dashboard Content -->
+		<div v-else class="page-content__body">
+			<!-- Hero Section -->
+			<div class="hero-section">
+				<div class="hero-content">
+					<div class="hero-greeting">
+						<span class="greeting-badge">
+							<v-icon name="hi-sparkles" scale="0.8" />
+							{{ getTimeGreeting() }}
+						</span>
+						<h1 class="greeting-text">
+							Welcome back, <span class="name-highlight">Dr. {{ dashboardData?.specialist?.firstName || 'Specialist' }}</span>
+						</h1>
+						<p class="greeting-subtitle">
+							Here's your practice overview for today, {{ formatDate(new Date(), 'EEEE, MMMM d, yyyy') }}
+						</p>
+					</div>
+					<div class="hero-today-stats">
+						<div class="today-stat">
+							<div class="stat-icon appointments">
+								<v-icon name="hi-calendar" scale="1.2" />
+							</div>
+							<div class="stat-content">
+								<span class="stat-value">{{ dashboardData?.today?.appointmentCount || 0 }}</span>
+								<span class="stat-label">Today's Appointments</span>
+							</div>
+						</div>
+						<div class="today-stat">
+							<div class="stat-icon completed">
+								<v-icon name="hi-check-circle" scale="1.2" />
+							</div>
+							<div class="stat-content">
+								<span class="stat-value">{{ dashboardData?.today?.completedToday || 0 }}</span>
+								<span class="stat-label">Completed</span>
+							</div>
+						</div>
+						<div class="today-stat">
+							<div class="stat-icon pending">
+								<v-icon name="hi-clock" scale="1.2" />
+							</div>
+							<div class="stat-content">
+								<span class="stat-value">{{ dashboardData?.today?.pendingToday || 0 }}</span>
+								<span class="stat-label">Pending</span>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="hero-visual">
+					<div class="rating-card" v-if="dashboardData?.specialist?.averageRating">
+						<div class="rating-stars">
+							<v-icon name="bi-star-fill" scale="1" class="star-icon" />
+							<span class="rating-value">{{ dashboardData?.specialist?.averageRating?.toFixed(1) }}</span>
+						</div>
+						<span class="rating-label">{{ dashboardData?.specialist?.totalReviews || 0 }} reviews</span>
+					</div>
+				</div>
+			</div>
 
-  <reschedule-appointment ref="rescheduleAppointmentRef" @rescheduled="onAppointmentRescheduled" />
+			<!-- Stats Cards Row -->
+			<div class="stats-row">
+				<div class="stat-card patients" @click="navigateTo('/app/specialist/patients')">
+					<div class="card-icon">
+						<v-icon name="hi-user-group" scale="1.3" />
+					</div>
+					<div class="card-content">
+						<span class="card-value">{{ dashboardData?.patientStats?.totalPatients || 0 }}</span>
+						<span class="card-label">Total Patients</span>
+						<span class="card-sublabel">{{ dashboardData?.patientStats?.thisMonthPatients || 0 }} this month</span>
+					</div>
+					<div class="card-arrow">
+						<v-icon name="hi-arrow-right" scale="0.9" />
+					</div>
+				</div>
 
-  <create-appointment-modal
-    v-model="isOpenCreateAppointment"
-    :pre-selected-date="dateSelector"
-    @appointmentCreated="onAppointmentCreated"
-  />
+				<div class="stat-card appointments" @click="navigateTo('/app/specialist/specialist-appointments')">
+					<div class="card-icon">
+						<v-icon name="hi-calendar" scale="1.3" />
+					</div>
+					<div class="card-content">
+						<span class="card-value">{{ dashboardData?.appointmentsData?.completedAppointments || 0 }}</span>
+						<span class="card-label">Completed</span>
+						<span class="card-sublabel">This month</span>
+					</div>
+					<div class="card-trend" :class="getCompletedTrend()">
+						<v-icon :name="getCompletedTrend() === 'up' ? 'hi-trending-up' : 'hi-trending-down'" scale="0.8" />
+						<span>{{ getCompletedPercentage() }}%</span>
+					</div>
+				</div>
+
+				<div class="stat-card wallet" @click="navigateTo('/app/specialist/specialist-account')">
+					<div class="card-icon">
+						<v-icon name="bi-wallet2" scale="1.3" />
+					</div>
+					<div class="card-content">
+						<span class="card-value">₦{{ formatCurrency(dashboardData?.wallet?.balance) }}</span>
+						<span class="card-label">Wallet Balance</span>
+						<span class="card-sublabel">₦{{ formatCurrency(dashboardData?.totalEarnings?.totalEarnings) }} total earned</span>
+					</div>
+					<div class="card-arrow">
+						<v-icon name="hi-arrow-right" scale="0.9" />
+					</div>
+				</div>
+
+				<div class="stat-card starred" @click="navigateTo('/app/specialist/patients/starred')">
+					<div class="card-icon">
+						<v-icon name="bi-star-fill" scale="1.3" />
+					</div>
+					<div class="card-content">
+						<span class="card-value">{{ dashboardData?.patientStats?.starredPatients || 0 }}</span>
+						<span class="card-label">Starred Patients</span>
+						<span class="card-sublabel">Quick access</span>
+					</div>
+					<div class="card-arrow">
+						<v-icon name="hi-arrow-right" scale="0.9" />
+					</div>
+				</div>
+			</div>
+
+			<!-- Quick Actions -->
+			<div class="quick-actions-section">
+				<h2 class="section-title">Quick Actions</h2>
+				<div class="quick-actions-grid">
+					<button class="quick-action" @click="navigateTo('/app/specialist/patients')">
+						<div class="action-icon patients">
+							<v-icon name="hi-users" scale="1.2" />
+						</div>
+						<span class="action-label">View Patients</span>
+					</button>
+					<button class="quick-action" @click="navigateTo('/app/specialist/specialist-appointments')">
+						<div class="action-icon appointments">
+							<v-icon name="hi-calendar" scale="1.2" />
+						</div>
+						<span class="action-label">Appointments</span>
+					</button>
+					<button class="quick-action" @click="navigateTo('/app/specialist/pharmacy/patients')">
+						<div class="action-icon prescriptions">
+							<v-icon name="ri-capsule-line" scale="1.2" />
+						</div>
+						<span class="action-label">Prescriptions</span>
+					</button>
+					<button class="quick-action" @click="navigateTo('/app/specialist/clinical-notes')">
+						<div class="action-icon notes">
+							<v-icon name="hi-document-text" scale="1.2" />
+						</div>
+						<span class="action-label">Clinical Notes</span>
+					</button>
+					<button class="quick-action" @click="openCreateAppointmentModal">
+						<div class="action-icon create">
+							<v-icon name="hi-plus" scale="1.2" />
+						</div>
+						<span class="action-label">New Appointment</span>
+					</button>
+					<button class="quick-action" @click="navigateTo('/app/specialist/specialist-account')">
+						<div class="action-icon settings">
+							<v-icon name="hi-cog" scale="1.2" />
+						</div>
+						<span class="action-label">Settings</span>
+					</button>
+				</div>
+			</div>
+
+			<!-- Main Content Grid -->
+			<div class="main-content-grid">
+				<!-- Left Column -->
+				<div class="left-column">
+					<!-- Today's Schedule -->
+					<div class="content-card schedule-card">
+						<div class="card-header">
+							<h3 class="card-title">
+								<v-icon name="hi-clock" scale="1" />
+								Today's Schedule
+							</h3>
+							<button class="view-all-btn" @click="navigateTo('/app/specialist/specialist-appointments')">
+								View All
+								<v-icon name="hi-arrow-right" scale="0.8" />
+							</button>
+						</div>
+						<div class="card-body">
+							<div v-if="dashboardData?.today?.appointments?.length" class="schedule-timeline">
+								<div
+									v-for="apt in dashboardData.today.appointments"
+									:key="apt._id"
+									class="timeline-item"
+									:class="{ completed: apt.status === 'COMPLETED', ongoing: apt.status === 'ONGOING' }"
+									@click="onOpenAppointment(apt)"
+								>
+									<div class="timeline-time">
+										{{ formatTime(apt.startTime) }}
+									</div>
+									<div class="timeline-marker">
+										<div class="marker-dot"></div>
+										<div class="marker-line"></div>
+									</div>
+									<div class="timeline-content">
+										<div class="patient-info">
+											<rc-avatar
+												size="sm"
+												:firstName="apt.patient?.firstName"
+												:lastName="apt.patient?.lastName"
+												:modelValue="apt.patient?.profileImage"
+												borderless
+											/>
+											<div class="patient-details">
+												<span class="patient-name">{{ apt.patient?.fullName || 'Patient' }}</span>
+												<span class="appointment-type">{{ apt.appointmentType || 'Consultation' }}</span>
+											</div>
+										</div>
+										<div class="timeline-status" :class="apt.status?.toLowerCase()">
+											{{ apt.status }}
+										</div>
+									</div>
+								</div>
+							</div>
+							<div v-else class="empty-state">
+								<div class="empty-icon">
+									<v-icon name="hi-calendar" scale="2" />
+								</div>
+								<p class="empty-text">No appointments scheduled for today</p>
+								<button class="empty-action" @click="openCreateAppointmentModal">
+									<v-icon name="hi-plus" scale="0.9" />
+									Schedule Appointment
+								</button>
+							</div>
+						</div>
+					</div>
+
+					<!-- Upcoming Appointments -->
+					<div class="content-card upcoming-card">
+						<div class="card-header">
+							<h3 class="card-title">
+								<v-icon name="hi-calendar" scale="1" />
+								Upcoming Appointments
+							</h3>
+							<button class="view-all-btn" @click="navigateTo('/app/specialist/specialist-appointments')">
+								View All
+								<v-icon name="hi-arrow-right" scale="0.8" />
+							</button>
+						</div>
+						<div class="card-body">
+							<div v-if="dashboardData?.upcomingAppointments?.length" class="appointments-list">
+								<div
+									v-for="apt in dashboardData.upcomingAppointments"
+									:key="apt._id"
+									class="appointment-item"
+									@click="onOpenAppointment(apt)"
+								>
+									<div class="appointment-date-block">
+										<span class="date-day">{{ formatDate(apt.startTime, 'dd') }}</span>
+										<span class="date-month">{{ formatDate(apt.startTime, 'MMM') }}</span>
+									</div>
+									<div class="appointment-details">
+										<div class="appointment-patient">
+											<rc-avatar
+												size="xs"
+												:firstName="apt.patient?.firstName"
+												:lastName="apt.patient?.lastName"
+												:modelValue="apt.patient?.profileImage"
+												borderless
+											/>
+											<span class="patient-name">{{ apt.patient?.fullName || 'Patient' }}</span>
+										</div>
+										<div class="appointment-meta">
+											<span class="meta-time">
+												<v-icon name="hi-clock" scale="0.7" />
+												{{ formatTime(apt.startTime) }}
+											</span>
+											<span class="meta-type">{{ apt.appointmentType || 'Consultation' }}</span>
+										</div>
+									</div>
+									<div class="appointment-arrow">
+										<v-icon name="hi-chevron-right" scale="0.9" />
+									</div>
+								</div>
+							</div>
+							<div v-else class="empty-state small">
+								<p class="empty-text">No upcoming appointments</p>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- Right Column -->
+				<div class="right-column">
+					<!-- Calendar Widget -->
+					<div class="content-card calendar-card">
+						<div class="card-header">
+							<h3 class="card-title">
+								<v-icon name="hi-calendar" scale="1" />
+								Calendar
+							</h3>
+							<rc-iconbutton
+								icon="icon-plus-solid"
+								size="sm"
+								@click="openCreateAppointmentModal"
+								title="Create appointment"
+							/>
+						</div>
+						<div class="card-body calendar-body">
+							<rc-calendar
+								transparent
+								borderless
+								expanded
+								v-model="dateSelector"
+								:appointmentDates="appointmentItems"
+							/>
+							<div class="selected-date-appointments" v-if="selectedDateAppointments.length">
+								<p class="selected-date-label">
+									{{ isSelectedDateToday ? 'Today' : formatDate(dateSelector, 'MMM d') }}
+									- {{ selectedDateAppointments.length }} appointment{{ selectedDateAppointments.length > 1 ? 's' : '' }}
+								</p>
+								<div class="mini-appointment-list">
+									<div
+										v-for="apt in selectedDateAppointments.slice(0, 3)"
+										:key="apt._id"
+										class="mini-appointment"
+										@click="onOpenAppointment(apt)"
+									>
+										<span class="mini-time">{{ formatTime(apt.start_time) }}</span>
+										<span class="mini-patient">{{ apt.patient?.full_name || apt.patient?.profile?.first_name || 'Patient' }}</span>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<!-- Recent Activity -->
+					<div class="content-card activity-card">
+						<div class="card-header">
+							<h3 class="card-title">
+								<v-icon name="hi-clock" scale="1" />
+								Recent Activity
+							</h3>
+							<button class="view-all-btn" @click="navigateTo('/app/specialist/specialist-appointments')">
+								View All
+								<v-icon name="hi-arrow-right" scale="0.8" />
+							</button>
+						</div>
+						<div class="card-body">
+							<div v-if="dashboardData?.recentActivity?.length" class="activity-feed">
+								<div
+									v-for="activity in dashboardData.recentActivity.slice(0, 5)"
+									:key="activity.referenceId"
+									class="activity-item"
+								>
+									<div class="activity-icon" :class="activity.type">
+										<v-icon :name="getActivityIcon(activity.type)" scale="0.9" />
+									</div>
+									<div class="activity-content">
+										<p class="activity-title">{{ activity.title }}</p>
+										<p class="activity-desc">{{ activity.description }}</p>
+										<span class="activity-time">{{ formatRelativeTime(activity.date) }}</span>
+									</div>
+								</div>
+							</div>
+							<div v-else class="empty-state small">
+								<p class="empty-text">No recent activity</p>
+							</div>
+						</div>
+					</div>
+
+					<!-- Performance Summary -->
+					<div class="content-card performance-card">
+						<div class="card-header">
+							<h3 class="card-title">
+								<v-icon name="hi-chart-bar" scale="1" />
+								This Month
+							</h3>
+						</div>
+						<div class="card-body">
+							<div class="performance-grid">
+								<div class="performance-item">
+									<span class="perf-value">{{ dashboardData?.performanceMetrics?.thisMonth?.completed || 0 }}</span>
+									<span class="perf-label">Consultations</span>
+								</div>
+								<div class="performance-item">
+									<span class="perf-value">{{ dashboardData?.performanceMetrics?.thisMonth?.prescriptions || 0 }}</span>
+									<span class="perf-label">Prescriptions</span>
+								</div>
+								<div class="performance-item">
+									<span class="perf-value">{{ dashboardData?.performanceMetrics?.thisMonth?.completionRate || 100 }}%</span>
+									<span class="perf-label">Completion Rate</span>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- Modals -->
+		<dialog-modal
+			v-if="isOpenAppointment"
+			title="Appointment Details"
+			@closeModal="isOpenAppointment = false"
+			:has-footer="true"
+			class="appointment-details-modal"
+		>
+			<template v-slot:body>
+				<div class="loader-container" v-if="isFetchingAppointment">
+					<loader :useOverlay="false" style="position: relative" />
+				</div>
+				<div v-else class="appointment-modal-content">
+					<div class="modal-patient-info">
+						<rc-avatar
+							size="lg"
+							:firstName="patientInfo.firstName"
+							:lastName="patientInfo.lastName"
+							v-model="patientInfo.profilePhoto"
+						/>
+						<div class="modal-patient-details">
+							<h2 class="modal-patient-name">{{ patientInfo.fullName }}</h2>
+							<p class="modal-patient-category">{{ patientInfo.category }}</p>
+						</div>
+					</div>
+					<div class="modal-appointment-details">
+						<div class="detail-row">
+							<span class="detail-label">Date & Time</span>
+							<span class="detail-value">
+								{{ formatDate(patientInfo.startTime, 'MMMM dd, yyyy') }} at {{ formatTime(patientInfo.startTime) }}
+							</span>
+						</div>
+						<div class="detail-row">
+							<span class="detail-label">Appointment Type</span>
+							<span class="detail-value">{{ patientInfo.appointmentType }}</span>
+						</div>
+					</div>
+				</div>
+			</template>
+			<template v-slot:foot>
+				<div class="modal-actions" v-if="!isFetchingAppointment">
+					<rc-button
+						type="tertiary"
+						label="Cancel Appointment"
+						@click="isOpenCancelAppointment = true"
+					/>
+					<div class="modal-actions-right">
+						<rc-button
+							type="tertiary"
+							label="Reschedule"
+							@click="onSubmitRescheduleAppointment(appointmentInfo)"
+						/>
+						<rc-button
+							type="primary"
+							label="Start Meeting"
+							:disabled="!appointmentInfo?.start_url"
+							@click="onStartMeetings(appointmentInfo)"
+						/>
+					</div>
+				</div>
+			</template>
+		</dialog-modal>
+
+		<dialog-modal
+			v-if="isOpenCancelAppointment"
+			@closeModal="isOpenCancelAppointment = false"
+			:has-footer="true"
+			title="Cancel Appointment"
+		>
+			<template v-slot:body>
+				<p class="modal-message">
+					Canceling your appointment less than 12 hours before the scheduled time will result in a surcharge fee. Are you sure you want to proceed?
+				</p>
+			</template>
+			<template v-slot:foot>
+				<div class="modal-confirm-actions">
+					<rc-button
+						label="No"
+						type="tertiary"
+						@click="isOpenCancelAppointment = false"
+					/>
+					<rc-button
+						label="Yes, Cancel"
+						type="primary"
+						:loading="isLoadingCancelAppointment"
+						@click="onSubmitCancelAppointment(appointmentInfo)"
+					/>
+				</div>
+			</template>
+		</dialog-modal>
+
+		<reschedule-appointment ref="rescheduleAppointmentRef" @rescheduled="onAppointmentRescheduled" />
+		<create-appointment-modal
+			v-model="isOpenCreateAppointment"
+			:pre-selected-date="dateSelector"
+			@appointmentCreated="onAppointmentCreated"
+		/>
+	</div>
 </template>
 
 <script setup>
 import { groupBy } from "lodash";
-import { format, isToday, isFuture, startOfDay } from "date-fns";
+import { format, formatDistanceToNow, isToday } from "date-fns";
 import { useToast } from "vue-toast-notification";
 import { ref, inject, computed, onMounted } from "vue";
+import { useRouter } from "vue-router";
 import TopBar from "@/components/Navigation/top-bar";
 import RcAvatar from "@/components/RCAvatar";
-import RcIcon from "@/components/RCIcon";
 import RcIconbutton from "@/components/RCIconButton";
 import RcButton from "@/components/buttons/button-primary";
-import ButtonIcon from "@/components/buttons/button-icon";
 import RcCalendar from "@/components/RCCalendar";
-import RcMenu from "@/components/RCMenu";
 import Loader from "@/components/Loader/main-loader";
 import DialogModal from "@/components/modals/dialog-modal.vue";
 import { calculatePercentageChange } from "@/utilities/utilityFunctions";
@@ -612,1199 +530,1260 @@ import CreateAppointmentModal from "./Appointments/CreateAppointmentModal.vue";
 
 const $http = inject("$_HTTP");
 const $toast = useToast();
+const router = useRouter();
 
+// State
 const isLoading = ref(true);
-const appointmentsData = ref({});
-const nextAppointment = ref({});
-const totalEarnings = ref({});
-const appointmentInfo = ref({});
-const appointmentItems = ref([]);
+const dashboardData = ref(null);
+const appointmentItems = ref({});
 const dateSelector = ref(new Date());
+const appointmentInfo = ref({});
 const patientInfo = ref({});
-const totalEarningsAnalytics = ref({});
-const completedAppointmentsAnalytics = ref({});
-const rescheduledAppointments = ref({});
-const specialistInfo = ref({});
 
+// Modal states
 const isOpenAppointment = ref(false);
-const isFetchingAppointment = ref(true);
+const isFetchingAppointment = ref(false);
 const isOpenCancelAppointment = ref(false);
 const isLoadingCancelAppointment = ref(false);
-const isOpenScheduleAppointment = ref(false);
-const isLoadingScheduleAppointment = ref(false);
 const isOpenCreateAppointment = ref(false);
 const rescheduleAppointmentRef = ref();
 
-onMounted(() => getSpecialistDashboard());
-
-const computedAppointments = computed(() => {
-  if (Object.keys(appointmentItems.value).length && dateSelector.value) {
-    return appointmentItems.value[new Date(dateSelector.value).toDateString()];
-  } else return [];
-});
-
-const selectedDateFormatted = computed(() => {
-  if (!dateSelector.value) return '';
-  try {
-    const date = new Date(dateSelector.value);
-    if (isNaN(date.getTime())) return '';
-    return format(date, "MMMM dd, yyyy");
-  } catch (error) {
-    console.error('Date formatting error:', error);
-    return '';
-  }
+// Computed
+const selectedDateAppointments = computed(() => {
+	if (Object.keys(appointmentItems.value).length && dateSelector.value) {
+		return appointmentItems.value[new Date(dateSelector.value).toDateString()] || [];
+	}
+	return [];
 });
 
 const isSelectedDateToday = computed(() => {
-  if (!dateSelector.value) return false;
-  try {
-    return isToday(new Date(dateSelector.value));
-  } catch (error) {
-    return false;
-  }
+	if (!dateSelector.value) return false;
+	return isToday(new Date(dateSelector.value));
 });
 
-async function getSpecialistDashboard() {
-  isLoading.value = true;
-  await $http.$_getSpecialistDashboard().then(async ({ data }) => {
-    appointmentsData.value = data.data.appointmentsData;
-    nextAppointment.value = data.data.nextAppointment;
-    totalEarnings.value = data.data.totalEarnings;
+// Methods
+const getTimeGreeting = () => {
+	const hour = new Date().getHours();
+	if (hour < 12) return 'Good Morning';
+	if (hour < 17) return 'Good Afternoon';
+	return 'Good Evening';
+};
 
-    totalEarningsAnalytics.value = calculatePercentageChange(
-      totalEarnings.value.totalEarnings,
-      totalEarnings.value.earningsThisWeek + totalEarnings.value.totalEarnings
-    );
-    completedAppointmentsAnalytics.value = calculatePercentageChange(
-      appointmentsData.value.completedAppointmentsLastMonth,
-      appointmentsData.value.completedAppointments
-    );
-    rescheduledAppointments.value = calculatePercentageChange(
-      appointmentsData.value.rescheduledAppointmentsLastMonth,
-      appointmentsData.value.rescheduledAppointments
-    );
+const formatDate = (date, formatStr) => {
+	if (!date) return '';
+	try {
+		return format(new Date(date), formatStr);
+	} catch {
+		return '';
+	}
+};
 
-    // Always load appointments to populate calendar
-    await getSpecialistAppointments(nextAppointment.value?.patient?.id);
-    isLoading.value = false;
-  });
-}
+const formatTime = (date) => {
+	if (!date) return '';
+	try {
+		return format(new Date(date), 'h:mm a');
+	} catch {
+		return '';
+	}
+};
 
-async function getSpecialistAppointments(patientId = null) {
-  isLoading.value = true;
-  const params = { currentPage: 1, pageLimit: 100, status: "OPEN" };
-  await $http.$_getSpecialistAppointments(params).then(({ data }) => {
-    // Group all appointments by date for calendar
-    appointmentItems.value = groupBy(
-      data.data?.map((item) => ({
-        ...item,
-        startTime: new Date(item.start_time).toDateString(),
-      })),
-      "startTime"
-    );
-    // If patientId provided, find that specific appointment for nextAppointment
-    if (patientId) {
-      const foundAppointment = data.data.find((i) => i?.patient?.id === patientId);
-      if (foundAppointment) {
-        nextAppointment.value = foundAppointment;
-      }
-    }
-    isLoading.value = false;
-  });
-}
+const formatRelativeTime = (date) => {
+	if (!date) return '';
+	try {
+		return formatDistanceToNow(new Date(date), { addSuffix: true });
+	} catch {
+		return '';
+	}
+};
 
+const formatCurrency = (amount) => {
+	if (!amount) return '0';
+	return new Intl.NumberFormat('en-NG').format(amount);
+};
+
+const getCompletedTrend = () => {
+	const current = dashboardData.value?.appointmentsData?.completedAppointments || 0;
+	const previous = dashboardData.value?.appointmentsData?.completedAppointmentsLastMonth || 0;
+	return current >= previous ? 'up' : 'down';
+};
+
+const getCompletedPercentage = () => {
+	const analytics = calculatePercentageChange(
+		dashboardData.value?.appointmentsData?.completedAppointmentsLastMonth || 0,
+		dashboardData.value?.appointmentsData?.completedAppointments || 0
+	);
+	return analytics.percentage || 0;
+};
+
+const getActivityIcon = (type) => {
+	const icons = {
+		'appointment_completed': 'hi-check-circle',
+		'prescription_written': 'ri-capsule-line',
+		'note_added': 'hi-document-text',
+	};
+	return icons[type] || 'hi-clock';
+};
+
+const navigateTo = (path) => {
+	router.push(path);
+};
+
+// Data fetching
+const fetchDashboardData = async () => {
+	isLoading.value = true;
+	try {
+		// Fetch all appointment statuses for the calendar to show color-coded dots
+		const [enhancedRes, openRes, ongoingRes, completedRes, missedRes, cancelledRes] = await Promise.all([
+			$http.$_getSpecialistDashboardEnhanced(),
+			$http.$_getSpecialistAppointments({ currentPage: 1, pageLimit: 100, status: "OPEN" }),
+			$http.$_getSpecialistAppointments({ currentPage: 1, pageLimit: 100, status: "ONGOING" }),
+			$http.$_getSpecialistAppointments({ currentPage: 1, pageLimit: 50, status: "COMPLETED" }),
+			$http.$_getSpecialistAppointments({ currentPage: 1, pageLimit: 50, status: "MISSED" }),
+			$http.$_getSpecialistAppointments({ currentPage: 1, pageLimit: 50, status: "CANCELLED" }),
+		]);
+
+		dashboardData.value = enhancedRes.data?.data || enhancedRes.data;
+
+		// Combine all appointments for calendar with status information
+		const allAppointments = [
+			...(openRes.data?.data || []),
+			...(ongoingRes.data?.data || []),
+			...(completedRes.data?.data || []),
+			...(missedRes.data?.data || []),
+			...(cancelledRes.data?.data || []),
+		];
+
+		// Group appointments by date for calendar (preserving status for color-coded dots)
+		appointmentItems.value = groupBy(
+			allAppointments.map((item) => ({
+				...item,
+				startTime: new Date(item.start_time).toDateString(),
+			})),
+			"startTime"
+		);
+	} catch (error) {
+		console.error('Error fetching dashboard:', error);
+		$toast.error('Failed to load dashboard data');
+	} finally {
+		isLoading.value = false;
+	}
+};
+
+// Appointment handlers
 const onOpenAppointment = async (appointment) => {
-  appointmentInfo.value = appointment;
+	appointmentInfo.value = appointment;
 
-  // Handle patient as either string ID or populated object
-  let userId;
-  if (typeof appointment.patient === 'string') {
-    // Patient is just an ID string
-    userId = appointment.patient;
-  } else if (appointment.patient && typeof appointment.patient === 'object') {
-    // Patient is populated object
-    userId = appointment.patient.id || appointment.patient._id;
-  }
+	let userId;
+	if (typeof appointment.patient === 'string') {
+		userId = appointment.patient;
+	} else if (appointment.patient && typeof appointment.patient === 'object') {
+		userId = appointment.patient.id || appointment.patient._id;
+	}
 
-  if (!userId) {
-    console.error('Patient information not found in appointment:', appointment);
-    $toast.error('Patient information not found');
-    return;
-  }
+	if (!userId) {
+		$toast.error('Patient information not found');
+		return;
+	}
 
-  isFetchingAppointment.value = true;
-  isOpenAppointment.value = true;
+	isFetchingAppointment.value = true;
+	isOpenAppointment.value = true;
 
-  await $http.$_getOneUser(userId).then(({ data }) => {
-    patientInfo.value = {
-      fullName: data.data?.full_name,
-      firstName: data.data?.profile?.first_name,
-      lastName: data.data?.profile?.last_name,
-      rating: data.data.average_rating,
-      category: appointment.category,
-      startTime: appointment.start_time,
-      appointmentType: appointment.appointment_type,
-      timezone: appointment.timezone,
-    };
-    isFetchingAppointment.value = false;
-  }).catch(error => {
-    console.error('Error fetching patient details:', error);
-    $toast.error('Failed to load patient details');
-    isFetchingAppointment.value = false;
-  });
+	try {
+		const { data } = await $http.$_getOneUser(userId);
+		patientInfo.value = {
+			fullName: data.data?.full_name,
+			firstName: data.data?.profile?.first_name,
+			lastName: data.data?.profile?.last_name,
+			category: appointment.category,
+			startTime: appointment.start_time || appointment.startTime,
+			appointmentType: appointment.appointment_type || appointment.appointmentType,
+		};
+	} catch (error) {
+		$toast.error('Failed to load patient details');
+	} finally {
+		isFetchingAppointment.value = false;
+	}
 };
 
 const onSubmitCancelAppointment = async (appointment) => {
-  isLoadingCancelAppointment.value = true;
-  const payload = { appointmentId: appointment._id, status: "CANCELLED" };
-
-  await $http
-    .$_cancelAppointments(payload)
-    .then(({ data }) => {
-      $toast.success("Appointment cancelled successfully!");
-      isLoadingCancelAppointment.value = false;
-      getUserAppointments();
-    })
-    .catch((error) => {
-      $toast.error(error.message);
-      isLoadingCancelAppointment.value = false;
-    });
+	isLoadingCancelAppointment.value = true;
+	try {
+		await $http.$_cancelAppointments({ appointmentId: appointment._id, status: "CANCELLED" });
+		$toast.success("Appointment cancelled successfully!");
+		isOpenCancelAppointment.value = false;
+		isOpenAppointment.value = false;
+		fetchDashboardData();
+	} catch (error) {
+		$toast.error(error.message || 'Failed to cancel appointment');
+	} finally {
+		isLoadingCancelAppointment.value = false;
+	}
 };
 
 const onSubmitRescheduleAppointment = (appointment) => {
-  rescheduleAppointmentRef.value.onOpen(appointment);
-  isOpenScheduleAppointment.value = false;
-  isOpenAppointment.value = false;
+	rescheduleAppointmentRef.value.onOpen(appointment);
+	isOpenAppointment.value = false;
+};
+
+const onStartMeetings = (appointment) => {
+	if (appointment.start_url) {
+		window.open(appointment.start_url, '_blank');
+	}
 };
 
 const openCreateAppointmentModal = () => {
-  isOpenCreateAppointment.value = true;
+	isOpenCreateAppointment.value = true;
 };
 
-const onAppointmentCreated = async (newAppointment) => {
-  $toast.success('Appointment created successfully!');
-  // Refresh appointments to show new appointment on calendar
-  await getSpecialistDashboard();
+const onAppointmentCreated = async () => {
+	$toast.success('Appointment created successfully!');
+	await fetchDashboardData();
 };
 
 const onAppointmentRescheduled = async () => {
-  // Refresh dashboard to update calendar with new appointment date
-  await getSpecialistDashboard();
+	await fetchDashboardData();
 };
 
-const isFutureDate = (date) => {
-  if (!date) return false;
-  const today = startOfDay(new Date());
-  const selectedDate = startOfDay(new Date(date));
-  return selectedDate >= today;
-};
+// Initialize
+onMounted(() => {
+	fetchDashboardData();
+});
 </script>
 
 <style lang="scss" scoped>
 .page-content {
-  @include flexItem(vertical) {
-    gap: $size-12;
-    width: 75vw;
-    height: 100vh;
-    position: relative;
-    margin-bottom: 50px;
-  }
-  @include responsive(tab-portrait) {
-    width: 100vw !important;
-  }
+	display: flex;
+	flex-direction: column;
+	width: 100%;
+	max-width: 1400px;
+	margin: 0 auto;
+	height: 100vh;
+	position: relative;
 
-  &__body {
-    @include flexItem(vertical) {
-      width: 100%;
-      height: 100%;
-      overflow-y: scroll;
-      padding: $size-16 $size-48;
-      background: $color-g-97;
-      position: relative;
-    }
+	@include responsive(tab-portrait) {
+		width: 100vw;
+		max-width: none;
+	}
 
-    @include responsive(phone) {
-      padding: $size-16 $size-24;
-    }
+	&__body {
+		flex: 1;
+		overflow-y: auto;
+		padding: 0;
+		padding-bottom: 100px;
+		background: #F8FAFC;
 
-    &::-webkit-scrollbar {
-      display: none;
-      width: $size-12;
-      background-color: $color-g-92;
-    }
-  }
+		&::-webkit-scrollbar {
+			display: none;
+		}
+	}
 }
 
-.container-root {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: $size-64;
+// Skeleton Loading
+.dashboard-skeleton {
+	.skeleton-hero {
+		background: linear-gradient(135deg, rgba(14, 174, 196, 0.1) 0%, rgba(14, 174, 196, 0.05) 100%);
+		border-radius: $size-24;
+		padding: $size-32;
+		margin-bottom: $size-24;
 
-  @include responsive(tab-portrait) {
-    flex-direction: column;
-  }
+		.skeleton-line {
+			background: linear-gradient(90deg, rgba(14, 174, 196, 0.1) 25%, rgba(14, 174, 196, 0.2) 50%, rgba(14, 174, 196, 0.1) 75%);
+			background-size: 200% 100%;
+			animation: shimmer 1.5s infinite;
+			border-radius: $size-8;
+
+			&.greeting {
+				width: 150px;
+				height: $size-24;
+				margin-bottom: $size-12;
+			}
+
+			&.subtitle {
+				width: 300px;
+				height: $size-20;
+			}
+		}
+
+		.skeleton-stats {
+			display: flex;
+			gap: $size-24;
+			margin-top: $size-24;
+
+			.skeleton-stat {
+				width: 120px;
+				height: 60px;
+				background: linear-gradient(90deg, rgba(14, 174, 196, 0.1) 25%, rgba(14, 174, 196, 0.2) 50%, rgba(14, 174, 196, 0.1) 75%);
+				background-size: 200% 100%;
+				animation: shimmer 1.5s infinite;
+				border-radius: $size-12;
+			}
+		}
+	}
+
+	.skeleton-cards {
+		display: grid;
+		grid-template-columns: repeat(4, 1fr);
+		gap: $size-20;
+		margin-bottom: $size-24;
+
+		@include responsive(tab-portrait) {
+			grid-template-columns: repeat(2, 1fr);
+		}
+
+		@include responsive(phone) {
+			grid-template-columns: 1fr;
+		}
+
+		.skeleton-card {
+			height: 120px;
+			background: linear-gradient(90deg, $color-g-95 25%, $color-g-90 50%, $color-g-95 75%);
+			background-size: 200% 100%;
+			animation: shimmer 1.5s infinite;
+			border-radius: $size-16;
+		}
+	}
+
+	.skeleton-sections {
+		display: grid;
+		grid-template-columns: 2fr 1fr;
+		gap: $size-24;
+
+		@include responsive(tab-portrait) {
+			grid-template-columns: 1fr;
+		}
+
+		.skeleton-section {
+			height: 300px;
+			background: linear-gradient(90deg, $color-g-95 25%, $color-g-90 50%, $color-g-95 75%);
+			background-size: 200% 100%;
+			animation: shimmer 1.5s infinite;
+			border-radius: $size-16;
+		}
+	}
 }
 
-.dashboard-container {
-  width: 60%;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: $size-32;
-
-  @include responsive(tab-portrait) {
-    width: 100%;
-  }
-
-  .dashboard-earnings {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: $size-24;
-    background: $color-pri-t5;
-    border: 1px solid $color-pri-t3;
-    border-radius: $size-12;
-    padding: $size-24;
-    box-shadow: 8px 24px 56px rgba(0, 0, 0, 0.1),
-      16px 16px 32px rgba(0, 0, 0, 0.15);
-
-    .dashboard-earnings__heading {
-      font-weight: 500;
-      font-size: $size-18;
-      color: $color-g-21;
-    }
-    .dashboard-earnings__content {
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: $size-16;
-
-      .dashboard-earnings__earnings {
-        font-weight: $fw-semi-bold;
-        font-size: $size-64;
-        line-height: $size-64;
-        color: $color-pri-s1;
-
-        @include responsive(phone) {
-          font-size: $size-48;
-        }
-      }
-      .dashboard-earnings__footer {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: $size-24;
-        padding: $size-8 $size-12;
-        background: $color-pri-t4;
-        border-radius: $size-12;
-
-        .dashboard-earnings__footer--earning {
-          font-weight: $fw-regular;
-          font-size: $size-10;
-          color: $color-g-21;
-        }
-        .dashboard-earnings__analytics {
-          display: flex;
-          justify-content: flex-start;
-          align-items: center;
-          gap: $size-4;
-          background: $color-white;
-          border-radius: $size-12;
-          padding: $size-2 $size-8;
-
-          .dashboard-earnings__analytics--analytics {
-            font-weight: $fw-regular;
-            font-size: $size-10;
-            color: #40af3e;
-          }
-        }
-      }
-    }
-  }
-
-  .dashboard-appointments {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: $size-32;
-
-    @include responsive(phone) {
-      flex-direction: column;
-    }
-
-    .completed-appointments {
-      width: 100%;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: $size-48;
-      background: $color-pri-main;
-      border: 1px solid $color-pri-s1;
-      border-radius: $size-16;
-      padding: $size-24;
-      box-shadow: 8px 24px 56px rgba(0, 0, 0, 0.1),
-        16px 16px 32px rgba(0, 0, 0, 0.15);
-
-      .completed-appointments__heading {
-        width: 100%;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-
-        .completed-appointments__heading--header {
-          font-weight: 500;
-          font-size: $size-18;
-          color: $color-pri-t4;
-        }
-        .completed-appointments__heading--icon {
-          background: $color-pri-t4;
-          border-radius: 100%;
-          padding: $size-12;
-          border: 4px solid $color-pri-t3;
-        }
-      }
-      .completed-appointments__content {
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        align-items: flex-start;
-        gap: $size-8;
-
-        .completed-appointments__counter {
-          display: flex;
-          justify-content: flex-start;
-          align-items: flex-end;
-          gap: $size-8;
-
-          .completed-appointments__counter--count {
-            font-weight: $fw-semi-bold;
-            font-size: $size-64;
-            color: $color-white;
-          }
-          .completed-appointments__counter--month {
-            font-weight: $fw-regular;
-            font-size: $size-12;
-            color: $color-pri-t3;
-            margin-bottom: $size-12;
-          }
-        }
-        .completed-appointments__footer {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          gap: $size-24;
-          padding: $size-8 $size-12;
-          background: $color-pri-s1;
-          border-radius: $size-12;
-
-          .completed-appointments__footer--month {
-            font-weight: $fw-regular;
-            font-size: $size-12;
-            color: $color-white;
-          }
-          .completed-appointments__analytics {
-            display: flex;
-            justify-content: flex-start;
-            align-items: center;
-            gap: $size-4;
-            background: $color-white;
-            border-radius: $size-12;
-            padding: $size-2 $size-8;
-
-            .completed-appointments__analytics--analytics {
-              font-weight: $fw-regular;
-              font-size: $size-10;
-              color: $color-ter-error;
-            }
-          }
-        }
-      }
-    }
-    .rescheduled-appointments {
-      width: 100%;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: $size-48;
-      background: $color-white;
-      border: 1px solid $color-pri-t5;
-      border-radius: $size-16;
-      padding: $size-24;
-      box-shadow: 8px 24px 56px rgba(0, 0, 0, 0.1),
-        16px 16px 32px rgba(0, 0, 0, 0.15);
-
-      .rescheduled-appointments__heading {
-        width: 100%;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-
-        .rescheduled-appointments__heading--header {
-          font-weight: 500;
-          font-size: $size-18;
-          color: $color-g-21;
-        }
-        .rescheduled-appointments__heading--icon {
-          background: $color-sec-t3;
-          border-radius: 100%;
-          padding: $size-12;
-          border: 4px solid $color-sec-t4;
-        }
-      }
-      .rescheduled-appointments__content {
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        align-items: flex-start;
-        gap: $size-8;
-
-        .rescheduled-appointments__counter {
-          display: flex;
-          justify-content: flex-start;
-          align-items: flex-end;
-          gap: $size-8;
-
-          .rescheduled-appointments__counter--count {
-            font-weight: $fw-semi-bold;
-            font-size: $size-64;
-            color: $color-g-21;
-          }
-          .rescheduled-appointments__counter--month {
-            font-weight: $fw-regular;
-            font-size: $size-12;
-            color: $color-g-54;
-            margin-bottom: $size-12;
-          }
-        }
-        .rescheduled-appointments__footer {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          gap: $size-24;
-          padding: $size-8 $size-12;
-          background: $color-g-90;
-          border-radius: $size-12;
-
-          .rescheduled-appointments__footer--month {
-            font-weight: $fw-regular;
-            font-size: $size-12;
-            color: $color-g-21;
-          }
-          .rescheduled-appointments__analytics {
-            display: flex;
-            justify-content: flex-start;
-            align-items: center;
-            gap: $size-4;
-            background: $color-white;
-            border-radius: $size-12;
-            padding: $size-2 $size-8;
-
-            .rescheduled-appointments__analytics--analytics {
-              font-weight: $fw-regular;
-              font-size: $size-10;
-              color: $color-ter-error;
-            }
-          }
-        }
-      }
-    }
-  }
-  .next-appointment {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: $size-24;
-    background: $color-white;
-    border: 1px solid $color-pri-t5;
-    border-radius: $size-16;
-    padding: $size-24 $size-32;
-    box-shadow: 8px 24px 56px rgba(0, 0, 0, 0.1),
-      16px 16px 32px rgba(0, 0, 0, 0.15);
-
-    .next-appointment__heading {
-      font-weight: $fw-medium;
-      font-size: $size-18;
-      color: $color-g-44;
-    }
-    .next-appointment__content {
-      display: flex;
-      justify-content: flex-start;
-      align-items: flex-start;
-      gap: $size-24;
-
-      .next-appointment-content {
-        display: flex;
-        flex-direction: column;
-        justify-content: flex-start;
-        gap: $size-8;
-
-        .next-appointment-content__name {
-          font-weight: $fw-semi-bold;
-          font-size: $size-20;
-          line-height: 26px;
-          color: $color-g-21;
-          text-transform: capitalize;
-        }
-        .next-appointment-content__schedule-container {
-          display: flex;
-          justify-content: flex-start;
-          align-items: center;
-          gap: $size-16;
-
-          .next-appointment-content__shedule {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: $size-8;
-
-            @include responsive(phone) {
-              gap: $size-0;
-            }
-
-            .next-appointment-content__shedule--content {
-              font-weight: $fw-regular;
-              font-size: $size-16;
-              color: $color-g-44;
-              white-space: nowrap;
-            }
-          }
-        }
-      }
-      .next-appointment-content__actions {
-        display: flex;
-        justify-content: flex-start;
-        align-items: center;
-        gap: $size-16;
-        margin-top: $size-16;
-      }
-    }
-  }
+@keyframes shimmer {
+	0% { background-position: 200% 0; }
+	100% { background-position: -200% 0; }
 }
 
-.calendar-container {
-  width: 40%;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  align-items: flex-start;
-  gap: $size-32;
+// Hero Section
+.hero-section {
+	background: linear-gradient(135deg, #4FC3F7 0%, #29B6F6 50%, #0288D1 100%);
+	border-radius: $size-24;
+	padding: $size-32 $size-48;
+	margin: $size-24 $size-48;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	position: relative;
+	overflow: visible;
+	box-shadow: 0 10px 40px rgba(79, 195, 247, 0.3);
+	color: white;
 
-  @include responsive(tab-portrait) {
-    width: 100%;
-    flex-direction: row;
-  }
-  @include responsive(phone) {
-    width: 100%;
-    flex-direction: column;
-  }
+	&::before {
+		content: '';
+		position: absolute;
+		top: -50%;
+		right: -10%;
+		width: 400px;
+		height: 400px;
+		background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+		pointer-events: none;
+	}
 
-  .calendar-container-header {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: $size-32;
+	@include responsive(tab-portrait) {
+		flex-direction: column;
+		align-items: flex-start;
+		padding: $size-24;
+		gap: $size-24;
+		margin: $size-16 $size-24;
+		border-radius: $size-16;
+	}
 
-    .calendar-heading {
-      width: 100%;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+	@include responsive(phone) {
+		padding: $size-20 $size-16;
+		margin: $size-12 $size-16;
+		border-radius: $size-12;
+	}
 
-      .calendar-heading__heading {
-        font-weight: $fw-medium;
-        font-size: $size-20;
-        line-height: 22px;
-        color: $color-g-21;
-      }
-      .calendar-heading__actions {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: $size-32;
-      }
-    }
-    .calendar-component {
-      width: 100%;
-    }
-  }
-  .calendar-appointments {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: $size-44;
+	.hero-content {
+		z-index: 1;
+		width: 100%;
+	}
 
-    .calender-appointments-items {
-      width: 100%;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: $size-32;
+	.hero-greeting {
+		.greeting-badge {
+			display: inline-flex;
+			align-items: center;
+			gap: $size-6;
+			background: rgba(255, 255, 255, 0.2);
+			padding: $size-6 $size-12;
+			border-radius: $size-20;
+			font-size: $size-12;
+			font-weight: $fw-medium;
+			color: white;
+			margin-bottom: $size-12;
+		}
 
-      .calendar-appointments-items__heading {
-        font-weight: $fw-regular;
-        font-size: $size-18;
-        line-height: 22px;
-        color: $color-g-44;
-      }
-      .calendar-appointments-items__container {
-        width: 100%;
-        display: flex;
-        flex-direction: column;
-        justify-content: flex-start;
-        gap: $size-16;
+		.greeting-text {
+			font-size: $size-32;
+			font-weight: $fw-bold;
+			color: white;
+			margin: 0 0 $size-8 0;
+			line-height: 1.2;
 
-        .calendar-appointments-items__content {
-          width: 100%;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          border-bottom: 1px solid $color-g-90;
-          padding: $size-24 $size-0;
-          padding-top: $size-8;
+			.name-highlight {
+				color: #fef3c7;
+			}
 
-          .calendar-appointments-items__content--time {
-            font-weight: $fw-regular;
-            font-size: $size-16;
-            color: $color-pri-main;
+			@include responsive(phone) {
+				font-size: $size-24;
+			}
+		}
 
-            @include responsive(phone) {
-              font-size: $size-14;
-            }
-          }
-          .calendar-appointments-items__content--desc {
-            font-weight: $fw-regular;
-            font-size: $size-18;
-            line-height: 26px;
-            color: $color-black;
-            text-transform: capitalize;
+		.greeting-subtitle {
+			font-size: $size-16;
+			color: rgba(255, 255, 255, 0.85);
+			margin: 0;
 
-            @include responsive(phone) {
-              font-size: $size-16;
-            }
-          }
+			@include responsive(phone) {
+				font-size: $size-14;
+			}
+		}
+	}
 
-          .no-appointments-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 1rem;
-            padding: 2rem 1rem;
+	.hero-today-stats {
+		display: flex;
+		gap: $size-20;
+		margin-top: $size-24;
 
-            .no-appointments-message {
-              font-weight: $fw-regular;
-              font-size: $size-16;
-              color: #6f6f6f;
-              text-align: center;
-            }
+		@include responsive(phone) {
+			flex-wrap: wrap;
+			gap: $size-12;
+		}
 
-            .create-appointment-btn {
-              margin-top: 0.5rem;
-            }
-          }
+		.today-stat {
+			display: flex;
+			align-items: center;
+			gap: $size-12;
+			background: rgba(255, 255, 255, 0.15);
+			backdrop-filter: blur(10px);
+			padding: $size-12 $size-16;
+			border-radius: $size-12;
+			border: 1px solid rgba(255, 255, 255, 0.2);
 
-          .calendar-action-button {
-            width: 5%;
-            cursor: pointer;
-            &:hover {
-              background: #eaeaea;
-              border-radius: $size-4;
-            }
+			.stat-icon {
+				width: 40px;
+				height: 40px;
+				border-radius: $size-10;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				color: white;
 
-            .calendar-action_content {
-              width: 120px;
-              padding: $size-10;
-              display: flex;
-              flex-direction: column;
-              justify-content: start;
-              gap: $size-5;
+				&.appointments { background: rgba(251, 191, 36, 0.3); }
+				&.completed { background: rgba(34, 197, 94, 0.3); }
+				&.pending { background: rgba(239, 68, 68, 0.3); }
+			}
 
-              .calendar-action_content__item {
-                color: $color-black;
-                padding: $size-5;
+			.stat-content {
+				display: flex;
+				flex-direction: column;
 
-                &:hover {
-                  color: $color-black;
-                  background: $color-g-92;
-                  border-radius: $size-4;
-                  padding: $size-5;
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
+				.stat-value {
+					font-size: $size-24;
+					font-weight: $fw-bold;
+					color: white;
+					line-height: 1;
+				}
+
+				.stat-label {
+					font-size: $size-12;
+					color: rgba(255, 255, 255, 0.8);
+				}
+			}
+		}
+	}
+
+	.hero-visual {
+		z-index: 1;
+
+		.rating-card {
+			background: rgba(255, 255, 255, 0.2);
+			backdrop-filter: blur(10px);
+			padding: $size-16 $size-24;
+			border-radius: $size-16;
+			border: 1px solid rgba(255, 255, 255, 0.3);
+			text-align: center;
+
+			.rating-stars {
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				gap: $size-6;
+
+				.star-icon {
+					color: #fbbf24;
+				}
+
+				.rating-value {
+					font-size: $size-28;
+					font-weight: $fw-bold;
+					color: white;
+				}
+			}
+
+			.rating-label {
+				font-size: $size-12;
+				color: rgba(255, 255, 255, 0.8);
+			}
+		}
+	}
 }
 
-.mobile {
-  display: none !important;
-  @include responsive(phone) {
-    display: flex !important;
-  }
-}
-.desktop {
-  display: flex !important;
-  @include responsive(phone) {
-    display: none !important;
-  }
-}
-.increasing {
-  color: #40af3e !important;
-  fill: #40af3e !important;
-  stroke: #40af3e !important;
-}
-.decreasing {
-  color: #ee4511 !important;
-  fill: #ee4511 !important;
-  stroke: #ee4511 !important;
-}
-.unchanged {
-  color: #363636 !important;
-  fill: #363636 !important;
-  stroke: #363636 !important;
-}
-</style>
+// Stats Row
+.stats-row {
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	gap: $size-20;
+	margin: 0 $size-48 $size-24;
 
-<style scoped lang="scss">
+	@include responsive(tab-portrait) {
+		grid-template-columns: repeat(2, 1fr);
+		margin: 0 $size-24 $size-24;
+	}
+
+	@include responsive(phone) {
+		grid-template-columns: 1fr;
+		margin: 0 $size-16 $size-24;
+	}
+
+	.stat-card {
+		background: white;
+		border-radius: $size-16;
+		padding: $size-20;
+		display: flex;
+		align-items: center;
+		gap: $size-16;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		border: 1px solid $color-g-92;
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+
+		&:hover {
+			transform: translateY(-2px);
+			box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+		}
+
+		.card-icon {
+			width: 52px;
+			height: 52px;
+			border-radius: $size-14;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			flex-shrink: 0;
+		}
+
+		&.patients .card-icon {
+			background: linear-gradient(135deg, #4FC3F7 0%, #0288D1 100%);
+			color: white;
+		}
+
+		&.appointments .card-icon {
+			background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+			color: white;
+		}
+
+		&.wallet .card-icon {
+			background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+			color: white;
+		}
+
+		&.starred .card-icon {
+			background: linear-gradient(135deg, #eab308 0%, #ca8a04 100%);
+			color: white;
+		}
+
+		.card-content {
+			flex: 1;
+			display: flex;
+			flex-direction: column;
+
+			.card-value {
+				font-size: $size-24;
+				font-weight: $fw-bold;
+				color: $color-g-21;
+				line-height: 1.2;
+			}
+
+			.card-label {
+				font-size: $size-14;
+				font-weight: $fw-medium;
+				color: $color-g-44;
+			}
+
+			.card-sublabel {
+				font-size: $size-12;
+				color: $color-g-67;
+			}
+		}
+
+		.card-arrow {
+			color: $color-g-67;
+		}
+
+		.card-trend {
+			display: flex;
+			align-items: center;
+			gap: $size-4;
+			font-size: $size-12;
+			font-weight: $fw-medium;
+			padding: $size-4 $size-8;
+			border-radius: $size-8;
+
+			&.up {
+				background: rgba(34, 197, 94, 0.1);
+				color: #16a34a;
+			}
+
+			&.down {
+				background: rgba(239, 68, 68, 0.1);
+				color: #dc2626;
+			}
+		}
+	}
+}
+
+// Quick Actions
+.quick-actions-section {
+	margin: 0 $size-48 $size-24;
+
+	@include responsive(tab-portrait) {
+		margin: 0 $size-24 $size-24;
+	}
+
+	@include responsive(phone) {
+		margin: 0 $size-16 $size-24;
+	}
+
+	.section-title {
+		font-size: $size-18;
+		font-weight: $fw-semi-bold;
+		color: $color-g-21;
+		margin: 0 0 $size-16 0;
+	}
+
+	.quick-actions-grid {
+		display: grid;
+		grid-template-columns: repeat(6, 1fr);
+		gap: $size-12;
+
+		@include responsive(tab-portrait) {
+			grid-template-columns: repeat(3, 1fr);
+		}
+
+		@include responsive(phone) {
+			grid-template-columns: repeat(2, 1fr);
+		}
+
+		.quick-action {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			gap: $size-10;
+			padding: $size-20 $size-12;
+			background: white;
+			border: 1px solid $color-g-92;
+			border-radius: $size-14;
+			cursor: pointer;
+			transition: all 0.2s ease;
+
+			&:hover {
+				border-color: #4FC3F7;
+				background: rgba(14, 174, 196, 0.02);
+
+				.action-icon {
+					transform: scale(1.05);
+				}
+			}
+
+			.action-icon {
+				width: 48px;
+				height: 48px;
+				border-radius: $size-12;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				transition: transform 0.2s ease;
+
+				&.patients { background: rgba(14, 174, 196, 0.1); color: #4FC3F7; }
+				&.appointments { background: rgba(249, 115, 22, 0.1); color: #f97316; }
+				&.prescriptions { background: rgba(168, 85, 247, 0.1); color: #a855f7; }
+				&.notes { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+				&.create { background: rgba(34, 197, 94, 0.1); color: #22c55e; }
+				&.settings { background: rgba(107, 114, 128, 0.1); color: #6b7280; }
+			}
+
+			.action-label {
+				font-size: $size-13;
+				font-weight: $fw-medium;
+				color: $color-g-44;
+				text-align: center;
+			}
+		}
+	}
+}
+
+// Main Content Grid
+.main-content-grid {
+	display: grid;
+	grid-template-columns: 1.5fr 1fr;
+	gap: $size-24;
+	margin: 0 $size-48;
+
+	@include responsive(tab-portrait) {
+		grid-template-columns: 1fr;
+		margin: 0 $size-24;
+	}
+
+	@include responsive(phone) {
+		margin: 0 $size-16;
+	}
+
+	.left-column, .right-column {
+		display: flex;
+		flex-direction: column;
+		gap: $size-24;
+	}
+}
+
+// Content Cards
+.content-card {
+	background: white;
+	border-radius: $size-16;
+	border: 1px solid $color-g-92;
+	overflow: hidden;
+
+	.card-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: $size-16 $size-20;
+		border-bottom: 1px solid $color-g-95;
+
+		.card-title {
+			display: flex;
+			align-items: center;
+			gap: $size-8;
+			font-size: $size-16;
+			font-weight: $fw-semi-bold;
+			color: $color-g-21;
+			margin: 0;
+
+			svg {
+				color: #4FC3F7;
+			}
+		}
+
+		.view-all-btn {
+			display: flex;
+			align-items: center;
+			gap: $size-4;
+			background: none;
+			border: none;
+			font-size: $size-13;
+			font-weight: $fw-medium;
+			color: #4FC3F7;
+			cursor: pointer;
+
+			&:hover {
+				text-decoration: underline;
+			}
+		}
+	}
+
+	.card-body {
+		padding: $size-20;
+	}
+}
+
+// Schedule Timeline
+.schedule-timeline {
+	.timeline-item {
+		display: flex;
+		gap: $size-16;
+		padding: $size-12 0;
+		cursor: pointer;
+		transition: background 0.2s ease;
+		border-radius: $size-8;
+		padding-left: $size-8;
+		margin-left: -$size-8;
+
+		&:hover {
+			background: $color-g-97;
+		}
+
+		&.completed .timeline-marker .marker-dot {
+			background: #22c55e;
+		}
+
+		&.ongoing .timeline-marker .marker-dot {
+			background: #f97316;
+			animation: pulse 2s infinite;
+		}
+
+		.timeline-time {
+			width: 70px;
+			font-size: $size-14;
+			font-weight: $fw-medium;
+			color: #4FC3F7;
+			flex-shrink: 0;
+		}
+
+		.timeline-marker {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			flex-shrink: 0;
+
+			.marker-dot {
+				width: 12px;
+				height: 12px;
+				border-radius: 50%;
+				background: $color-g-67;
+				border: 2px solid white;
+				box-shadow: 0 0 0 2px $color-g-90;
+			}
+
+			.marker-line {
+				width: 2px;
+				flex: 1;
+				min-height: 30px;
+				background: $color-g-90;
+				margin-top: $size-4;
+			}
+		}
+
+		&:last-child .timeline-marker .marker-line {
+			display: none;
+		}
+
+		.timeline-content {
+			flex: 1;
+			display: flex;
+			justify-content: space-between;
+			align-items: flex-start;
+
+			.patient-info {
+				display: flex;
+				align-items: center;
+				gap: $size-10;
+
+				.patient-details {
+					display: flex;
+					flex-direction: column;
+
+					.patient-name {
+						font-size: $size-14;
+						font-weight: $fw-medium;
+						color: $color-g-21;
+					}
+
+					.appointment-type {
+						font-size: $size-12;
+						color: $color-g-67;
+					}
+				}
+			}
+
+			.timeline-status {
+				font-size: $size-11;
+				font-weight: $fw-medium;
+				padding: $size-4 $size-8;
+				border-radius: $size-6;
+				text-transform: uppercase;
+
+				&.open { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+				&.ongoing { background: rgba(249, 115, 22, 0.1); color: #f97316; }
+				&.completed { background: rgba(34, 197, 94, 0.1); color: #22c55e; }
+			}
+		}
+	}
+}
+
+@keyframes pulse {
+	0%, 100% { opacity: 1; }
+	50% { opacity: 0.5; }
+}
+
+// Appointments List
+.appointments-list {
+	.appointment-item {
+		display: flex;
+		align-items: center;
+		gap: $size-16;
+		padding: $size-14;
+		border-radius: $size-12;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		border: 1px solid transparent;
+
+		&:hover {
+			background: $color-g-97;
+			border-color: $color-g-90;
+		}
+
+		.appointment-date-block {
+			width: 48px;
+			height: 48px;
+			background: linear-gradient(135deg, #4FC3F7 0%, #0288D1 100%);
+			border-radius: $size-10;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			flex-shrink: 0;
+
+			.date-day {
+				font-size: $size-18;
+				font-weight: $fw-bold;
+				color: white;
+				line-height: 1;
+			}
+
+			.date-month {
+				font-size: $size-10;
+				color: rgba(255, 255, 255, 0.85);
+				text-transform: uppercase;
+			}
+		}
+
+		.appointment-details {
+			flex: 1;
+
+			.appointment-patient {
+				display: flex;
+				align-items: center;
+				gap: $size-8;
+				margin-bottom: $size-4;
+
+				.patient-name {
+					font-size: $size-14;
+					font-weight: $fw-medium;
+					color: $color-g-21;
+				}
+			}
+
+			.appointment-meta {
+				display: flex;
+				align-items: center;
+				gap: $size-12;
+
+				.meta-time {
+					display: flex;
+					align-items: center;
+					gap: $size-4;
+					font-size: $size-12;
+					color: $color-g-67;
+				}
+
+				.meta-type {
+					font-size: $size-12;
+					color: $color-g-67;
+				}
+			}
+		}
+
+		.appointment-arrow {
+			color: $color-g-67;
+		}
+	}
+}
+
+// Calendar Card
+.calendar-card {
+	.calendar-body {
+		padding: $size-12;
+	}
+
+	.selected-date-appointments {
+		margin-top: $size-16;
+		padding-top: $size-16;
+		border-top: 1px solid $color-g-92;
+
+		.selected-date-label {
+			font-size: $size-13;
+			font-weight: $fw-medium;
+			color: $color-g-44;
+			margin: 0 0 $size-12 0;
+		}
+
+		.mini-appointment-list {
+			display: flex;
+			flex-direction: column;
+			gap: $size-8;
+
+			.mini-appointment {
+				display: flex;
+				align-items: center;
+				gap: $size-12;
+				padding: $size-8 $size-12;
+				background: $color-g-97;
+				border-radius: $size-8;
+				cursor: pointer;
+				font-size: $size-13;
+
+				&:hover {
+					background: $color-g-92;
+				}
+
+				.mini-time {
+					color: #4FC3F7;
+					font-weight: $fw-medium;
+				}
+
+				.mini-patient {
+					color: $color-g-44;
+				}
+			}
+		}
+	}
+}
+
+// Activity Feed
+.activity-feed {
+	.activity-item {
+		display: flex;
+		gap: $size-12;
+		padding: $size-12 0;
+		border-bottom: 1px solid $color-g-95;
+
+		&:last-child {
+			border-bottom: none;
+		}
+
+		.activity-icon {
+			width: 36px;
+			height: 36px;
+			border-radius: $size-10;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			flex-shrink: 0;
+
+			&.appointment_completed {
+				background: rgba(34, 197, 94, 0.1);
+				color: #22c55e;
+			}
+
+			&.prescription_written {
+				background: rgba(168, 85, 247, 0.1);
+				color: #a855f7;
+			}
+		}
+
+		.activity-content {
+			flex: 1;
+
+			.activity-title {
+				font-size: $size-13;
+				font-weight: $fw-medium;
+				color: $color-g-21;
+				margin: 0 0 $size-2 0;
+			}
+
+			.activity-desc {
+				font-size: $size-12;
+				color: $color-g-67;
+				margin: 0 0 $size-4 0;
+			}
+
+			.activity-time {
+				font-size: $size-11;
+				color: $color-g-77;
+			}
+		}
+	}
+}
+
+// Performance Card
+.performance-card {
+	.performance-grid {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: $size-12;
+
+		.performance-item {
+			text-align: center;
+			padding: $size-16;
+			background: $color-g-97;
+			border-radius: $size-12;
+
+			.perf-value {
+				display: block;
+				font-size: $size-24;
+				font-weight: $fw-bold;
+				color: #4FC3F7;
+				line-height: 1.2;
+			}
+
+			.perf-label {
+				font-size: $size-12;
+				color: $color-g-67;
+			}
+		}
+	}
+}
+
+// Empty States
+.empty-state {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: $size-32;
+	text-align: center;
+
+	&.small {
+		padding: $size-20;
+	}
+
+	.empty-icon {
+		width: 64px;
+		height: 64px;
+		background: $color-g-95;
+		border-radius: 50%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		margin-bottom: $size-16;
+		color: $color-g-67;
+	}
+
+	.empty-text {
+		font-size: $size-14;
+		color: $color-g-67;
+		margin: 0 0 $size-16 0;
+	}
+
+	.empty-action {
+		display: flex;
+		align-items: center;
+		gap: $size-6;
+		padding: $size-10 $size-16;
+		background: #4FC3F7;
+		color: white;
+		border: none;
+		border-radius: $size-8;
+		font-size: $size-13;
+		font-weight: $fw-medium;
+		cursor: pointer;
+
+		&:hover {
+			background: #0288D1;
+		}
+	}
+}
+
+// Modal Styles
 .loader-container {
-  width: 100%;
-  height: 50vh;
-}
-.details-container {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  height: 100%;
-  width: 70%;
-  padding-bottom: 70px;
-
-  @include responsive(phone) {
-    display: none !important;
-  }
-  @include responsive(tab-landscape) {
-    display: none !important;
-    position: absolute;
-    background: $color-g-97;
-    width: 100% !important;
-  }
-}
-.modal-details-container {
-  display: flex !important;
-  flex-direction: column;
-  justify-content: space-between;
-  height: 100%;
-  width: 636px !important;
-  padding: $size-44 $size-32;
-
-  @include responsive(tab-landscape) {
-    width: 100% !important;
-    display: flex !important;
-    padding: $size-32;
-  }
-  @include responsive(phone) {
-    width: 100% !important;
-    display: flex !important;
-    padding: $size-24;
-  }
-}
-.modal-appointment-actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-  gap: $size-16;
-
-  .modal-appointment-actions__meeting {
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    gap: $size-16;
-
-    @include responsive(phone) {
-      width: 100%;
-      flex-direction: column-reverse;
-
-      button {
-        width: 100% !important;
-      }
-    }
-  }
-
-  @include responsive(phone) {
-    flex-direction: column-reverse;
-
-    button {
-      width: 100% !important;
-    }
-  }
+	min-height: 200px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
 }
 
-.details-container__body {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  overflow: scroll;
-  gap: $size-64;
-}
-.top_container {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: $size-20;
-}
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.appointment-modal-content {
+	padding: $size-24;
+	min-width: 400px;
 
-  .heading {
-    font-weight: $fw-semi-bold;
-    font-size: $size-28;
-    color: $color-black;
-  }
-  .close-container {
-    cursor: pointer;
-  }
-}
-.spacialist-details__container {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: $size-32;
+	@include responsive(phone) {
+		min-width: auto;
+		padding: $size-16;
+	}
 
-  @include responsive(phone) {
-    justify-content: flex-start;
-  }
+	.modal-patient-info {
+		display: flex;
+		align-items: center;
+		gap: $size-16;
+		margin-bottom: $size-24;
 
-  .spacialist_details {
-    display: flex;
-    flex-direction: column;
-    gap: $size-20;
+		.modal-patient-details {
+			.modal-patient-name {
+				font-size: $size-20;
+				font-weight: $fw-semi-bold;
+				color: $color-g-21;
+				margin: 0 0 $size-4 0;
+			}
 
-    .specialist_details-heading {
-      font-weight: $fw-regular;
-      font-size: $size-14;
-      color: $color-g-44;
-      border-bottom: $size-1 solid $color-g-90;
-      padding-bottom: $size-5;
-    }
-  }
-  .specialist-details__actions {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: $size-8;
+			.modal-patient-category {
+				font-size: $size-14;
+				color: $color-g-67;
+				margin: 0;
+			}
+		}
+	}
 
-    .specialist-details__actions--diagnosis {
-      background: $color-white;
-      border: $size-1 solid $color-pri;
-    }
-  }
-  .specialist-details__health_info {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
+	.modal-appointment-details {
+		.detail-row {
+			display: flex;
+			flex-direction: column;
+			gap: $size-4;
+			padding: $size-12 0;
+			border-bottom: 1px solid $color-g-95;
 
-    .specialist-details__health_info--items {
-      display: flex;
-      flex-direction: column;
-      justify-content: flex-start;
-      gap: $size-8;
+			&:last-child {
+				border-bottom: none;
+			}
 
-      .specialist-details__health_info--item {
-        display: flex;
-        justify-content: flex-start;
-        align-items: center;
-        gap: $size-8;
+			.detail-label {
+				font-size: $size-12;
+				color: $color-g-67;
+			}
 
-        .specialist-details__health_info--item-key {
-          font-size: $size-16;
-          font-weight: $fw-regular;
-          color: $color-g-44;
-        }
-        .specialist-details__health_info--item-value {
-          font-size: $size-16;
-          font-weight: $fw-regular;
-          color: $color-g-21;
-        }
-      }
-    }
-  }
-  .specialist_details-container {
-    display: flex;
-    justify-content: start;
-    align-items: flex-start;
-    gap: $size-20;
-
-    @include responsive(phone) {
-      flex-direction: column;
-      justify-content: flex-start;
-      align-items: center;
-    }
-  }
-  .specialist_details-info-container {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    justify-content: start;
-    align-items: flex-start;
-    gap: $size-5;
-
-    .specialist-details-heading {
-      display: flex;
-      justify-content: flex-start;
-      align-items: center;
-      gap: $size-16;
-
-      .specialist_details-rating-container {
-        display: flex;
-        justify-content: flex-start;
-        align-items: center;
-        gap: 0;
-
-        .specialist_details-rating {
-          font-weight: $fw-bold;
-          font-size: $size-16;
-          line-height: 24px;
-          color: $color-g-44;
-        }
-      }
-    }
-
-    .specialist_details-info {
-      display: flex;
-      justify-content: start;
-      align-items: flex-start;
-      gap: $size-10;
-
-      .specialist_details-name {
-        font-weight: $fw-semi-bold;
-        font-size: $size-26;
-        color: $color-black;
-      }
-      .specialist_details-rating-container {
-        display: flex;
-        justify-content: start;
-        align-items: center;
-        gap: $size-5;
-
-        .specialist_details-rating {
-          font-size: $size-12;
-          font-weight: $fw-regular;
-          color: $color-g-44;
-        }
-      }
-    }
-    .specialist-details__patient {
-      display: flex;
-      flex-direction: column;
-      justify-content: flex-start;
-      align-items: flex-start;
-      gap: $size-4;
-
-      .specialist-details__icon {
-        .specialist-details__no-rating span {
-          font-weight: $fw-bold;
-          font-size: $size-16;
-          line-height: 24px;
-          color: $color-g-44;
-        }
-      }
-
-      @include responsive(phone) {
-        flex-direction: column;
-        justify-content: flex-start;
-        align-items: flex-start;
-        gap: $size-4;
-      }
-
-      .specialist_details-specialty {
-        font-size: $size-14;
-        font-weight: $fw-regular;
-        color: $color-g-44;
-      }
-    }
-  }
-  .specialist-appointment-details {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-    align-items: flex-start;
-    gap: $size-24;
-    padding-left: 100px !important;
-
-    @include responsive(tab-landscape) {
-      padding-left: 100px !important;
-    }
-    @include responsive(phone) {
-      padding-left: 0 !important;
-    }
-
-    .specialist_details-heading {
-      width: 100%;
-      font-weight: $fw-regular;
-      font-size: $size-14;
-      color: $color-g-44;
-      border-bottom: $size-1 solid $color-g-90;
-      padding-bottom: $size-5;
-    }
-
-    .specialist-appointment-details__container {
-      display: flex;
-      flex-direction: column;
-      justify-content: start;
-      align-content: center;
-      gap: $size-10;
-
-      @include responsive(phone) {
-        flex-direction: column;
-      }
-
-      .specialist-appointment-details__title {
-        font-size: $size-16;
-        font-weight: $fw-regular;
-        color: $color-g-44;
-
-        @include responsive(phone) {
-          font-size: $size-14;
-          font-weight: $fw-regular;
-          color: $color-g-44;
-        }
-      }
-      .specialist-appointment-details__item {
-        font-size: $size-16;
-        font-weight: $fw-regular;
-        color: $color-black;
-        padding-bottom: $size-4;
-
-        @include responsive(phone) {
-          font-size: $size-14;
-          font-weight: $fw-regular;
-          color: $color-black;
-          padding-bottom: $size-4;
-        }
-      }
-    }
-  }
-}
-.appointment_actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-
-  .reschedule_action {
-    font-weight: $fw-regular;
-    font-size: $size-16;
-    color: $color-pri-main;
-    padding: $size-6 $size-10;
-    border-radius: $size-8;
-    cursor: pointer;
-    &:hover {
-      background: $color-pri-t4;
-    }
-  }
+			.detail-value {
+				font-size: $size-14;
+				color: $color-g-21;
+				font-weight: $fw-medium;
+			}
+		}
+	}
 }
 
-.caution-container {
-  width: 468px;
-  // padding: $size-24;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: $size-24;
+.modal-actions {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	width: 100%;
 
-  @include responsive(phone) {
-    width: 100% !important;
-  }
+	.modal-actions-right {
+		display: flex;
+		gap: $size-12;
+	}
 
-  .caution-content {
-    font-weight: $fw-regular;
-    font-size: $size-16;
-    color: $color-g-21;
-  }
-}
-.caution-actions {
-  width: 100%;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+	@include responsive(phone) {
+		flex-direction: column;
+		gap: $size-12;
 
-  @include responsive(phone) {
-    flex-direction: column;
-    gap: $size-16;
-    width: 100%;
-    padding-top: 0;
-    padding-bottom: 0;
-
-    button {
-      width: 100% !important;
-    }
-  }
+		.modal-actions-right {
+			width: 100%;
+			flex-direction: column;
+		}
+	}
 }
 
-:deep(.appointment-details-modal .modal__footer) {
-  padding-top: $size-24;
-  padding-bottom: $size-24;
-}
-:deep(.appointment-details-modal .modal__body) {
-  width: 636px !important;
-
-  @include responsive(tab-landscape) {
-  }
-  @include responsive(phone) {
-    width: 100% !important;
-  }
-}
-:deep(.caution-message-modal .modal) {
-  // width: 100% !important;
-
-  @include responsive(tab-landscape) {
-    width: 90% !important;
-  }
-  @include responsive(phone) {
-    width: 100% !important;
-    height: 100% !important;
-  }
-}
-:deep(.caution-message-modal .modal__body) {
-  width: 400px !important;
-  height: 100% !important;
-
-  @include responsive(tab-landscape) {
-    height: 100% !important;
-    width: 90% !important;
-  }
-  @include responsive(phone) {
-    width: 100% !important;
-    height: 100% !important;
-  }
+.modal-message {
+	font-size: $size-14;
+	color: $color-g-44;
+	line-height: 1.6;
+	max-width: 400px;
 }
 
-.desktop-visible {
-  display: flex !important;
-
-  @include responsive(phone) {
-    display: none !important;
-  }
-}
-.mobile-visible {
-  display: none !important;
-
-  @include responsive(phone) {
-    display: flex !important;
-  }
+.modal-confirm-actions {
+	display: flex;
+	justify-content: space-between;
+	width: 100%;
 }
 </style>
