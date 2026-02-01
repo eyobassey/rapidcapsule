@@ -6,6 +6,7 @@ import { NoteTemplatesController } from './note-templates.controller';
 import { NoteTemplatesService } from './note-templates.service';
 import { Appointment, AppointmentSchema } from '../appointments/entities/appointment.entity';
 import { NoteTemplate, NoteTemplateSchema } from './entities/note-template.entity';
+import { FileUploadHelper } from '../../common/helpers/file-upload.helpers';
 
 @Module({
   imports: [
@@ -15,7 +16,7 @@ import { NoteTemplate, NoteTemplateSchema } from './entities/note-template.entit
     ]),
   ],
   controllers: [NoteTemplatesController, ClinicalNotesController],
-  providers: [ClinicalNotesService, NoteTemplatesService],
+  providers: [ClinicalNotesService, NoteTemplatesService, FileUploadHelper],
   exports: [ClinicalNotesService, NoteTemplatesService],
 })
 export class ClinicalNotesModule {}
