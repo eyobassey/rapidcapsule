@@ -21,6 +21,7 @@ import {
   Appointment,
   AppointmentDocument,
   AppointmentStatus,
+  MeetingChannel,
 } from './entities/appointment.entity';
 import { MeetingStatus, Zoom } from '../../common/external/zoom/zoom';
 import { GoogleCalendar } from '../../common/external/google-calendar/google-calendar';
@@ -68,6 +69,7 @@ import { RescheduleAppointmentDto } from './dto/reschedule-appointment.dto';
 import { HealthCheckupService } from '../health-checkup/health-checkup.service';
 import { AdvancedHealthScoreService } from '../advanced-health-score/advanced-health-score.service';
 import { VitalsService } from '../vitals/vitals.service';
+import { ConsultationServicesService } from '../consultation-services/consultation-services.service';
 import { FileUploadHelper } from '../../common/helpers/file-upload.helpers';
 import {
   SpecialistPrescription,
@@ -85,7 +87,14 @@ import {
   PharmacyOrderType,
 } from '../pharmacy/entities/pharmacy-order.entity';
 import { UnifiedWalletService } from '../accounting/services/unified-wallet.service';
+import { AppointmentEscrowService } from '../accounting/services/appointment-escrow.service';
 import { WalletOwnerType, TransactionCategory } from '../accounting/enums/account-codes.enum';
+import { SpecialistWalletService } from '../wallets/specialist-wallet.service';
+import { SpecialistTransactionReference } from '../wallets/entities/specialist-wallet-transaction.entity';
+import {
+  CreateSpecialistAppointmentDto,
+  PaymentSource,
+} from './dto/create-specialist-appointment.dto';
 
 @Injectable()
 export class AppointmentsService {
@@ -115,6 +124,9 @@ export class AppointmentsService {
     private readonly vitalsService: VitalsService,
     private readonly fileUploadHelper: FileUploadHelper,
     private readonly unifiedWalletService: UnifiedWalletService,
+    private readonly consultationServicesService: ConsultationServicesService,
+    private readonly specialistWalletService: SpecialistWalletService,
+    private readonly appointmentEscrowService: AppointmentEscrowService,
   ) {}
   async createAppointment(
     createAppointmentDto: CreateAppointmentDto,
@@ -315,8 +327,109 @@ export class AppointmentsService {
     return appointment;
   }
 
+  /**
+   * Process appointment payment (debit wallet)
+   * Called when specialist authorizes payment at Step 4 of appointment creation
+   */
+  /**
+   * Pre-authorize appointment payment (Step 4 of wizard)
+   * This validates the balance but does NOT debit the wallet yet.
+   * Actual escrow hold happens in createAppointmentBySpecialist.
+   */
+  async processAppointmentPayment(
+    dto: {
+      patient_id: Types.ObjectId;
+      specialist_id: Types.ObjectId;
+      consultation_fee: number;
+      platform_fee: number;
+      total_amount: number;
+      payment_source: 'patient_wallet' | 'specialist_wallet';
+      appointment_type?: string;
+      appointment_type_name?: string;
+    },
+  ) {
+    const {
+      patient_id,
+      specialist_id,
+      consultation_fee,
+      platform_fee,
+      total_amount,
+      payment_source,
+      appointment_type,
+      appointment_type_name,
+    } = dto;
+
+    // Generate a unique payment reference (pre-authorization token)
+    const paymentReference = `APT-PREAUTH-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+
+    if (payment_source === 'specialist_wallet') {
+      // Validate specialist has sufficient balance
+      const specialistWallet = await this.unifiedWalletService.getWalletByOwner(
+        specialist_id,
+        WalletOwnerType.SPECIALIST,
+      );
+
+      if (!specialistWallet) {
+        throw new BadRequestException('Specialist does not have a wallet');
+      }
+
+      if (specialistWallet.available_balance < total_amount) {
+        throw new BadRequestException(
+          `Insufficient specialist wallet balance. Required: ₦${total_amount.toLocaleString()}, Available: ₦${specialistWallet.available_balance.toLocaleString()}`,
+        );
+      }
+
+      this.logger.log(`Specialist wallet pre-authorized for ${total_amount}. Reference: ${paymentReference}`);
+
+      return {
+        success: true,
+        payment_reference: paymentReference,
+        payment_ref_id: new Types.ObjectId().toString(),
+        amount: total_amount,
+        consultation_fee,
+        platform_fee,
+        source: 'specialist_wallet',
+        message: 'Payment pre-authorized. Funds will be held when appointment is confirmed.',
+        is_preauthorization: true,
+      };
+
+    } else if (payment_source === 'patient_wallet') {
+      // Validate patient has sufficient balance
+      const patientWallet = await this.unifiedWalletService.getWalletByOwner(
+        patient_id,
+        WalletOwnerType.PATIENT,
+      );
+
+      if (!patientWallet) {
+        throw new BadRequestException('Patient does not have a wallet');
+      }
+
+      if (patientWallet.available_balance < total_amount) {
+        throw new BadRequestException(
+          `Insufficient patient wallet balance. Required: ₦${total_amount.toLocaleString()}, Available: ₦${patientWallet.available_balance.toLocaleString()}`,
+        );
+      }
+
+      this.logger.log(`Patient wallet pre-authorized for ${total_amount}. Reference: ${paymentReference}`);
+
+      return {
+        success: true,
+        payment_reference: paymentReference,
+        payment_ref_id: new Types.ObjectId().toString(),
+        amount: total_amount,
+        consultation_fee,
+        platform_fee,
+        source: 'patient_wallet',
+        message: 'Payment pre-authorized. Funds will be held when appointment is confirmed.',
+        is_preauthorization: true,
+      };
+    }
+
+    throw new BadRequestException('Invalid payment source');
+  }
+
   async createAppointmentBySpecialist(
-    createSpecialistAppointmentDto: any,
+    createSpecialistAppointmentDto: CreateSpecialistAppointmentDto,
     specialistId: Types.ObjectId,
   ) {
     const {
@@ -327,16 +440,38 @@ export class AppointmentsService {
       duration_minutes,
       timezone,
       appointment_type,
-      urgency,
+      appointment_type_name,
       consultation_fee,
+      platform_fee,
+      total_amount,
+      payment_source,
       patient_notes,
       private_notes,
       status,
       meeting_channel,
+      clinical_flags,
+      reminder_settings,
+      video_settings,
+      attachments,
+      notify_patient,
     } = createSpecialistAppointmentDto;
 
-    // Validate appointment time
-    const appointmentStartTime = new Date(start_time);
+    // Validate patient_id is provided
+    if (!patient_id) {
+      throw new BadRequestException('Patient ID is required');
+    }
+
+    // Validate appointment time - combine appointment_date and start_time if needed
+    let appointmentStartTime: Date;
+    if (start_time && start_time.includes('T')) {
+      // Full ISO datetime string
+      appointmentStartTime = new Date(start_time);
+    } else if (appointment_date && start_time) {
+      // Separate date and time - combine them
+      appointmentStartTime = new Date(`${appointment_date}T${start_time}:00`);
+    } else {
+      throw new BadRequestException('Invalid appointment date/time format');
+    }
     const appointmentEndTime = new Date(appointmentStartTime.getTime() + (duration_minutes || 30) * 60000);
     const now = new Date();
 
@@ -348,7 +483,6 @@ export class AppointmentsService {
     }
 
     // Check for double booking - prevent specialist from having two appointments at the same time
-
     const conflictingAppointment = await this.appointmentModel.findOne({
       specialist: specialistId,
       status: { $in: ['OPEN', 'ONGOING', 'RESCHEDULED'] },
@@ -386,68 +520,179 @@ export class AppointmentsService {
       );
     }
 
+    // Calculate total amount if not provided
+    const finalConsultationFee = consultation_fee || 0;
+    const finalPlatformFee = platform_fee || 500;
+    const finalTotalAmount = total_amount || (finalConsultationFee + finalPlatformFee);
+
+    // Initial payment status - will be updated after escrow hold
+    let paymentStatus = Status.PENDING;
+
+    // Pre-validate funds are available (but don't debit yet)
+    if (payment_source === PaymentSource.SPECIALIST_WALLET && finalTotalAmount > 0) {
+      const specialistWallet = await this.unifiedWalletService.getWalletByOwner(
+        specialistId,
+        WalletOwnerType.SPECIALIST,
+      );
+      if (!specialistWallet || specialistWallet.available_balance < finalTotalAmount) {
+        throw new BadRequestException(
+          `Insufficient specialist wallet balance. Required: ₦${finalTotalAmount.toLocaleString()}, Available: ₦${(specialistWallet?.available_balance || 0).toLocaleString()}`
+        );
+      }
+    } else if (payment_source === PaymentSource.PATIENT_WALLET && finalTotalAmount > 0) {
+      const patientWallet = await this.unifiedWalletService.getWalletByOwner(
+        patient_id,
+        WalletOwnerType.PATIENT,
+      );
+      if (!patientWallet || patientWallet.available_balance < finalTotalAmount) {
+        throw new BadRequestException(
+          `Insufficient patient wallet balance. Required: ₦${finalTotalAmount.toLocaleString()}, Available: ₦${(patientWallet?.available_balance || 0).toLocaleString()}`
+        );
+      }
+    } else if (payment_source === PaymentSource.CARD) {
+      // Card payment will be handled separately via Paystack
+      paymentStatus = Status.PENDING;
+    }
+
     // Get patient's subscription for meeting_class
     const subscription = await this.subscriptionsService.getActiveSubscription(
       patient_id,
     );
 
+    // Determine meeting channel based on video settings
+    let finalMeetingChannel = meeting_channel || 'zoom';
+    if (video_settings?.platform) {
+      finalMeetingChannel = video_settings.platform;
+    }
+
+    // Create the appointment with initial escrow status
     const appointment = await create(this.appointmentModel, {
       category: category || 'General',
-      start_time: new Date(start_time),
+      start_time: appointmentStartTime,
       timezone: timezone || 'UTC',
       appointment_type,
-      urgency: urgency || 'routine', // Default to routine if not specified
+      appointment_type_name,
+      urgency: 'routine',
       patient: patient_id,
       specialist: specialistId,
-      appointment_fee: consultation_fee || 0,
+      appointment_fee: finalConsultationFee,
+      platform_fee: finalPlatformFee,
+      total_amount: finalTotalAmount,
+      payment_source: payment_source || PaymentSource.PATIENT_WALLET,
       meeting_class: subscription?.planId?.name || 'Free',
-      meeting_channel: meeting_channel || 'zoom', // Default to Zoom if not specified
+      meeting_channel: finalMeetingChannel,
       patient_notes,
       private_notes,
       duration_minutes: duration_minutes || 30,
       status: status || 'OPEN',
-      payment_status: 'SUCCESSFUL', // Specialist-created appointments are pre-approved
+      payment_status: paymentStatus,
+      clinical_flags: clinical_flags || [],
+      reminder_settings: reminder_settings || {
+        email: { enabled: true, timing: '24h' },
+        sms: { enabled: true, timing: '1h' },
+      },
+      video_settings,
+      attachments: attachments || [],
+      escrow: {
+        status: 'none',
+      },
     });
 
-    // Handle meeting channel-specific logic (same as patient-created appointments)
+    // Hold funds in escrow for wallet payments
+    if (finalTotalAmount > 0 && (payment_source === PaymentSource.SPECIALIST_WALLET || payment_source === PaymentSource.PATIENT_WALLET)) {
+      try {
+        const escrowBatch = await this.appointmentEscrowService.holdAppointmentFunds({
+          appointment_id: appointment._id,
+          patient_id,
+          specialist_id: specialistId,
+          payment_source: payment_source as 'patient_wallet' | 'specialist_wallet',
+          consultation_fee: finalConsultationFee,
+          platform_fee: finalPlatformFee,
+          total_amount: finalTotalAmount,
+          description: `Appointment escrow hold - ${appointment_type_name || appointment_type}`,
+          performed_by: specialistId,
+        });
+
+        // Update appointment with escrow details
+        await this.updateAppointment(
+          { _id: appointment._id },
+          {
+            payment_status: Status.SUCCESSFUL,
+            escrow: {
+              status: 'held',
+              hold_batch_id: escrowBatch.batch_id,
+              held_at: new Date(),
+            },
+          },
+        );
+
+        // Update the appointment object in memory for return
+        appointment.payment_status = Status.SUCCESSFUL;
+        appointment.escrow = {
+          status: 'held',
+          hold_batch_id: escrowBatch.batch_id,
+          held_at: new Date(),
+        };
+
+        this.logger.log(`Escrow held for appointment ${appointment._id}. Batch: ${escrowBatch.batch_id}`);
+      } catch (error) {
+        this.logger.error(`Failed to hold escrow for appointment ${appointment._id}: ${error.message}`);
+
+        // Mark appointment as failed if escrow fails
+        await this.updateAppointment(
+          { _id: appointment._id },
+          { status: AppointmentStatus.FAILED, payment_status: Status.FAILED },
+        );
+
+        throw new BadRequestException(`Failed to process payment: ${error.message}`);
+      }
+    }
+
+    // Handle meeting channel-specific logic
     try {
-      if (appointment.meeting_channel === 'zoom') {
+      if (finalMeetingChannel === 'zoom' && video_settings?.auto_generate_link !== false) {
         return await this.scheduleZoomMeeting(appointment);
-      } else if (appointment.meeting_channel === 'whatsapp') {
-        return await this.scheduleWhatsAppMeeting(appointment);
-      } else if (appointment.meeting_channel === 'google_meet') {
+      } else if (finalMeetingChannel === 'google_meet') {
         return await this.scheduleGoogleMeet(appointment);
-      } else if (appointment.meeting_channel === 'microsoft_teams') {
+      } else if (finalMeetingChannel === 'microsoft_teams') {
         return await this.scheduleTeamsMeeting(appointment);
       }
 
-      // For phone and in_person, just return appointment and send notifications
-      // Get users for notification
-      const [specialist, patient] = await Promise.all([
-        this.usersService.findById(specialistId),
-        this.usersService.findById(patient_id),
-      ]);
+      // For phone and in_person, just send notifications
+      if (notify_patient !== false) {
+        const [specialist, patient] = await Promise.all([
+          this.usersService.findById(specialistId),
+          this.usersService.findById(patient_id),
+        ]);
 
-      const topic = `Appointment Between ${specialist.profile.first_name} and ${patient.profile.first_name}`;
+        const topic = `Appointment Between ${specialist.profile?.first_name || 'Specialist'} and ${patient.profile?.first_name || 'Patient'}`;
 
-      // Send appointment confirmation emails
-      await this.taskCron.addCron(
-        this.sendScheduledAppointment({
-          patient,
-          specialist,
-          start_time: appointment.start_time,
-          topic,
-          link: { join_url: '', start_url: '' }, // No link for phone/in-person
-          call_duration: String(duration_minutes || 30),
-          appointmentId: appointment._id,
-          meeting_channel: appointment.meeting_channel || 'zoom',
-          appointment_type: appointment.appointment_type,
-          patient_notes: appointment.patient_notes,
-          urgency: appointment.urgency,
-          timezone: appointment.timezone,
-        }),
-        `${Date.now()}-sendSpecialistAppointmentMail`,
-      );
+        await this.taskCron.addCron(
+          this.sendScheduledAppointment({
+            patient,
+            specialist,
+            start_time: appointment.start_time,
+            topic,
+            link: { join_url: '', start_url: '' },
+            call_duration: String(duration_minutes || 30),
+            appointmentId: appointment._id,
+            meeting_channel: appointment.meeting_channel || 'zoom',
+            appointment_type: appointment.appointment_type,
+            patient_notes: appointment.patient_notes,
+            urgency: appointment.urgency,
+            timezone: appointment.timezone,
+            // Extended data for comprehensive email
+            consultation_fee: appointment.consultation_fee || consultation_fee,
+            platform_fee: appointment.platform_fee || platform_fee,
+            total_amount: appointment.total_amount || total_amount,
+            payment_source: appointment.payment_source || payment_source,
+            clinical_flags: appointment.clinical_flags || clinical_flags,
+            pre_visit_instructions: appointment.pre_visit_instructions || patient_notes,
+            created_by_specialist: true,
+          }),
+          `${Date.now()}-sendSpecialistAppointmentMail`,
+        );
+      }
 
       return appointment;
     } catch (error) {
@@ -509,6 +754,36 @@ export class AppointmentsService {
     }
 
     if (cancelled) {
+      // Refund escrow if funds were held
+      if (appointment.escrow?.status === 'held') {
+        try {
+          const refundBatch = await this.appointmentEscrowService.refundAppointmentFunds({
+            appointment_id: appointmentId.toString(),
+            reason: 'Appointment cancelled',
+          });
+          this.logger.log(`Escrow refunded for cancelled appointment ${appointmentId}`);
+
+          // Update appointment with refund details
+          await this.updateAppointment(
+            { _id: appointmentId },
+            {
+              status: AppointmentStatus.CANCELLED,
+              'escrow.status': 'refunded',
+              'escrow.refunded_at': new Date(),
+              'escrow.settlement_batch_id': refundBatch.batch_id,
+              'escrow.settlement_type': 'cancelled',
+            },
+          );
+          return appointment;
+        } catch (escrowError) {
+          this.logger.error(
+            `Failed to refund escrow for appointment ${appointmentId}: ${escrowError.message}`,
+          );
+          // Continue with cancellation even if refund fails
+          // The refund can be processed manually later
+        }
+      }
+
       await this.updateAppointment(
         { _id: appointmentId },
         { status: AppointmentStatus.CANCELLED },
@@ -571,7 +846,8 @@ export class AppointmentsService {
     });
 
     const dateKey = moment(date).format('YYYY-MM-DD');
-    const availableSlots = availableTimes[dateKey] || [];
+    const slotsData = availableTimes[dateKey];
+    const availableSlots = slotsData?.available || [];
 
     if (!availableSlots.includes(time)) {
       throw new BadRequestException(
@@ -632,10 +908,14 @@ export class AppointmentsService {
 
     // Update appointment in database regardless of Zoom status
     // Keep status as OPEN since rescheduled appointments are still active
-    // Track reschedule timestamp for analytics
+    // Track reschedule timestamp and reason for analytics
     await this.updateAppointment(
       { _id: appointmentId },
-      { start_time: startTime, rescheduled_at: new Date() },
+      {
+        start_time: startTime,
+        rescheduled_at: new Date(),
+        reschedule_reason: rescheduleAppointmentDto.reason || undefined,
+      },
     );
 
     // Send notification emails
@@ -1025,6 +1305,14 @@ export class AppointmentsService {
     patient_notes,
     urgency,
     timezone,
+    // Extended fields
+    consultation_fee,
+    platform_fee,
+    total_amount,
+    payment_source,
+    clinical_flags,
+    pre_visit_instructions,
+    created_by_specialist,
   }: ICalendarType) {
     this.logger.log(`Getting generated ical attachment`);
     const { attachments, attendees } = this.generateICalendar({
@@ -1057,11 +1345,14 @@ export class AppointmentsService {
       appointmentDate = moment(start_time).format('MMMM Do YYYY, h:mm A');
     }
 
+    // Parse duration from call_duration string
+    const duration = parseInt(call_duration || '30') || 30;
+
     for (const attendee of attendees) {
       const isPatient = patient.profile.contact.email === attendee.email;
       this.generalHelpers.generateEmailAndSend({
         email: <string>attendee.email,
-        subject: topic,
+        subject: `✅ Appointment Confirmed - ${topic}`,
         emailBody: appointmentScheduleEmail(
           isPatient ? join_url : start_url,
           attendees,
@@ -1070,6 +1361,27 @@ export class AppointmentsService {
           appointment_type,
           patient_notes,
           urgency,
+          // Extended data for comprehensive email
+          {
+            appointmentId: appointmentId?.toString(),
+            patientName: patient.full_name,
+            patientEmail: patient.profile?.contact?.email,
+            patientPhone: patient.profile?.contact?.phone?.number,
+            specialistName: specialist.full_name,
+            specialistTitle: 'Dr.',
+            specialistSpecialty: (specialist.profile as any)?.area_of_specialty || '',
+            duration,
+            consultationFee: consultation_fee || 0,
+            platformFee: platform_fee || 0,
+            totalAmount: total_amount || 0,
+            paymentSource: payment_source,
+            paymentStatus: 'Paid',
+            timezone: timezone || 'WAT (GMT+1)',
+            clinicalFlags: clinical_flags || [],
+            preVisitInstructions: pre_visit_instructions,
+            isRecipientPatient: isPatient,
+            createdBySpecialist: created_by_specialist || false,
+          }
         ),
         attachments,
       });
@@ -1217,16 +1529,26 @@ export class AppointmentsService {
     userId: Types.ObjectId,
     queryStatus: QueryStatus,
   ) {
-    const { status } = queryStatus || {};
+    const { status, patient, limit } = queryStatus || {};
     const now = new Date();
 
     let appointments: AppointmentDocument[];
 
+    // Build base query
+    const baseQuery: any = {
+      specialist: userId,
+    };
+
+    // Add patient filter if provided
+    if (patient) {
+      baseQuery.patient = new Types.ObjectId(patient);
+    }
+
     // MISSED: appointments that are explicitly MISSED OR OPEN status with start_time in the past
     if (status === 'MISSED') {
-      appointments = await this.appointmentModel
+      const query = this.appointmentModel
         .find({
-          specialist: userId,
+          ...baseQuery,
           $or: [
             { status: 'MISSED' },
             { status: 'NO_SHOW' },
@@ -1235,25 +1557,35 @@ export class AppointmentsService {
         })
         .populate('patient', 'profile email')
         .populate('specialist', 'profile email')
-        .exec();
+        .sort({ start_time: -1 });
+
+      if (limit) {
+        query.limit(Number(limit));
+      }
+
+      appointments = await query.exec();
     } else {
       // For OPEN status, filter to only show future appointments (upcoming)
-      // For COMPLETED/CANCELLED, show past appointments (history)
+      // For COMPLETED/CANCELLED, show all (status itself is the filter)
       const dateFilter = status === 'OPEN'
         ? { start_time: { $gte: now } }
-        : status === 'COMPLETED' || status === 'CANCELLED'
-          ? { start_time: { $lt: now } }
-          : {};
+        : {}; // Don't filter by date for COMPLETED - trust the status
 
-      appointments = await this.appointmentModel
+      const query = this.appointmentModel
         .find({
-          specialist: userId,
+          ...baseQuery,
           ...(status && { status }),
           ...dateFilter,
         })
         .populate('patient', 'profile email')
         .populate('specialist', 'profile email')
-        .exec();
+        .sort({ start_time: -1 });
+
+      if (limit) {
+        query.limit(Number(limit));
+      }
+
+      appointments = await query.exec();
     }
 
     // Presign patient profile photos from S3
@@ -1384,6 +1716,35 @@ export class AppointmentsService {
           ),
         },
       );
+
+      // Settle escrow if funds were held (release to specialist and platform)
+      if (appointment.escrow?.status === 'held') {
+        try {
+          const settleBatch = await this.appointmentEscrowService.settleAppointmentFunds({
+            appointment_id: appointmentId.toString(),
+            settlement_type: 'completed',
+          });
+          this.logger.log(`Escrow settled for completed appointment ${appointmentId}`);
+
+          // Update appointment with settlement details
+          await this.updateAppointment(
+            { _id: appointmentId },
+            {
+              'escrow.status': 'settled',
+              'escrow.settled_at': new Date(),
+              'escrow.settlement_batch_id': settleBatch.batch_id,
+              'escrow.settlement_type': 'completed',
+              'escrow.consultation_fee_settled': appointment.appointment_fee,
+              'escrow.platform_fee_settled': appointment.platform_fee,
+            },
+          );
+        } catch (escrowError) {
+          this.logger.error(
+            `Failed to settle escrow for appointment ${appointmentId}: ${escrowError.message}`,
+          );
+          // Log but don't fail - settlement can be retried
+        }
+      }
 
       // Automatically fetch clinical notes from Zoom if available
       try {
@@ -1781,8 +2142,13 @@ export class AppointmentsService {
   }
 
   async getAvailableTimes(availableTimesDto: AvailableTimesDto) {
-    const { preferredDates, specialistId, urgency } = availableTimesDto;
-    const result: { [x: string]: string[] } = {};
+    const { preferredDates, specialistId, patientId, urgency } = availableTimesDto;
+    const result: {
+      [x: string]: {
+        available: string[];
+        booked: { time: string; reason: 'specialist' | 'patient' }[];
+      }
+    } = {};
 
     await Promise.all(
       preferredDates.map(async ({ date }) => {
@@ -1802,7 +2168,7 @@ export class AppointmentsService {
 
         // If specialist-specific and no preferences found, return empty
         if (specialistId && preferences.length === 0) {
-          result[dateString] = [];
+          result[dateString] = { available: [], booked: [] };
           return;
         }
 
@@ -1845,13 +2211,35 @@ export class AppointmentsService {
           }
         }
 
-        // If specialist-specific, exclude already booked times
+        // Track booked slots with reasons
+        const bookedSlots: { time: string; reason: 'specialist' | 'patient' }[] = [];
+
+        // Check specialist's booked times
         if (specialistId) {
-          const bookedTimes = await this.getSpecialistBookedTimes(
+          const specialistBookedTimes = await this.getSpecialistBookedTimes(
             specialistId,
             dateString,
           );
-          bookedTimes.forEach((time) => timeIntervals.delete(time));
+          specialistBookedTimes.forEach((time) => {
+            if (timeIntervals.has(time)) {
+              timeIntervals.delete(time);
+              bookedSlots.push({ time, reason: 'specialist' });
+            }
+          });
+        }
+
+        // Check patient's booked times (prevent double-booking for the patient)
+        if (patientId) {
+          const patientBookedTimes = await this.getPatientBookedTimes(
+            patientId,
+            dateString,
+          );
+          patientBookedTimes.forEach((time) => {
+            if (timeIntervals.has(time)) {
+              timeIntervals.delete(time);
+              bookedSlots.push({ time, reason: 'patient' });
+            }
+          });
         }
 
         // Sort time intervals chronologically
@@ -1859,7 +2247,15 @@ export class AppointmentsService {
           return moment(a, 'HH:mm').diff(moment(b, 'HH:mm'));
         });
 
-        result[dateString] = sortedTimes;
+        // Sort booked slots chronologically
+        bookedSlots.sort((a, b) => {
+          return moment(a.time, 'HH:mm').diff(moment(b.time, 'HH:mm'));
+        });
+
+        result[dateString] = {
+          available: sortedTimes,
+          booked: bookedSlots,
+        };
       }),
     );
     return result;
@@ -1877,6 +2273,28 @@ export class AppointmentsService {
 
     const bookedAppointments = await find(this.appointmentModel, {
       specialist: new Types.ObjectId(specialistId),
+      start_time: { $gte: dayStart, $lte: dayEnd },
+      status: { $in: [AppointmentStatus.OPEN, AppointmentStatus.ONGOING, AppointmentStatus.RESCHEDULED] },
+    });
+
+    return bookedAppointments.map((apt) =>
+      moment(apt.start_time).format('HH:mm'),
+    );
+  }
+
+  /**
+   * Get times that are already booked for a patient on a specific date
+   * This prevents double-booking the same patient
+   */
+  private async getPatientBookedTimes(
+    patientId: string,
+    dateString: string,
+  ): Promise<string[]> {
+    const dayStart = moment(dateString).startOf('day').toDate();
+    const dayEnd = moment(dateString).endOf('day').toDate();
+
+    const bookedAppointments = await find(this.appointmentModel, {
+      patient: new Types.ObjectId(patientId),
       start_time: { $gte: dayStart, $lte: dayEnd },
       status: { $in: [AppointmentStatus.OPEN, AppointmentStatus.ONGOING, AppointmentStatus.RESCHEDULED] },
     });
@@ -2109,25 +2527,48 @@ export class AppointmentsService {
         recommendations: score.report?.recommendations || [],
       })) || [];
 
-      // Format appointments with notes
-      const formattedAppointments = appointments.map((apt: any) => {
-        const specialistProfile = apt.specialist?.profile as any;
-        return {
-          id: apt._id,
-          date: apt.start_time,
-          status: apt.status,
-          appointment_type: apt.appointment_type,
-          specialist: {
-            name: specialistProfile
-              ? `${specialistProfile.first_name || ''} ${specialistProfile.last_name || ''}`.trim()
-              : 'Unknown',
-            specialty: specialistProfile?.specialty || 'General',
-          },
-          notes: apt.notes || null,
-          call_duration: apt.call_duration || null,
-          cancellation_reason: apt.cancellation_reason || null,
-        };
-      });
+      // Format appointments with notes (with presigned URLs for specialist images)
+      const formattedAppointments = await Promise.all(
+        appointments.map(async (apt: any) => {
+          const specialistProfile = apt.specialist?.profile as any;
+          const rawProfileImage = specialistProfile?.profile_photo || specialistProfile?.profile_image || null;
+
+          // Generate presigned URL for specialist profile image
+          let profileImageUrl: string | null = null;
+          if (rawProfileImage) {
+            try {
+              profileImageUrl = await this.fileUploadHelper.resolveProfileImage(rawProfileImage);
+            } catch (err) {
+              this.logger.warn(`Failed to resolve specialist profile image: ${err.message}`);
+            }
+          }
+
+          return {
+            id: apt._id,
+            date: apt.start_time,
+            start_time: apt.start_time,
+            status: apt.status,
+            appointment_type: apt.appointment_type,
+            meeting_channel: apt.meeting_channel,
+            duration_minutes: apt.duration_minutes,
+            appointment_fee: apt.appointment_fee,
+            total_amount: apt.total_amount,
+            platform_fee: apt.platform_fee,
+            specialist: {
+              id: apt.specialist?._id,
+              name: specialistProfile
+                ? `${specialistProfile.first_name || ''} ${specialistProfile.last_name || ''}`.trim()
+                : 'Unknown',
+              specialty: specialistProfile?.specialty || 'General',
+              profile_image: profileImageUrl,
+            },
+            notes: apt.notes || null,
+            call_duration: apt.call_duration || null,
+            cancellation_reason: apt.cancellation_reason || null,
+            join_url: apt.meeting?.join_url || null,
+          };
+        }),
+      );
 
       // Get basic health score from stored value
       const storedBasicScore = user?.basic_health_score;
@@ -2888,6 +3329,7 @@ export class AppointmentsService {
           start_time: apt.start_time,
           status: apt.status,
           notes: apt.notes,
+          clinical_notes: apt.clinical_notes,
           call_duration: apt.call_duration,
         })),
         has_health_data: formattedCheckups.length > 0 || basicHealthScore !== null || latestAdvancedScore !== null,
@@ -3176,5 +3618,60 @@ export class AppointmentsService {
     }
 
     return formatted;
+  }
+
+  /**
+   * Get filter options for appointments (statuses, channels, consultation services)
+   * Returns all available options for filtering appointments in the UI
+   */
+  async getFilterOptions() {
+    // Get consultation services (appointment types) from DB
+    const consultationServices = await this.consultationServicesService.findAll();
+
+    // Filter statuses - only return statuses that make sense for filtering
+    const statuses = [
+      { value: 'OPEN', label: 'Confirmed', description: 'Upcoming confirmed appointments' },
+      { value: 'COMPLETED', label: 'Completed', description: 'Successfully completed appointments' },
+      { value: 'MISSED', label: 'No Show', description: 'Appointments where patient did not attend' },
+      { value: 'CANCELLED', label: 'Cancelled', description: 'Cancelled appointments' },
+      { value: 'RESCHEDULED', label: 'Rescheduled', description: 'Appointments that have been rescheduled' },
+      { value: 'ONGOING', label: 'In Progress', description: 'Currently ongoing appointments' },
+    ];
+
+    // Meeting channels
+    const channels = [
+      { value: MeetingChannel.ZOOM, label: 'Zoom', description: 'Video call via Zoom' },
+      { value: MeetingChannel.GOOGLE_MEET, label: 'Google Meet', description: 'Video call via Google Meet' },
+      { value: MeetingChannel.WHATSAPP, label: 'WhatsApp', description: 'Call via WhatsApp' },
+      { value: MeetingChannel.PHONE, label: 'Phone', description: 'Traditional phone call' },
+      { value: MeetingChannel.IN_PERSON, label: 'In Person', description: 'Face-to-face appointment' },
+    ];
+
+    // Date range presets
+    const dateRanges = [
+      { value: 'today', label: 'Today' },
+      { value: 'week', label: 'This Week' },
+      { value: 'month', label: 'This Month' },
+      { value: 'past_week', label: 'Past Week' },
+      { value: 'past_month', label: 'Past Month' },
+    ];
+
+    return {
+      statuses,
+      channels,
+      consultationServices: consultationServices
+        .filter((s: any) => s.is_active)
+        .sort((a: any, b: any) => (a.display_order || 0) - (b.display_order || 0))
+        .map((s: any) => ({
+          value: s.name,
+          label: s.name,
+          slug: s.slug,
+          description: s.description,
+          icon: s.icon,
+          icon_color: s.icon_color,
+          icon_bg_color: s.icon_bg_color,
+        })),
+      dateRanges,
+    };
   }
 }

@@ -25,6 +25,7 @@
 						<div class="patient-avatar">
 							<rc-avatar
 								size="lg"
+								borderless
 								:firstName="patient.profile?.first_name || ''"
 								:lastName="patient.profile?.last_name || ''"
 								:modelValue="getProfileImage(patient)"
@@ -77,18 +78,71 @@
 
 			<!-- Quick Actions -->
 			<div class="quick-actions" v-if="patient">
-				<button class="action-btn" @click="bookAppointment">
-					<v-icon name="hi-calendar" scale="1" />
-					<span>Book Appointment</span>
-				</button>
-				<button class="action-btn" @click="writePrescription">
-					<v-icon name="ri-capsule-fill" scale="1" />
-					<span>Write Prescription</span>
-				</button>
-				<button class="action-btn" @click="addClinicalNote">
-					<v-icon name="hi-document-text" scale="1" />
-					<span>Add Clinical Note</span>
-				</button>
+				<div class="actions-group primary-actions">
+					<button class="action-btn primary" @click="bookAppointment">
+						<v-icon name="hi-calendar" scale="1" />
+						<span>Book Appointment</span>
+					</button>
+					<button class="action-btn" @click="writePrescription">
+						<v-icon name="ri-capsule-fill" scale="1" />
+						<span>Write Prescription</span>
+					</button>
+					<button class="action-btn" @click="addClinicalNote">
+						<v-icon name="hi-document-text" scale="1" />
+						<span>Add Clinical Note</span>
+					</button>
+				</div>
+				<div class="actions-group contact-actions">
+					<button v-if="getPhone(patient)" class="contact-btn call" @click="callPatient" title="Call Patient">
+						<v-icon name="hi-phone" scale="1" />
+					</button>
+					<button v-if="getEmail(patient)" class="contact-btn email" @click="emailPatient" title="Send Email">
+						<v-icon name="hi-mail" scale="1" />
+					</button>
+					<button class="contact-btn message" @click="sendMessage" title="Send Message">
+						<v-icon name="hi-chat-alt-2" scale="1" />
+					</button>
+				</div>
+			</div>
+
+			<!-- Patient Stats Summary -->
+			<div class="stats-summary" v-if="patient">
+				<div class="stat-card-mini">
+					<div class="stat-icon blue">
+						<v-icon name="hi-calendar" scale="0.9" />
+					</div>
+					<div class="stat-info">
+						<span class="stat-value">{{ patientStats?.totalAppointments || patient.stats?.totalAppointments || 0 }}</span>
+						<span class="stat-label">Total Visits</span>
+					</div>
+				</div>
+				<div class="stat-card-mini">
+					<div class="stat-icon green">
+						<v-icon name="hi-check-circle" scale="0.9" />
+					</div>
+					<div class="stat-info">
+						<span class="stat-value">{{ patientStats?.completedAppointments || patient.stats?.completedAppointments || 0 }}</span>
+						<span class="stat-label">Completed</span>
+					</div>
+				</div>
+				<div class="stat-card-mini">
+					<div class="stat-icon purple">
+						<v-icon name="ri-capsule-line" scale="0.9" />
+					</div>
+					<div class="stat-info">
+						<span class="stat-value">{{ patientStats?.prescriptionCount || patient.stats?.prescriptionCount || 0 }}</span>
+						<span class="stat-label">Prescriptions</span>
+					</div>
+				</div>
+				<div class="stat-card-mini">
+					<div class="stat-icon orange">
+						<v-icon name="hi-clock" scale="0.9" />
+					</div>
+					<div class="stat-info">
+						<span class="stat-value">{{ formatLastVisitShort(patientStats?.lastVisit || patient.stats?.lastVisit) }}</span>
+						<span class="stat-label">Last Visit</span>
+					</div>
+				</div>
 			</div>
 
 			<!-- Skeleton Loading State -->
@@ -1006,107 +1060,242 @@
 					</div>
 
 					<!-- Appointments Tab -->
-					<div v-if="activeTab === 'appointments'" class="tab-content appointments-tab">
-						<div class="content-wrapper">
-							<div class="section-header-bar">
-								<div class="header-title">
-									<v-icon name="hi-calendar" scale="1.1" />
-									<h3>Appointment History</h3>
+					<div v-if="activeTab === 'appointments'" class="tab-content appointments-tab-v2">
+						<!-- Stats Overview -->
+						<div class="apt-stats-row">
+							<div class="apt-stat-card stat-total">
+								<div class="stat-icon-wrap">
+									<v-icon name="hi-calendar" scale="1" />
 								</div>
-								<span class="total-badge">{{ appointmentsData.pagination?.total || appointmentsData.items?.length || 0 }} total</span>
+								<div class="stat-content">
+									<span class="stat-number">{{ appointmentStatusCounts.total }}</span>
+									<span class="stat-label">Total</span>
+								</div>
 							</div>
+							<div class="apt-stat-card stat-confirmed">
+								<div class="stat-icon-wrap">
+									<v-icon name="hi-check-circle" scale="1" />
+								</div>
+								<div class="stat-content">
+									<span class="stat-number">{{ appointmentStatusCounts.confirmed }}</span>
+									<span class="stat-label">Confirmed</span>
+								</div>
+							</div>
+							<div class="apt-stat-card stat-completed">
+								<div class="stat-icon-wrap">
+									<v-icon name="hi-badge-check" scale="1" />
+								</div>
+								<div class="stat-content">
+									<span class="stat-number">{{ appointmentStatusCounts.completed }}</span>
+									<span class="stat-label">Completed</span>
+								</div>
+							</div>
+							<div class="apt-stat-card stat-cancelled">
+								<div class="stat-icon-wrap">
+									<v-icon name="hi-x-circle" scale="1" />
+								</div>
+								<div class="stat-content">
+									<span class="stat-number">{{ appointmentStatusCounts.cancelled }}</span>
+									<span class="stat-label">Cancelled</span>
+								</div>
+							</div>
+							<div class="apt-stat-card stat-noshow">
+								<div class="stat-icon-wrap">
+									<v-icon name="hi-user-remove" scale="1" />
+								</div>
+								<div class="stat-content">
+									<span class="stat-number">{{ appointmentStatusCounts.noShow }}</span>
+									<span class="stat-label">No Show</span>
+								</div>
+							</div>
+						</div>
 
-							<div v-if="appointmentsData.items?.length" class="appointments-list">
-								<div
-									v-for="apt in appointmentsData.items"
-									:key="apt.id || apt._id"
-									class="appointment-card-enhanced glass-card"
-									@click.stop="viewAppointmentDetails(apt)"
+						<!-- Filter Tabs -->
+						<div class="apt-filter-section">
+							<div class="apt-filter-tabs">
+								<button
+									class="filter-tab"
+									:class="{ active: !appointmentStatusFilter }"
+									@click="setAppointmentStatusFilter('')"
 								>
-									<div class="card-left-accent" :class="getAppointmentStatusClass(apt)"></div>
-									<div class="appointment-card-header" :class="getAppointmentStatusClass(apt)">
-										<div class="header-left">
-											<div class="date-block">
-												<span class="date-day">{{ formatAppointmentDay(apt.date || apt.start_time) }}</span>
-												<span class="date-month">{{ formatAppointmentMonth(apt.date || apt.start_time) }}</span>
-											</div>
-											<div class="header-info">
+									All ({{ appointmentStatusCounts.total }})
+								</button>
+								<button
+									class="filter-tab"
+									:class="{ active: appointmentStatusFilter === 'OPEN' }"
+									@click="setAppointmentStatusFilter('OPEN')"
+								>
+									Confirmed ({{ appointmentStatusCounts.confirmed }})
+								</button>
+								<button
+									class="filter-tab"
+									:class="{ active: appointmentStatusFilter === 'COMPLETED' }"
+									@click="setAppointmentStatusFilter('COMPLETED')"
+								>
+									Completed ({{ appointmentStatusCounts.completed }})
+								</button>
+								<button
+									class="filter-tab"
+									:class="{ active: appointmentStatusFilter === 'CANCELLED' }"
+									@click="setAppointmentStatusFilter('CANCELLED')"
+								>
+									Cancelled ({{ appointmentStatusCounts.cancelled }})
+								</button>
+								<button
+									class="filter-tab"
+									:class="{ active: appointmentStatusFilter === 'MISSED' }"
+									@click="setAppointmentStatusFilter('MISSED')"
+								>
+									No Show ({{ appointmentStatusCounts.noShow }})
+								</button>
+							</div>
+							<button class="btn-book-apt" @click="bookAppointment">
+								<v-icon name="hi-plus" scale="0.9" />
+								<span>Book New</span>
+							</button>
+						</div>
+
+						<!-- Appointments Table -->
+						<div v-if="filteredAppointments.length" class="apt-table-card">
+							<table class="apt-table">
+								<thead>
+									<tr>
+										<th>Date & Time</th>
+										<th>Specialist</th>
+										<th>Type</th>
+										<th>Channel</th>
+										<th>Duration</th>
+										<th>Fee</th>
+										<th>Status</th>
+										<th class="th-actions">Actions</th>
+									</tr>
+								</thead>
+								<tbody>
+									<tr
+										v-for="(apt, aptIndex) in filteredAppointments"
+										:key="apt.id || apt._id"
+										:class="['apt-row', `row-${getAppointmentStatusClass(apt)}`]"
+									>
+										<td>
+											<div class="datetime-cell">
+												<span class="date-text">{{ formatAppointmentDate(apt.date || apt.start_time) }}</span>
 												<span class="time-text">{{ formatAppointmentTime(apt.date || apt.start_time) }}</span>
-												<span class="type-text">{{ apt.appointment_type || 'Consultation' }}</span>
 											</div>
-										</div>
-										<div class="header-right">
-											<span class="status-badge" :class="getAppointmentStatusClass(apt)">
+										</td>
+										<td>
+											<div class="specialist-cell">
+												<div class="specialist-avatar-sm">
+													<img v-if="apt.specialist?.profile_image" :src="apt.specialist.profile_image" :alt="apt.specialist?.name" referrerpolicy="no-referrer" @error="handleSpecialistImgError($event)" />
+													<v-icon v-if="!apt.specialist?.profile_image" name="hi-user-circle" scale="1.2" />
+												</div>
+												<div class="specialist-info-sm">
+													<span class="specialist-name-sm">{{ apt.specialist?.name || apt.specialist?.profile?.first_name || 'Specialist' }}</span>
+													<span class="specialist-specialty-sm">{{ apt.specialist?.specialty || apt.specialist?.specialization || 'General' }}</span>
+												</div>
+											</div>
+										</td>
+										<td>
+											<span class="type-badge">{{ apt.appointment_type || 'Consultation' }}</span>
+										</td>
+										<td>
+											<div class="channel-cell">
+												<v-icon :name="getChannelIcon(apt.meeting_channel)" scale="0.85" class="channel-icon" />
+												<span>{{ getChannelLabel(apt.meeting_channel) }}</span>
+											</div>
+										</td>
+										<td>
+											<span class="duration-text">{{ formatDuration(apt.duration_minutes, apt.call_duration, apt.status) }}</span>
+										</td>
+										<td>
+											<span class="fee-text">{{ formatAppointmentFee(apt) }}</span>
+										</td>
+										<td>
+											<span class="apt-status-badge" :class="getAppointmentStatusClass(apt)">
 												{{ getAppointmentDisplayStatus(apt) }}
 											</span>
-										</div>
-									</div>
-									<div class="appointment-card-body">
-										<div class="specialist-row">
-											<div class="specialist-avatar">
-												<img v-if="apt.specialist?.profile_image" :src="apt.specialist.profile_image" :alt="apt.specialist?.name" />
-												<v-icon v-else name="hi-user-circle" scale="2" />
+										</td>
+										<td>
+											<div class="actions-cell">
+												<button class="apt-action-btn view" title="View Details" @click="viewAppointmentDetails(apt)">
+													<v-icon name="hi-eye" scale="0.9" />
+												</button>
+												<template v-if="normalizeAppointmentStatus(apt) === 'confirmed'">
+													<a v-if="apt.join_url" :href="apt.join_url" target="_blank" class="apt-action-btn meeting" title="Join Meeting">
+														<v-icon name="hi-video-camera" scale="0.9" />
+													</a>
+												</template>
+												<template v-if="normalizeAppointmentStatus(apt) === 'completed'">
+													<button class="apt-action-btn notes" title="Clinical Notes" @click="addClinicalNote">
+														<v-icon name="hi-document-text" scale="0.9" />
+													</button>
+												</template>
+												<div class="apt-more-dropdown">
+													<button class="apt-action-btn more" title="More options" @click.stop="toggleAptMenu(apt._id || apt.id)">
+														<v-icon name="hi-dots-vertical" scale="0.9" />
+													</button>
+													<div v-if="activeAptMenu === (apt._id || apt.id)" class="apt-dropdown-menu" :class="{ upward: aptIndex >= filteredAppointments.length - 2 }">
+														<button @click="viewAppointmentDetails(apt)">
+															<v-icon name="hi-eye" scale="0.8" />
+															<span>View Details</span>
+														</button>
+														<button v-if="normalizeAppointmentStatus(apt) === 'confirmed'" @click="rescheduleAppointment(apt)">
+															<v-icon name="hi-calendar" scale="0.8" />
+															<span>Reschedule</span>
+														</button>
+														<button v-if="normalizeAppointmentStatus(apt) === 'confirmed'" @click="cancelAppointment(apt)" class="danger">
+															<v-icon name="hi-x-circle" scale="0.8" />
+															<span>Cancel</span>
+														</button>
+														<button @click="addClinicalNote">
+															<v-icon name="hi-document-text" scale="0.8" />
+															<span>Clinical Notes</span>
+														</button>
+													</div>
+												</div>
 											</div>
-											<div class="specialist-info">
-												<span class="specialist-name">{{ apt.specialist?.name || 'Specialist' }}</span>
-												<span class="specialty">{{ apt.specialist?.specialty || 'General Consultation' }}</span>
-											</div>
-										</div>
-										<div class="appointment-meta">
-											<div class="meta-item" v-if="apt.appointment_type">
-												<v-icon name="hi-video-camera" scale="0.8" />
-												<span>{{ apt.appointment_type }}</span>
-											</div>
-											<div class="meta-item" v-if="formatCallDuration(apt.call_duration)">
-												<v-icon name="hi-clock" scale="0.8" />
-												<span>{{ formatCallDuration(apt.call_duration) }}</span>
-											</div>
-											<div class="meta-item" v-if="apt.fee || apt.amount">
-												<v-icon name="hi-currency-dollar" scale="0.8" />
-												<span>{{ formatCurrency(apt.fee || apt.amount) }}</span>
-											</div>
-										</div>
-										<div class="notes-section" v-if="apt.notes">
-											<div class="notes-label">
-												<v-icon name="hi-annotation" scale="0.7" />
-												<span>Notes</span>
-											</div>
-											<p class="notes-content">{{ apt.notes }}</p>
-										</div>
-										<div class="cancellation-banner" v-if="apt.cancellation_reason">
-											<v-icon name="hi-x-circle" scale="0.9" />
-											<span>{{ apt.cancellation_reason }}</span>
-										</div>
-									</div>
-									<div class="appointment-card-footer">
-										<span class="view-link">
-											<span>View Appointment Details</span>
-											<v-icon name="hi-arrow-right" scale="0.8" />
-										</span>
-									</div>
-								</div>
-							</div>
-							<div v-else class="empty-state glass-card">
-								<div class="empty-icon-wrapper">
-									<v-icon name="hi-calendar" scale="2.5" />
-								</div>
-								<h4>No Appointments</h4>
-								<p>No appointment history with this patient</p>
-							</div>
+										</td>
+									</tr>
+								</tbody>
+							</table>
+						</div>
 
-							<!-- Pagination -->
-							<div v-if="appointmentsData.pagination?.total_pages > 1" class="pagination">
-								<button :disabled="appointmentsData.pagination.page <= 1" @click="fetchAppointmentsData(appointmentsData.pagination.page - 1)" class="page-btn">
+						<!-- Empty State -->
+						<div v-else class="apt-empty-state">
+							<div class="empty-illustration">
+								<v-icon name="hi-calendar" scale="2.5" />
+							</div>
+							<h4>No Appointments Found</h4>
+							<p v-if="appointmentStatusFilter">No {{ getAppointmentDisplayStatus({ status: appointmentStatusFilter }) }} appointments with this patient</p>
+							<p v-else>No appointment history with this patient</p>
+							<button class="btn-book-empty" @click="bookAppointment">
+								<v-icon name="hi-plus-circle" scale="1" />
+								<span>Book First Appointment</span>
+							</button>
+						</div>
+
+						<!-- Pagination -->
+						<div v-if="appointmentsData.pagination?.total_pages > 1" class="apt-pagination">
+							<div class="pagination-info">
+								Showing <strong>{{ filteredAppointments.length }}</strong> of <strong>{{ appointmentsData.pagination?.total || appointmentsData.items?.length || 0 }}</strong> appointments
+							</div>
+							<div class="pagination-controls">
+								<button
+									class="page-btn"
+									:disabled="appointmentsData.pagination.page <= 1"
+									@click="fetchAppointmentsData(appointmentsData.pagination.page - 1)"
+								>
 									<v-icon name="hi-chevron-left" scale="0.9" />
-									<span>Previous</span>
 								</button>
-								<div class="page-indicator">
-									<span class="current">{{ appointmentsData.pagination.page }}</span>
-									<span class="separator">/</span>
-									<span class="total">{{ appointmentsData.pagination.total_pages }}</span>
+								<div class="page-numbers">
+									<span class="current-page">{{ appointmentsData.pagination.page }}</span>
+									<span class="page-sep">/</span>
+									<span class="total-pages">{{ appointmentsData.pagination.total_pages }}</span>
 								</div>
-								<button :disabled="appointmentsData.pagination.page >= appointmentsData.pagination.total_pages" @click="fetchAppointmentsData(appointmentsData.pagination.page + 1)" class="page-btn">
-									<span>Next</span>
+								<button
+									class="page-btn"
+									:disabled="appointmentsData.pagination.page >= appointmentsData.pagination.total_pages"
+									@click="fetchAppointmentsData(appointmentsData.pagination.page + 1)"
+								>
 									<v-icon name="hi-chevron-right" scale="0.9" />
 								</button>
 							</div>
@@ -1250,7 +1439,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, inject } from 'vue';
+import { ref, computed, onMounted, onUnmounted, inject } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import moment from 'moment';
 import TopBar from "@/components/Navigation/top-bar";
@@ -1279,6 +1468,8 @@ const uploadedPrescriptions = ref({ uploads: [], stats: null, pagination: null }
 const pharmacyOrders = ref({ orders: [], stats: null, pagination: null });
 const appointments = ref(null);
 const appointmentsData = ref({ items: [], pagination: null });
+const appointmentStatusFilter = ref('');  // '', 'OPEN', 'COMPLETED', 'CANCELLED', 'MISSED'
+const activeAptMenu = ref(null);  // Track which appointment's dropdown menu is open
 const purchases = ref(null);
 const timeline = ref(null);
 const timelineData = ref({ items: [], pagination: null });
@@ -1366,6 +1557,41 @@ const healthScoresData = computed(() => {
 		basic: overview.value?.healthScores?.basic || healthRecords.value?.healthScores?.basic || null,
 		advanced: overview.value?.healthScores?.advanced || healthRecords.value?.healthScores?.advanced || null,
 	};
+});
+
+// Helper function for appointment status (must be defined before computed properties that use it)
+const isAppointmentMissed = (apt) => {
+	if (!apt.date && !apt.start_time) return false;
+	const status = apt.status?.toUpperCase();
+	if (status !== 'OPEN') return false;
+	const appointmentDate = new Date(apt.date || apt.start_time);
+	const now = new Date();
+	return appointmentDate < now;
+};
+
+// Appointments tab computed properties
+const appointmentStatusCounts = computed(() => {
+	const items = appointmentsData.value?.items || [];
+	const counts = { total: items.length, confirmed: 0, completed: 0, cancelled: 0, noShow: 0 };
+	items.forEach(apt => {
+		const status = apt.status?.toUpperCase();
+		if (status === 'OPEN' || status === 'ONGOING') counts.confirmed++;
+		else if (status === 'COMPLETED') counts.completed++;
+		else if (status === 'CANCELLED') counts.cancelled++;
+		else if (status === 'MISSED' || status === 'NO_SHOW' || isAppointmentMissed(apt)) counts.noShow++;
+	});
+	return counts;
+});
+
+const filteredAppointments = computed(() => {
+	const items = appointmentsData.value?.items || [];
+	if (!appointmentStatusFilter.value) return items;
+	return items.filter(apt => {
+		const status = apt.status?.toUpperCase();
+		if (appointmentStatusFilter.value === 'OPEN') return status === 'OPEN' || status === 'ONGOING';
+		if (appointmentStatusFilter.value === 'MISSED') return status === 'MISSED' || status === 'NO_SHOW' || isAppointmentMissed(apt);
+		return status === appointmentStatusFilter.value;
+	});
 });
 
 // Methods
@@ -1549,6 +1775,37 @@ function addClinicalNote() {
 	});
 }
 
+function callPatient() {
+	const phone = getPhone(patient.value);
+	if (phone) {
+		window.open(`tel:${phone.replace(/\s/g, '')}`, '_self');
+	}
+}
+
+function emailPatient() {
+	const email = getEmail(patient.value);
+	if (email) {
+		window.open(`mailto:${email}?subject=Regarding your healthcare`, '_blank');
+	}
+}
+
+function sendMessage() {
+	// Navigate to messaging or show a message modal
+	$toast?.info('Messaging feature coming soon');
+}
+
+function formatLastVisitShort(date) {
+	if (!date) return 'Never';
+	const m = moment(date).startOf('day');
+	const now = moment().startOf('day');
+	const days = now.diff(m, 'days');
+	if (days === 0) return 'Today';
+	if (days === 1) return 'Yesterday';
+	if (days < 7) return `${days}d ago`;
+	if (days < 30) return `${Math.floor(days / 7)}w ago`;
+	return moment(date).format('MMM D');
+}
+
 function viewScoreDetails(score) {
 	// Navigate to the HealthScoreReport page with score details
 	// Using "dashboard" as appointmentId since we're coming from patient dashboard
@@ -1720,7 +1977,7 @@ function formatAptTime(date) {
 }
 
 function formatCurrency(amount) {
-	if (!amount) return 'N0';
+	if (!amount && amount !== 0) return null;
 	return new Intl.NumberFormat('en-NG', {
 		style: 'currency',
 		currency: 'NGN',
@@ -2014,15 +2271,6 @@ const fetchAppointmentsData = async (page = 1) => {
 	}
 };
 
-const isAppointmentMissed = (apt) => {
-	if (!apt.date && !apt.start_time) return false;
-	const status = apt.status?.toUpperCase();
-	if (status !== 'OPEN') return false;
-	const appointmentDate = new Date(apt.date || apt.start_time);
-	const now = new Date();
-	return appointmentDate < now;
-};
-
 const getAppointmentDisplayStatus = (apt) => {
 	if (isAppointmentMissed(apt)) return 'Missed';
 	const status = apt.status?.toUpperCase();
@@ -2080,19 +2328,163 @@ const formatCallDuration = (seconds) => {
 	return `${mins}m ${secs}s`;
 };
 
+const setAppointmentStatusFilter = (status) => {
+	appointmentStatusFilter.value = status;
+};
+
+const normalizeAppointmentStatus = (apt) => {
+	if (isAppointmentMissed(apt)) return 'no_show';
+	const status = apt.status?.toUpperCase();
+	const statusMap = {
+		'OPEN': 'confirmed',
+		'ONGOING': 'in_progress',
+		'COMPLETED': 'completed',
+		'CANCELLED': 'cancelled',
+		'RESCHEDULED': 'rescheduled',
+		'NO_SHOW': 'no_show',
+		'MISSED': 'no_show',
+	};
+	return statusMap[status] || 'pending';
+};
+
+const getChannelLabel = (channel) => {
+	const channelMap = {
+		'zoom': 'Zoom',
+		'google_meet': 'Google Meet',
+		'whatsapp': 'WhatsApp',
+		'phone': 'Phone Call',
+		'in_person': 'In Person',
+		'video': 'Video Call',
+	};
+	return channelMap[channel?.toLowerCase()] || channel || 'Video Call';
+};
+
+const getChannelIcon = (channel) => {
+	const iconMap = {
+		'zoom': 'hi-video-camera',
+		'google_meet': 'hi-video-camera',
+		'whatsapp': 'co-whatsapp',
+		'phone': 'hi-phone',
+		'in_person': 'hi-office-building',
+		'video': 'hi-video-camera',
+	};
+	return iconMap[channel?.toLowerCase()] || 'hi-video-camera';
+};
+
+const formatAppointmentDate = (date) => {
+	if (!date) return '-';
+	return moment(date).format('ddd, MMM D');
+};
+
+const formatAppointmentFee = (apt) => {
+	// Try to get fee from various fields
+	const fee = apt.appointment_fee || apt.total_amount || apt.fee || apt.amount;
+
+	if (!fee && fee !== 0) return '-';
+	if (fee === 0) return 'Free';
+
+	// Format with Nigerian Naira
+	return new Intl.NumberFormat('en-NG', {
+		style: 'currency',
+		currency: 'NGN',
+		minimumFractionDigits: 0,
+	}).format(fee);
+};
+
 const viewAppointmentDetails = (apt) => {
 	const appointmentId = apt.id || apt._id;
 	if (!appointmentId) return;
+	activeAptMenu.value = null;  // Close menu
 	router.push({
-		path: `/app/specialist/specialist-appointments/details/${appointmentId}`,
-		query: { appointment_status: apt.status?.toLowerCase() || 'completed' }
+		path: `/app/specialist/appointments-v2/${appointmentId}`,
 	});
+};
+
+const formatDuration = (durationMinutes, callDuration, status) => {
+	// For completed appointments, show actual call duration if available
+	const normalizedStatus = status?.toLowerCase();
+	if (normalizedStatus === 'completed' && callDuration) {
+		// Handle object format: { time_taken: 30, unit: "Minutes" }
+		if (typeof callDuration === 'object') {
+			const timeTaken = callDuration.time_taken || callDuration.timeTaken || 0;
+			const unit = callDuration.unit?.toLowerCase() || 'minutes';
+			if (timeTaken > 0) {
+				if (unit === 'hours' || unit === 'hour') {
+					return `${timeTaken}h`;
+				}
+				return `${timeTaken} min`;
+			}
+		}
+		// Handle string format (legacy)
+		if (typeof callDuration === 'string') {
+			const parsed = parseInt(callDuration);
+			if (!isNaN(parsed) && parsed > 0) {
+				return `${parsed} min`;
+			}
+		}
+	}
+
+	// For non-completed or if no call duration, show scheduled duration
+	if (durationMinutes && typeof durationMinutes === 'number' && durationMinutes > 0) {
+		if (durationMinutes >= 60) {
+			const hrs = Math.floor(durationMinutes / 60);
+			const mins = durationMinutes % 60;
+			return mins > 0 ? `${hrs}h ${mins}m` : `${hrs}h`;
+		}
+		return `${durationMinutes} min`;
+	}
+
+	return '-';
+};
+
+const toggleAptMenu = (aptId) => {
+	if (activeAptMenu.value === aptId) {
+		activeAptMenu.value = null;
+	} else {
+		activeAptMenu.value = aptId;
+	}
+};
+
+const rescheduleAppointment = (apt) => {
+	activeAptMenu.value = null;
+	// Navigate to reschedule - for now just view details
+	viewAppointmentDetails(apt);
+};
+
+const cancelAppointment = (apt) => {
+	activeAptMenu.value = null;
+	// For now just show a toast - would need a modal for proper implementation
+	$toast?.warning('Cancel functionality coming soon');
+};
+
+// Close dropdown when clicking outside
+const closeAptMenu = () => {
+	activeAptMenu.value = null;
+};
+
+// Handle specialist image load error - show fallback icon
+const handleSpecialistImgError = (event) => {
+	event.target.style.display = 'none';
+	// Show the fallback icon by adding a sibling
+	const parent = event.target.parentElement;
+	if (parent && !parent.querySelector('.fallback-icon')) {
+		const icon = document.createElement('span');
+		icon.className = 'fallback-icon';
+		icon.innerHTML = '<svg viewBox="0 0 20 20" fill="currentColor" style="width:24px;height:24px;color:#94a3b8"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z" clip-rule="evenodd"/></svg>';
+		parent.appendChild(icon);
+	}
 };
 
 // Initialize
 onMounted(() => {
+	// Close dropdown when clicking outside
+	document.addEventListener('click', closeAptMenu);
 	fetchPatientData();
 	// Data for other tabs is lazy-loaded via loadTabData when user switches tabs
+});
+
+onUnmounted(() => {
+	document.removeEventListener('click', closeAptMenu);
 });
 </script>
 
@@ -2102,7 +2494,8 @@ onMounted(() => {
 	flex-direction: column;
 	width: 100%;
 	height: 100%;
-	padding: 0 256px;
+	padding: 0;
+	background: #F8FAFC;
 
 	@include responsive(tab-portrait) {
 		padding: 0;
@@ -2112,24 +2505,35 @@ onMounted(() => {
 		display: flex;
 		flex-direction: column;
 		width: 100%;
+		max-width: 1400px;
+		margin: 0 auto;
 		height: 100%;
 		overflow-y: auto;
 		padding-bottom: 100px;
 
 		&::-webkit-scrollbar {
-			display: none;
+			width: 6px;
+		}
+
+		&::-webkit-scrollbar-track {
+			background: transparent;
+		}
+
+		&::-webkit-scrollbar-thumb {
+			background: #CBD5E1;
+			border-radius: 3px;
 		}
 	}
 }
 
 // Hero Banner
 .hero-banner {
-	background: linear-gradient(135deg, #0EAEC4 0%, #0891b2 50%, #0e7490 100%);
+	background: linear-gradient(135deg, #4FC3F7 0%, #29B6F6 50%, #0288D1 100%);
 	border-radius: $size-24;
 	padding: $size-24 $size-48;
 	margin: $size-24 $size-48 0;
 	color: white;
-	box-shadow: 0 10px 40px rgba(14, 174, 196, 0.3);
+	box-shadow: 0 10px 40px rgba(79, 195, 247, 0.3);
 
 	@media (max-width: 768px) {
 		margin: $size-16;
@@ -2271,6 +2675,7 @@ onMounted(() => {
 	text-align: center;
 	border: 1px solid rgba(255, 255, 255, 0.2);
 	min-width: 100px;
+	color: white;
 
 	&.excellent { border-color: #10b981; background: rgba(16, 185, 129, 0.2); }
 	&.good { border-color: #3b82f6; background: rgba(59, 130, 246, 0.2); }
@@ -2292,6 +2697,7 @@ onMounted(() => {
 	.score-label {
 		display: block;
 		font-size: $size-11;
+		color: white;
 		opacity: 0.8;
 		text-transform: uppercase;
 		margin-bottom: $size-4;
@@ -2300,6 +2706,7 @@ onMounted(() => {
 	.score-value {
 		display: block;
 		font-size: $size-24;
+		color: white;
 		font-weight: $fw-bold;
 	}
 }
@@ -2307,12 +2714,39 @@ onMounted(() => {
 // Quick Actions
 .quick-actions {
 	display: flex;
-	gap: $size-12;
+	justify-content: space-between;
+	align-items: center;
+	gap: $size-16;
 	padding: $size-20 $size-48;
 
 	@media (max-width: 768px) {
 		padding: $size-16;
+		flex-direction: column;
+		align-items: stretch;
+	}
+}
+
+.actions-group {
+	display: flex;
+	gap: $size-12;
+
+	&.primary-actions {
 		flex-wrap: wrap;
+	}
+
+	&.contact-actions {
+		display: flex;
+		gap: $size-8;
+	}
+
+	@media (max-width: 768px) {
+		&.primary-actions {
+			width: 100%;
+		}
+
+		&.contact-actions {
+			justify-content: center;
+		}
 	}
 }
 
@@ -2332,14 +2766,139 @@ onMounted(() => {
 	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 
 	&:hover {
-		border-color: #0EAEC4;
-		color: #0EAEC4;
-		box-shadow: 0 4px 12px rgba(14, 174, 196, 0.15);
+		border-color: #4FC3F7;
+		color: #4FC3F7;
+		box-shadow: 0 4px 12px rgba(79, 195, 247, 0.15);
+	}
+
+	&.primary {
+		background: linear-gradient(135deg, #4FC3F7 0%, #29B6F6 100%);
+		border: none;
+		color: white;
+
+		&:hover {
+			box-shadow: 0 4px 16px rgba(79, 195, 247, 0.4);
+			color: white;
+		}
 	}
 
 	@media (max-width: 480px) {
 		flex: 1;
 		justify-content: center;
+	}
+}
+
+.contact-btn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 44px;
+	height: 44px;
+	border-radius: 50%;
+	border: none;
+	cursor: pointer;
+	transition: all 0.2s ease;
+
+	&.call {
+		background: #D1FAE5;
+		color: #059669;
+
+		&:hover {
+			background: #059669;
+			color: white;
+		}
+	}
+
+	&.email {
+		background: #DBEAFE;
+		color: #2563EB;
+
+		&:hover {
+			background: #2563EB;
+			color: white;
+		}
+	}
+
+	&.message {
+		background: #F3E8FF;
+		color: #7C3AED;
+
+		&:hover {
+			background: #7C3AED;
+			color: white;
+		}
+	}
+}
+
+// Stats Summary
+.stats-summary {
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	gap: $size-16;
+	padding: 0 $size-48 $size-20;
+
+	@media (max-width: 992px) {
+		grid-template-columns: repeat(2, 1fr);
+	}
+
+	@media (max-width: 480px) {
+		padding: 0 $size-16 $size-16;
+		gap: $size-12;
+	}
+}
+
+.stat-card-mini {
+	display: flex;
+	align-items: center;
+	gap: $size-12;
+	background: white;
+	padding: $size-16;
+	border-radius: $size-12;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+
+	.stat-icon {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 40px;
+		height: 40px;
+		border-radius: $size-10;
+
+		&.blue {
+			background: #E0F2FE;
+			color: #0288D1;
+		}
+
+		&.green {
+			background: #D1FAE5;
+			color: #059669;
+		}
+
+		&.purple {
+			background: #F3E8FF;
+			color: #7C3AED;
+		}
+
+		&.orange {
+			background: #FFEDD5;
+			color: #EA580C;
+		}
+	}
+
+	.stat-info {
+		display: flex;
+		flex-direction: column;
+	}
+
+	.stat-value {
+		font-size: $size-18;
+		font-weight: $fw-bold;
+		color: $color-g-21;
+	}
+
+	.stat-label {
+		font-size: $size-12;
+		color: $color-g-54;
 	}
 }
 
@@ -2360,7 +2919,7 @@ onMounted(() => {
 		position: absolute;
 		inset: 0;
 		border: 3px solid $color-g-90;
-		border-top-color: #0EAEC4;
+		border-top-color: #4FC3F7;
 		border-radius: 50%;
 		animation: spin 1s linear infinite;
 	}
@@ -2417,13 +2976,13 @@ onMounted(() => {
 		width: 100px;
 		height: 100px;
 		border-radius: 50%;
-		background: linear-gradient(90deg, rgba(14, 174, 196, 0.1) 25%, rgba(14, 174, 196, 0.2) 50%, rgba(14, 174, 196, 0.1) 75%);
+		background: linear-gradient(90deg, rgba(79, 195, 247, 0.1) 25%, rgba(79, 195, 247, 0.2) 50%, rgba(79, 195, 247, 0.1) 75%);
 		background-size: 200% 100%;
 		animation: shimmer 1.5s infinite;
 	}
 
 	.skeleton-line {
-		background: linear-gradient(90deg, rgba(14, 174, 196, 0.1) 25%, rgba(14, 174, 196, 0.2) 50%, rgba(14, 174, 196, 0.1) 75%);
+		background: linear-gradient(90deg, rgba(79, 195, 247, 0.1) 25%, rgba(79, 195, 247, 0.2) 50%, rgba(79, 195, 247, 0.1) 75%);
 		background-size: 200% 100%;
 		animation: shimmer 1.5s infinite;
 		border-radius: $size-4;
@@ -2461,7 +3020,7 @@ onMounted(() => {
 		width: 100px;
 		height: 70px;
 		border-radius: $size-12;
-		background: linear-gradient(90deg, rgba(14, 174, 196, 0.1) 25%, rgba(14, 174, 196, 0.2) 50%, rgba(14, 174, 196, 0.1) 75%);
+		background: linear-gradient(90deg, rgba(79, 195, 247, 0.1) 25%, rgba(79, 195, 247, 0.2) 50%, rgba(79, 195, 247, 0.1) 75%);
 		background-size: 200% 100%;
 		animation: shimmer 1.5s infinite;
 	}
@@ -2582,7 +3141,7 @@ onMounted(() => {
 		align-items: center;
 		gap: $size-8;
 		padding: $size-12 $size-24;
-		background: linear-gradient(135deg, #0EAEC4 0%, #0891b2 100%);
+		background: linear-gradient(135deg, #4FC3F7 0%, #29B6F6 100%);
 		color: white;
 		border: none;
 		border-radius: $size-8;
@@ -2591,7 +3150,7 @@ onMounted(() => {
 		cursor: pointer;
 
 		&:hover {
-			box-shadow: 0 4px 16px rgba(14, 174, 196, 0.3);
+			box-shadow: 0 4px 16px rgba(79, 195, 247, 0.3);
 		}
 	}
 }
@@ -2639,14 +3198,14 @@ onMounted(() => {
 	white-space: nowrap;
 
 	&:hover {
-		color: #0EAEC4;
+		color: #4FC3F7;
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 	}
 
 	&.active {
-		background: linear-gradient(135deg, #0EAEC4 0%, #0891b2 100%);
+		background: linear-gradient(135deg, #4FC3F7 0%, #29B6F6 100%);
 		color: white;
-		box-shadow: 0 4px 16px rgba(14, 174, 196, 0.3);
+		box-shadow: 0 4px 16px rgba(79, 195, 247, 0.3);
 	}
 
 	.tab-count {
@@ -2705,7 +3264,7 @@ onMounted(() => {
 	.view-all-btn {
 		background: none;
 		border: none;
-		color: #0EAEC4;
+		color: #4FC3F7;
 		font-size: $size-13;
 		font-weight: $fw-medium;
 		cursor: pointer;
@@ -2883,12 +3442,12 @@ onMounted(() => {
 	width: 36px;
 	height: 36px;
 	border-radius: $size-8;
-	background: rgba(14, 174, 196, 0.1);
+	background: rgba(79, 195, 247, 0.1);
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	flex-shrink: 0;
-	color: #0EAEC4;
+	color: #4FC3F7;
 }
 
 .checkup-content {
@@ -2918,7 +3477,7 @@ onMounted(() => {
 		align-items: center;
 		gap: $size-4;
 		font-size: $size-13;
-		color: #0EAEC4;
+		color: #4FC3F7;
 		font-weight: $fw-medium;
 	}
 }
@@ -2974,7 +3533,7 @@ onMounted(() => {
 		display: block;
 		font-size: $size-28;
 		font-weight: $fw-bold;
-		color: #0EAEC4;
+		color: #4FC3F7;
 		margin-bottom: $size-4;
 
 		&.small {
@@ -3001,7 +3560,7 @@ onMounted(() => {
 	border-radius: $size-16;
 	padding: $size-20;
 	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-	border-left: 4px solid #0EAEC4;
+	border-left: 4px solid #4FC3F7;
 }
 
 .record-header, .rx-header, .purchase-header {
@@ -3065,7 +3624,7 @@ onMounted(() => {
 
 .more-tag {
 	padding: $size-4 $size-10;
-	background: #0EAEC4;
+	background: #4FC3F7;
 	color: white;
 	border-radius: $size-4;
 	font-size: $size-12;
@@ -3093,7 +3652,7 @@ onMounted(() => {
 	.condition-prob {
 		font-size: $size-13;
 		font-weight: $fw-semi-bold;
-		color: #0EAEC4;
+		color: #4FC3F7;
 	}
 }
 
@@ -3111,7 +3670,7 @@ onMounted(() => {
 			gap: 12px;
 
 			svg {
-				color: #0EAEC4;
+				color: #4FC3F7;
 			}
 
 			h3 {
@@ -3124,7 +3683,7 @@ onMounted(() => {
 
 		.total-badge {
 			background: linear-gradient(135deg, #f0fdfa, #e0f7fa);
-			color: #0891b2;
+			color: #29B6F6;
 			padding: 6px 16px;
 			border-radius: 20px;
 			font-size: 13px;
@@ -3220,8 +3779,8 @@ onMounted(() => {
 		}
 
 		.for-badge {
-			background: rgba(#0EAEC4, 0.1);
-			color: #0891b2;
+			background: rgba(#4FC3F7, 0.1);
+			color: #29B6F6;
 		}
 
 		.ai-badge {
@@ -3310,7 +3869,7 @@ onMounted(() => {
 		letter-spacing: 0.5px;
 		margin-bottom: 14px;
 
-		svg { color: #0EAEC4; }
+		svg { color: #4FC3F7; }
 	}
 
 	.conditions-section {
@@ -3407,8 +3966,8 @@ onMounted(() => {
 		transition: all 0.3s ease;
 
 		&:hover {
-			border-color: #0EAEC4;
-			box-shadow: 0 2px 8px rgba(#0EAEC4, 0.15);
+			border-color: #4FC3F7;
+			box-shadow: 0 2px 8px rgba(#4FC3F7, 0.15);
 		}
 
 		.symptom-name {
@@ -3429,13 +3988,13 @@ onMounted(() => {
 	}
 
 	.specialist-tag {
-		background: linear-gradient(135deg, rgba(#0EAEC4, 0.1), rgba(#0EAEC4, 0.05));
-		color: #0891b2;
+		background: linear-gradient(135deg, rgba(#4FC3F7, 0.1), rgba(#4FC3F7, 0.05));
+		color: #29B6F6;
 		padding: 8px 16px;
 		border-radius: 20px;
 		font-size: 13px;
 		font-weight: 500;
-		border: 1px solid rgba(#0EAEC4, 0.15);
+		border: 1px solid rgba(#4FC3F7, 0.15);
 	}
 
 	.checkup-card-footer {
@@ -3449,12 +4008,12 @@ onMounted(() => {
 		transition: all 0.3s ease;
 
 		&:hover {
-			background: linear-gradient(135deg, rgba(#0EAEC4, 0.05), rgba(#0EAEC4, 0.02));
+			background: linear-gradient(135deg, rgba(#4FC3F7, 0.05), rgba(#4FC3F7, 0.02));
 
-			.view-report-link { color: #0891b2; }
+			.view-report-link { color: #29B6F6; }
 			.arrow-icon {
 				transform: translateX(4px);
-				color: #0EAEC4;
+				color: #4FC3F7;
 			}
 		}
 
@@ -3567,7 +4126,7 @@ onMounted(() => {
 .apt-date-block {
 	text-align: center;
 	padding: $size-12 $size-16;
-	background: linear-gradient(135deg, #0EAEC4 0%, #0891b2 100%);
+	background: linear-gradient(135deg, #4FC3F7 0%, #29B6F6 100%);
 	border-radius: $size-8;
 	min-width: 60px;
 
@@ -3659,7 +4218,7 @@ onMounted(() => {
 	.total-amount {
 		font-size: $size-18;
 		font-weight: $fw-bold;
-		color: #0EAEC4;
+		color: #4FC3F7;
 	}
 }
 
@@ -3758,7 +4317,7 @@ onMounted(() => {
 		width: 48px;
 		height: 48px;
 		border-radius: 50%;
-		background: linear-gradient(135deg, #0EAEC4 0%, #0891b2 100%);
+		background: linear-gradient(135deg, #4FC3F7 0%, #29B6F6 100%);
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -3811,8 +4370,8 @@ onMounted(() => {
 		right: 0;
 		height: 4px;
 
-		&.basic { background: linear-gradient(90deg, #ef4444, #f59e0b, #0EAEC4, #10b981); }
-		&.advanced { background: linear-gradient(90deg, #8b5cf6, #6366f1, #0EAEC4); }
+		&.basic { background: linear-gradient(90deg, #ef4444, #f59e0b, #4FC3F7, #10b981); }
+		&.advanced { background: linear-gradient(90deg, #8b5cf6, #6366f1, #4FC3F7); }
 	}
 
 	.card-header {
@@ -3945,8 +4504,8 @@ onMounted(() => {
 
 			&:hover {
 				background: #f1f5f9;
-				border-color: #0EAEC4;
-				color: #0EAEC4;
+				border-color: #4FC3F7;
+				color: #4FC3F7;
 			}
 		}
 
@@ -4096,7 +4655,7 @@ onMounted(() => {
 	&:hover {
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 		transform: translateY(-2px);
-		border-color: rgba(14, 174, 196, 0.3);
+		border-color: rgba(79, 195, 247, 0.3);
 		background: #f8fafc;
 	}
 
@@ -4240,8 +4799,8 @@ onMounted(() => {
 		transition: all 0.2s ease;
 
 		&:hover:not(:disabled) {
-			border-color: #0EAEC4;
-			color: #0EAEC4;
+			border-color: #4FC3F7;
+			color: #4FC3F7;
 		}
 
 		&:disabled {
@@ -4258,7 +4817,7 @@ onMounted(() => {
 
 		.current {
 			font-weight: $fw-semi-bold;
-			color: #0EAEC4;
+			color: #4FC3F7;
 		}
 
 		.separator {
@@ -4283,12 +4842,12 @@ onMounted(() => {
 	justify-content: center;
 	width: 100px;
 	height: 100px;
-	background: linear-gradient(135deg, rgba(14, 174, 196, 0.1) 0%, rgba(14, 174, 196, 0.05) 100%);
+	background: linear-gradient(135deg, rgba(79, 195, 247, 0.1) 0%, rgba(79, 195, 247, 0.05) 100%);
 	border-radius: 50%;
 	margin-bottom: $size-24;
 
 	.empty-icon {
-		color: #0EAEC4;
+		color: #4FC3F7;
 	}
 }
 
@@ -4373,7 +4932,7 @@ onMounted(() => {
 			align-items: center;
 			gap: 12px;
 
-			svg { color: #0EAEC4; }
+			svg { color: #4FC3F7; }
 
 			h3 {
 				font-size: 20px;
@@ -4385,7 +4944,7 @@ onMounted(() => {
 
 		.total-badge {
 			background: linear-gradient(135deg, #f0fdfa, #e0f7fa);
-			color: #0891b2;
+			color: #29B6F6;
 			padding: 6px 16px;
 			border-radius: 20px;
 			font-size: 13px;
@@ -4457,11 +5016,11 @@ onMounted(() => {
 		&:hover {
 			transform: translateY(-4px);
 			box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-			border-color: rgba(#0EAEC4, 0.2);
+			border-color: rgba(#4FC3F7, 0.2);
 
 			.scroll-hint {
 				opacity: 1;
-				color: #0EAEC4;
+				color: #4FC3F7;
 				animation: bounce 1s infinite;
 			}
 		}
@@ -4503,11 +5062,11 @@ onMounted(() => {
 			font-weight: 600;
 			color: #1e293b;
 
-			svg { color: #0EAEC4; }
+			svg { color: #4FC3F7; }
 
 			.section-count {
-				background: rgba(#0EAEC4, 0.1);
-				color: #0891b2;
+				background: rgba(#4FC3F7, 0.1);
+				color: #29B6F6;
 				padding: 4px 10px;
 				border-radius: 12px;
 				font-size: 12px;
@@ -4558,8 +5117,8 @@ onMounted(() => {
 		transition: all 0.2s ease;
 
 		&:hover:not(:disabled) {
-			background: #0EAEC4;
-			border-color: #0EAEC4;
+			background: #4FC3F7;
+			border-color: #4FC3F7;
 			color: white;
 		}
 
@@ -4596,7 +5155,7 @@ onMounted(() => {
 		border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 
 		&.pending { background: linear-gradient(135deg, rgba(#f59e0b, 0.08), rgba(#f59e0b, 0.04)); }
-		&.paid, &.processing { background: linear-gradient(135deg, rgba(#0EAEC4, 0.08), rgba(#0EAEC4, 0.04)); }
+		&.paid, &.processing { background: linear-gradient(135deg, rgba(#4FC3F7, 0.08), rgba(#4FC3F7, 0.04)); }
 		&.dispensed, &.shipped { background: linear-gradient(135deg, rgba(#6366f1, 0.08), rgba(#6366f1, 0.04)); }
 		&.delivered, &.completed { background: linear-gradient(135deg, rgba(#10b981, 0.08), rgba(#10b981, 0.04)); }
 		&.cancelled, &.refunded { background: linear-gradient(135deg, rgba(#ef4444, 0.08), rgba(#ef4444, 0.04)); }
@@ -4617,14 +5176,14 @@ onMounted(() => {
 			color: white;
 
 			&.pending { background: linear-gradient(135deg, #f59e0b, #d97706); }
-			&.paid, &.processing { background: linear-gradient(135deg, #0EAEC4, #0891b2); }
+			&.paid, &.processing { background: linear-gradient(135deg, #4FC3F7, #29B6F6); }
 			&.dispensed, &.shipped { background: linear-gradient(135deg, #6366f1, #4f46e5); }
 			&.delivered, &.completed { background: linear-gradient(135deg, #10b981, #059669); }
 			&.cancelled, &.refunded { background: linear-gradient(135deg, #ef4444, #dc2626); }
 			&.verified { background: linear-gradient(135deg, #10b981, #059669); }
 			&.review, &.clarification { background: linear-gradient(135deg, #8b5cf6, #6d28d9); }
 			&.rejected { background: linear-gradient(135deg, #ef4444, #dc2626); }
-			&.confirmed { background: linear-gradient(135deg, #0EAEC4, #0891b2); }
+			&.confirmed { background: linear-gradient(135deg, #4FC3F7, #29B6F6); }
 			&.ready, &.transit { background: linear-gradient(135deg, #8b5cf6, #6d28d9); }
 		}
 
@@ -4655,14 +5214,14 @@ onMounted(() => {
 			font-weight: 600;
 
 			&.pending { background: rgba(#f59e0b, 0.15); color: #b45309; }
-			&.paid, &.processing { background: rgba(#0EAEC4, 0.15); color: #0891b2; }
+			&.paid, &.processing { background: rgba(#4FC3F7, 0.15); color: #29B6F6; }
 			&.dispensed, &.shipped { background: rgba(#6366f1, 0.15); color: #4f46e5; }
 			&.delivered, &.completed { background: rgba(#10b981, 0.15); color: #059669; }
 			&.cancelled, &.refunded { background: rgba(#ef4444, 0.15); color: #ef4444; }
 			&.verified { background: rgba(#10b981, 0.15); color: #059669; }
 			&.review, &.clarification { background: rgba(#8b5cf6, 0.15); color: #6d28d9; }
 			&.rejected { background: rgba(#ef4444, 0.15); color: #ef4444; }
-			&.confirmed { background: rgba(#0EAEC4, 0.15); color: #0891b2; }
+			&.confirmed { background: rgba(#4FC3F7, 0.15); color: #29B6F6; }
 			&.ready, &.transit { background: rgba(#8b5cf6, 0.15); color: #6d28d9; }
 		}
 
@@ -4709,7 +5268,7 @@ onMounted(() => {
 		font-size: 14px;
 		color: #64748b;
 
-		svg { color: #0EAEC4; }
+		svg { color: #4FC3F7; }
 		strong { color: #1e293b; }
 
 		.specialty-badge {
@@ -4742,7 +5301,7 @@ onMounted(() => {
 			color: #475569;
 			margin-bottom: 16px;
 
-			svg { color: #0EAEC4; }
+			svg { color: #4FC3F7; }
 		}
 
 		.medications-grid {
@@ -4789,7 +5348,7 @@ onMounted(() => {
 				}
 
 				.med-duration {
-					color: #0EAEC4;
+					color: #4FC3F7;
 					font-weight: 500;
 				}
 
@@ -4815,7 +5374,7 @@ onMounted(() => {
 			grid-column: 1 / -1;
 			text-align: center;
 			padding: 12px;
-			color: #0EAEC4;
+			color: #4FC3F7;
 			font-size: 14px;
 			font-weight: 500;
 		}
@@ -4858,12 +5417,12 @@ onMounted(() => {
 		align-items: center;
 		gap: 10px;
 		padding: 14px 24px;
-		background: rgba(#0EAEC4, 0.05);
-		border-top: 1px solid rgba(#0EAEC4, 0.1);
+		background: rgba(#4FC3F7, 0.05);
+		border-top: 1px solid rgba(#4FC3F7, 0.1);
 		font-size: 13px;
 		color: #475569;
 
-		svg { color: #0EAEC4; }
+		svg { color: #4FC3F7; }
 	}
 
 	.clinical-notes {
@@ -4899,7 +5458,7 @@ onMounted(() => {
 		color: #64748b;
 		border-top: 1px solid #f1f5f9;
 
-		svg { color: #0EAEC4; }
+		svg { color: #4FC3F7; }
 
 		.usage-info {
 			margin-left: auto;
@@ -4930,14 +5489,14 @@ onMounted(() => {
 		border-top: 1px solid #f1f5f9;
 		background: #fafbfc;
 
-		svg { color: #0EAEC4; }
+		svg { color: #4FC3F7; }
 
 		.tracking {
 			padding: 4px 10px;
-			background: rgba(#0EAEC4, 0.1);
+			background: rgba(#4FC3F7, 0.1);
 			border-radius: 8px;
 			font-size: 12px;
-			color: #0891b2;
+			color: #29B6F6;
 		}
 
 		.delivered-date {
@@ -5012,7 +5571,7 @@ onMounted(() => {
 			align-items: center;
 			gap: 12px;
 
-			svg { color: #0EAEC4; }
+			svg { color: #4FC3F7; }
 
 			h3 {
 				font-size: 20px;
@@ -5024,7 +5583,7 @@ onMounted(() => {
 
 		.total-badge {
 			background: linear-gradient(135deg, #f0fdfa, #e0f7fa);
-			color: #0891b2;
+			color: #29B6F6;
 			padding: 6px 16px;
 			border-radius: 20px;
 			font-size: 13px;
@@ -5050,14 +5609,14 @@ onMounted(() => {
 
 		&:hover {
 			transform: translateY(-3px);
-			box-shadow: 0 12px 32px rgba(14, 174, 196, 0.15);
-			border-color: rgba(14, 174, 196, 0.2);
+			box-shadow: 0 12px 32px rgba(79, 195, 247, 0.15);
+			border-color: rgba(79, 195, 247, 0.2);
 
 			.appointment-card-footer {
 				background: linear-gradient(135deg, #f0fdfa, #e0f7fa);
 
 				.view-link {
-					color: #0891b2;
+					color: #29B6F6;
 
 					svg {
 						transform: translateX(4px);
@@ -5073,7 +5632,7 @@ onMounted(() => {
 			bottom: 0;
 			width: 4px;
 
-			&.scheduled, &.open { background: linear-gradient(180deg, #0EAEC4, #0891b2); }
+			&.scheduled, &.open { background: linear-gradient(180deg, #4FC3F7, #29B6F6); }
 			&.ongoing { background: linear-gradient(180deg, #8b5cf6, #6d28d9); }
 			&.completed { background: linear-gradient(180deg, #10b981, #059669); }
 			&.cancelled { background: linear-gradient(180deg, #ef4444, #dc2626); }
@@ -5097,7 +5656,7 @@ onMounted(() => {
 				.date-block {
 					text-align: center;
 					padding: 10px 14px;
-					background: linear-gradient(135deg, #0EAEC4 0%, #0891b2 100%);
+					background: linear-gradient(135deg, #4FC3F7 0%, #29B6F6 100%);
 					border-radius: 10px;
 					min-width: 56px;
 
@@ -5144,7 +5703,7 @@ onMounted(() => {
 					font-weight: 600;
 					text-transform: capitalize;
 
-					&.scheduled, &.open { background: rgba(14, 174, 196, 0.15); color: #0891b2; }
+					&.scheduled, &.open { background: rgba(79, 195, 247, 0.15); color: #29B6F6; }
 					&.ongoing { background: rgba(139, 92, 246, 0.15); color: #6d28d9; }
 					&.completed { background: rgba(16, 185, 129, 0.15); color: #059669; }
 					&.cancelled { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
@@ -5183,7 +5742,7 @@ onMounted(() => {
 					}
 
 					svg {
-						color: #0EAEC4;
+						color: #4FC3F7;
 					}
 				}
 
@@ -5219,7 +5778,7 @@ onMounted(() => {
 					padding: 8px 12px;
 					border-radius: 8px;
 
-					svg { color: #0EAEC4; }
+					svg { color: #4FC3F7; }
 				}
 			}
 
@@ -5292,6 +5851,621 @@ onMounted(() => {
 	}
 }
 
+// Appointments Tab v2 - Table Layout
+.appointments-tab-v2 {
+	width: 100%;
+}
+
+.apt-stats-row {
+	display: grid;
+	grid-template-columns: repeat(5, 1fr);
+	gap: 12px;
+	margin-bottom: 20px;
+
+	@media (max-width: 1024px) {
+		grid-template-columns: repeat(3, 1fr);
+	}
+
+	@media (max-width: 640px) {
+		grid-template-columns: repeat(2, 1fr);
+	}
+}
+
+.apt-stat-card {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 16px;
+	background: white;
+	border-radius: 12px;
+	border: 1px solid #e2e8f0;
+	transition: all 0.2s ease;
+
+	&:hover {
+		transform: translateY(-2px);
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+	}
+
+	.stat-icon-wrap {
+		width: 40px;
+		height: 40px;
+		border-radius: 10px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		flex-shrink: 0;
+	}
+
+	.stat-content {
+		display: flex;
+		flex-direction: column;
+
+		.stat-number {
+			font-size: 20px;
+			font-weight: 700;
+			line-height: 1.1;
+		}
+
+		.stat-label {
+			font-size: 12px;
+			color: #64748b;
+			margin-top: 2px;
+		}
+	}
+
+	&.stat-total {
+		.stat-icon-wrap {
+			background: linear-gradient(135deg, #E1F5FE 0%, #B3E5FC 100%);
+			color: #0288D1;
+		}
+		.stat-number { color: #0288D1; }
+	}
+
+	&.stat-confirmed {
+		.stat-icon-wrap {
+			background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%);
+			color: #388E3C;
+		}
+		.stat-number { color: #388E3C; }
+	}
+
+	&.stat-completed {
+		.stat-icon-wrap {
+			background: linear-gradient(135deg, #F3E5F5 0%, #E1BEE7 100%);
+			color: #7B1FA2;
+		}
+		.stat-number { color: #7B1FA2; }
+	}
+
+	&.stat-cancelled {
+		.stat-icon-wrap {
+			background: linear-gradient(135deg, #FFEBEE 0%, #FFCDD2 100%);
+			color: #C62828;
+		}
+		.stat-number { color: #C62828; }
+	}
+
+	&.stat-noshow {
+		.stat-icon-wrap {
+			background: linear-gradient(135deg, #FFF3E0 0%, #FFE0B2 100%);
+			color: #E65100;
+		}
+		.stat-number { color: #E65100; }
+	}
+}
+
+.apt-filter-section {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	margin-bottom: 20px;
+	flex-wrap: wrap;
+}
+
+.apt-filter-tabs {
+	display: flex;
+	gap: 8px;
+	flex-wrap: wrap;
+
+	.filter-tab {
+		padding: 8px 16px;
+		background: #f1f5f9;
+		border: 1px solid #e2e8f0;
+		border-radius: 20px;
+		font-size: 13px;
+		font-weight: 500;
+		color: #64748b;
+		cursor: pointer;
+		transition: all 0.2s ease;
+
+		&:hover {
+			background: #e2e8f0;
+			color: #475569;
+		}
+
+		&.active {
+			background: linear-gradient(135deg, #4FC3F7 0%, #29B6F6 100%);
+			border-color: #29B6F6;
+			color: white;
+			box-shadow: 0 2px 8px rgba(79, 195, 247, 0.3);
+		}
+	}
+}
+
+.btn-book-apt {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 10px 18px;
+	background: linear-gradient(135deg, #4FC3F7 0%, #29B6F6 100%);
+	color: white;
+	border: none;
+	border-radius: 10px;
+	font-size: 13px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.2s ease;
+
+	&:hover {
+		transform: translateY(-1px);
+		box-shadow: 0 4px 12px rgba(79, 195, 247, 0.35);
+	}
+}
+
+.apt-table-card {
+	background: white;
+	border-radius: 16px;
+	box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+	border: 1px solid #e2e8f0;
+	margin-bottom: 20px;
+	overflow-x: auto;
+	overflow-y: visible;
+
+	&::-webkit-scrollbar {
+		height: 6px;
+	}
+
+	&::-webkit-scrollbar-track {
+		background: #f1f5f9;
+	}
+
+	&::-webkit-scrollbar-thumb {
+		background: #cbd5e1;
+		border-radius: 3px;
+	}
+}
+
+.apt-table {
+	width: 100%;
+	border-collapse: collapse;
+	min-width: 950px;
+
+	th, td {
+		padding: 14px 16px;
+		text-align: left;
+		vertical-align: middle;
+	}
+
+	th {
+		background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+		font-size: 11px;
+		font-weight: 700;
+		color: #64748b;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+		border-bottom: 1px solid #e2e8f0;
+		white-space: nowrap;
+	}
+
+	.th-actions {
+		width: 140px;
+		text-align: center;
+	}
+
+	tbody tr {
+		border-bottom: 1px solid #f1f5f9;
+		transition: all 0.2s ease;
+
+		&:hover {
+			background: rgba(79, 195, 247, 0.04);
+		}
+
+		&:last-child {
+			border-bottom: none;
+		}
+
+		&.row-completed { background: #F3E5F5; &:hover { background: #EDE7F6; } }
+		&.row-missed { background: #FFF3E0; &:hover { background: #FFE0B2; } }
+		&.row-cancelled { background: #FFEBEE; &:hover { background: #FFCDD2; } }
+	}
+}
+
+.datetime-cell {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+
+	.date-text {
+		font-weight: 600;
+		color: #1e293b;
+		font-size: 14px;
+	}
+
+	.time-text {
+		font-size: 12px;
+		color: #64748b;
+	}
+}
+
+.specialist-cell {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+
+	.specialist-avatar-sm {
+		width: 36px;
+		height: 36px;
+		border-radius: 50%;
+		overflow: hidden;
+		background: linear-gradient(135deg, #e0f7fa, #b2ebf2);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		flex-shrink: 0;
+
+		img {
+			width: 100%;
+			height: 100%;
+			object-fit: cover;
+		}
+
+		svg {
+			color: #4FC3F7;
+		}
+	}
+
+	.specialist-info-sm {
+		display: flex;
+		flex-direction: column;
+		min-width: 0;
+
+		.specialist-name-sm {
+			font-size: 13px;
+			font-weight: 600;
+			color: #1e293b;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+
+		.specialist-specialty-sm {
+			font-size: 11px;
+			color: #64748b;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+	}
+}
+
+.type-badge {
+	display: inline-block;
+	padding: 6px 12px;
+	background: linear-gradient(135deg, #E1F5FE 0%, #B3E5FC 100%);
+	color: #0277BD;
+	border-radius: 8px;
+	font-size: 12px;
+	font-weight: 500;
+}
+
+.channel-cell {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 13px;
+	color: #475569;
+
+	.channel-icon {
+		color: #4FC3F7;
+	}
+}
+
+.duration-text, .fee-text {
+	font-size: 13px;
+	color: #475569;
+	font-weight: 500;
+}
+
+.apt-status-badge {
+	display: inline-flex;
+	align-items: center;
+	padding: 6px 12px;
+	border-radius: 20px;
+	font-size: 11px;
+	font-weight: 600;
+	text-transform: capitalize;
+
+	&.scheduled, &.open {
+		background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%);
+		color: #2E7D32;
+	}
+
+	&.ongoing {
+		background: linear-gradient(135deg, #E1F5FE 0%, #B3E5FC 100%);
+		color: #0277BD;
+	}
+
+	&.completed {
+		background: linear-gradient(135deg, #E1F5FE 0%, #B3E5FC 100%);
+		color: #0277BD;
+	}
+
+	&.cancelled {
+		background: linear-gradient(135deg, #FFEBEE 0%, #FFCDD2 100%);
+		color: #C62828;
+	}
+
+	&.missed {
+		background: linear-gradient(135deg, #FFF3E0 0%, #FFE0B2 100%);
+		color: #E65100;
+	}
+
+	&.rescheduled {
+		background: linear-gradient(135deg, #FFF8E1 0%, #FFECB3 100%);
+		color: #F57C00;
+	}
+}
+
+.actions-cell {
+	display: flex;
+	gap: 6px;
+	justify-content: center;
+
+	.apt-action-btn {
+		width: 32px;
+		height: 32px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: white;
+		border: 1px solid #e2e8f0;
+		border-radius: 8px;
+		color: #64748b;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		text-decoration: none;
+
+		&:hover {
+			transform: translateY(-2px);
+		}
+
+		&.view:hover {
+			border-color: #4FC3F7;
+			color: #4FC3F7;
+			background: #E1F5FE;
+		}
+
+		&.meeting:hover {
+			border-color: #4CAF50;
+			color: #4CAF50;
+			background: #E8F5E9;
+		}
+
+		&.notes:hover {
+			border-color: #9C27B0;
+			color: #9C27B0;
+			background: #F3E5F5;
+		}
+
+		&.more:hover {
+			border-color: #94a3b8;
+			color: #475569;
+			background: #f8fafc;
+		}
+	}
+
+	.apt-more-dropdown {
+		position: relative;
+
+		.apt-dropdown-menu {
+			position: absolute;
+			top: 100%;
+			right: 0;
+			margin-top: 4px;
+			min-width: 160px;
+			background: white;
+			border: 1px solid #e2e8f0;
+			border-radius: 10px;
+			box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+			z-index: 1000;
+			overflow: hidden;
+
+			// Upward variant for items near the bottom
+			&.upward {
+				top: auto;
+				bottom: 100%;
+				margin-top: 0;
+				margin-bottom: 4px;
+			}
+
+			button {
+				display: flex;
+				align-items: center;
+				gap: 10px;
+				width: 100%;
+				padding: 10px 14px;
+				background: none;
+				border: none;
+				font-size: 13px;
+				color: #475569;
+				cursor: pointer;
+				transition: all 0.15s ease;
+				text-align: left;
+
+				svg {
+					color: #94a3b8;
+				}
+
+				&:hover {
+					background: #f8fafc;
+					color: #1e293b;
+
+					svg {
+						color: #4FC3F7;
+					}
+				}
+
+				&.danger {
+					color: #dc2626;
+
+					svg {
+						color: #ef4444;
+					}
+
+					&:hover {
+						background: #fef2f2;
+						color: #b91c1c;
+					}
+				}
+			}
+		}
+	}
+}
+
+.apt-empty-state {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 60px 20px;
+	background: white;
+	border-radius: 16px;
+	border: 1px solid #e2e8f0;
+	text-align: center;
+
+	.empty-illustration {
+		width: 80px;
+		height: 80px;
+		background: linear-gradient(135deg, #E1F5FE 0%, #B3E5FC 100%);
+		border-radius: 50%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		margin-bottom: 20px;
+		color: #0288D1;
+	}
+
+	h4 {
+		font-size: 18px;
+		font-weight: 600;
+		color: #1e293b;
+		margin: 0 0 8px;
+	}
+
+	p {
+		font-size: 14px;
+		color: #64748b;
+		margin: 0 0 24px;
+	}
+}
+
+.btn-book-empty {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 12px 24px;
+	background: linear-gradient(135deg, #4FC3F7 0%, #29B6F6 100%);
+	color: white;
+	border: none;
+	border-radius: 12px;
+	font-size: 14px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.2s ease;
+
+	&:hover {
+		transform: translateY(-2px);
+		box-shadow: 0 6px 20px rgba(79, 195, 247, 0.35);
+	}
+}
+
+.apt-pagination {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 16px 20px;
+	background: white;
+	border-radius: 12px;
+	border: 1px solid #e2e8f0;
+
+	@media (max-width: 640px) {
+		flex-direction: column;
+		gap: 12px;
+	}
+}
+
+.pagination-info {
+	font-size: 13px;
+	color: #64748b;
+
+	strong {
+		color: #1e293b;
+	}
+}
+
+.pagination-controls {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+
+	.page-btn {
+		width: 36px;
+		height: 36px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: white;
+		border: 1px solid #e2e8f0;
+		border-radius: 8px;
+		color: #64748b;
+		cursor: pointer;
+		transition: all 0.2s ease;
+
+		&:hover:not(:disabled) {
+			border-color: #4FC3F7;
+			color: #4FC3F7;
+			background: #E1F5FE;
+		}
+
+		&:disabled {
+			opacity: 0.5;
+			cursor: not-allowed;
+		}
+	}
+
+	.page-numbers {
+		display: flex;
+		align-items: center;
+		gap: 4px;
+		font-size: 14px;
+		font-weight: 500;
+
+		.current-page {
+			color: #0288D1;
+			font-weight: 600;
+		}
+
+		.page-sep {
+			color: #94a3b8;
+		}
+
+		.total-pages {
+			color: #64748b;
+		}
+	}
+}
+
 // Timeline Tab Styles
 .timeline-tab {
 	.section-header-bar {
@@ -5305,7 +6479,7 @@ onMounted(() => {
 			align-items: center;
 			gap: 12px;
 
-			svg { color: #0EAEC4; }
+			svg { color: #4FC3F7; }
 
 			h3 {
 				font-size: 20px;
@@ -5317,7 +6491,7 @@ onMounted(() => {
 
 		.total-badge {
 			background: linear-gradient(135deg, #f0fdfa, #e0f7fa);
-			color: #0891b2;
+			color: #29B6F6;
 			padding: 6px 16px;
 			border-radius: 20px;
 			font-size: 13px;
@@ -5336,7 +6510,7 @@ onMounted(() => {
 			top: 0;
 			bottom: 0;
 			width: 2px;
-			background: linear-gradient(180deg, #0EAEC4 0%, #e2e8f0 100%);
+			background: linear-gradient(180deg, #4FC3F7 0%, #e2e8f0 100%);
 		}
 	}
 
@@ -5366,9 +6540,9 @@ onMounted(() => {
 		svg { color: #64748b; }
 
 		&.appointment {
-			border-color: #0EAEC4;
+			border-color: #4FC3F7;
 			background: linear-gradient(135deg, #e0f7fa, #f0fdfa);
-			svg { color: #0891b2; }
+			svg { color: #29B6F6; }
 		}
 
 		&.prescription {
@@ -5419,7 +6593,7 @@ onMounted(() => {
 		background: #f1f5f9;
 		color: #475569;
 
-		&.appointment { background: rgba(14, 174, 196, 0.1); color: #0891b2; }
+		&.appointment { background: rgba(79, 195, 247, 0.1); color: #29B6F6; }
 		&.prescription { background: rgba(139, 92, 246, 0.1); color: #7c3aed; }
 		&.health_checkup { background: rgba(16, 185, 129, 0.1); color: #059669; }
 		&.pharmacy_order { background: rgba(245, 158, 11, 0.1); color: #d97706; }
@@ -5455,7 +6629,7 @@ onMounted(() => {
 
 			&.status {
 				&.completed, &.delivered, &.dispensed { background: rgba(16, 185, 129, 0.1); color: #059669; }
-				&.open, &.scheduled, &.pending, &.processing { background: rgba(14, 174, 196, 0.1); color: #0891b2; }
+				&.open, &.scheduled, &.pending, &.processing { background: rgba(79, 195, 247, 0.1); color: #29B6F6; }
 				&.cancelled { background: rgba(239, 68, 68, 0.1); color: #dc2626; }
 			}
 
