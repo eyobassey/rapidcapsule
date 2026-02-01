@@ -1,1605 +1,1181 @@
 <template>
   <div class="page-content">
-    <TopBar showButtons type="avatar" @open-side-nav="$emit('openSideNav')" />
+    <TopBar showButtons type="title-only" title="Create Prescription" @open-side-nav="$emit('openSideNav')" />
     <div class="page-content__body">
       <div class="create-prescription-container">
-        <!-- Header -->
-        <div class="page-header">
-          <button class="back-btn" @click="goBack">
-            <rc-icon icon-name="arrow-left" size="sm" />
-          </button>
-          <div class="header-content">
-            <h1>Create Prescription</h1>
-            <p>Add medications and set payment method</p>
+        <!-- Hero Banner -->
+        <div class="hero-banner">
+          <div class="hero-top">
+            <button @click="goBack" class="back-link">
+              <v-icon name="hi-arrow-left" scale="0.9" />
+              <span>{{ currentStep > 0 ? steps[currentStep - 1].label : 'Back to Pharmacy' }}</span>
+            </button>
+            <div class="hero-step-indicator">
+              Step {{ currentStep + 1 }} of {{ steps.length }}
+            </div>
           </div>
+          <div class="hero-main">
+            <div class="hero-info">
+              <span class="hero-badge">
+                <v-icon name="ri-capsule-line" scale="0.7" />
+                New Prescription
+              </span>
+              <h1 class="hero-title">{{ steps[currentStep].label }}</h1>
+              <p class="hero-subtitle">
+                <template v-if="selectedPatient">
+                  Prescribing for <strong>{{ selectedPatient.full_name }}</strong>
+                </template>
+                <template v-else-if="currentStep === 0">
+                  Select a patient to begin creating their prescription
+                </template>
+                <template v-else-if="currentStep === 1">
+                  Add medications and dosage instructions
+                </template>
+                <template v-else>
+                  Choose payment method and delivery options
+                </template>
+              </p>
+            </div>
+            <div class="hero-stats">
+              <div v-if="selectedPatient" class="patient-card">
+                <div class="patient-avatar">
+                  <RcAvatar
+                    :model-value="selectedPatient.profile_image"
+                    :first-name="getFirstName(selectedPatient.full_name)"
+                    :last-name="getLastName(selectedPatient.full_name)"
+                    size="sm"
+                  />
+                </div>
+                <div class="patient-info">
+                  <span class="patient-name">{{ selectedPatient.full_name }}</span>
+                  <span class="patient-label">Patient</span>
+                </div>
+              </div>
+              <div v-if="prescriptionItems.length > 0" class="stat-card">
+                <span class="stat-value">{{ prescriptionItems.length }}</span>
+                <span class="stat-label">Medications</span>
+              </div>
+              <div v-if="subtotal > 0" class="stat-card">
+                <span class="stat-value">{{ formatCurrency(subtotal) }}</span>
+                <span class="stat-label">Subtotal</span>
+              </div>
+            </div>
+          </div>
+          <!-- Linked Records Indicator -->
+          <div v-if="preSelectedAppointments.length > 0 || preSelectedNotes.length > 0" class="linked-records-badge">
+            <v-icon name="hi-link" scale="0.7" />
+            <span>Linked to {{ preSelectedAppointments.length > 0 ? 'appointment' : '' }}{{ preSelectedAppointments.length > 0 && preSelectedNotes.length > 0 ? ' & ' : '' }}{{ preSelectedNotes.length > 0 ? 'clinical note' : '' }}</span>
+          </div>
+        </div>
+
+        <!-- Allergy Status Banner -->
+        <div v-if="selectedPatient && !allergyWarningDismissed" :class="['allergy-banner', patientAllergies.length > 0 ? 'allergy-banner--warning' : 'allergy-banner--safe']">
+          <div class="allergy-icon">
+            <v-icon :name="patientAllergies.length > 0 ? 'hi-exclamation-triangle' : 'hi-shield-check'" scale="1.2" />
+          </div>
+          <div class="allergy-content">
+            <h4 class="allergy-title">
+              {{ patientAllergies.length > 0 ? 'Allergy Warning' : 'Allergy Status' }}
+            </h4>
+            <p class="allergy-text">
+              <template v-if="patientAllergies.length > 0">
+                Patient has documented allergies:
+                <strong>{{ formatAllergies(patientAllergies) }}</strong>.
+                Review medication selection carefully.
+              </template>
+              <template v-else>
+                No known allergies documented for this patient. Always verify with patient before prescribing.
+              </template>
+            </p>
+          </div>
+          <button class="allergy-dismiss" @click="dismissAllergyWarning" title="Dismiss">
+            <v-icon name="hi-x" scale="0.9" />
+          </button>
         </div>
 
         <!-- Progress Steps -->
-        <div class="progress-steps">
-          <div
-            v-for="(step, index) in steps"
-            :key="step.id"
-            :class="['step', { active: currentStep === index, completed: currentStep > index }]"
-          >
-            <div class="step-number">{{ index + 1 }}</div>
-            <span class="step-label">{{ step.label }}</span>
-          </div>
-        </div>
-
-        <!-- Step Content -->
-        <div class="step-content">
-          <!-- Step 1: Select Patient -->
-          <div v-if="currentStep === 0" class="step-panel">
-            <h2>Select Patient</h2>
-            <div class="search-patient">
-              <div class="search-bar">
-                <rc-icon icon-name="search" size="sm" />
-                <input
-                  v-model="patientSearch"
-                  type="text"
-                  placeholder="Search by name, email, or phone..."
-                  @input="searchPatients"
-                />
+        <div class="progress-container">
+          <div class="progress-steps-enhanced">
+            <div
+              v-for="(step, index) in steps"
+              :key="step.id"
+              :class="['step', { active: currentStep === index, completed: currentStep > index }]"
+              @click="goToStep(index)"
+            >
+              <div class="step-circle">
+                <v-icon v-if="currentStep > index" name="hi-check" scale="0.8" />
+                <span v-else>{{ index + 1 }}</span>
               </div>
-              <loader v-if="searchingPatients" :useOverlay="false" size="sm" />
-              <div v-else-if="patientResults.length" class="patient-results">
-                <div
-                  v-for="patient in patientResults"
-                  :key="patient._id"
-                  :class="['patient-option', { selected: selectedPatient?._id === patient._id }]"
-                  @click="selectPatient(patient)"
-                >
-                  <div class="patient-avatar">
-                    <img v-if="patient.profile_image" :src="patient.profile_image" :alt="patient.full_name" />
-                    <span v-else>{{ getInitials(patient.full_name) }}</span>
-                  </div>
-                  <div class="patient-info">
-                    <p class="patient-name">{{ patient.full_name }}</p>
-                    <p class="patient-email">{{ patient.email }}</p>
-                  </div>
-                  <rc-icon v-if="selectedPatient?._id === patient._id" icon-name="check" size="sm" class="check-icon" />
-                </div>
-              </div>
-              <p v-else-if="patientSearch && !searchingPatients" class="no-results">
-                No patients found
-              </p>
-            </div>
-
-            <!-- Selected Patient Card -->
-            <div v-if="selectedPatient" class="selected-patient-card">
-              <h3>Selected Patient</h3>
-              <div class="patient-details">
-                <div class="patient-avatar large">
-                  <img v-if="selectedPatient.profile_image" :src="selectedPatient.profile_image" :alt="selectedPatient.full_name" />
-                  <span v-else>{{ getInitials(selectedPatient.full_name) }}</span>
-                </div>
-                <div class="patient-info">
-                  <p class="patient-name">{{ selectedPatient.full_name }}</p>
-                  <p class="patient-email">{{ selectedPatient.email }}</p>
-                  <p class="patient-phone">{{ selectedPatient.phone || 'No phone' }}</p>
-                </div>
-              </div>
-            </div>
-
-            <!-- Pre-selected Drug Indicator -->
-            <div v-if="preSelectedDrug" class="preselected-drug-card">
-              <h3>
-                <rc-icon icon-name="pill" size="sm" />
-                Pre-selected Medication
-              </h3>
-              <div class="drug-preview">
-                <div class="drug-image">
-                  <img v-if="preSelectedDrug.primary_image" :src="preSelectedDrug.primary_image" :alt="preSelectedDrug.name" />
-                  <rc-icon v-else icon-name="pill" size="md" />
-                </div>
-                <div class="drug-info">
-                  <p class="drug-name">{{ preSelectedDrug.name }}</p>
-                  <p class="drug-details">{{ preSelectedDrug.generic_name }} | {{ preSelectedDrug.strength }}</p>
-                  <p class="drug-price">NGN {{ formatCurrency(preSelectedDrug.selling_price) }}</p>
-                </div>
-              </div>
-              <p class="drug-note">This medication will be automatically added when you proceed to the next step.</p>
-            </div>
-
-            <loader v-if="loadingPreSelectedDrug" :useOverlay="false" size="sm" />
-          </div>
-
-          <!-- Step 2: Add Medications -->
-          <div v-if="currentStep === 1" class="step-panel">
-            <div class="medications-header">
-              <h2>Add Medications</h2>
-              <button class="btn btn-secondary" @click="openDrugSearch">
-                <rc-icon icon-name="plus" size="sm" />
-                Add Drug
-              </button>
-            </div>
-
-            <!-- Drug Search Modal -->
-            <div v-if="showDrugSearch" class="drug-search-modal">
-              <div class="modal-overlay" @click="closeDrugSearch"></div>
-              <div class="modal-content">
-                <div class="modal-header">
-                  <h3>Search Medications</h3>
-                  <button class="close-btn" @click="closeDrugSearch">
-                    <rc-icon icon-name="close" size="sm" />
-                  </button>
-                </div>
-                <div class="modal-body">
-                  <div class="search-bar">
-                    <rc-icon icon-name="search" size="sm" />
-                    <input
-                      v-model="drugSearch"
-                      type="text"
-                      placeholder="Search by name or select a category..."
-                      @input="searchDrugs"
-                    />
-                  </div>
-
-                  <!-- Category Filter -->
-                  <div class="category-filter-row">
-                    <select
-                      v-model="selectedCategory"
-                      class="category-select"
-                      @change="fetchDrugs"
-                      :disabled="loadingCategories"
-                    >
-                      <option :value="null">All Categories</option>
-                      <option
-                        v-for="category in drugCategories"
-                        :key="category._id"
-                        :value="category._id"
-                      >
-                        {{ category.name }}
-                      </option>
-                    </select>
-                    <span v-if="selectedCategory" class="clear-filter" @click="clearCategoryFilter">
-                      <rc-icon icon-name="close" size="xs" />
-                      Clear
-                    </span>
-                  </div>
-
-                  <div class="search-divider" v-if="selectedCategory || drugSearch">
-                    <span>{{ getSearchResultsLabel() }}</span>
-                  </div>
-
-                  <loader v-if="searchingDrugs" :useOverlay="false" size="sm" />
-                  <div v-else-if="drugResults.length" class="drug-results">
-                    <div
-                      v-for="drug in drugResults"
-                      :key="drug.batch_id || drug._id"
-                      class="drug-option"
-                      @click="addDrugToList(drug)"
-                    >
-                      <div class="drug-image">
-                        <img v-if="drug.primary_image" :src="drug.primary_image" :alt="drug.name" />
-                        <rc-icon v-else icon-name="pill" size="md" />
-                      </div>
-                      <div class="drug-info">
-                        <p class="drug-name">{{ drug.name }}</p>
-                        <p class="drug-details">{{ drug.generic_name }} | {{ drug.strength }}</p>
-                        <p class="drug-manufacturer" v-if="drug.manufacturer">{{ drug.manufacturer }}</p>
-                        <p class="drug-batch" v-if="drug.batch_number">
-                          Batch: {{ drug.batch_number }}
-                          <span v-if="drug.expiry_date" :class="['expiry-tag', drug.expiry_status]">
-                            Exp: {{ formatDate(drug.expiry_date) }}
-                          </span>
-                        </p>
-                        <p class="drug-price">NGN {{ formatCurrency(drug.selling_price) }}</p>
-                      </div>
-                      <div :class="['stock-badge', drug.quantity > 0 ? 'in-stock' : 'out-of-stock']">
-                        {{ drug.quantity > 0 ? `${drug.quantity} in stock` : 'Out of stock' }}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Medications List -->
-            <div v-if="prescriptionItems.length" class="medications-list">
-              <div
-                v-for="(item, index) in prescriptionItems"
-                :key="index"
-                class="medication-card"
-              >
-                <div class="medication-header">
-                  <h4>{{ item.drug_name }}</h4>
-                  <button class="remove-btn" @click="removeDrug(index)">
-                    <rc-icon icon-name="trash" size="sm" />
-                  </button>
-                </div>
-                <p class="medication-details">{{ item.generic_name }} | {{ item.strength }}</p>
-                <p class="medication-meta" v-if="item.manufacturer || item.batch_number">
-                  <span v-if="item.manufacturer" class="mfr">{{ item.manufacturer }}</span>
-                  <span v-if="item.batch_number" class="batch">Batch: {{ item.batch_number }}</span>
-                </p>
-
-                <div class="medication-form">
-                  <div class="form-row">
-                    <div class="form-group">
-                      <label>Quantity *</label>
-                      <input
-                        v-model.number="item.quantity"
-                        type="number"
-                        min="1"
-                        :max="item.available_quantity"
-                        @change="updateTotals"
-                      />
-                      <span class="help-text">Available: {{ item.available_quantity }}</span>
-                    </div>
-                    <div class="form-group">
-                      <label>Unit Price</label>
-                      <input
-                        :value="formatCurrency(item.unit_price)"
-                        type="text"
-                        disabled
-                      />
-                    </div>
-                    <div class="form-group">
-                      <label>Subtotal</label>
-                      <input
-                        :value="formatCurrency(item.quantity * item.unit_price)"
-                        type="text"
-                        disabled
-                      />
-                    </div>
-                  </div>
-                  <div class="form-row">
-                    <div class="form-group">
-                      <label>Dosage *</label>
-                      <input
-                        v-model="item.dosage"
-                        type="text"
-                        placeholder="e.g., 1 tablet, 5ml"
-                      />
-                    </div>
-                    <div class="form-group">
-                      <label>Frequency *</label>
-                      <input
-                        v-model="item.frequency"
-                        type="text"
-                        placeholder="e.g., twice daily"
-                      />
-                    </div>
-                    <div class="form-group">
-                      <label>Duration *</label>
-                      <input
-                        v-model="item.duration"
-                        type="text"
-                        placeholder="e.g., 7 days"
-                      />
-                    </div>
-                  </div>
-                  <div class="form-group">
-                    <label>Additional Notes</label>
-                    <textarea
-                      v-model="item.notes"
-                      rows="2"
-                      placeholder="Any special instructions..."
-                    ></textarea>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div v-else class="empty-medications">
-              <rc-icon icon-name="pill" size="lg" />
-              <p>No medications added yet</p>
-              <button class="btn btn-primary" @click="openDrugSearch">
-                Add First Medication
-              </button>
-            </div>
-
-            <!-- Order Summary -->
-            <div v-if="prescriptionItems.length" class="order-summary">
-              <h3>Order Summary</h3>
-              <div class="summary-row">
-                <span>Subtotal ({{ prescriptionItems.length }} items)</span>
-                <span>NGN {{ formatCurrency(subtotal) }}</span>
-              </div>
-              <div class="summary-row total">
-                <span>Total</span>
-                <span>NGN {{ formatCurrency(subtotal) }}</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Step 3: Payment & Delivery -->
-          <div v-if="currentStep === 2" class="step-panel">
-            <h2>Payment & Delivery</h2>
-
-            <!-- Payment Method -->
-            <div class="section-card">
-              <h3>Payment Method</h3>
-              <div class="payment-options">
-                <div
-                  :class="['payment-option', { selected: paymentMethod === 'specialist_wallet' }]"
-                  @click="paymentMethod = 'specialist_wallet'"
-                >
-                  <div class="option-icon">
-                    <rc-icon icon-name="wallet" size="md" />
-                  </div>
-                  <div class="option-info">
-                    <h4>Pay from Wallet</h4>
-                    <p>Use your pharmacy wallet balance</p>
-                    <p class="wallet-balance">Balance: NGN {{ formatCurrency(walletBalance) }}</p>
-                  </div>
-                  <div class="option-check">
-                    <rc-icon v-if="paymentMethod === 'specialist_wallet'" icon-name="check-circle" size="md" />
-                  </div>
-                </div>
-
-                <div
-                  :class="['payment-option', { selected: paymentMethod === 'patient_wallet', disabled: !selectedPatient || !allowPatientWalletCharge }]"
-                  @click="selectPatientWalletPayment"
-                >
-                  <div class="option-icon patient-wallet">
-                    <rc-icon icon-name="wallet" size="md" />
-                  </div>
-                  <div class="option-info">
-                    <h4>Charge Patient Wallet</h4>
-                    <p>Deduct from patient's wallet balance</p>
-                    <loader v-if="loadingPatientWallet" :useOverlay="false" size="xs" />
-                    <template v-else>
-                      <p v-if="!allowPatientWalletCharge" class="charging-disabled-warning">
-                        Patient has disabled wallet charges
-                      </p>
-                      <template v-else>
-                        <p class="wallet-balance patient">Balance: NGN {{ formatCurrency(patientWalletBalance) }}</p>
-                        <p v-if="patientWalletBalance < subtotal && patientWalletBalance > 0" class="partial-warning">
-                          Partial payment - NGN {{ formatCurrency(subtotal - patientWalletBalance) }} remaining
-                        </p>
-                        <p v-if="patientWalletBalance === 0" class="no-balance-warning">
-                          Patient has no wallet balance
-                        </p>
-                      </template>
-                    </template>
-                  </div>
-                  <div class="option-check">
-                    <rc-icon v-if="paymentMethod === 'patient_wallet'" icon-name="check-circle" size="md" />
-                  </div>
-                </div>
-
-                <!-- Remaining Payment Method (for partial patient wallet payments) -->
-                <div v-if="paymentMethod === 'patient_wallet' && patientWalletBalance > 0 && patientWalletBalance < subtotal" class="remaining-payment-options">
-                  <label>How should the remaining amount be collected?</label>
-                  <div class="remaining-options">
-                    <div
-                      :class="['remaining-option', { selected: remainingPaymentMethod === 'online' }]"
-                      @click="remainingPaymentMethod = 'online'"
-                    >
-                      <rc-icon icon-name="credit-card" size="sm" />
-                      <span>Online Payment</span>
-                    </div>
-                    <div
-                      :class="['remaining-option', { selected: remainingPaymentMethod === 'cash' }]"
-                      @click="remainingPaymentMethod = 'cash'"
-                    >
-                      <rc-icon icon-name="money" size="sm" />
-                      <span>Cash on Delivery</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div
-                  :class="['payment-option', { selected: paymentMethod === 'patient_online' }]"
-                  @click="paymentMethod = 'patient_online'"
-                >
-                  <div class="option-icon">
-                    <rc-icon icon-name="credit-card" size="md" />
-                  </div>
-                  <div class="option-info">
-                    <h4>Patient Online Payment</h4>
-                    <p>Send payment link to patient</p>
-                  </div>
-                  <div class="option-check">
-                    <rc-icon v-if="paymentMethod === 'patient_online'" icon-name="check-circle" size="md" />
-                  </div>
-                </div>
-
-                <div
-                  :class="['payment-option', { selected: paymentMethod === 'patient_cash' }]"
-                  @click="paymentMethod = 'patient_cash'"
-                >
-                  <div class="option-icon">
-                    <rc-icon icon-name="money" size="md" />
-                  </div>
-                  <div class="option-info">
-                    <h4>Cash Payment</h4>
-                    <p>Patient pays in cash on delivery/pickup</p>
-                  </div>
-                  <div class="option-check">
-                    <rc-icon v-if="paymentMethod === 'patient_cash'" icon-name="check-circle" size="md" />
-                  </div>
-                </div>
-
-                <!-- Send to Patient for Self-Service -->
-                <div
-                  :class="['payment-option send-to-patient', { selected: paymentMethod === 'send_to_patient' }]"
-                  @click="paymentMethod = 'send_to_patient'"
-                >
-                  <div class="option-icon self-service">
-                    <rc-icon icon-name="send" size="md" />
-                  </div>
-                  <div class="option-info">
-                    <h4>Send to Patient</h4>
-                    <p>Patient reviews, accepts, and pays themselves</p>
-                    <p class="self-service-note">PDF generated, 48h validity</p>
-                  </div>
-                  <div class="option-check">
-                    <rc-icon v-if="paymentMethod === 'send_to_patient'" icon-name="check-circle" size="md" />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Delivery Info -->
-            <div class="section-card">
-              <h3>Delivery Information</h3>
-              <div class="form-group">
-                <label>Delivery Type</label>
-                <select v-model="deliveryType" @change="onDeliveryTypeChange">
-                  <option value="PICKUP">Pickup at Clinic</option>
-                  <option value="DELIVERY">Home Delivery</option>
-                  <option value="PICKUP_CENTER">Pickup at Pharmacy</option>
-                </select>
-              </div>
-
-              <!-- Pickup Center Selection -->
-              <div v-if="deliveryType === 'PICKUP_CENTER'" class="pickup-center-section">
-                <label>Select Pickup Center</label>
-                <div class="pickup-center-search">
-                  <div class="search-bar">
-                    <rc-icon icon-name="search" size="sm" />
-                    <input
-                      v-model="pickupCenterSearch"
-                      type="text"
-                      placeholder="Search pickup centers by city or state..."
-                      @input="searchPickupCenters"
-                    />
-                  </div>
-                  <button class="use-location-btn" type="button" @click="useLocationForPickup">
-                    <rc-icon icon-name="navigation" size="sm" />
-                    Near Me
-                  </button>
-                </div>
-
-                <loader v-if="loadingPickupCenters" :useOverlay="false" size="sm" />
-
-                <div v-else-if="pickupCenters.length > 0" class="pickup-centers-list">
-                  <div
-                    v-for="center in pickupCenters"
-                    :key="center._id"
-                    :class="['pickup-center-option', { selected: selectedPickupCenterId === center._id }]"
-                    @click="selectPickupCenter(center)"
-                  >
-                    <div class="pickup-center-radio">
-                      <input
-                        type="radio"
-                        :id="`pickup-${center._id}`"
-                        :value="center._id"
-                        v-model="selectedPickupCenterId"
-                      />
-                    </div>
-                    <div class="pickup-center-info">
-                      <h4>{{ center.name }}</h4>
-                      <p class="center-address">{{ formatPickupCenterAddress(center.address) }}</p>
-                      <div class="center-meta">
-                        <span v-if="center.distance" class="distance">
-                          <rc-icon icon-name="navigation" size="xs" />
-                          {{ formatDistance(center.distance) }}
-                        </span>
-                        <span v-if="center.pickup_center_settings?.handling_fee" class="handling-fee">
-                          Fee: NGN {{ formatCurrency(center.pickup_center_settings.handling_fee) }}
-                        </span>
-                      </div>
-                    </div>
-                    <rc-icon v-if="selectedPickupCenterId === center._id" icon-name="check-circle" size="sm" class="selected-check" />
-                  </div>
-                </div>
-
-                <div v-else-if="pickupCenterSearch" class="no-pickup-centers">
-                  <rc-icon icon-name="map-pin" size="md" />
-                  <p>No pickup centers found</p>
-                  <span>Try searching in a different location</span>
-                </div>
-
-                <!-- Selected Pickup Center Display -->
-                <div v-if="selectedPickupCenter" class="selected-pickup-center">
-                  <h4>Selected Pickup Center</h4>
-                  <div class="pickup-details">
-                    <p class="center-name">{{ selectedPickupCenter.name }}</p>
-                    <p class="center-address">{{ formatPickupCenterAddress(selectedPickupCenter.address) }}</p>
-                    <p v-if="selectedPickupCenter.contact?.phone" class="center-phone">
-                      {{ selectedPickupCenter.contact.phone }}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Home Delivery Address Section -->
-              <div v-if="deliveryType === 'DELIVERY'" class="delivery-address-section">
-                <!-- Saved Addresses -->
-                <div v-if="savedAddresses.length > 0 || profileAddress" class="saved-addresses">
-                  <label>Select an Address</label>
-                  <div class="address-options">
-                    <!-- Profile Address -->
-                    <div
-                      v-if="profileAddress"
-                      :class="['address-option', { selected: selectedAddressId === 'profile_address' }]"
-                      @click="selectAddress(profileAddress)"
-                    >
-                      <div class="address-option__header">
-                        <span class="address-label">{{ profileAddress.label }}</span>
-                        <span class="profile-badge">From Profile</span>
-                      </div>
-                      <div class="address-option__details">
-                        <p class="recipient">{{ profileAddress.recipient_name }}</p>
-                        <p class="address-line">{{ profileAddress.street }}</p>
-                        <p class="address-line">{{ formatAddressLine(profileAddress) }}</p>
-                        <p class="phone" v-if="profileAddress.phone">{{ profileAddress.phone }}</p>
-                      </div>
-                      <rc-icon v-if="selectedAddressId === 'profile_address'" icon-name="check-circle" size="sm" class="selected-check" />
-                    </div>
-
-                    <!-- Saved Addresses -->
-                    <div
-                      v-for="address in savedAddresses"
-                      :key="address._id"
-                      :class="['address-option', { selected: selectedAddressId === address._id }]"
-                      @click="selectAddress(address)"
-                    >
-                      <div class="address-option__header">
-                        <span class="address-label">{{ address.label }}</span>
-                        <span v-if="address.is_default" class="default-badge">Default</span>
-                      </div>
-                      <div class="address-option__details">
-                        <p class="recipient">{{ address.recipient_name }}</p>
-                        <p class="address-line">{{ address.street }}</p>
-                        <p class="address-line">{{ formatAddressLine(address) }}</p>
-                        <p class="phone" v-if="address.phone">{{ address.phone }}</p>
-                      </div>
-                      <rc-icon v-if="selectedAddressId === address._id" icon-name="check-circle" size="sm" class="selected-check" />
-                    </div>
-
-                    <!-- Add New Address Option -->
-                    <div
-                      :class="['address-option add-new', { selected: selectedAddressId === 'new' }]"
-                      @click="selectNewAddress"
-                    >
-                      <rc-icon icon-name="plus" size="md" />
-                      <span>Add New Address</span>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- New Address Form -->
-                <div v-if="selectedAddressId === 'new' || (!savedAddresses.length && !profileAddress)" class="new-address-form">
-                  <h4>{{ savedAddresses.length || profileAddress ? 'New Delivery Address' : 'Delivery Address' }}</h4>
-
-                  <div class="form-row">
-                    <div class="form-group">
-                      <label>Address Label *</label>
-                      <select v-model="newAddress.label">
-                        <option value="">Select label</option>
-                        <option value="Home">Home</option>
-                        <option value="Office">Office</option>
-                        <option value="Other">Other</option>
-                      </select>
-                    </div>
-                    <div class="form-group flex-2">
-                      <label>Recipient Name *</label>
-                      <input
-                        v-model="newAddress.recipient_name"
-                        type="text"
-                        placeholder="Full name of person receiving delivery"
-                      />
-                    </div>
-                  </div>
-
-                  <div class="form-row">
-                    <div class="form-group flex-2">
-                      <label>Phone Number *</label>
-                      <input
-                        v-model="newAddress.phone"
-                        type="tel"
-                        placeholder="e.g., 08012345678"
-                      />
-                    </div>
-                  </div>
-
-                  <div class="form-group">
-                    <label>Street Address *</label>
-                    <input
-                      v-model="newAddress.street"
-                      type="text"
-                      placeholder="House number, street name, landmark"
-                    />
-                  </div>
-
-                  <div class="form-row">
-                    <div class="form-group">
-                      <label>City *</label>
-                      <input
-                        v-model="newAddress.city"
-                        type="text"
-                        placeholder="City"
-                      />
-                    </div>
-                    <div class="form-group">
-                      <label>State *</label>
-                      <select v-model="newAddress.state">
-                        <option value="">Select state</option>
-                        <option v-for="state in nigerianStates" :key="state" :value="state">{{ state }}</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div class="form-row">
-                    <div class="form-group">
-                      <label>Postal Code</label>
-                      <input
-                        v-model="newAddress.postal_code"
-                        type="text"
-                        placeholder="Optional"
-                      />
-                    </div>
-                    <div class="form-group flex-2">
-                      <label>Additional Info</label>
-                      <input
-                        v-model="newAddress.additional_info"
-                        type="text"
-                        placeholder="e.g., Gate code, building color"
-                      />
-                    </div>
-                  </div>
-
-                  <div class="form-group checkbox-group" v-if="savedAddresses.length > 0 || profileAddress">
-                    <label class="checkbox-label">
-                      <input type="checkbox" v-model="saveNewAddress" />
-                      <span>Save this address for future use</span>
-                    </label>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Notes -->
-            <div class="section-card">
-              <h3>Prescription Notes</h3>
-              <div class="form-group">
-                <label>Notes for Patient (Optional)</label>
-                <textarea
-                  v-model="prescriptionNotes"
-                  rows="3"
-                  placeholder="Any additional notes for the patient..."
-                ></textarea>
-              </div>
-            </div>
-
-            <!-- Final Summary -->
-            <div class="final-summary">
-              <h3>Final Summary</h3>
-              <div class="summary-details">
-                <div class="summary-item">
-                  <span class="label">Patient</span>
-                  <span class="value">{{ selectedPatient?.full_name }}</span>
-                </div>
-                <div class="summary-item">
-                  <span class="label">Items</span>
-                  <span class="value">{{ prescriptionItems.length }} medications</span>
-                </div>
-                <div class="summary-item">
-                  <span class="label">Payment Method</span>
-                  <span class="value">{{ formatPaymentMethod(paymentMethod) }}</span>
-                </div>
-                <div class="summary-item">
-                  <span class="label">Delivery</span>
-                  <span class="value">{{ formatDeliveryType(deliveryType) }}</span>
-                </div>
-                <div v-if="deliveryType === 'DELIVERY' && deliveryAddressForSubmit" class="summary-item address">
-                  <span class="label">Delivery Address</span>
-                  <div class="value address-preview">
-                    <p>{{ deliveryAddressForSubmit.recipient_name }}</p>
-                    <p>{{ deliveryAddressForSubmit.street }}</p>
-                    <p>{{ formatAddressLine(deliveryAddressForSubmit) }}</p>
-                    <p>{{ deliveryAddressForSubmit.phone }}</p>
-                  </div>
-                </div>
-                <div v-if="deliveryType === 'PICKUP_CENTER' && selectedPickupCenter" class="summary-item address">
-                  <span class="label">Pickup Center</span>
-                  <div class="value address-preview">
-                    <p>{{ selectedPickupCenter.name }}</p>
-                    <p>{{ formatPickupCenterAddress(selectedPickupCenter.address) }}</p>
-                    <p v-if="selectedPickupCenter.contact?.phone">{{ selectedPickupCenter.contact.phone }}</p>
-                  </div>
-                </div>
-                <div class="summary-item total">
-                  <span class="label">Total Amount</span>
-                  <span class="value">NGN {{ formatCurrency(subtotal) }}</span>
-                </div>
+              <div class="step-info">
+                <span class="step-label">{{ step.label }}</span>
+                <span class="step-desc">{{ getStepDescription(index) }}</span>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Navigation Buttons -->
-        <div class="navigation-buttons">
-          <button
-            v-if="currentStep > 0"
-            class="btn btn-secondary"
-            @click="prevStep"
-          >
-            Back
-          </button>
-          <div class="spacer"></div>
-          <button
-            v-if="currentStep < steps.length - 1"
-            class="btn btn-primary"
-            :disabled="!canProceed"
-            @click="nextStep"
-          >
-            Continue
-          </button>
-          <button
-            v-else
-            class="btn btn-primary"
-            :disabled="!canSubmit || submitting"
-            @click="submitPrescription"
-          >
-            {{ submitting ? 'Creating...' : 'Create Prescription' }}
-          </button>
+        <!-- Main Content Area -->
+        <div class="main-content">
+          <!-- Step Content -->
+          <div class="step-content">
+            <StepPatientSelect
+              v-if="currentStep === 0"
+              :selectedPatient="selectedPatient"
+              :preSelectedDrug="preSelectedDrug"
+              :loadingPreSelectedDrug="loadingPreSelectedDrug"
+              @select-patient="onPatientSelect"
+            />
+
+            <StepMedications
+              v-if="currentStep === 1"
+              :items="prescriptionItems"
+              :subtotal="subtotal"
+              @add-drug="addDrug"
+              @remove-drug="removeDrug"
+              @update-drug="updateDrug"
+            />
+
+            <StepLinkRecords
+              v-if="currentStep === 1 && selectedPatient"
+              :patientId="selectedPatient?._id"
+              :preSelectedAppointments="preSelectedAppointments"
+              :preSelectedNotes="preSelectedNotes"
+              @update:linkedAppointments="linkedAppointments = $event"
+              @update:linkedClinicalNotes="linkedClinicalNotes = $event"
+            />
+
+            <StepPaymentDelivery
+              v-if="currentStep === 2"
+              :paymentMethod="paymentMethod"
+              :deliveryType="deliveryType"
+              :prescriptionNotes="prescriptionNotes"
+              :walletBalance="walletBalance"
+              :patientWalletBalance="patientWalletBalance"
+              :loadingPatientWallet="loadingPatientWallet"
+              :allowPatientWalletCharge="allowPatientWalletCharge"
+              :remainingPaymentMethod="remainingPaymentMethod"
+              :subtotal="subtotal"
+              :itemCount="prescriptionItems.length"
+              :patientName="selectedPatient?.full_name || ''"
+              :savedAddresses="savedAddresses"
+              :profileAddress="profileAddress"
+              :selectedAddressId="selectedAddressId"
+              :selectedAddress="selectedAddress"
+              :newAddress="newAddress"
+              :saveNewAddress="saveNewAddress"
+              :selectedPickupCenter="selectedPickupCenter"
+              :selectedPickupCenterId="selectedPickupCenterId"
+              @update:paymentMethod="paymentMethod = $event"
+              @update:deliveryType="onDeliveryTypeChange($event)"
+              @update:prescriptionNotes="prescriptionNotes = $event"
+              @update:remainingPaymentMethod="remainingPaymentMethod = $event"
+              @update:saveNewAddress="saveNewAddress = $event"
+              @select-address="selectAddress"
+              @select-new-address="selectNewAddress"
+              @update-address-field="updateAddressField"
+              @select-pickup-center="selectPickupCenter"
+              @clear-pickup-center="clearPickupCenter"
+            />
+          </div>
+        </div>
+
+        <!-- Navigation Footer -->
+        <div class="navigation-footer">
+          <div class="nav-left">
+            <button
+              v-if="currentStep > 0"
+              class="nav-btn nav-btn--secondary"
+              @click="prevStep"
+            >
+              <v-icon name="hi-arrow-left" scale="0.8" />
+              Back
+            </button>
+          </div>
+          <div class="nav-right">
+            <button
+              v-if="currentStep < steps.length - 1"
+              class="nav-btn nav-btn--primary"
+              :disabled="!canProceed"
+              @click="nextStep"
+            >
+              Continue
+              <v-icon name="hi-arrow-right" scale="0.8" />
+            </button>
+            <button
+              v-else
+              class="nav-btn nav-btn--success"
+              :disabled="!canSubmit || submitting"
+              @click="submitPrescription"
+            >
+              <v-icon v-if="!submitting" name="hi-check" scale="0.9" />
+              <span v-if="submitting" class="spinner"></span>
+              {{ submitting ? 'Creating...' : 'Create Prescription' }}
+            </button>
+          </div>
         </div>
       </div>
     </div>
   </div>
 </template>
 
-<script>
-import TopBar from "@/components/Navigation/top-bar";
-import Loader from "@/components/Loader/main-loader";
-import RcIcon from "@/components/RCIcon";
-import apiFactory from "@/services/apiFactory";
-import { debounce } from "lodash";
+<script setup>
+import { ref, computed, onMounted } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
+import { useToast } from 'vue-toast-notification';
+import TopBar from '@/components/Navigation/top-bar';
+import RcAvatar from '@/components/RCAvatar';
+import apiFactory from '@/services/apiFactory';
+import { usePharmacy } from './composables/usePharmacy';
+import ProgressSteps from './components/create-prescription/ProgressSteps.vue';
+import StepPatientSelect from './components/create-prescription/StepPatientSelect.vue';
+import StepMedications from './components/create-prescription/StepMedications.vue';
+import StepPaymentDelivery from './components/create-prescription/StepPaymentDelivery.vue';
+import StepLinkRecords from './components/create-prescription/StepLinkRecords.vue';
 
-export default {
-  name: "CreatePrescription",
-  components: {
-    TopBar,
-    Loader,
-    RcIcon,
-  },
-  data() {
-    return {
-      currentStep: 0,
-      steps: [
-        { id: "patient", label: "Select Patient" },
-        { id: "medications", label: "Add Medications" },
-        { id: "payment", label: "Payment & Delivery" },
-      ],
-      // Patient Selection
-      patientSearch: "",
-      searchingPatients: false,
-      patientResults: [],
-      selectedPatient: null,
-      // Drug Selection
-      showDrugSearch: false,
-      drugSearch: "",
-      searchingDrugs: false,
-      drugResults: [],
-      drugCategories: [],
-      selectedCategory: null,
-      loadingCategories: false,
-      // Pre-selected drug from URL
-      preSelectedDrug: null,
-      loadingPreSelectedDrug: false,
-      // Prescription Items
-      prescriptionItems: [],
-      // Payment & Delivery
-      paymentMethod: "specialist_wallet",
-      deliveryType: "PICKUP",
-      prescriptionNotes: "",
-      walletBalance: 0,
-      // Patient Wallet
-      patientWalletBalance: 0,
-      loadingPatientWallet: false,
-      remainingPaymentMethod: "online",
-      allowPatientWalletCharge: true,
-      // Delivery Address
-      savedAddresses: [],
-      profileAddress: null,
-      selectedAddressId: null,
-      selectedAddress: null,
-      saveNewAddress: true,
-      newAddress: {
-        label: "Home",
-        recipient_name: "",
-        phone: "",
-        street: "",
-        city: "",
-        state: "",
-        postal_code: "",
-        additional_info: "",
-      },
-      nigerianStates: [
-        "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", "Borno",
-        "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu", "FCT", "Gombe",
-        "Imo", "Jigawa", "Kaduna", "Kano", "Katsina", "Kebbi", "Kogi", "Kwara",
-        "Lagos", "Nasarawa", "Niger", "Ogun", "Ondo", "Osun", "Oyo", "Plateau",
-        "Rivers", "Sokoto", "Taraba", "Yobe", "Zamfara"
-      ],
-      // Pickup Center
-      pickupCenterSearch: "",
-      pickupCenters: [],
-      loadingPickupCenters: false,
-      selectedPickupCenter: null,
-      selectedPickupCenterId: null,
-      // Submission
-      submitting: false,
+const router = useRouter();
+const route = useRoute();
+const $toast = useToast();
+const { formatCurrency } = usePharmacy();
+
+function getFirstName(name) {
+  if (!name) return '';
+  return name.split(' ')[0] || '';
+}
+
+function getLastName(name) {
+  if (!name) return '';
+  const parts = name.split(' ');
+  return parts.length > 1 ? parts[parts.length - 1] : '';
+}
+
+// Format allergies for display
+function formatAllergies(allergies) {
+  if (!allergies || allergies.length === 0) return '';
+  return allergies.map(a => {
+    if (typeof a === 'string') return a;
+    const name = a.name || a.allergen || a;
+    const severity = a.severity ? ` (${a.severity})` : '';
+    return `${name}${severity}`;
+  }).join(', ');
+}
+
+// Dismiss allergy warning (temporarily)
+function dismissAllergyWarning() {
+  allergyWarningDismissed.value = true;
+}
+
+// Step descriptions for progress indicator
+function getStepDescription(index) {
+  const descriptions = [
+    'Choose patient',
+    'Add drugs & dosage',
+    'Payment options',
+  ];
+  return descriptions[index] || '';
+}
+
+// Navigate to a specific step (only if completed or current)
+function goToStep(index) {
+  if (index < currentStep.value) {
+    currentStep.value = index;
+  }
+}
+
+// Steps
+const steps = [
+  { id: 'patient', label: 'Select Patient' },
+  { id: 'medications', label: 'Add Medications' },
+  { id: 'payment', label: 'Payment & Delivery' },
+];
+const currentStep = ref(0);
+
+// Patient
+const selectedPatient = ref(null);
+const patientAllergies = ref([]);
+const loadingAllergies = ref(false);
+const allergyWarningDismissed = ref(false);
+
+// Pre-selected Drug
+const preSelectedDrug = ref(null);
+const loadingPreSelectedDrug = ref(false);
+
+// Prescription Items
+const prescriptionItems = ref([]);
+
+// Linked Records
+const linkedAppointments = ref([]);
+const linkedClinicalNotes = ref([]);
+const preSelectedAppointments = ref([]);
+const preSelectedNotes = ref([]);
+
+// Payment & Delivery
+const paymentMethod = ref('specialist_wallet');
+const deliveryType = ref('PICKUP');
+const prescriptionNotes = ref('');
+const walletBalance = ref(0);
+const patientWalletBalance = ref(0);
+const loadingPatientWallet = ref(false);
+const allowPatientWalletCharge = ref(true);
+const remainingPaymentMethod = ref('online');
+
+// Delivery Address
+const savedAddresses = ref([]);
+const profileAddress = ref(null);
+const selectedAddressId = ref(null);
+const selectedAddress = ref(null);
+const saveNewAddress = ref(true);
+const newAddress = ref({
+  label: 'Home',
+  recipient_name: '',
+  phone: '',
+  street: '',
+  city: '',
+  state: '',
+  postal_code: '',
+  additional_info: '',
+});
+
+// Pickup Center
+const selectedPickupCenter = ref(null);
+const selectedPickupCenterId = ref(null);
+
+// Submission
+const submitting = ref(false);
+
+// Computed
+const subtotal = computed(() => {
+  return prescriptionItems.value.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
+});
+
+const canProceed = computed(() => {
+  if (currentStep.value === 0) return !!selectedPatient.value;
+  if (currentStep.value === 1) {
+    return prescriptionItems.value.length > 0 &&
+      prescriptionItems.value.every(item => item.quantity > 0 && item.dosage && item.frequency && item.duration);
+  }
+  return true;
+});
+
+const canSubmit = computed(() => {
+  if (!canProceed.value || !paymentMethod.value) return false;
+
+  if (deliveryType.value === 'DELIVERY') {
+    if (selectedAddressId.value === 'new' || (!savedAddresses.value.length && !profileAddress.value)) {
+      const addr = newAddress.value;
+      return !!(addr.label && addr.recipient_name && addr.phone && addr.street && addr.city && addr.state);
+    }
+    return !!selectedAddressId.value;
+  }
+
+  if (deliveryType.value === 'PICKUP_CENTER') {
+    return !!selectedPickupCenterId.value;
+  }
+
+  return true;
+});
+
+const deliveryAddressForSubmit = computed(() => {
+  if (deliveryType.value !== 'DELIVERY') return null;
+  if (selectedAddressId.value && selectedAddressId.value !== 'new') {
+    return selectedAddress.value;
+  }
+  return { ...newAddress.value, country: 'Nigeria' };
+});
+
+// Lifecycle
+onMounted(async () => {
+  const patientId = route.query.patient;
+  if (patientId) {
+    await loadPatient(patientId);
+    await loadPatientAddresses(patientId);
+  }
+
+  const drugId = route.query.drug;
+  const batchId = route.query.batch;
+  if (drugId) {
+    await loadPreSelectedDrug(drugId, batchId);
+  }
+
+  // Handle linked appointment/note pre-selection
+  const linkAppointment = route.query.linkAppointment;
+  if (linkAppointment) {
+    preSelectedAppointments.value = [linkAppointment];
+    linkedAppointments.value = [linkAppointment];
+  }
+  const linkNote = route.query.linkNote;
+  if (linkNote) {
+    // Format: appointmentId:noteId
+    const [apptId, noteId] = linkNote.split(':');
+    if (apptId && noteId) {
+      preSelectedNotes.value = [{ appointment_id: apptId, note_id: noteId }];
+      linkedClinicalNotes.value = [{ appointment_id: apptId, note_id: noteId }];
+      if (!preSelectedAppointments.value.includes(apptId)) {
+        preSelectedAppointments.value.push(apptId);
+        linkedAppointments.value.push(apptId);
+      }
+    }
+  }
+
+  await fetchWalletBalance();
+});
+
+// Methods
+async function loadPatient(patientId) {
+  try {
+    const response = await apiFactory.$_getPharmacyPatientDetails(patientId);
+    const result = response.data?.data || response.data?.result;
+    if (result) selectedPatient.value = result;
+  } catch (error) {
+    console.error('Error loading patient:', error);
+  }
+}
+
+async function loadPreSelectedDrug(drugId, batchId = null) {
+  try {
+    loadingPreSelectedDrug.value = true;
+    const params = batchId ? { batch_id: batchId } : {};
+    const response = await apiFactory.$_getPharmacyDrugDetails(drugId, params);
+    const result = response.data?.data || response.data?.result;
+    if (result) {
+      preSelectedDrug.value = { ...result, batch_id: batchId || result.batch_id };
+      $toast.info(`${result.name} will be added to your prescription`);
+    }
+  } catch (error) {
+    console.error('Error loading pre-selected drug:', error);
+    $toast.error('Failed to load the selected medication');
+  } finally {
+    loadingPreSelectedDrug.value = false;
+  }
+}
+
+async function fetchWalletBalance() {
+  try {
+    const response = await apiFactory.$_getSpecialistWallet();
+    const result = response.data?.data || response.data?.result;
+    if (result) walletBalance.value = result.available_balance || 0;
+  } catch (error) {
+    console.error('Error fetching wallet:', error);
+  }
+}
+
+async function fetchPatientWalletBalance(patientId) {
+  if (!patientId) return;
+  try {
+    loadingPatientWallet.value = true;
+    const response = await apiFactory.$_getPatientWalletBalance(patientId);
+    const result = response.data?.data || response.data?.result;
+    if (result) {
+      patientWalletBalance.value = result.available_balance || 0;
+      allowPatientWalletCharge.value = result.allow_specialist_charge !== false;
+    }
+  } catch (error) {
+    console.error('Error fetching patient wallet:', error);
+    patientWalletBalance.value = 0;
+    allowPatientWalletCharge.value = true;
+  } finally {
+    loadingPatientWallet.value = false;
+  }
+}
+
+function onPatientSelect(patient) {
+  selectedPatient.value = patient;
+  allergyWarningDismissed.value = false; // Reset warning for new patient
+  resetDeliveryAddresses();
+  loadPatientAddresses(patient._id);
+  fetchPatientWalletBalance(patient._id);
+  fetchPatientAllergies(patient._id);
+}
+
+async function fetchPatientAllergies(patientId) {
+  try {
+    loadingAllergies.value = true;
+    const response = await apiFactory.$_getPharmacyPatientMedicalHistory(patientId);
+    const data = response.data?.data || response.data?.result || response.data;
+    patientAllergies.value = data?.allergies || [];
+  } catch (error) {
+    console.error('Error fetching patient allergies:', error);
+    patientAllergies.value = [];
+  } finally {
+    loadingAllergies.value = false;
+  }
+}
+
+async function loadPatientAddresses(patientId) {
+  try {
+    const response = await apiFactory.$_getPatientDeliveryAddresses(patientId);
+    const result = response.data?.data || response.data?.result;
+    if (result) {
+      savedAddresses.value = result.addresses || [];
+      profileAddress.value = result.profile_address;
+
+      const defaultAddr = savedAddresses.value.find(a => a.is_default);
+      if (defaultAddr) {
+        selectAddress(defaultAddr);
+      } else if (profileAddress.value) {
+        selectAddress(profileAddress.value);
+      }
+    }
+  } catch (error) {
+    console.error('Error loading addresses:', error);
+  }
+}
+
+function resetDeliveryAddresses() {
+  savedAddresses.value = [];
+  profileAddress.value = null;
+  selectedAddressId.value = null;
+  selectedAddress.value = null;
+  newAddress.value = {
+    label: 'Home', recipient_name: '', phone: '',
+    street: '', city: '', state: '', postal_code: '', additional_info: '',
+  };
+}
+
+function selectAddress(address) {
+  selectedAddressId.value = address._id || 'profile_address';
+  selectedAddress.value = {
+    recipient_name: address.recipient_name,
+    phone: address.phone,
+    street: address.street,
+    city: address.city,
+    state: address.state,
+    country: address.country || 'Nigeria',
+    postal_code: address.postal_code || '',
+    additional_info: address.additional_info || '',
+  };
+}
+
+function selectNewAddress() {
+  selectedAddressId.value = 'new';
+  selectedAddress.value = null;
+  if (selectedPatient.value) {
+    newAddress.value.recipient_name = selectedPatient.value.full_name || '';
+    newAddress.value.phone = selectedPatient.value.phone || '';
+  }
+}
+
+function updateAddressField({ field, value }) {
+  newAddress.value = { ...newAddress.value, [field]: value };
+}
+
+function onDeliveryTypeChange(type) {
+  deliveryType.value = type;
+  if (type !== 'PICKUP_CENTER') {
+    selectedPickupCenter.value = null;
+    selectedPickupCenterId.value = null;
+  }
+}
+
+function selectPickupCenter(center) {
+  selectedPickupCenter.value = center;
+  selectedPickupCenterId.value = center._id;
+}
+
+function clearPickupCenter() {
+  selectedPickupCenter.value = null;
+  selectedPickupCenterId.value = null;
+}
+
+// Drug management
+function addDrug(item) {
+  prescriptionItems.value.push(item);
+}
+
+function removeDrug(index) {
+  prescriptionItems.value.splice(index, 1);
+}
+
+function updateDrug({ index, item }) {
+  prescriptionItems.value[index] = item;
+}
+
+function addPreSelectedDrugToList() {
+  if (!preSelectedDrug.value) return;
+  const drug = preSelectedDrug.value;
+
+  if (drug.is_out_of_stock || drug.quantity === 0) {
+    $toast.error('This medication is out of stock');
+    preSelectedDrug.value = null;
+    return;
+  }
+
+  const duplicateKey = drug.batch_id ? `${drug._id}-${drug.batch_id}` : drug._id;
+  const exists = prescriptionItems.value.find(item => {
+    const itemKey = item.batch_id ? `${item.drug_id}-${item.batch_id}` : item.drug_id;
+    return itemKey === duplicateKey;
+  });
+
+  if (exists) {
+    $toast.warning('This medication is already in the list');
+    preSelectedDrug.value = null;
+    return;
+  }
+
+  prescriptionItems.value.push({
+    drug_id: drug._id,
+    batch_id: drug.batch_id || null,
+    batch_number: drug.batch_number || null,
+    drug_name: drug.name,
+    generic_name: drug.generic_name,
+    strength: drug.strength,
+    dosage_form: drug.dosage_form,
+    manufacturer: drug.manufacturer || null,
+    unit_price: drug.selling_price,
+    quantity: 1,
+    available_quantity: drug.quantity,
+    expiry_date: drug.expiry_date || null,
+    dosage: '',
+    frequency: '',
+    duration: '',
+    notes: '',
+  });
+
+  preSelectedDrug.value = null;
+}
+
+// Navigation
+function nextStep() {
+  if (currentStep.value === 0 && preSelectedDrug.value) {
+    addPreSelectedDrugToList();
+  }
+  if (currentStep.value < steps.length - 1) {
+    currentStep.value++;
+  }
+}
+
+function prevStep() {
+  if (currentStep.value > 0) {
+    currentStep.value--;
+  }
+}
+
+function goBack() {
+  if (currentStep.value > 0) {
+    prevStep();
+  } else {
+    router.back();
+  }
+}
+
+// Submission
+async function submitPrescription() {
+  try {
+    submitting.value = true;
+
+    // Save new address if needed
+    if (deliveryType.value === 'DELIVERY' && selectedAddressId.value === 'new' && saveNewAddress.value) {
+      await saveDeliveryAddress();
+    }
+
+    const payload = {
+      patient_id: selectedPatient.value._id,
+      items: prescriptionItems.value.map(item => ({
+        drug_id: item.drug_id,
+        batch_id: item.batch_id || undefined,
+        quantity: item.quantity,
+        dosage: item.dosage,
+        frequency: item.frequency,
+        duration: item.duration,
+        instructions: item.notes,
+      })),
+      payment_method: paymentMethod.value,
+      delivery_address: deliveryAddressForSubmit.value,
+      patient_notes: prescriptionNotes.value,
+      is_pickup_order: deliveryType.value === 'PICKUP_CENTER',
+      pickup_pharmacy_id: deliveryType.value === 'PICKUP_CENTER' ? selectedPickupCenterId.value : undefined,
+      linked_appointments: linkedAppointments.value.length ? linkedAppointments.value : undefined,
+      linked_clinical_notes: linkedClinicalNotes.value.length ? linkedClinicalNotes.value : undefined,
     };
-  },
-  computed: {
-    subtotal() {
-      return this.prescriptionItems.reduce((sum, item) => {
-        return sum + (item.quantity * item.unit_price);
-      }, 0);
-    },
-    canProceed() {
-      if (this.currentStep === 0) {
-        return !!this.selectedPatient;
-      }
-      if (this.currentStep === 1) {
-        return this.prescriptionItems.length > 0 &&
-          this.prescriptionItems.every(item => item.quantity > 0 && item.dosage && item.frequency && item.duration);
-      }
-      return true;
-    },
-    canSubmit() {
-      if (!this.canProceed || !this.paymentMethod) return false;
 
-      // Validate delivery address if home delivery is selected
-      if (this.deliveryType === 'DELIVERY') {
-        if (this.selectedAddressId === 'new' || (!this.savedAddresses.length && !this.profileAddress)) {
-          // Validate new address form
-          const addr = this.newAddress;
-          return addr.label && addr.recipient_name && addr.phone && addr.street && addr.city && addr.state;
-        } else {
-          // Must have selected an existing address
-          return !!this.selectedAddressId;
-        }
-      }
+    const response = await apiFactory.$_createSpecialistPrescription(payload);
+    const createResult = response.data?.data || response.data?.result;
 
-      // Validate pickup center if pickup at pharmacy is selected
-      if (this.deliveryType === 'PICKUP_CENTER') {
-        return !!this.selectedPickupCenterId;
-      }
+    if (createResult) {
+      $toast.success('Prescription created successfully');
+      const prescriptionId = createResult.prescription?._id || createResult._id;
 
-      return true;
-    },
-    deliveryAddressForSubmit() {
-      if (this.deliveryType !== 'DELIVERY') return null;
-
-      // If using a saved address or profile address
-      if (this.selectedAddressId && this.selectedAddressId !== 'new') {
-        return this.selectedAddress;
-      }
-
-      // If using new address form
-      return {
-        ...this.newAddress,
-        country: 'Nigeria',
-      };
-    },
-  },
-  async mounted() {
-    // Check for pre-selected patient from query params
-    const patientId = this.$route.query.patient;
-    if (patientId) {
-      await this.loadPatient(patientId);
-      await this.loadPatientAddresses(patientId);
+      await handlePostCreationPayment(prescriptionId);
+      router.push(`/app/specialist/pharmacy/prescriptions/${prescriptionId}`);
     }
+  } catch (error) {
+    console.error('Error creating prescription:', error);
+    $toast.error(error.response?.data?.message || 'Failed to create prescription');
+  } finally {
+    submitting.value = false;
+  }
+}
 
-    // Check for pre-selected drug from query params
-    const drugId = this.$route.query.drug;
-    const batchId = this.$route.query.batch;
-    if (drugId) {
-      await this.loadPreSelectedDrug(drugId, batchId);
-    }
-
-    await this.fetchWalletBalance();
-  },
-  created() {
-    this.debouncedPatientSearch = debounce(this.fetchPatients, 300);
-    this.debouncedDrugSearch = debounce(this.fetchDrugs, 300);
-  },
-  methods: {
-    async loadPatient(patientId) {
-      try {
-        const response = await apiFactory.$_getPharmacyPatientDetails(patientId);
-        const result = response.data?.data || response.data?.result;
-        if (result) {
-          this.selectedPatient = result;
-        }
-      } catch (error) {
-        console.error("Error loading patient:", error);
-      }
-    },
-    async loadPreSelectedDrug(drugId, batchId = null) {
-      try {
-        this.loadingPreSelectedDrug = true;
-        const params = {};
-        if (batchId) {
-          params.batch_id = batchId;
-        }
-        const response = await apiFactory.$_getPharmacyDrugDetails(drugId, params);
-        const result = response.data?.data || response.data?.result;
-        if (result) {
-          this.preSelectedDrug = {
-            ...result,
-            batch_id: batchId || result.batch_id,
-          };
-          this.$toast.info(`${result.name} will be added to your prescription`);
-        }
-      } catch (error) {
-        console.error("Error loading pre-selected drug:", error);
-        this.$toast.error("Failed to load the selected medication");
-      } finally {
-        this.loadingPreSelectedDrug = false;
-      }
-    },
-    addPreSelectedDrugToList() {
-      if (!this.preSelectedDrug) return;
-
-      const drug = this.preSelectedDrug;
-
-      // Check if drug is out of stock
-      if (drug.is_out_of_stock || drug.quantity === 0) {
-        this.$toast.error("This medication is out of stock");
-        this.preSelectedDrug = null;
-        return;
-      }
-
-      // Check if already added
-      const duplicateKey = drug.batch_id ? `${drug._id}-${drug.batch_id}` : drug._id;
-      const exists = this.prescriptionItems.find(item => {
-        const itemKey = item.batch_id ? `${item.drug_id}-${item.batch_id}` : item.drug_id;
-        return itemKey === duplicateKey;
-      });
-
-      if (exists) {
-        this.$toast.warning("This medication is already in the list");
-        this.preSelectedDrug = null;
-        return;
-      }
-
-      // Add to prescription items
-      this.prescriptionItems.push({
-        drug_id: drug._id,
-        batch_id: drug.batch_id || null,
-        batch_number: drug.batch_number || null,
-        drug_name: drug.name,
-        generic_name: drug.generic_name,
-        strength: drug.strength,
-        dosage_form: drug.dosage_form,
-        manufacturer: drug.manufacturer || null,
-        unit_price: drug.selling_price,
-        quantity: 1,
-        available_quantity: drug.quantity,
-        expiry_date: drug.expiry_date || null,
-        dosage: "",
-        frequency: "",
-        duration: "",
-        notes: "",
-      });
-
-      // Clear the pre-selected drug
-      this.preSelectedDrug = null;
-    },
-    async fetchWalletBalance() {
-      try {
-        const response = await apiFactory.$_getSpecialistWallet();
-        const result = response.data?.data || response.data?.result;
-        if (result) {
-          this.walletBalance = result.available_balance || 0;
-        }
-      } catch (error) {
-        console.error("Error fetching wallet:", error);
-      }
-    },
-    async fetchPatientWalletBalance(patientId) {
-      if (!patientId) return;
-      try {
-        this.loadingPatientWallet = true;
-        const response = await apiFactory.$_getPatientWalletBalance(patientId);
-        const result = response.data?.data || response.data?.result;
-        if (result) {
-          this.patientWalletBalance = result.available_balance || 0;
-          this.allowPatientWalletCharge = result.allow_specialist_charge !== false;
-        }
-      } catch (error) {
-        console.error("Error fetching patient wallet:", error);
-        this.patientWalletBalance = 0;
-        this.allowPatientWalletCharge = true;
-      } finally {
-        this.loadingPatientWallet = false;
-      }
-    },
-    selectPatientWalletPayment() {
-      if (!this.selectedPatient) {
-        this.$toast.warning("Please select a patient first");
-        return;
-      }
-      if (!this.allowPatientWalletCharge) {
-        this.$toast.warning("Patient has disabled specialist wallet charges");
-        return;
-      }
-      if (this.patientWalletBalance === 0) {
-        this.$toast.warning("Patient has no wallet balance");
-        return;
-      }
-      this.paymentMethod = "patient_wallet";
-    },
-    searchPatients() {
-      this.debouncedPatientSearch();
-    },
-    async fetchPatients() {
-      if (!this.patientSearch) {
-        this.patientResults = [];
-        return;
-      }
-      try {
-        this.searchingPatients = true;
-        const response = await apiFactory.$_searchPharmacyPatients({
-          search: this.patientSearch,
-          type: 'all', // Search all patients, not just those with appointments
-          limit: 10,
-        });
-        // Backend returns: { statusCode, message, data: { total, docs, pages, perPage, currentPage } }
-        const result = response.data?.data || response.data?.result;
-        if (result) {
-          this.patientResults = result.docs || [];
-        }
-      } catch (error) {
-        console.error("Error searching patients:", error);
-      } finally {
-        this.searchingPatients = false;
-      }
-    },
-    selectPatient(patient) {
-      this.selectedPatient = patient;
-      this.patientSearch = "";
-      this.patientResults = [];
-      // Reset and load delivery addresses for the selected patient
-      this.resetDeliveryAddresses();
-      this.loadPatientAddresses(patient._id);
-      // Fetch patient wallet balance
-      this.fetchPatientWalletBalance(patient._id);
-    },
-    async loadPatientAddresses(patientId) {
-      try {
-        const response = await apiFactory.$_getPatientDeliveryAddresses(patientId);
-        const result = response.data?.data || response.data?.result;
-        if (result) {
-          this.savedAddresses = result.addresses || [];
-          this.profileAddress = result.profile_address;
-
-          // Pre-select default address if available
-          const defaultAddr = this.savedAddresses.find(a => a.is_default);
-          if (defaultAddr) {
-            this.selectAddress(defaultAddr);
-          } else if (this.profileAddress) {
-            this.selectAddress(this.profileAddress);
-          }
-        }
-      } catch (error) {
-        console.error("Error loading patient addresses:", error);
-      }
-    },
-    resetDeliveryAddresses() {
-      this.savedAddresses = [];
-      this.profileAddress = null;
-      this.selectedAddressId = null;
-      this.selectedAddress = null;
-      this.newAddress = {
-        label: "Home",
-        recipient_name: "",
-        phone: "",
-        street: "",
-        city: "",
-        state: "",
-        postal_code: "",
-        additional_info: "",
+async function handlePostCreationPayment(prescriptionId) {
+  try {
+    if (paymentMethod.value === 'specialist_wallet') {
+      await apiFactory.$_payPrescriptionFromWallet(prescriptionId);
+      $toast.success('Payment completed from wallet');
+    } else if (paymentMethod.value === 'patient_wallet') {
+      const isPartial = patientWalletBalance.value < subtotal.value;
+      const walletPayload = {
+        allow_partial: isPartial,
+        remaining_payment_method: isPartial ? remainingPaymentMethod.value : undefined,
       };
-    },
-    selectAddress(address) {
-      this.selectedAddressId = address._id;
-      this.selectedAddress = {
-        recipient_name: address.recipient_name,
-        phone: address.phone,
-        street: address.street,
-        city: address.city,
-        state: address.state,
-        country: address.country || 'Nigeria',
-        postal_code: address.postal_code || '',
-        additional_info: address.additional_info || '',
-      };
-    },
-    selectNewAddress() {
-      this.selectedAddressId = 'new';
-      this.selectedAddress = null;
-      // Pre-fill with patient info if available
-      if (this.selectedPatient) {
-        this.newAddress.recipient_name = this.selectedPatient.full_name || '';
-        this.newAddress.phone = this.selectedPatient.phone || '';
-      }
-    },
-    async saveDeliveryAddress() {
-      if (!this.selectedPatient || !this.saveNewAddress) return null;
+      const payResult = await apiFactory.$_payPrescriptionFromPatientWallet(prescriptionId, walletPayload);
+      const payData = payResult.data?.data || payResult.data?.result;
 
-      try {
-        const response = await apiFactory.$_addPatientDeliveryAddress(
-          this.selectedPatient._id,
-          this.newAddress
-        );
-        const result = response.data?.data || response.data?.result;
-        if (result) {
-          this.savedAddresses.push(result);
-          return result;
-        }
-      } catch (error) {
-        console.error("Error saving address:", error);
-      }
-      return null;
-    },
-    openDrugSearch() {
-      this.showDrugSearch = true;
-      this.fetchDrugCategories();
-    },
-    closeDrugSearch() {
-      this.showDrugSearch = false;
-      this.drugSearch = "";
-      this.drugResults = [];
-      this.selectedCategory = null;
-    },
-    searchDrugs() {
-      this.debouncedDrugSearch();
-    },
-    async fetchDrugCategories() {
-      if (this.drugCategories.length > 0) return; // Already loaded
-      try {
-        this.loadingCategories = true;
-        const response = await apiFactory.$_getPharmacyDrugCategories();
-        const result = response.data?.data || response.data?.result;
-        if (result) {
-          this.drugCategories = result || [];
-        }
-      } catch (error) {
-        console.error("Error fetching drug categories:", error);
-      } finally {
-        this.loadingCategories = false;
-      }
-    },
-    clearCategoryFilter() {
-      this.selectedCategory = null;
-      this.fetchDrugs();
-    },
-    getSearchResultsLabel() {
-      if (this.selectedCategory && this.drugSearch) {
-        const category = this.drugCategories.find(c => c._id === this.selectedCategory);
-        return `Results in "${category?.name || 'Category'}"`;
-      }
-      if (this.selectedCategory) {
-        const category = this.drugCategories.find(c => c._id === this.selectedCategory);
-        return `Showing "${category?.name || 'Category'}"`;
-      }
-      return 'Search Results';
-    },
-    async fetchDrugs() {
-      // Allow search by category OR text
-      if (!this.drugSearch && !this.selectedCategory) {
-        this.drugResults = [];
-        return;
-      }
-      try {
-        this.searchingDrugs = true;
-        const params = {
-          stock_status: "in_stock",
-          limit: 20,
-        };
-        if (this.drugSearch) {
-          params.search = this.drugSearch;
-        }
-        if (this.selectedCategory) {
-          params.category = this.selectedCategory;
-        }
-        const response = await apiFactory.$_searchPharmacyDrugs(params);
-        // Backend returns: { statusCode, message, data: { total, docs, pages, perPage, currentPage } }
-        const result = response.data?.data || response.data?.result;
-        if (result) {
-          this.drugResults = result.docs || [];
-        }
-      } catch (error) {
-        console.error("Error searching drugs:", error);
-      } finally {
-        this.searchingDrugs = false;
-      }
-    },
-    addDrugToList(drug) {
-      // Check if already added (same drug + same batch)
-      const duplicateKey = drug.batch_id ? `${drug._id}-${drug.batch_id}` : drug._id;
-      if (this.prescriptionItems.find(item => {
-        const itemKey = item.batch_id ? `${item.drug_id}-${item.batch_id}` : item.drug_id;
-        return itemKey === duplicateKey;
-      })) {
-        this.$toast.warning("This medication batch is already in the list");
-        return;
-      }
-      this.prescriptionItems.push({
-        drug_id: drug._id,
-        batch_id: drug.batch_id || null,
-        batch_number: drug.batch_number || null,
-        drug_name: drug.name,
-        generic_name: drug.generic_name,
-        strength: drug.strength,
-        dosage_form: drug.dosage_form,
-        manufacturer: drug.manufacturer || null,
-        unit_price: drug.selling_price,
-        quantity: 1,
-        available_quantity: drug.quantity,
-        expiry_date: drug.expiry_date || null,
-        dosage: "",
-        frequency: "",
-        duration: "",
-        notes: "",
-      });
-      this.showDrugSearch = false;
-      this.drugSearch = "";
-      this.drugResults = [];
-    },
-    removeDrug(index) {
-      this.prescriptionItems.splice(index, 1);
-    },
-    updateTotals() {
-      // Triggered when quantity changes
-      this.$forceUpdate();
-    },
-    nextStep() {
-      if (this.currentStep < this.steps.length - 1) {
-        // When moving from patient selection to medications, add pre-selected drug
-        if (this.currentStep === 0 && this.preSelectedDrug) {
-          this.addPreSelectedDrugToList();
-        }
-        this.currentStep++;
-      }
-    },
-    prevStep() {
-      if (this.currentStep > 0) {
-        this.currentStep--;
-      }
-    },
-    goBack() {
-      if (this.currentStep > 0) {
-        this.prevStep();
+      if (payData?.is_partial_payment) {
+        $toast.info(`NGN ${formatCurrency(payData.wallet_amount_paid)} charged from patient wallet. Remaining: NGN ${formatCurrency(payData.remaining_amount)}`);
       } else {
-        this.$router.back();
+        $toast.success('Payment completed from patient wallet');
       }
-    },
-    async submitPrescription() {
-      try {
-        this.submitting = true;
-
-        // Save new address if requested
-        if (this.deliveryType === 'DELIVERY' && this.selectedAddressId === 'new' && this.saveNewAddress) {
-          await this.saveDeliveryAddress();
-        }
-
-        // Get delivery address for submission
-        const deliveryAddress = this.deliveryAddressForSubmit;
-
-        const payload = {
-          patient_id: this.selectedPatient._id,
-          items: this.prescriptionItems.map(item => ({
-            drug_id: item.drug_id,
-            batch_id: item.batch_id || undefined, // Include batch for correct pricing
-            quantity: item.quantity,
-            dosage: item.dosage,
-            frequency: item.frequency,
-            duration: item.duration,
-            instructions: item.notes,
-          })),
-          payment_method: this.paymentMethod,
-          delivery_address: deliveryAddress,
-          patient_notes: this.prescriptionNotes,
-          // Pickup center fields
-          is_pickup_order: this.deliveryType === 'PICKUP_CENTER',
-          pickup_pharmacy_id: this.deliveryType === 'PICKUP_CENTER' ? this.selectedPickupCenterId : undefined,
-        };
-
-        const response = await apiFactory.$_createSpecialistPrescription(payload);
-        const createResult = response.data?.data || response.data?.result;
-
-        if (createResult) {
-          this.$toast.success("Prescription created successfully");
-
-          // Handle payment based on method
-          // Response structure: { prescription: {...}, stock_reserved, ... }
-          const prescriptionId = createResult.prescription?._id || createResult._id;
-
-          if (this.paymentMethod === "specialist_wallet") {
-            // Auto-pay from wallet
-            try {
-              await apiFactory.$_payPrescriptionFromWallet(prescriptionId);
-              this.$toast.success("Payment completed from wallet");
-            } catch (payError) {
-              console.error("Wallet payment error:", payError);
-              this.$toast.warning("Prescription created but wallet payment failed");
-            }
-          } else if (this.paymentMethod === "patient_wallet") {
-            // Charge patient wallet
-            try {
-              const isPartialPayment = this.patientWalletBalance < this.subtotal;
-              const walletPayload = {
-                allow_partial: isPartialPayment,
-                remaining_payment_method: isPartialPayment ? this.remainingPaymentMethod : undefined,
-              };
-              const payResult = await apiFactory.$_payPrescriptionFromPatientWallet(prescriptionId, walletPayload);
-              const payData = payResult.data?.data || payResult.data?.result;
-
-              if (payData?.is_partial_payment) {
-                this.$toast.info(`NGN ${this.formatCurrency(payData.wallet_amount_paid)} charged from patient wallet. Remaining: NGN ${this.formatCurrency(payData.remaining_amount)}`);
-              } else {
-                this.$toast.success("Payment completed from patient wallet");
-              }
-            } catch (payError) {
-              console.error("Patient wallet payment error:", payError);
-              this.$toast.warning(payError.response?.data?.message || "Prescription created but wallet payment failed");
-            }
-          } else if (this.paymentMethod === "patient_online") {
-            // Send payment link
-            try {
-              await apiFactory.$_sendPrescriptionPaymentLink(prescriptionId, {
-                email: this.selectedPatient.email,
-              });
-              this.$toast.info("Payment link sent to patient");
-            } catch (linkError) {
-              console.error("Send payment link error:", linkError);
-            }
-          } else if (this.paymentMethod === "send_to_patient") {
-            // Send to patient for self-service (accept/decline/pay)
-            try {
-              await apiFactory.$_sendPrescriptionToPatient(prescriptionId);
-              this.$toast.success("Prescription sent to patient. They will receive an email with the PDF and can accept/decline from their dashboard.");
-            } catch (sendError) {
-              console.error("Send to patient error:", sendError);
-              this.$toast.warning(sendError.response?.data?.message || "Prescription created but failed to send to patient");
-            }
-          }
-
-          this.$router.push(`/app/specialist/pharmacy/prescriptions/${prescriptionId}`);
-        }
-      } catch (error) {
-        console.error("Error creating prescription:", error);
-        this.$toast.error(error.response?.data?.message || "Failed to create prescription");
-      } finally {
-        this.submitting = false;
-      }
-    },
-    getInitials(name) {
-      if (!name) return "?";
-      return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
-    },
-    formatCurrency(amount) {
-      if (!amount) return "0.00";
-      return Number(amount).toLocaleString("en-NG", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
+    } else if (paymentMethod.value === 'patient_online') {
+      await apiFactory.$_sendPrescriptionPaymentLink(prescriptionId, {
+        email: selectedPatient.value.email,
       });
-    },
-    formatAddressLine(address) {
-      if (!address) return "";
-      const parts = [];
-      // Add city
-      if (address.city) {
-        parts.push(address.city);
-      }
-      // Add state only if different from city
-      if (address.state && address.state !== address.city) {
-        parts.push(address.state);
-      }
-      // Add postal code if available
-      if (address.postal_code) {
-        parts.push(address.postal_code);
-      }
-      // Add country
-      if (address.country) {
-        parts.push(address.country);
-      }
-      return parts.join(", ");
-    },
-    formatDate(dateStr) {
-      if (!dateStr) return "";
-      const date = new Date(dateStr);
-      return date.toLocaleDateString("en-GB", {
-        month: "short",
-        year: "numeric",
-      });
-    },
-    formatPaymentMethod(method) {
-      const methods = {
-        specialist_wallet: "Pay from Wallet",
-        patient_wallet: "Charge Patient Wallet",
-        patient_online: "Patient Online Payment",
-        patient_cash: "Cash Payment",
-        send_to_patient: "Send to Patient (Self-Service)",
-      };
-      return methods[method] || method;
-    },
+      $toast.info('Payment link sent to patient');
+    } else if (paymentMethod.value === 'send_to_patient') {
+      await apiFactory.$_sendPrescriptionToPatient(prescriptionId);
+      $toast.success('Prescription sent to patient');
+    }
+  } catch (payError) {
+    console.error('Post-creation payment error:', payError);
+    $toast.warning(payError.response?.data?.message || 'Prescription created but payment action failed');
+  }
+}
 
-    // ============ PICKUP CENTER METHODS ============
-
-    formatDeliveryType(type) {
-      const types = {
-        PICKUP: "Pickup at Clinic",
-        DELIVERY: "Home Delivery",
-        PICKUP_CENTER: "Pickup at Pharmacy",
-      };
-      return types[type] || type;
-    },
-
-    onDeliveryTypeChange() {
-      // Reset pickup center selection when delivery type changes
-      if (this.deliveryType !== 'PICKUP_CENTER') {
-        this.selectedPickupCenter = null;
-        this.selectedPickupCenterId = null;
-        this.pickupCenters = [];
-        this.pickupCenterSearch = "";
-      }
-    },
-
-    async searchPickupCenters() {
-      if (!this.pickupCenterSearch || this.pickupCenterSearch.length < 2) {
-        return;
-      }
-
-      this.loadingPickupCenters = true;
-      try {
-        const response = await apiFactory.$_getPickupCenters({
-          city: this.pickupCenterSearch,
-          state: this.pickupCenterSearch,
-          limit: 20,
-        });
-        this.pickupCenters = response.data?.data?.pickup_centers || [];
-      } catch (err) {
-        console.error("Error searching pickup centers:", err);
-        this.pickupCenters = [];
-      } finally {
-        this.loadingPickupCenters = false;
-      }
-    },
-
-    async useLocationForPickup() {
-      if (!navigator.geolocation) {
-        this.$toast.error("Geolocation is not supported by your browser");
-        return;
-      }
-
-      this.loadingPickupCenters = true;
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          try {
-            const response = await apiFactory.$_recommendPickupCenters({
-              latitude: position.coords.latitude,
-              longitude: position.coords.longitude,
-              limit: 10,
-            });
-            this.pickupCenters = response.data?.data || [];
-          } catch (err) {
-            console.error("Error fetching nearby pickup centers:", err);
-            this.$toast.error("Failed to find nearby pickup centers");
-          } finally {
-            this.loadingPickupCenters = false;
-          }
-        },
-        (error) => {
-          console.error("Geolocation error:", error);
-          this.$toast.error("Unable to get your location. Please search manually.");
-          this.loadingPickupCenters = false;
-        }
-      );
-    },
-
-    selectPickupCenter(center) {
-      this.selectedPickupCenter = center;
-      this.selectedPickupCenterId = center._id;
-    },
-
-    formatPickupCenterAddress(address) {
-      if (!address) return "Address not available";
-      const parts = [address.street, address.city, address.state].filter(Boolean);
-      return parts.join(", ") || "Address not available";
-    },
-
-    formatDistance(distance) {
-      if (!distance) return "";
-      if (distance < 1) return `${Math.round(distance * 1000)}m`;
-      return `${distance.toFixed(1)}km`;
-    },
-  },
-};
+async function saveDeliveryAddress() {
+  if (!selectedPatient.value || !saveNewAddress.value) return;
+  try {
+    await apiFactory.$_addPatientDeliveryAddress(
+      selectedPatient.value._id,
+      newAddress.value
+    );
+  } catch (error) {
+    console.error('Error saving address:', error);
+  }
+}
 </script>
 
 <style scoped lang="scss">
 .page-content {
-  @include flexItem(vertical) {
-    width: 100%;
-    height: 100%;
-    background-color: $color-g-97;
-  }
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  background: #F8FAFC;
 
   &__body {
-    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    height: 100%;
     overflow-y: auto;
-    padding: $size-24;
+    padding: 0 $size-24 $size-48;
 
-    @include responsive(tab-portrait) {
-      padding: $size-16;
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: #CBD5E1;
+      border-radius: 3px;
+    }
+
+    @include responsive(phone) {
+      padding: 0 $size-16 $size-32;
     }
   }
 }
 
 .create-prescription-container {
-  max-width: 800px;
+  width: 100%;
+  max-width: 900px;
   margin: 0 auto;
 }
 
-.page-header {
+// Hero Banner - Sky Blue Theme
+.hero-banner {
+  background: linear-gradient(135deg, #4FC3F7 0%, #29B6F6 50%, #0288D1 100%);
+  border-radius: $size-24;
+  padding: $size-24 $size-32;
+  margin-top: $size-24;
+  color: white;
+  box-shadow: 0 10px 40px rgba(79, 195, 247, 0.3);
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -10%;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -30%;
+    left: -5%;
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  @media (max-width: 768px) {
+    padding: $size-20;
+    border-radius: $size-16;
+    margin-top: $size-16;
+  }
+}
+
+.hero-top {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: $size-16;
-  margin-bottom: $size-24;
+  margin-bottom: $size-20;
+  position: relative;
+  z-index: 1;
+}
 
-  .back-btn {
-    width: $size-40;
-    height: $size-40;
-    border-radius: 50%;
-    border: none;
-    background: $color-white;
-    cursor: pointer;
-    display: flex;
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: $size-8;
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  padding: $size-10 $size-16;
+  border-radius: $size-10;
+  color: white;
+  font-size: $size-14;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.25);
+    transform: translateX(-2px);
+  }
+}
+
+.hero-step-indicator {
+  background: rgba(255, 255, 255, 0.2);
+  padding: $size-8 $size-16;
+  border-radius: $size-20;
+  font-size: $size-13;
+  font-weight: 600;
+}
+
+.hero-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: $size-24;
+  position: relative;
+  z-index: 1;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+  }
+}
+
+.hero-info {
+  flex: 1;
+
+  .hero-badge {
+    display: inline-flex;
     align-items: center;
-    justify-content: center;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    gap: $size-6;
+    background: rgba(255, 255, 255, 0.2);
+    padding: $size-6 $size-14;
+    border-radius: $size-16;
+    font-size: $size-12;
+    font-weight: 600;
+    margin-bottom: $size-12;
+  }
 
-    &:hover {
-      background: $color-g-95;
+  .hero-title {
+    font-size: $size-28;
+    font-weight: 700;
+    margin: 0 0 $size-8;
+    line-height: 1.2;
+
+    @media (max-width: 768px) {
+      font-size: $size-24;
     }
   }
 
-  .header-content {
-    h1 {
-      font-size: $size-24;
-      font-weight: $fw-semi-bold;
-      color: $color-g-21;
-      margin-bottom: $size-4;
-    }
+  .hero-subtitle {
+    font-size: $size-15;
+    opacity: 0.9;
+    margin: 0;
+    line-height: 1.5;
 
-    p {
-      font-size: $size-15;
-      color: $color-g-54;
+    strong {
+      font-weight: 600;
     }
   }
 }
 
-.progress-steps {
+.hero-stats {
   display: flex;
-  justify-content: center;
-  gap: $size-32;
-  margin-bottom: $size-32;
-  padding: $size-20;
-  background: $color-white;
+  gap: $size-12;
+  flex-wrap: wrap;
+
+  @media (max-width: 768px) {
+    width: 100%;
+  }
+}
+
+.patient-card {
+  display: flex;
+  align-items: center;
+  gap: $size-12;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: $size-12 $size-16;
   border-radius: $size-12;
 
-  @include responsive(phone) {
+  .patient-avatar {
+    flex-shrink: 0;
+
+    :deep(.rc-avatar) {
+      border: 2px solid rgba(255, 255, 255, 0.4);
+    }
+  }
+
+  .patient-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+
+    .patient-name {
+      font-weight: 600;
+      font-size: $size-14;
+    }
+
+    .patient-label {
+      font-size: $size-11;
+      opacity: 0.8;
+    }
+  }
+}
+
+.stat-card {
+  background: rgba(255, 255, 255, 0.15);
+  padding: $size-12 $size-20;
+  border-radius: $size-12;
+  text-align: center;
+  min-width: 90px;
+
+  .stat-value {
+    display: block;
+    font-size: $size-22;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  .stat-label {
+    display: block;
+    font-size: $size-11;
+    opacity: 0.85;
+    margin-top: 2px;
+  }
+}
+
+.linked-records-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: $size-8;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: $size-8 $size-16;
+  border-radius: $size-20;
+  font-size: $size-12;
+  font-weight: 500;
+  margin-top: $size-16;
+  position: relative;
+  z-index: 1;
+}
+
+// Allergy Status Banner
+.allergy-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: $size-16;
+  border-radius: $size-12;
+  padding: $size-16 $size-20;
+  margin-top: $size-20;
+  position: relative;
+  animation: slideIn 0.3s ease;
+
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .allergy-icon {
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+  }
+
+  .allergy-content {
+    flex: 1;
+
+    .allergy-title {
+      font-size: $size-16;
+      font-weight: 700;
+      margin: 0 0 $size-6;
+      display: flex;
+      align-items: center;
+      gap: $size-8;
+    }
+
+    .allergy-text {
+      font-size: $size-14;
+      margin: 0;
+      line-height: 1.5;
+
+      strong {
+        font-weight: 600;
+      }
+    }
+  }
+
+  .allergy-dismiss {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+      transform: scale(1.1);
+    }
+  }
+
+  // Warning state (has allergies)
+  &--warning {
+    background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
+    border: 1px solid #F59E0B;
+    border-left: 4px solid #D97706;
+    box-shadow: 0 4px 15px rgba(245, 158, 11, 0.15);
+
+    .allergy-icon {
+      background: #F59E0B;
+      box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+    }
+
+    .allergy-title {
+      color: #92400E;
+    }
+
+    .allergy-text {
+      color: #78350F;
+
+      strong {
+        color: #92400E;
+      }
+    }
+
+    .allergy-dismiss {
+      background: rgba(146, 64, 14, 0.1);
+      color: #92400E;
+
+      &:hover {
+        background: rgba(146, 64, 14, 0.2);
+      }
+    }
+  }
+
+  // Safe state (no allergies)
+  &--safe {
+    background: linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%);
+    border: 1px solid #10B981;
+    border-left: 4px solid #059669;
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.15);
+
+    .allergy-icon {
+      background: #10B981;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+
+    .allergy-title {
+      color: #065F46;
+    }
+
+    .allergy-text {
+      color: #047857;
+
+      strong {
+        color: #065F46;
+      }
+    }
+
+    .allergy-dismiss {
+      background: rgba(6, 95, 70, 0.1);
+      color: #065F46;
+
+      &:hover {
+        background: rgba(6, 95, 70, 0.2);
+      }
+    }
+  }
+
+  @media (max-width: 600px) {
+    flex-direction: column;
+    text-align: center;
+
+    .allergy-icon {
+      margin: 0 auto;
+    }
+
+    .allergy-dismiss {
+      position: absolute;
+      top: $size-12;
+      right: $size-12;
+    }
+  }
+}
+
+// Progress Steps - Enhanced
+.progress-container {
+  margin: $size-24 0;
+}
+
+.progress-steps-enhanced {
+  display: flex;
+  justify-content: space-between;
+  background: white;
+  border-radius: $size-16;
+  padding: $size-20 $size-24;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+
+  @media (max-width: 768px) {
+    flex-direction: column;
     gap: $size-16;
   }
 }
@@ -1607,1346 +1183,228 @@ export default {
 .step {
   display: flex;
   align-items: center;
-  gap: $size-12;
+  gap: $size-14;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex: 1;
+  position: relative;
 
-  .step-number {
-    width: $size-32;
-    height: $size-32;
-    border-radius: 50%;
-    background: $color-g-90;
-    color: $color-g-54;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: $size-15;
-    font-weight: $fw-semi-bold;
-    transition: all 0.2s ease;
-  }
+  &:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 40px;
+    height: 2px;
+    background: #E2E8F0;
 
-  .step-label {
-    font-size: $size-15;
-    color: $color-g-54;
-
-    @include responsive(phone) {
+    @media (max-width: 768px) {
       display: none;
     }
   }
 
-  &.active .step-number {
-    background: $color-pri;
-    color: $color-white;
+  &.completed:not(:last-child)::after {
+    background: #10B981;
   }
 
-  &.completed .step-number {
-    background: #10b981;
-    color: $color-white;
-  }
-
-  &.active .step-label,
-  &.completed .step-label {
-    color: $color-g-21;
-    font-weight: $fw-medium;
-  }
-}
-
-.step-panel {
-  background: $color-white;
-  padding: $size-24;
-  border-radius: $size-12;
-  margin-bottom: $size-20;
-
-  h2 {
-    font-size: $size-20;
-    font-weight: $fw-semi-bold;
-    color: $color-g-21;
-    margin-bottom: $size-20;
-  }
-}
-
-.search-bar {
-  display: flex;
-  align-items: center;
-  gap: $size-12;
-  background: $color-g-97;
-  padding: $size-12 $size-16;
-  border-radius: $size-10;
-  margin-bottom: $size-16;
-
-  input {
-    flex: 1;
-    border: none;
-    outline: none;
-    font-size: $size-15;
-    color: $color-g-21;
-    background: transparent;
-
-    &::placeholder {
-      color: $color-g-67;
-    }
-  }
-}
-
-.patient-results,
-.drug-results {
-  max-height: 300px;
-  overflow-y: auto;
-}
-
-.patient-option,
-.drug-option {
-  display: flex;
-  align-items: center;
-  gap: $size-12;
-  padding: $size-12;
-  border-radius: $size-8;
-  cursor: pointer;
-  transition: background 0.2s ease;
-
-  &:hover {
-    background: $color-g-97;
-  }
-
-  &.selected {
-    background: rgba($color-pri, 0.1);
-  }
-}
-
-.patient-avatar {
-  width: $size-44;
-  height: $size-44;
-  border-radius: 50%;
-  background: $color-pri;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  flex-shrink: 0;
-
-  &.large {
-    width: $size-64;
-    height: $size-64;
-  }
-
-  img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-
-  span {
-    font-size: $size-15;
-    font-weight: $fw-semi-bold;
-    color: $color-white;
-  }
-}
-
-.patient-info {
-  flex: 1;
-
-  .patient-name {
-    font-size: $size-15;
-    font-weight: $fw-medium;
-    color: $color-g-21;
-  }
-
-  .patient-email,
-  .patient-phone {
-    font-size: $size-12;
-    color: $color-g-54;
-  }
-}
-
-.check-icon {
-  color: $color-pri;
-}
-
-.selected-patient-card {
-  margin-top: $size-24;
-  padding: $size-20;
-  background: rgba($color-pri, 0.05);
-  border: 1px solid rgba($color-pri, 0.2);
-  border-radius: $size-12;
-
-  h3 {
-    font-size: $size-15;
-    font-weight: $fw-medium;
-    color: $color-g-54;
-    margin-bottom: $size-12;
-  }
-
-  .patient-details {
+  .step-circle {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: #F1F5F9;
+    color: #64748B;
     display: flex;
     align-items: center;
-    gap: $size-16;
-  }
-}
-
-.preselected-drug-card {
-  margin-top: $size-16;
-  padding: $size-20;
-  background: rgba(#10b981, 0.05);
-  border: 1px solid rgba(#10b981, 0.2);
-  border-radius: $size-12;
-
-  h3 {
-    font-size: $size-15;
-    font-weight: $fw-medium;
-    color: #059669;
-    margin-bottom: $size-12;
-    display: flex;
-    align-items: center;
-    gap: $size-8;
+    justify-content: center;
+    font-size: $size-16;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
   }
 
-  .drug-preview {
+  .step-info {
     display: flex;
-    align-items: center;
-    gap: $size-12;
+    flex-direction: column;
+    gap: 2px;
 
-    .drug-image {
-      width: $size-56;
-      height: $size-56;
-      border-radius: $size-8;
-      background: $color-white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
-      flex-shrink: 0;
-      border: 1px solid rgba(#10b981, 0.2);
-
-      img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-      }
+    .step-label {
+      font-size: $size-14;
+      font-weight: 600;
+      color: #64748B;
+      transition: color 0.2s;
     }
 
-    .drug-info {
-      flex: 1;
-
-      .drug-name {
-        font-size: $size-15;
-        font-weight: $fw-semi-bold;
-        color: $color-g-21;
-      }
-
-      .drug-details {
-        font-size: $size-12;
-        color: $color-g-54;
-        margin-top: $size-2;
-      }
-
-      .drug-price {
-        font-size: $size-15;
-        font-weight: $fw-semi-bold;
-        color: #059669;
-        margin-top: $size-4;
-      }
+    .step-desc {
+      font-size: $size-12;
+      color: #94A3B8;
     }
   }
 
-  .drug-note {
-    font-size: $size-12;
-    color: $color-g-54;
-    margin-top: $size-12;
-    font-style: italic;
+  &.active {
+    .step-circle {
+      background: linear-gradient(135deg, #4FC3F7 0%, #29B6F6 100%);
+      color: white;
+      box-shadow: 0 4px 15px rgba(79, 195, 247, 0.4);
+    }
+
+    .step-label {
+      color: #1E293B;
+    }
+  }
+
+  &.completed {
+    .step-circle {
+      background: #10B981;
+      color: white;
+    }
+
+    .step-label {
+      color: #1E293B;
+    }
+  }
+
+  &:hover:not(.active) .step-circle {
+    transform: scale(1.05);
   }
 }
 
-.medications-header {
+// Main Content
+.main-content {
+  margin-bottom: $size-24;
+}
+
+.step-content {
+  display: flex;
+  flex-direction: column;
+  gap: $size-20;
+
+  :deep(.step-medications),
+  :deep(.step-patient-select),
+  :deep(.step-payment-delivery),
+  :deep(.step-link-records) {
+    background: white;
+    border-radius: $size-16;
+    padding: $size-24;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  }
+}
+
+// Navigation Footer
+.navigation-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: $size-20;
-
-  h2 {
-    margin-bottom: 0;
-  }
-}
-
-.drug-search-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
+  background: white;
+  border-radius: $size-16;
+  padding: $size-20 $size-24;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.04);
+  position: sticky;
   bottom: 0;
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  margin-top: auto;
 
-  .modal-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-  }
-
-  .modal-content {
-    position: relative;
-    width: 90%;
-    max-width: 500px;
-    max-height: 80vh;
-    background: $color-white;
-    border-radius: $size-16;
-    overflow: hidden;
-  }
-
-  .modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: $size-16 $size-20;
-    border-bottom: 1px solid $color-g-92;
-
-    h3 {
-      font-size: $size-18;
-      font-weight: $fw-semi-bold;
-      color: $color-g-21;
-    }
-
-    .close-btn {
-      background: none;
-      border: none;
-      cursor: pointer;
-      padding: $size-4;
-      color: $color-g-54;
-
-      &:hover {
-        color: $color-g-36;
-      }
-    }
-  }
-
-  .modal-body {
-    padding: $size-20;
-    max-height: calc(80vh - 70px);
-    overflow-y: auto;
-  }
-}
-
-.category-filter-row {
-  display: flex;
-  align-items: center;
-  gap: $size-12;
-  margin-bottom: $size-12;
-
-  .category-select {
-    flex: 1;
-    padding: $size-10 $size-12;
-    border: 1px solid $color-g-85;
-    border-radius: $size-8;
-    font-size: $size-14;
-    color: $color-g-21;
-    background: $color-white;
-    cursor: pointer;
-
-    &:focus {
-      outline: none;
-      border-color: $color-pri;
-    }
-
-    &:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
-  }
-
-  .clear-filter {
-    display: flex;
-    align-items: center;
-    gap: $size-4;
-    font-size: $size-12;
-    color: $color-g-54;
-    cursor: pointer;
-    padding: $size-6 $size-10;
-    border-radius: $size-6;
-    transition: all 0.2s ease;
-
-    &:hover {
-      color: $color-pri;
-      background: rgba($color-pri, 0.1);
-    }
-  }
-}
-
-.search-divider {
-  display: flex;
-  align-items: center;
-  margin: $size-16 0 $size-12;
-
-  span {
-    font-size: $size-12;
-    font-weight: $fw-medium;
-    color: $color-g-54;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-
-  &::after {
-    content: "";
-    flex: 1;
-    height: 1px;
-    background: $color-g-90;
-    margin-left: $size-12;
-  }
-}
-
-.drug-option {
-  padding: $size-12;
-  border-bottom: 1px solid $color-g-95;
-
-  &:last-child {
-    border-bottom: none;
-  }
-}
-
-.drug-image {
-  width: $size-56;
-  height: $size-56;
-  border-radius: $size-8;
-  background: $color-g-97;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  flex-shrink: 0;
-
-  img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-}
-
-.drug-info {
-  flex: 1;
-
-  .drug-name {
-    font-size: $size-15;
-    font-weight: $fw-medium;
-    color: $color-g-21;
-  }
-
-  .drug-details {
-    font-size: $size-12;
-    color: $color-g-54;
-  }
-
-  .drug-manufacturer {
-    font-size: $size-11;
-    color: $color-g-67;
-    margin-top: $size-2;
-  }
-
-  .drug-batch {
-    font-size: $size-11;
-    color: $color-g-54;
-    margin-top: $size-2;
-    display: flex;
-    align-items: center;
-    gap: $size-8;
-
-    .expiry-tag {
-      font-size: $size-10;
-      padding: 2px 6px;
-      border-radius: 4px;
-      background: $color-g-95;
-      color: $color-g-54;
-
-      &.warning {
-        background: #fef3c7;
-        color: #d97706;
-      }
-
-      &.critical {
-        background: #fee2e2;
-        color: #dc2626;
-      }
-    }
-  }
-
-  .drug-price {
-    font-size: $size-15;
-    font-weight: $fw-semi-bold;
-    color: $color-pri;
-    margin-top: $size-4;
-  }
-}
-
-.stock-badge {
-  font-size: $size-11;
-  padding: $size-4 $size-8;
-  border-radius: $size-12;
-
-  &.in-stock {
-    background: rgba(#10b981, 0.1);
-    color: #059669;
-  }
-
-  &.out-of-stock {
-    background: rgba(#ef4444, 0.1);
-    color: #dc2626;
-  }
-}
-
-.medications-list {
-  display: flex;
-  flex-direction: column;
-  gap: $size-16;
-}
-
-.medication-card {
-  padding: $size-20;
-  background: $color-g-97;
-  border-radius: $size-12;
-
-  .medication-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: $size-4;
-
-    h4 {
-      font-size: $size-16;
-      font-weight: $fw-semi-bold;
-      color: $color-g-21;
-    }
-
-    .remove-btn {
-      background: none;
-      border: none;
-      cursor: pointer;
-      color: #ef4444;
-      padding: $size-4;
-
-      &:hover {
-        opacity: 0.8;
-      }
-    }
-  }
-
-  .medication-details {
-    font-size: $size-12;
-    color: $color-g-54;
-    margin-bottom: $size-4;
-  }
-
-  .medication-meta {
-    font-size: $size-11;
-    color: $color-g-67;
-    margin-bottom: $size-16;
-    display: flex;
-    gap: $size-12;
-
-    .mfr {
-      font-weight: $fw-medium;
-    }
-
-    .batch {
-      color: $color-g-54;
-    }
-  }
-}
-
-.medication-form {
-  .form-row {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: $size-12;
-    margin-bottom: $size-12;
-
-    @include responsive(phone) {
-      grid-template-columns: 1fr;
-    }
-  }
-
-  .flex-2 {
-    grid-column: span 2;
-
-    @include responsive(phone) {
-      grid-column: span 1;
-    }
-  }
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: $size-6;
-
-  label {
-    font-size: $size-12;
-    font-weight: $fw-medium;
-    color: $color-g-44;
-  }
-
-  input,
-  select,
-  textarea {
-    padding: $size-10 $size-12;
-    border: 1px solid $color-g-85;
-    border-radius: $size-8;
-    font-size: $size-15;
-    color: $color-g-21;
-
-    &:focus {
-      outline: none;
-      border-color: $color-pri;
-    }
-
-    &:disabled {
-      background: $color-g-95;
-      color: $color-g-54;
-    }
-  }
-
-  textarea {
-    resize: vertical;
-  }
-
-  .help-text {
-    font-size: $size-11;
-    color: $color-g-54;
-  }
-}
-
-.empty-medications {
-  text-align: center;
-  padding: $size-48;
-  color: $color-g-54;
-
-  p {
-    margin: $size-16 0;
-  }
-}
-
-.order-summary {
-  margin-top: $size-24;
-  padding: $size-20;
-  background: $color-g-97;
-  border-radius: $size-12;
-
-  h3 {
-    font-size: $size-16;
-    font-weight: $fw-semi-bold;
-    color: $color-g-21;
-    margin-bottom: $size-16;
-  }
-
-  .summary-row {
-    display: flex;
-    justify-content: space-between;
-    padding: $size-8 0;
-    font-size: $size-15;
-    color: $color-g-44;
-
-    &.total {
-      border-top: 1px solid $color-g-85;
-      padding-top: $size-12;
-      margin-top: $size-8;
-      font-size: $size-16;
-      font-weight: $fw-semi-bold;
-      color: $color-g-21;
-    }
-  }
-}
-
-.section-card {
-  background: $color-white;
-  padding: $size-20;
-  border-radius: $size-12;
-  margin-bottom: $size-16;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-
-  h3 {
-    font-size: $size-16;
-    font-weight: $fw-semi-bold;
-    color: $color-g-21;
-    margin-bottom: $size-16;
-  }
-}
-
-.payment-options {
-  display: flex;
-  flex-direction: column;
-  gap: $size-12;
-}
-
-.payment-option {
-  display: flex;
-  align-items: center;
-  gap: $size-16;
-  padding: $size-16;
-  border: 2px solid $color-g-90;
-  border-radius: $size-12;
-  cursor: pointer;
-  transition: all 0.2s ease;
-
-  &:hover {
-    border-color: $color-g-77;
-  }
-
-  &.selected {
-    border-color: $color-pri;
-    background: rgba($color-pri, 0.03);
-  }
-
-  .option-icon {
-    width: $size-48;
-    height: $size-48;
-    border-radius: $size-12;
-    background: $color-g-95;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: $color-g-44;
-  }
-
-  .option-info {
-    flex: 1;
-
-    h4 {
-      font-size: $size-15;
-      font-weight: $fw-medium;
-      color: $color-g-21;
-      margin-bottom: $size-2;
-    }
-
-    p {
-      font-size: $size-12;
-      color: $color-g-54;
-    }
-
-    .wallet-balance {
-      margin-top: $size-4;
-      font-size: $size-15;
-      font-weight: $fw-semi-bold;
-      color: $color-pri;
-    }
-  }
-
-  .option-check {
-    color: $color-pri;
-  }
-
-  &.disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-
-    &:hover {
-      border-color: $color-g-90;
-    }
-  }
-
-  .option-icon.patient-wallet {
-    background: rgba(#10b981, 0.1);
-    color: #10b981;
-  }
-
-  .wallet-balance.patient {
-    color: #10b981;
-  }
-
-  .partial-warning {
-    color: #f59e0b;
-    font-size: $size-11;
-    margin-top: $size-4;
-    font-weight: $fw-medium;
-  }
-
-  .no-balance-warning {
-    color: #ef4444;
-    font-size: $size-11;
-    margin-top: $size-4;
-    font-weight: $fw-medium;
-  }
-
-  .charging-disabled-warning {
-    color: #6b7280;
-    font-size: $size-12;
-    margin-top: $size-4;
-    font-weight: $fw-medium;
-    font-style: italic;
-  }
-
-  .option-icon.self-service {
-    background: rgba(#8b5cf6, 0.1);
-    color: #8b5cf6;
-  }
-
-  .self-service-note {
-    color: #8b5cf6 !important;
-    font-size: $size-11 !important;
-    font-weight: $fw-medium;
-    margin-top: $size-4;
-  }
-}
-
-.remaining-payment-options {
-  padding: $size-16;
-  background: $color-g-97;
-  border-radius: $size-10;
-  margin-top: -$size-4;
-
-  > label {
-    font-size: $size-13;
-    font-weight: $fw-medium;
-    color: $color-g-36;
-    display: block;
-    margin-bottom: $size-12;
-  }
-
-  .remaining-options {
+  .nav-left, .nav-right {
     display: flex;
     gap: $size-12;
   }
-
-  .remaining-option {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: $size-8;
-    padding: $size-12;
-    border: 2px solid $color-g-85;
-    border-radius: $size-8;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-size: $size-13;
-    color: $color-g-44;
-
-    &:hover {
-      border-color: $color-g-67;
-    }
-
-    &.selected {
-      border-color: $color-pri;
-      background: rgba($color-pri, 0.05);
-      color: $color-pri;
-    }
-  }
 }
 
-.final-summary {
-  background: rgba($color-pri, 0.05);
-  border: 1px solid rgba($color-pri, 0.2);
-  padding: $size-20;
+.nav-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: $size-8;
+  padding: $size-14 $size-28;
   border-radius: $size-12;
-
-  h3 {
-    font-size: $size-16;
-    font-weight: $fw-semi-bold;
-    color: $color-g-21;
-    margin-bottom: $size-16;
-  }
-
-  .summary-details {
-    display: flex;
-    flex-direction: column;
-    gap: $size-12;
-  }
-
-  .summary-item {
-    display: flex;
-    justify-content: space-between;
-    font-size: $size-15;
-
-    .label {
-      color: $color-g-54;
-    }
-
-    .value {
-      font-weight: $fw-medium;
-      color: $color-g-21;
-    }
-
-    &.total {
-      padding-top: $size-12;
-      border-top: 1px solid rgba($color-pri, 0.2);
-      font-size: $size-16;
-
-      .value {
-        font-weight: $fw-bold;
-        color: $color-pri;
-      }
-    }
-  }
-}
-
-.navigation-buttons {
-  display: flex;
-  gap: $size-12;
-  margin-top: $size-24;
-
-  .spacer {
-    flex: 1;
-  }
-}
-
-.btn {
-  padding: $size-12 $size-24;
-  border-radius: $size-8;
   font-size: $size-15;
-  font-weight: $fw-medium;
+  font-weight: 600;
   cursor: pointer;
   border: none;
   transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  gap: $size-8;
 
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
   }
 
-  &-primary {
-    background: $color-pri;
-    color: $color-white;
+  &--primary {
+    background: linear-gradient(135deg, #4FC3F7 0%, #29B6F6 100%);
+    color: white;
+    box-shadow: 0 4px 15px rgba(79, 195, 247, 0.3);
 
     &:hover:not(:disabled) {
-      background: darken($color-pri, 10%);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(79, 195, 247, 0.4);
     }
   }
 
-  &-secondary {
-    background: $color-g-90;
-    color: $color-g-36;
+  &--secondary {
+    background: #F1F5F9;
+    color: #64748B;
 
     &:hover:not(:disabled) {
-      background: $color-g-85;
+      background: #E2E8F0;
+    }
+  }
+
+  &--success {
+    background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+    color: white;
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+
+    &:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
     }
   }
 }
 
-.no-results {
-  text-align: center;
-  padding: $size-24;
-  color: $color-g-54;
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
 }
 
-// Delivery Address Styles
-.delivery-address-section {
-  margin-top: $size-16;
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
-.saved-addresses {
-  > label {
-    font-size: $size-14;
-    font-weight: $fw-medium;
-    color: $color-g-36;
-    margin-bottom: $size-12;
-    display: block;
-  }
-}
-
-.address-options {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: $size-12;
-  margin-bottom: $size-16;
-}
-
-.address-option {
-  padding: $size-16;
-  border: 2px solid $color-g-90;
-  border-radius: $size-12;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  position: relative;
-
-  &:hover {
-    border-color: $color-g-77;
-  }
-
-  &.selected {
-    border-color: $color-pri;
-    background: rgba($color-pri, 0.03);
-  }
-
-  &.add-new {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: $size-12;
-    min-height: 140px;
-    color: $color-g-54;
-    border-style: dashed;
-
-    &:hover {
-      color: $color-pri;
-      border-color: $color-pri;
-    }
-  }
-
-  .selected-check {
-    position: absolute;
-    top: $size-12;
-    right: $size-12;
-    color: $color-pri;
-  }
-
-  &__header {
-    display: flex;
-    align-items: center;
-    gap: $size-8;
-    margin-bottom: $size-8;
-
-    .address-label {
-      font-size: $size-14;
-      font-weight: $fw-semi-bold;
-      color: $color-g-21;
-    }
-
-    .default-badge,
-    .profile-badge {
-      font-size: $size-11;
-      padding: $size-2 $size-8;
-      border-radius: $size-12;
-      font-weight: $fw-medium;
-    }
-
-    .default-badge {
-      background: rgba(#10b981, 0.1);
-      color: #10b981;
-    }
-
-    .profile-badge {
-      background: rgba($color-pri, 0.1);
-      color: $color-pri;
-    }
-  }
-
-  &__details {
-    .recipient {
-      font-size: $size-14;
-      font-weight: $fw-medium;
-      color: $color-g-21;
-      margin-bottom: $size-4;
-    }
-
-    .address-line {
-      font-size: $size-12;
-      color: $color-g-54;
-      line-height: 1.4;
-    }
-
-    .phone {
-      font-size: $size-12;
-      color: $color-g-44;
-      margin-top: $size-6;
-    }
-  }
-}
-
-.new-address-form {
-  background: $color-g-97;
-  padding: $size-20;
-  border-radius: $size-12;
-
-  h4 {
-    font-size: $size-16;
-    font-weight: $fw-semi-bold;
-    color: $color-g-21;
-    margin-bottom: $size-16;
-  }
-}
-
-.checkbox-group {
-  margin-top: $size-12;
-
-  .checkbox-label {
-    display: flex;
-    align-items: center;
-    gap: $size-10;
-    cursor: pointer;
-    font-size: $size-14;
-    color: $color-g-44;
-
-    input[type="checkbox"] {
-      width: $size-18;
-      height: $size-18;
-      accent-color: $color-pri;
-      cursor: pointer;
-    }
-  }
-}
-
-.summary-item.address {
-  flex-direction: column;
-  align-items: flex-start;
-  gap: $size-8;
-
-  .address-preview {
-    font-weight: normal;
-
-    p {
-      font-size: $size-14;
-      line-height: 1.5;
-      color: $color-g-44;
-      margin: 0;
-    }
-  }
-}
-
-// Pickup Center Styles
-.pickup-center-section {
-  margin-top: $size-16;
-
-  .pickup-center-search {
-    display: flex;
-    gap: $size-12;
-    margin-bottom: $size-16;
-
-    .search-input-wrapper {
-      flex: 1;
-      position: relative;
-
-      input {
-        width: 100%;
-        padding: $size-12 $size-16;
-        padding-left: $size-40;
-        border: 1px solid $color-g-85;
-        border-radius: $size-10;
-        font-size: $size-14;
-        transition: border-color 0.2s ease;
-
-        &:focus {
-          outline: none;
-          border-color: $color-pri;
-        }
-
-        &::placeholder {
-          color: $color-g-67;
-        }
-      }
-
-      .search-icon {
-        position: absolute;
-        left: $size-12;
-        top: 50%;
-        transform: translateY(-50%);
-        color: $color-g-54;
-      }
-    }
-
-    .location-btn {
-      display: flex;
-      align-items: center;
-      gap: $size-8;
-      padding: $size-12 $size-16;
-      background: rgba($color-pri, 0.1);
-      color: $color-pri;
-      border: none;
-      border-radius: $size-10;
-      font-size: $size-14;
-      font-weight: $fw-medium;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      white-space: nowrap;
-
-      &:hover {
-        background: rgba($color-pri, 0.15);
-      }
-
-      &:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-      }
-    }
-  }
-
-  .pickup-centers-loading {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: $size-12;
-    padding: $size-24;
-    color: $color-g-54;
-    font-size: $size-14;
-  }
-
-  .pickup-centers-list {
-    display: flex;
-    flex-direction: column;
-    gap: $size-12;
-    max-height: 300px;
-    overflow-y: auto;
-    padding-right: $size-4;
-
-    &::-webkit-scrollbar {
-      width: 6px;
-    }
-
-    &::-webkit-scrollbar-track {
-      background: $color-g-95;
-      border-radius: 3px;
-    }
-
-    &::-webkit-scrollbar-thumb {
-      background: $color-g-77;
-      border-radius: 3px;
-    }
-  }
-
-  .pickup-center-option {
-    display: flex;
-    align-items: flex-start;
-    gap: $size-12;
+// Mobile adjustments
+@media (max-width: 600px) {
+  .hero-banner {
+    margin: $size-12;
     padding: $size-16;
-    border: 2px solid $color-g-90;
     border-radius: $size-12;
-    cursor: pointer;
-    transition: all 0.2s ease;
-
-    &:hover {
-      border-color: $color-g-77;
-      background: $color-g-97;
-    }
-
-    &.selected {
-      border-color: #10b981;
-      background: rgba(#10b981, 0.03);
-    }
-
-    .pickup-icon {
-      width: $size-40;
-      height: $size-40;
-      border-radius: $size-10;
-      background: rgba(#10b981, 0.1);
-      color: #10b981;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-
-    .pickup-info {
-      flex: 1;
-      min-width: 0;
-
-      .pickup-name {
-        font-size: $size-15;
-        font-weight: $fw-semi-bold;
-        color: $color-g-21;
-        margin-bottom: $size-4;
-      }
-
-      .pickup-address {
-        font-size: $size-13;
-        color: $color-g-54;
-        line-height: 1.4;
-        margin-bottom: $size-6;
-      }
-
-      .pickup-meta {
-        display: flex;
-        align-items: center;
-        gap: $size-12;
-        font-size: $size-12;
-        color: $color-g-67;
-
-        .distance {
-          display: flex;
-          align-items: center;
-          gap: $size-4;
-          color: #10b981;
-          font-weight: $fw-medium;
-        }
-
-        .hours {
-          display: flex;
-          align-items: center;
-          gap: $size-4;
-        }
-      }
-    }
-
-    .selected-check {
-      color: #10b981;
-      flex-shrink: 0;
-    }
   }
 
-  .no-pickup-centers {
+  .hero-top {
+    flex-direction: column;
+    gap: $size-12;
+    align-items: stretch;
+  }
+
+  .back-link {
+    justify-content: center;
+  }
+
+  .hero-step-indicator {
     text-align: center;
-    padding: $size-32;
-    color: $color-g-54;
-
-    svg {
-      margin-bottom: $size-12;
-      color: $color-g-77;
-    }
-
-    p {
-      font-size: $size-14;
-      margin: 0;
-    }
   }
 
-  .selected-pickup-center {
+  .navigation-footer {
+    flex-direction: column;
+    gap: $size-12;
     padding: $size-16;
-    background: rgba(#10b981, 0.05);
-    border: 1px solid rgba(#10b981, 0.2);
-    border-radius: $size-12;
-    margin-top: $size-16;
 
-    .selected-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: $size-12;
-
-      h4 {
-        font-size: $size-14;
-        font-weight: $fw-semi-bold;
-        color: #10b981;
-        display: flex;
-        align-items: center;
-        gap: $size-8;
-      }
-
-      .change-btn {
-        font-size: $size-13;
-        color: $color-pri;
-        background: none;
-        border: none;
-        cursor: pointer;
-        font-weight: $fw-medium;
-
-        &:hover {
-          text-decoration: underline;
-        }
-      }
+    .nav-left, .nav-right {
+      width: 100%;
     }
 
-    .selected-details {
-      .pharmacy-name {
-        font-size: $size-15;
-        font-weight: $fw-medium;
-        color: $color-g-21;
-        margin-bottom: $size-4;
-      }
-
-      .pharmacy-address {
-        font-size: $size-13;
-        color: $color-g-54;
-        line-height: 1.4;
-      }
-
-      .pharmacy-hours {
-        font-size: $size-12;
-        color: $color-g-67;
-        margin-top: $size-8;
-        display: flex;
-        align-items: center;
-        gap: $size-6;
-      }
+    .nav-btn {
+      width: 100%;
+      justify-content: center;
     }
   }
 }
