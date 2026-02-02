@@ -12,6 +12,7 @@ export interface Response<T> {
   statusCode: number;
   message: string;
   data: T;
+  meta?: any;
 }
 
 @Injectable()
@@ -25,6 +26,7 @@ export class ResponseInterceptor<T> implements NestInterceptor<T, Response<T>> {
         statusCode: context.switchToHttp().getResponse().statusCode,
         message: data?.message || SUCCESS,
         data: data?.result,
+        ...(data?.meta && { meta: data.meta }),
       })),
     );
   }

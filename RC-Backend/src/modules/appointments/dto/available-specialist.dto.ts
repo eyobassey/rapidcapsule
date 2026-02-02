@@ -1,6 +1,8 @@
 import { Type } from 'class-transformer';
 import {
   IsArray,
+  IsBoolean,
+  IsIn,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -42,8 +44,23 @@ export class AvailableSpecialistDto {
   time_zone: string;
 
   @IsOptional()
+  @IsString()
+  @IsIn(['routine', 'urgent'])
+  urgency?: string; // Filter specialists by slot_type (also includes 'both' slots)
+
+  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => AvailabilityParam)
   availabilityDates?: AvailabilityParam[];
+
+  @IsOptional()
+  @IsBoolean()
+  @Type(() => Boolean)
+  is_diaspora?: boolean; // Filter by diaspora status
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  languages?: string[]; // Filter by language IDs
 }

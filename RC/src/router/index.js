@@ -124,15 +124,32 @@ const routes = [
         component: () =>
           import("@/views/Mainapp/HealthCheckup/DiagnosisReport"),
       },
+      // V1 Appointments - Redirect to V2
       {
         path: "appointments",
         name: "Appointments",
-        component: Appointments,
+        redirect: { name: "Appointmentsv2" },
       },
       {
         path: "appointments/book",
         name: "BookAppointment",
-        component: () => import("@/views/Mainapp/Appointments/BookAppointment/index.vue"),
+        redirect: { name: "Appointmentsv2Book" },
+      },
+      // Appointmentsv2 - Primary booking flow (6-step wizard)
+      {
+        path: "appointmentsv2",
+        name: "Appointmentsv2",
+        component: () => import("@/views/Mainapp/Appointmentsv2/index.vue"),
+      },
+      {
+        path: "appointmentsv2/book",
+        name: "Appointmentsv2Book",
+        component: () => import("@/views/Mainapp/Appointmentsv2/BookingWizard.vue"),
+      },
+      {
+        path: "appointmentsv2/confirmation/:id?",
+        name: "Appointmentsv2Confirmation",
+        component: () => import("@/views/Mainapp/Appointmentsv2/BookingConfirmation.vue"),
       },
       {
         name: "Orders",
@@ -303,6 +320,69 @@ const routes = [
         name: "Advanced Health Score History",
         component: () => import("@/views/Mainapp/AdvancedHealthScore/History.vue"),
       },
+      // Patient Onboarding Routes
+      {
+        path: "onboarding",
+        name: "PatientOnboarding",
+        component: () => import("@/views/Mainapp/PatientApp/Onboarding/index.vue"),
+        redirect: { name: "PatientSetupDashboard" },
+        children: [
+          {
+            path: "dashboard",
+            name: "PatientSetupDashboard",
+            component: () => import("@/views/Mainapp/PatientApp/Onboarding/SetupDashboard.vue"),
+            meta: { step: 1 },
+          },
+          {
+            path: "personal-details",
+            name: "PatientPersonalDetails",
+            component: () => import("@/views/Mainapp/PatientApp/Onboarding/PersonalDetails.vue"),
+            meta: { step: 2 },
+          },
+          {
+            path: "address-emergency",
+            name: "PatientAddressEmergency",
+            component: () => import("@/views/Mainapp/PatientApp/Onboarding/AddressEmergency.vue"),
+            meta: { step: 3 },
+          },
+          {
+            path: "dependants",
+            name: "PatientDependants",
+            component: () => import("@/views/Mainapp/PatientApp/Onboarding/Dependants.vue"),
+            meta: { step: 4 },
+          },
+          {
+            path: "vitals-metrics",
+            name: "PatientVitalsMetrics",
+            component: () => import("@/views/Mainapp/PatientApp/Onboarding/VitalsMetrics.vue"),
+            meta: { step: 5 },
+          },
+          {
+            path: "allergies",
+            name: "PatientAllergies",
+            component: () => import("@/views/Mainapp/PatientApp/Onboarding/Allergies.vue"),
+            meta: { step: 6 },
+          },
+          {
+            path: "medical-history",
+            name: "PatientMedicalHistory",
+            component: () => import("@/views/Mainapp/PatientApp/Onboarding/MedicalHistory.vue"),
+            meta: { step: 7 },
+          },
+          {
+            path: "device-integration",
+            name: "PatientDeviceIntegration",
+            component: () => import("@/views/Mainapp/PatientApp/Onboarding/DeviceIntegration.vue"),
+            meta: { step: 8 },
+          },
+          {
+            path: "wallet-credits",
+            name: "PatientWalletCredits",
+            component: () => import("@/views/Mainapp/PatientApp/Onboarding/WalletCredits.vue"),
+            meta: { step: 9 },
+          },
+        ],
+      },
     ],
   },
   {
@@ -325,17 +405,20 @@ const routes = [
     name: "Specialist App",
     component: SpecialistApp,
     beforeEnter: async (to, from) => {
+      // Get token fresh each time instead of using stale module-level variable
+      const currentToken = localStorage.getItem("token") || sessionStorage.getItem("token");
+
       if (from.name === "Login") {
         return true;
       } else if (from.name === "Specialist Profile Setup") {
-        await store.dispatch("authenticate", saved_token);
+        await store.dispatch("authenticate", currentToken);
 
         return true;
       } else if (from.name === "Signup-specialist") {
         return true;
       } else {
-        if (saved_token) {
-          await store.dispatch("authenticate", saved_token);
+        if (currentToken) {
+          await store.dispatch("authenticate", currentToken);
 
           let isAuthenticated = store.getters["authenticated"];
 
@@ -365,6 +448,50 @@ const routes = [
           import(
             "@/views/Mainapp/SpecialistApp/Appointments/AppointmentDetails"
           ),
+      },
+      // Specialist Appointments v2 Routes (New consolidated module)
+      {
+        path: "appointments-v2",
+        name: "SpecialistAppointmentsLayout",
+        component: () => import("@/views/Mainapp/SpecialistApp/SpecialistAppointments/index.vue"),
+        redirect: { name: "SpecialistAppointmentsDashboard" },
+        children: [
+          {
+            path: "",
+            name: "SpecialistAppointmentsDashboard",
+            component: () => import("@/views/Mainapp/SpecialistApp/SpecialistAppointments/Dashboard.vue"),
+          },
+          {
+            path: "list",
+            name: "SpecialistAppointmentsList",
+            component: () => import("@/views/Mainapp/SpecialistApp/SpecialistAppointments/AppointmentsList.vue"),
+          },
+          {
+            path: "create",
+            name: "SpecialistAppointmentsCreate",
+            component: () => import("@/views/Mainapp/SpecialistApp/SpecialistAppointments/CreateWizard.vue"),
+          },
+          {
+            path: "confirmation",
+            name: "SpecialistAppointmentConfirmation",
+            component: () => import("@/views/Mainapp/SpecialistApp/SpecialistAppointments/AppointmentConfirmation.vue"),
+          },
+          {
+            path: ":id",
+            name: "SpecialistAppointmentDetail",
+            component: () => import("@/views/Mainapp/SpecialistApp/SpecialistAppointments/AppointmentDetail.vue"),
+          },
+          {
+            path: "analytics",
+            name: "SpecialistAppointmentsAnalytics",
+            component: () => import("@/views/Mainapp/SpecialistApp/SpecialistAppointments/Analytics.vue"),
+          },
+          {
+            path: "settings",
+            name: "SpecialistAppointmentsSettings",
+            component: () => import("@/views/Mainapp/SpecialistApp/SpecialistAppointments/Settings.vue"),
+          },
+        ],
       },
       // Specialist Patient Dashboard Routes
       {
@@ -497,6 +624,63 @@ const routes = [
         path: "patient/:patientId/health-records",
         name: "SpecialistPatientHealthRecords",
         component: () => import("@/views/Mainapp/SpecialistApp/PatientHealth/PatientHealthRecords.vue"),
+      },
+      // Specialist Onboarding Routes
+      {
+        path: "onboarding",
+        name: "SpecialistOnboarding",
+        component: () => import("@/views/Mainapp/SpecialistApp/Onboarding/index.vue"),
+        redirect: { name: "SpecialistSetupDashboard" },
+        children: [
+          {
+            path: "quick-bio",
+            name: "SpecialistQuickBio",
+            component: () => import("@/views/Mainapp/SpecialistApp/Onboarding/QuickBio.vue"),
+            meta: { step: 2 },
+          },
+          {
+            path: "dashboard",
+            name: "SpecialistSetupDashboard",
+            component: () => import("@/views/Mainapp/SpecialistApp/Onboarding/SetupDashboard.vue"),
+            meta: { step: 3 },
+          },
+          {
+            path: "profile",
+            name: "SpecialistProfileConfig",
+            component: () => import("@/views/Mainapp/SpecialistApp/Onboarding/ProfileConfiguration.vue"),
+            meta: { step: 4 },
+          },
+          {
+            path: "availability",
+            name: "SpecialistAvailability",
+            component: () => import("@/views/Mainapp/SpecialistApp/Onboarding/AvailabilitySetup.vue"),
+            meta: { step: 5 },
+          },
+          {
+            path: "rates",
+            name: "SpecialistRates",
+            component: () => import("@/views/Mainapp/SpecialistApp/Onboarding/RateCards.vue"),
+            meta: { step: 6 },
+          },
+          {
+            path: "verification",
+            name: "SpecialistVerification",
+            component: () => import("@/views/Mainapp/SpecialistApp/Onboarding/IdentityCompliance.vue"),
+            meta: { step: 7 },
+          },
+          {
+            path: "security",
+            name: "SpecialistSecurity",
+            component: () => import("@/views/Mainapp/SpecialistApp/Onboarding/SecurityCommunication.vue"),
+            meta: { step: 8 },
+          },
+          {
+            path: "review",
+            name: "SpecialistReview",
+            component: () => import("@/views/Mainapp/SpecialistApp/Onboarding/ReviewActivation.vue"),
+            meta: { step: 9 },
+          },
+        ],
       },
     ],
   },

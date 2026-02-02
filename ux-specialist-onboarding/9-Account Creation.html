@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account Creation - Rapid Capsule Specialist</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        rapid: {
+                            sky: '#4FC3F7',
+                            skyLight: '#E1F5FE',
+                            skyDark: '#0288D1',
+                            orange: '#FF9800',
+                            orangeLight: '#FFF3E0',
+                            orangeDark: '#F57C00',
+                            navy: '#1A365D',
+                            gray: '#F5F9FF',
+                            text: '#334155',
+                            success: '#4CAF50',
+                            error: '#EF4444',
+                            border: '#E2E8F0'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        display: ['Poppins', 'system-ui', 'sans-serif']
+                    },
+                    boxShadow: {
+                        'soft': '0 4px 20px -2px rgba(79, 195, 247, 0.15)',
+                        'card': '0 10px 30px -5px rgba(0, 0, 0, 0.05)',
+                        'glow': '0 0 15px rgba(79, 195, 247, 0.3)',
+                        'inner-light': 'inset 0 2px 4px 0 rgba(255, 255, 255, 0.3)',
+                        'input-focus': '0 0 0 4px rgba(79, 195, 247, 0.2)'
+                    }
+                }
+            }
+        }
+        window.FontAwesomeConfig = { autoReplaceSvg: 'nest' };
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        .form-input {
+            transition: all 0.2s ease-in-out;
+        }
+        .form-input:focus {
+            border-color: #4FC3F7;
+            box-shadow: 0 0 0 4px rgba(79, 195, 247, 0.2);
+            outline: none;
+        }
+        .form-input.error {
+            border-color: #EF4444;
+            background-color: #FEF2F2;
+        }
+        .form-input.success {
+            border-color: #4CAF50;
+            background-color: #F0FDF4;
+        }
+
+        .floating-element {
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+
+        .bg-grid-pattern {
+            background-image: radial-gradient(#4FC3F7 1px, transparent 1px);
+            background-size: 30px 30px;
+            opacity: 0.1;
+        }
+
+        /* Checkbox styling */
+        .custom-checkbox:checked {
+            background-color: #4FC3F7;
+            border-color: #4FC3F7;
+        }
+        .custom-checkbox:checked + div {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 font-sans text-rapid-text antialiased h-[1024px] overflow-hidden flex flex-col relative w-[1440px] mx-auto">
+
+    <!-- Background Decoration -->
+    <div class="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+        <div class="absolute top-0 right-0 w-[800px] h-[800px] bg-rapid-skyLight/40 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
+        <div class="absolute bottom-0 left-0 w-[600px] h-[600px] bg-orange-50/50 rounded-full blur-3xl translate-y-1/2 -translate-x-1/4"></div>
+        <div class="absolute inset-0 bg-grid-pattern"></div>
+    </div>
+
+    <!-- Header -->
+    <header id="header" class="bg-white/80 backdrop-blur-md border-b border-slate-100 h-20 z-40 sticky top-0 flex-none px-12">
+        <div class="h-full flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-gradient-to-br from-rapid-sky to-rapid-skyDark rounded-xl flex items-center justify-center text-white shadow-glow">
+                    <i class="fa-solid fa-heart-pulse text-lg"></i>
+                </div>
+                <div>
+                    <span class="text-2xl font-bold text-rapid-navy font-display tracking-tight block leading-none">Rapid Capsule</span>
+                    <span class="text-[10px] font-medium text-slate-500 uppercase tracking-widest">Specialist Portal</span>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-6">
+                <!-- Accessibility Controls -->
+                <div class="flex items-center gap-3 px-4 py-2 bg-slate-100 rounded-full">
+                    <button class="text-slate-400 hover:text-rapid-navy transition-colors" title="Keyboard Navigation">
+                        <i class="fa-solid fa-keyboard"></i>
+                    </button>
+                    <button class="text-slate-400 hover:text-rapid-navy transition-colors" title="High Contrast">
+                        <i class="fa-solid fa-circle-half-stroke"></i>
+                    </button>
+                    <div class="h-4 w-px bg-slate-300"></div>
+                    <div class="flex items-center gap-2 cursor-pointer">
+                        <i class="fa-solid fa-globe text-slate-400 text-xs"></i>
+                        <select class="bg-transparent text-xs font-bold text-slate-600 outline-none cursor-pointer">
+                            <option>English</option>
+                            <option>Yoruba</option>
+                            <option>Hausa</option>
+                            <option>Igbo</option>
+                            <option>Swahili</option>
+                            <option>French</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <span class="text-sm text-slate-500">Already have an account?</span>
+                    <button class="text-sm font-bold text-rapid-sky hover:text-rapid-navy transition-colors">Log In</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex z-10 relative h-[calc(1024px-80px)]">
+        
+        <!-- Left Column: Signup Form -->
+        <div class="w-7/12 h-full overflow-y-auto px-16 py-10 flex flex-col">
+            
+            <div class="max-w-xl mx-auto w-full">
+                <!-- Back Link -->
+                <a href="#" class="inline-flex items-center gap-2 text-sm font-medium text-slate-400 hover:text-rapid-navy mb-8 transition-colors">
+                    <i class="fa-solid fa-arrow-left"></i> Back to Role Selection
+                </a>
+
+                <!-- Header -->
+                <div class="mb-8">
+                    <h1 class="text-3xl font-display font-bold text-rapid-navy mb-2">Create your Specialist Account</h1>
+                    <p class="text-slate-500">Secure access for verified medical practitioners.</p>
+                </div>
+
+                <!-- SSO Options -->
+                <div class="grid grid-cols-2 gap-4 mb-8">
+                    <button class="flex items-center justify-center gap-3 px-4 py-3 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors font-medium text-slate-600 bg-white">
+                        <i class="fa-brands fa-google text-red-500"></i> Google
+                    </button>
+                    <button class="flex items-center justify-center gap-3 px-4 py-3 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors font-medium text-slate-600 bg-white">
+                        <i class="fa-brands fa-apple text-black"></i> Apple
+                    </button>
+                </div>
+
+                <div class="relative mb-8">
+                    <div class="absolute inset-0 flex items-center">
+                        <div class="w-full border-t border-slate-200"></div>
+                    </div>
+                    <div class="relative flex justify-center text-xs uppercase">
+                        <span class="bg-slate-50 px-4 text-slate-400 font-semibold tracking-wider">Or continue with email</span>
+                    </div>
+                </div>
+
+                <!-- Form -->
+                <form onsubmit="event.preventDefault();" class="space-y-5">
+                    
+                    <!-- Email -->
+                    <div>
+                        <label for="email" class="block text-sm font-bold text-rapid-navy mb-2">Work Email Address</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                                <i class="fa-regular fa-envelope"></i>
+                            </div>
+                            <input type="email" id="email" class="form-input w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-sm placeholder-slate-400" placeholder="dr.name@hospital.com" onblur="validateField(this)">
+                            <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none opacity-0 transition-opacity" id="email-icon">
+                                <i class="fa-solid fa-check text-rapid-success"></i>
+                            </div>
+                        </div>
+                        <p class="mt-1 text-xs text-rapid-error hidden" id="email-error">Please enter a valid email address.</p>
+                    </div>
+
+                    <!-- Phone -->
+                    <div>
+                        <label for="phone" class="block text-sm font-bold text-rapid-navy mb-2">Phone Number</label>
+                        <div class="flex gap-3">
+                            <div class="relative w-32">
+                                <select class="form-input w-full pl-8 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-sm appearance-none cursor-pointer">
+                                    <option>🇳🇬 +234</option>
+                                    <option>🇬🇭 +233</option>
+                                    <option>🇰🇪 +254</option>
+                                    <option>🇿🇦 +27</option>
+                                    <option>🇺🇸 +1</option>
+                                    <option>🇬🇧 +44</option>
+                                </select>
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                                    <i class="fa-solid fa-globe"></i>
+                                </div>
+                            </div>
+                            <div class="relative flex-1">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                                    <i class="fa-solid fa-phone"></i>
+                                </div>
+                                <input type="tel" id="phone" class="form-input w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-sm placeholder-slate-400" placeholder="80 1234 5678">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Password -->
+                    <div>
+                        <label for="password" class="block text-sm font-bold text-rapid-navy mb-2">Password</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                                <i class="fa-solid fa-lock"></i>
+                            </div>
+                            <input type="password" id="password" class="form-input w-full pl-10 pr-10 py-3 bg-white border border-slate-200 rounded-xl text-sm placeholder-slate-400" placeholder="Create a strong password" onkeyup="checkStrength(this.value)">
+                            <button type="button" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-rapid-navy cursor-pointer" onclick="togglePassword('password')">
+                                <i class="fa-regular fa-eye"></i>
+                            </button>
+                        </div>
+                        
+                        <!-- Strength Meter -->
+                        <div class="mt-2 flex items-center gap-2">
+                            <div class="flex-1 h-1 bg-slate-200 rounded-full overflow-hidden">
+                                <div id="strength-bar" class="h-full bg-rapid-orange w-0 transition-all duration-300"></div>
+                            </div>
+                            <span id="strength-text" class="text-[10px] font-bold text-slate-400 uppercase">Weak</span>
+                        </div>
+                    </div>
+
+                    <!-- Consents -->
+                    <div class="space-y-3 pt-2">
+                        <label class="flex items-start gap-3 cursor-pointer group">
+                            <div class="relative flex items-center mt-0.5">
+                                <input type="checkbox" class="custom-checkbox appearance-none w-5 h-5 border-2 border-slate-300 rounded bg-white transition-colors cursor-pointer group-hover:border-rapid-sky">
+                                <div class="absolute inset-0 flex items-center justify-center text-white pointer-events-none opacity-0 transition-opacity">
+                                    <i class="fa-solid fa-check text-xs"></i>
+                                </div>
+                            </div>
+                            <span class="text-sm text-slate-600 leading-tight select-none">
+                                I agree to the <a href="#" class="text-rapid-sky hover:underline font-medium">Terms of Service</a> and <a href="#" class="text-rapid-sky hover:underline font-medium">Privacy Policy</a>.
+                            </span>
+                        </label>
+                        
+                        <label class="flex items-start gap-3 cursor-pointer group">
+                            <div class="relative flex items-center mt-0.5">
+                                <input type="checkbox" class="custom-checkbox appearance-none w-5 h-5 border-2 border-slate-300 rounded bg-white transition-colors cursor-pointer group-hover:border-rapid-sky">
+                                <div class="absolute inset-0 flex items-center justify-center text-white pointer-events-none opacity-0 transition-opacity">
+                                    <i class="fa-solid fa-check text-xs"></i>
+                                </div>
+                            </div>
+                            <span class="text-sm text-slate-600 leading-tight select-none">
+                                I consent to automated background checks and credential verification as required by medical regulations.
+                            </span>
+                        </label>
+                    </div>
+
+                    <!-- CTA -->
+                    <button type="submit" class="w-full bg-rapid-orange text-white font-bold text-lg py-4 rounded-xl shadow-lg shadow-orange-200 hover:shadow-orange-300 hover:bg-rapid-orangeDark transition-all transform active:scale-[0.99] flex items-center justify-center gap-2 mt-4">
+                        Create Account <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+
+                    <!-- Security Note -->
+                    <div class="flex items-center justify-center gap-4 py-2 opacity-70">
+                        <div class="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
+                            <i class="fa-solid fa-lock text-rapid-success"></i> 256-bit Encryption
+                        </div>
+                        <div class="h-3 w-px bg-slate-300"></div>
+                        <div class="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
+                            <i class="fa-solid fa-shield-halved text-rapid-navy"></i> Paystack Secured
+                        </div>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+
+        <!-- Right Column: Value Props & Preview -->
+        <div class="w-5/12 h-full bg-white border-l border-slate-100 relative overflow-hidden flex flex-col">
+            <!-- Decorative Elements -->
+            <div class="absolute top-0 right-0 w-64 h-64 bg-rapid-skyLight/30 rounded-bl-full pointer-events-none"></div>
+            
+            <div class="p-12 flex-1 flex flex-col justify-center">
+                
+                <!-- Setup Preview Widget -->
+                <div class="bg-white rounded-2xl shadow-card border border-slate-100 p-6 mb-10 relative floating-element">
+                    <div class="absolute -top-3 -right-3 bg-rapid-navy text-white text-xs font-bold px-3 py-1 rounded-full shadow-md z-20">
+                        <i class="fa-solid fa-user-doctor mr-1"></i> Specialist Setup
+                    </div>
+                    
+                    <h3 class="text-sm font-bold text-slate-400 uppercase tracking-widest mb-6">Setup Progress</h3>
+                    
+                    <div class="space-y-6 relative">
+                        <div class="absolute left-[15px] top-2 bottom-2 w-0.5 bg-slate-100 z-0"></div>
+                        
+                        <!-- Step 1: Account (Active) -->
+                        <div class="flex items-start gap-4 relative z-10">
+                            <div class="w-8 h-8 rounded-full bg-rapid-sky text-white flex items-center justify-center text-xs font-bold shadow-glow ring-4 ring-white relative">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rapid-sky opacity-75"></span>
+                                1
+                            </div>
+                            <div class="bg-rapid-skyLight/30 p-3 rounded-lg w-full -mt-2 border border-rapid-sky/20">
+                                <h4 class="text-sm font-bold text-rapid-navy">Account Creation</h4>
+                                <p class="text-xs text-slate-600 mt-1">Secure login setup & consents.</p>
+                            </div>
+                        </div>
+
+                        <!-- Step 2: Credentials -->
+                        <div class="flex items-start gap-4 relative z-10 opacity-50">
+                            <div class="w-8 h-8 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center text-xs font-bold ring-4 ring-white">2</div>
+                            <div class="pt-1">
+                                <h4 class="text-sm font-bold text-rapid-navy">Verify Credentials</h4>
+                                <p class="text-xs text-slate-500">Upload license & ID.</p>
+                            </div>
+                        </div>
+
+                        <!-- Step 3: Profile -->
+                        <div class="flex items-start gap-4 relative z-10 opacity-50">
+                            <div class="w-8 h-8 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center text-xs font-bold ring-4 ring-white">3</div>
+                            <div class="pt-1">
+                                <h4 class="text-sm font-bold text-rapid-navy">Practice Profile</h4>
+                                <p class="text-xs text-slate-500">Bio, rates & availability.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Trust & Value -->
+                <div class="bg-gradient-to-br from-slate-50 to-white border border-slate-100 rounded-2xl p-6">
+                    <h4 class="text-sm font-bold text-rapid-navy mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-shield-cat text-rapid-orange"></i> Why we need this?
+                    </h4>
+                    <ul class="space-y-3">
+                        <li class="flex items-start gap-3 text-sm text-slate-600">
+                            <i class="fa-solid fa-check text-green-500 mt-1"></i>
+                            <span><strong>Identity Protection:</strong> Your email and phone are used for 2-factor authentication to secure patient data.</span>
+                        </li>
+                        <li class="flex items-start gap-3 text-sm text-slate-600">
+                            <i class="fa-solid fa-check text-green-500 mt-1"></i>
+                            <span><strong>Compliance:</strong> We verify every specialist against the Medical and Dental Council registry.</span>
+                        </li>
+                        <li class="flex items-start gap-3 text-sm text-slate-600">
+                            <i class="fa-solid fa-check text-green-500 mt-1"></i>
+                            <span><strong>Instant Notifications:</strong> Receive urgent triage alerts directly to your phone.</span>
+                        </li>
+                    </ul>
+                </div>
+
+            </div>
+            
+            <!-- Bottom Trust Badge -->
+            <div class="p-6 border-t border-slate-100 bg-slate-50 flex items-center justify-center gap-6">
+                <div class="flex items-center gap-2 text-xs font-bold text-slate-400">
+                    <i class="fa-brands fa-whatsapp text-lg text-green-500"></i>
+                    Need help? Chat with Support
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        function togglePassword(inputId) {
+            const input = document.getElementById(inputId);
+            const icon = input.parentElement.querySelector('button i');
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        }
+
+        function checkStrength(password) {
+            const bar = document.getElementById('strength-bar');
+            const text = document.getElementById('strength-text');
+            
+            if (password.length === 0) {
+                bar.style.width = '0%';
+                text.textContent = 'Weak';
+                text.className = 'text-[10px] font-bold text-slate-400 uppercase';
+                return;
+            }
+
+            let strength = 0;
+            if (password.length > 5) strength += 1;
+            if (password.length > 8) strength += 1;
+            if (/[A-Z]/.test(password)) strength += 1;
+            if (/[0-9]/.test(password)) strength += 1;
+
+            if (strength <= 1) {
+                bar.style.width = '25%';
+                bar.className = 'h-full bg-red-500 w-0 transition-all duration-300';
+                text.textContent = 'Weak';
+                text.className = 'text-[10px] font-bold text-red-500 uppercase';
+            } else if (strength <= 3) {
+                bar.style.width = '60%';
+                bar.className = 'h-full bg-rapid-orange w-0 transition-all duration-300';
+                text.textContent = 'Medium';
+                text.className = 'text-[10px] font-bold text-rapid-orange uppercase';
+            } else {
+                bar.style.width = '100%';
+                bar.className = 'h-full bg-green-500 w-0 transition-all duration-300';
+                text.textContent = 'Strong';
+                text.className = 'text-[10px] font-bold text-green-500 uppercase';
+            }
+        }
+
+        function validateField(input) {
+            // Simple simulation of validation
+            const icon = input.parentElement.querySelector('.absolute.right-0');
+            const errorMsg = document.getElementById(input.id + '-error');
+            
+            if (input.value.length > 0 && input.value.includes('@')) {
+                input.classList.remove('error');
+                input.classList.add('success');
+                if (icon) icon.classList.remove('opacity-0');
+                if (errorMsg) errorMsg.classList.add('hidden');
+            } else if (input.value.length > 0) {
+                input.classList.add('error');
+                input.classList.remove('success');
+                if (icon) icon.classList.add('opacity-0');
+                if (errorMsg) errorMsg.classList.remove('hidden');
+            } else {
+                input.classList.remove('error', 'success');
+                if (icon) icon.classList.add('opacity-0');
+                if (errorMsg) errorMsg.classList.add('hidden');
+            }
+        }
+    </script>
+</body>
+</html>

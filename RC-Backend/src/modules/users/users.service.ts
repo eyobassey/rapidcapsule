@@ -200,79 +200,147 @@ export class UsersService {
   }
 
   async profileSetup(userId: Types.ObjectId, profileSetupDto: ProfileSetupDto) {
-    const { profile, reg_medium } = await this.findById(userId);
-    const {
-      profile: {
-        contact: { address1, address2, country, zip_code, state, phone },
+    const existingUser = await this.findById(userId);
+    const { profile: existingProfile, reg_medium, allergies: existingAllergies, medical_history: existingMedicalHistory, device_integration: existingDeviceIntegration } = existingUser;
+
+    // Extract optional fields from DTO
+    const { profile: profileDto, emergency_contacts, pre_existing_conditions, dependants, security, allergies, medical_history, device_integration } = profileSetupDto;
+
+    // Build update object dynamically based on what's provided
+    const updateFields: any = {};
+
+    // Handle profile updates if profile data is provided
+    if (profileDto) {
+      const contact = profileDto.contact || {};
+      const { address1, address2, country, zip_code, state, city, phone } = contact;
+      const {
         profile_photo,
         basic_health_info,
         health_risk_factors,
         gender,
         marital_status,
-      },
-      emergency_contacts,
-      pre_existing_conditions,
-      dependants,
-      security,
-    } = profileSetupDto;
+        first_name,
+        last_name,
+        date_of_birth,
+        blood_type,
+        genotype,
+        occupation,
+      } = profileDto as any;
 
-    const files =
-      pre_existing_conditions
+      updateFields.profile = {
+        ...existingProfile,
+        ...(first_name !== undefined && { first_name }),
+        ...(last_name !== undefined && { last_name }),
+        ...(date_of_birth !== undefined && { date_of_birth }),
+        ...(blood_type !== undefined && { blood_type }),
+        ...(genotype !== undefined && { genotype }),
+        ...(occupation !== undefined && { occupation }),
+        ...(basic_health_info !== undefined && { basic_health_info }),
+        ...(health_risk_factors !== undefined && { health_risk_factors }),
+        ...(marital_status !== undefined && { marital_status }),
+        ...(gender !== undefined && { gender }),
+        contact: {
+          ...existingProfile?.contact,
+          ...(address1 !== undefined && { address1 }),
+          ...(address2 !== undefined && { address2 }),
+          ...(city !== undefined && { city }),
+          ...(country !== undefined && { country }),
+          ...(zip_code !== undefined && { zip_code }),
+          ...(state !== undefined && { state }),
+          ...(phone && {
+            phone: {
+              country_code: phone.country_code || existingProfile?.contact?.phone?.country_code,
+              number: phone.number || existingProfile?.contact?.phone?.number,
+            },
+          }),
+        },
+      };
+
+      // Handle profile photo upload
+      if (profile_photo) {
+        await this.taskCron.addCron(
+          this.uploadProfilePhoto(userId, profile_photo),
+          `${Date.now()}-${userId}-uploadProfilePhoto`,
+        );
+      }
+    }
+
+    // Handle emergency contacts
+    if (emergency_contacts !== undefined) {
+      updateFields.emergency_contacts = emergency_contacts;
+    }
+
+    // Handle dependants
+    if (dependants !== undefined) {
+      updateFields.dependants = dependants;
+    }
+
+    // Handle security
+    if (security !== undefined) {
+      updateFields.security = security;
+    }
+
+    // Handle pre_existing_conditions
+    if (pre_existing_conditions !== undefined) {
+      updateFields.pre_existing_conditions = pre_existing_conditions?.map((condition) => ({
+        ...condition,
+        file:
+          condition?.file?.map(({ file_type, original_name }) => ({
+            file_type,
+            original_name,
+            url: '',
+          })) || [],
+      })) || [];
+
+      const files = pre_existing_conditions
         ?.map(({ file }) => file)
         .filter((file) => file && file?.length) || [];
+
+      if (files?.length) {
+        await this.hasFilesAndUpload(
+          <File[][]>files,
+          pre_existing_conditions,
+          this.uploadProfileFiles(files, userId, 'pre_existing_conditions'),
+          `${Date.now()}-${userId}-uploadFiles`,
+        );
+      }
+    }
+
+    // Handle allergies
+    if (allergies !== undefined) {
+      updateFields.allergies = {
+        ...(existingAllergies || {}),
+        ...allergies,
+      };
+    }
+
+    // Handle medical_history
+    if (medical_history !== undefined) {
+      updateFields.medical_history = {
+        ...(existingMedicalHistory || {}),
+        ...medical_history,
+      };
+    }
+
+    // Handle device_integration
+    if (device_integration !== undefined) {
+      updateFields.device_integration = {
+        ...(existingDeviceIntegration || {}),
+        ...device_integration,
+      };
+    }
+
+    // Only update if there are fields to update
+    if (Object.keys(updateFields).length === 0) {
+      return existingUser;
+    }
 
     const user = await updateOne(
       this.userModel,
       { _id: userId },
-      {
-        profile: {
-          ...profile,
-          basic_health_info,
-          health_risk_factors,
-          marital_status,
-          gender,
-          contact: {
-            ...profile.contact,
-            ...(reg_medium !== RegMedium.LOCAL && {
-              phone: { country_code: phone.country_code, number: phone.number },
-            }),
-            address1,
-            address2,
-            country,
-            zip_code,
-            state,
-          },
-        },
-        emergency_contacts,
-        dependants,
-        security,
-        pre_existing_conditions:
-          pre_existing_conditions?.map((condition) => ({
-            ...condition,
-            file:
-              condition?.file?.map(({ file_type, original_name }) => ({
-                file_type,
-                original_name,
-                url: '',
-              })) || [],
-          })) || [],
-      },
+      updateFields,
     );
-    if (profile_photo) {
-      await this.taskCron.addCron(
-        this.uploadProfilePhoto(userId, profile_photo),
-        `${Date.now()}-${userId}-uploadProfilePhoto`,
-      );
-    }
 
-    if (files?.length) {
-      await this.hasFilesAndUpload(
-        <File[][]>files,
-        pre_existing_conditions,
-        this.uploadProfileFiles(files, userId, 'pre_existing_conditions'),
-        `${Date.now()}-${userId}-uploadFiles`,
-      );
-    }
     return user;
   }
 
@@ -391,6 +459,11 @@ export class UsersService {
       dependants,
       emergency_contacts,
       security,
+      languages,
+      specialist_categories,
+      professional_practice,
+      medical_history,
+      allergies,
     } = updateUserProfileDto || {};
 
     const user = await this.findById(userId);
@@ -448,6 +521,26 @@ export class UsersService {
           dbEmergencyContacts,
           emergency_contacts,
         ),
+      }),
+      ...(languages?.length && { languages }),
+      ...(specialist_categories?.length && { specialist_categories }),
+      ...(professional_practice && {
+        professional_practice: {
+          ...(user.professional_practice || {}),
+          ...professional_practice,
+        },
+      }),
+      ...(medical_history && {
+        medical_history: {
+          ...(user.medical_history || {}),
+          ...medical_history,
+        },
+      }),
+      ...(allergies && {
+        allergies: {
+          ...(user.allergies || {}),
+          ...allergies,
+        },
       }),
     };
 
@@ -576,11 +669,12 @@ export class UsersService {
   }
 
   async getProfile(payload: IJwtPayload) {
-    const user = await findOne(
-      this.userModel,
-      { _id: payload.sub },
-      { selectFields: this.getSelectedFields(payload.user_type) },
-    );
+    const user = await this.userModel
+      .findOne({ _id: payload.sub })
+      .select(this.getSelectedFields(payload.user_type))
+      .populate('languages', 'name code native_name')
+      .populate('specialist_categories', 'name slug icon')
+      .exec();
     if (!user) throw new NotFoundException(Messages.NO_USER_FOUND);
 
     // Generate presigned URL for profile photo if it exists
@@ -992,5 +1086,141 @@ export class UsersService {
 
   async getUserEarning(userId: Types.ObjectId) {
     return this.walletsService.getUserEarnings(userId);
+  }
+
+  // Identity Verification Methods
+  async getIdentityVerification(userId: Types.ObjectId) {
+    const user = await findOne(this.userModel, { _id: userId }, {
+      selectFields: ['identity_verification', 'documents', 'professional_practice'],
+    });
+    if (!user) throw new NotFoundException(Messages.NO_USER_FOUND);
+
+    // Generate presigned URLs for verification documents if they exist
+    const verification = user.identity_verification || {};
+
+    if (verification.government_id?.document_url) {
+      try {
+        verification.government_id.document_url = await this.fileUpload.getPresignedUrl(
+          verification.government_id.document_url,
+          3600, // 1 hour expiry
+        );
+      } catch (e) {
+        this.logger.error(`Error generating presigned URL for government ID: ${e}`);
+      }
+    }
+
+    if (verification.medical_license?.document_url) {
+      try {
+        verification.medical_license.document_url = await this.fileUpload.getPresignedUrl(
+          verification.medical_license.document_url,
+          3600,
+        );
+      } catch (e) {
+        this.logger.error(`Error generating presigned URL for medical license: ${e}`);
+      }
+    }
+
+    return {
+      identity_verification: verification,
+      professional_practice: user.professional_practice,
+      documents: user.documents,
+    };
+  }
+
+  async updateIdentityVerification(
+    userId: Types.ObjectId,
+    updateDto: any,
+  ) {
+    const user = await this.findById(userId);
+    if (!user) throw new NotFoundException(Messages.NO_USER_FOUND);
+    if (user.user_type !== UserType.SPECIALIST) {
+      throw new BadRequestException('Only specialists can update identity verification');
+    }
+
+    const existingVerification = user.identity_verification || {};
+
+    // Merge the updates with existing data
+    const updatedVerification = {
+      government_id: {
+        ...(existingVerification.government_id || {}),
+        ...(updateDto.government_id || {}),
+      },
+      medical_license: {
+        ...(existingVerification.medical_license || {}),
+        ...(updateDto.medical_license || {}),
+      },
+      registry_check: {
+        ...(existingVerification.registry_check || {}),
+        ...(updateDto.registry_check || {}),
+      },
+      credential_hash: updateDto.credential_hash || existingVerification.credential_hash,
+      overall_status: this.calculateOverallVerificationStatus(updateDto, existingVerification),
+      submitted_at: existingVerification.submitted_at || new Date(),
+    };
+
+    // Handle document uploads if base64 data is provided
+    if (updateDto.government_id?.document_url?.startsWith('data:')) {
+      const s3Url = await this.uploadVerificationDocument(
+        userId,
+        updateDto.government_id.document_url,
+        'government_id',
+      );
+      updatedVerification.government_id.document_url = s3Url;
+    }
+
+    if (updateDto.medical_license?.document_url?.startsWith('data:')) {
+      const s3Url = await this.uploadVerificationDocument(
+        userId,
+        updateDto.medical_license.document_url,
+        'medical_license',
+      );
+      updatedVerification.medical_license.document_url = s3Url;
+    }
+
+    return await updateOne(
+      this.userModel,
+      { _id: userId },
+      { identity_verification: updatedVerification },
+    );
+  }
+
+  private calculateOverallVerificationStatus(updateDto: any, existing: any): string {
+    const govStatus = updateDto.government_id?.status || existing.government_id?.status || 'pending';
+    const licenseStatus = updateDto.medical_license?.status || existing.medical_license?.status || 'pending';
+    const registryStatus = updateDto.registry_check?.status || existing.registry_check?.status || 'pending';
+
+    if (govStatus === 'verified' && licenseStatus === 'verified' && registryStatus === 'verified') {
+      return 'verified';
+    }
+    if (govStatus === 'rejected' || licenseStatus === 'rejected') {
+      return 'rejected';
+    }
+    return 'pending';
+  }
+
+  private async uploadVerificationDocument(
+    userId: Types.ObjectId,
+    base64: string,
+    docType: string,
+  ): Promise<string> {
+    try {
+      const matches = base64.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+      if (!matches || matches.length !== 3) {
+        throw new BadRequestException('Invalid base64 document format');
+      }
+
+      const buffer = Buffer.from(matches[2], 'base64');
+      const extension = mime.extension(matches[1]) || 'pdf';
+      const fileName = `${userId}-${docType}-${Date.now()}.${extension}`;
+
+      this.logger.log(`Uploading ${docType} verification document: ${fileName}`);
+      const s3Url = await this.fileUpload.uploadToS3(buffer, fileName);
+      this.logger.log(`Uploaded ${docType} verification document: ${s3Url}`);
+
+      return s3Url;
+    } catch (e) {
+      this.logger.error(`Error uploading ${docType} verification document: ${e}`);
+      throw new InternalServerErrorException(`Failed to upload ${docType} document`);
+    }
   }
 }

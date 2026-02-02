@@ -38,27 +38,70 @@ const props = defineProps({
 const modelValue = ref();
 const selectedDates = ref([]);
 
+// Status color mapping for appointments
+const statusColors = {
+	OPEN: '#0066FF',        // Blue - Upcoming
+	ONGOING: '#FF9800',     // Orange - In progress
+	COMPLETED: '#4CAF50',   // Green - Completed
+	MISSED: '#F44336',      // Red - Missed
+	NO_SHOW: '#F44336',     // Red - No show
+	CANCELLED: '#9E9E9E',   // Grey - Cancelled
+};
+
+const getStatusLabel = (status) => {
+	const labels = {
+		OPEN: 'Upcoming',
+		ONGOING: 'In Progress',
+		COMPLETED: 'Completed',
+		MISSED: 'Missed',
+		NO_SHOW: 'No Show',
+		CANCELLED: 'Cancelled',
+	};
+	return labels[status] || status;
+};
+
 const attributes = computed(() => {
 	const attrs = [{ highlight: true, dates: selectedDates.value }];
 
-	// Add dots for dates with appointments
-	const appointmentAttrs = Object.entries(props.appointmentDates).map(([dateStr, appointments]) => {
-		const count = Array.isArray(appointments) ? appointments.length : 0;
+	// Add dots for dates with appointments - color coded by status
+	const appointmentAttrs = [];
 
-		return {
+	Object.entries(props.appointmentDates).forEach(([dateStr, appointments]) => {
+		if (!Array.isArray(appointments) || appointments.length === 0) return;
+
+		// Group appointments by status for this date
+		const statusGroups = {};
+		appointments.forEach(apt => {
+			const status = apt.status || 'OPEN';
+			if (!statusGroups[status]) {
+				statusGroups[status] = [];
+			}
+			statusGroups[status].push(apt);
+		});
+
+		// Create a dot for each status present on this date
+		const dots = Object.keys(statusGroups).map(status => ({
+			color: statusColors[status] || '#0066FF',
+			class: `appointment-dot status-${status.toLowerCase()}`
+		}));
+
+		// Build popover label with status breakdown
+		const statusSummary = Object.entries(statusGroups)
+			.map(([status, apts]) => `${apts.length} ${getStatusLabel(status)}`)
+			.join(', ');
+
+		appointmentAttrs.push({
 			key: dateStr,
-			dot: {
-				color: '#0066FF',
-				class: 'appointment-dot'
-			},
+			dot: dots.length === 1 ? dots[0] : dots,
 			popover: {
-				label: `${count} appointment${count !== 1 ? 's' : ''}`,
+				label: statusSummary,
 			},
 			dates: new Date(dateStr),
 			customData: {
-				count: count
+				appointments: appointments,
+				statusGroups: statusGroups
 			}
-		};
+		});
 	});
 
 	return [...attrs, ...appointmentAttrs];
@@ -151,13 +194,32 @@ const onSelected = (event) => {
 		justify-content: center !important;
 		align-items: center !important;
 		margin-top: 2px !important;
+		gap: 2px !important;
 	}
 
 	.vc-dot {
 		width: 5px !important;
 		height: 5px !important;
-		background-color: #0066FF !important;
 		border-radius: 50% !important;
+		// Allow v-calendar to set the background color dynamically
+	}
+
+	// Status-specific dot colors (fallback)
+	.appointment-dot.status-open {
+		background-color: #0066FF !important;
+	}
+	.appointment-dot.status-ongoing {
+		background-color: #FF9800 !important;
+	}
+	.appointment-dot.status-completed {
+		background-color: #4CAF50 !important;
+	}
+	.appointment-dot.status-missed,
+	.appointment-dot.status-no_show {
+		background-color: #F44336 !important;
+	}
+	.appointment-dot.status-cancelled {
+		background-color: #9E9E9E !important;
 	}
 }
 </style>

@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Appointment</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        rapid: {
+                            sky: '#4FC3F7',
+                            skyLight: '#E1F5FE',
+                            skyDark: '#0288D1',
+                            orange: '#FF9800',
+                            orangeLight: '#FFF3E0',
+                            orangeDark: '#F57C00',
+                            navy: '#1A365D',
+                            gray: '#F5F9FF',
+                            text: '#334155',
+                            success: '#4CAF50'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        display: ['Poppins', 'system-ui', 'sans-serif']
+                    }
+                }
+            }
+        }
+        window.FontAwesomeConfig = { autoReplaceSvg: 'nest' };
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar { display: none; }
+        
+        .service-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            min-height: 44px;
+        }
+
+        .service-card.selected {
+            background: #F0F9FF;
+            border-color: #4FC3F7;
+            box-shadow: 0 0 0 2px #4FC3F7;
+        }
+
+        .step-item.active .step-circle {
+            background-color: #4FC3F7;
+            color: white;
+            box-shadow: 0 0 0 3px #E1F5FE;
+        }
+
+        @keyframes pulse-soft {
+            0% { box-shadow: 0 0 0 0 rgba(79, 195, 247, 0.4); }
+            70% { box-shadow: 0 0 0 8px rgba(79, 195, 247, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(79, 195, 247, 0); }
+        }
+        .ai-pulse {
+            animation: pulse-soft 2s infinite;
+        }
+
+        .drawer {
+            transform: translateX(-100%);
+            transition: transform 0.3s ease-in-out;
+        }
+        .drawer.open {
+            transform: translateX(0);
+        }
+    </style>
+</head>
+<body class="bg-rapid-gray font-sans text-rapid-text antialiased overflow-x-hidden" style="width: 375px; max-width: 375px;">
+
+    <!-- Mobile Header -->
+    <header id="header" class="bg-white/95 backdrop-blur-md border-b border-slate-100 sticky top-0 z-50">
+        <div class="px-4 py-3 flex items-center justify-between">
+            <button onclick="toggleDrawer()" class="w-10 h-10 flex items-center justify-center text-slate-600 active:bg-slate-100 rounded-lg">
+                <i class="fa-solid fa-bars text-lg"></i>
+            </button>
+            
+            <div class="flex items-center gap-2">
+                <div class="w-7 h-7 bg-gradient-to-br from-rapid-sky to-rapid-skyDark rounded-lg flex items-center justify-center text-white">
+                    <i class="fa-solid fa-heart-pulse text-xs"></i>
+                </div>
+                <span class="text-base font-bold text-rapid-navy font-display">Rapid Capsule</span>
+            </div>
+
+            <button class="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 active:border-rapid-sky relative">
+                <i class="fa-regular fa-bell text-sm"></i>
+                <span class="absolute top-2 right-2 w-1.5 h-1.5 bg-rapid-orange rounded-full border border-white"></span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Side Drawer Navigation -->
+    <div id="drawer-overlay" class="fixed inset-0 bg-black/50 z-40 hidden" onclick="toggleDrawer()"></div>
+    <aside id="drawer" class="drawer fixed top-0 left-0 w-72 h-full bg-white z-50 shadow-2xl overflow-y-auto">
+        <div class="p-4 border-b border-slate-100 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg" class="w-10 h-10 rounded-full object-cover border-2 border-rapid-sky">
+                <div>
+                    <div class="text-sm font-bold text-rapid-navy">Sarah Johnson</div>
+                    <div class="text-xs text-slate-500">ID: #RC-8821</div>
+                </div>
+            </div>
+            <button onclick="toggleDrawer()" class="w-8 h-8 flex items-center justify-center text-slate-400">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+
+        <nav class="p-4 space-y-1">
+            <a href="#" class="flex items-center gap-3 px-4 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg active:bg-slate-100">
+                <i class="fa-solid fa-house w-5"></i> Dashboard
+            </a>
+            <a href="#" class="flex items-center gap-3 px-4 py-3 text-sm font-bold text-rapid-sky bg-rapid-skyLight/50 rounded-lg">
+                <i class="fa-solid fa-calendar-plus w-5"></i> Book Appointment
+            </a>
+            <a href="#" class="flex items-center gap-3 px-4 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg active:bg-slate-100">
+                <i class="fa-solid fa-calendar-check w-5"></i> My Appointments
+            </a>
+            <a href="#" class="flex items-center gap-3 px-4 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg active:bg-slate-100">
+                <i class="fa-solid fa-messages w-5"></i> Messages
+            </a>
+            <a href="#" class="flex items-center gap-3 px-4 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg active:bg-slate-100">
+                <i class="fa-solid fa-user w-5"></i> Profile
+            </a>
+        </nav>
+
+        <div class="p-4 border-t border-slate-100 mt-4">
+            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Health Summary</h3>
+            
+            <div class="bg-gradient-to-br from-rapid-navy to-slate-800 rounded-xl p-4 text-white mb-3">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-xs font-medium opacity-80">Last Vitals</span>
+                    <span class="text-[10px] bg-white/20 px-2 py-0.5 rounded">Today</span>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <div class="text-[10px] opacity-60 mb-1">Heart Rate</div>
+                        <div class="text-lg font-bold">72 <span class="text-xs opacity-60">bpm</span></div>
+                    </div>
+                    <div>
+                        <div class="text-[10px] opacity-60 mb-1">BP</div>
+                        <div class="text-lg font-bold">118/78</div>
+                    </div>
+                    <div>
+                        <div class="text-[10px] opacity-60 mb-1">Weight</div>
+                        <div class="text-lg font-bold">68 <span class="text-xs opacity-60">kg</span></div>
+                    </div>
+                    <div>
+                        <div class="text-[10px] opacity-60 mb-1">Temp</div>
+                        <div class="text-lg font-bold">36.6°C</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-slate-50 border border-slate-100 rounded-xl p-3 mb-3">
+                <div class="text-xs font-bold text-rapid-navy mb-2">Last Checkup</div>
+                <div class="flex gap-2">
+                    <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 flex-shrink-0">
+                        <i class="fa-solid fa-user-doctor text-xs"></i>
+                    </div>
+                    <div>
+                        <div class="text-xs font-bold text-slate-800">General Consultation</div>
+                        <div class="text-[10px] text-slate-500">Dr. Amina • 2 weeks ago</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-rapid-orangeLight rounded-xl p-3 flex items-start gap-2">
+                <i class="fa-solid fa-headset text-rapid-orangeDark text-sm mt-0.5"></i>
+                <div>
+                    <div class="text-xs font-bold text-rapid-orangeDark mb-1">Need Help?</div>
+                    <button class="text-[10px] font-bold text-rapid-navy underline">Start Chat</button>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="pb-32">
+        <!-- Progress Section -->
+        <div class="bg-white px-4 py-4 border-b border-slate-100">
+            <div class="flex items-center justify-between mb-3">
+                <div>
+                    <h1 class="text-lg font-display font-bold text-rapid-navy">Select Service Type</h1>
+                    <p class="text-xs text-slate-500">Step 1 of 6</p>
+                </div>
+                <button class="w-9 h-9 flex items-center justify-center text-slate-400 active:bg-slate-100 rounded-lg">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Progress Steps -->
+            <div class="relative">
+                <div class="absolute top-1/2 left-0 w-full h-0.5 bg-slate-200 -translate-y-1/2 rounded-full"></div>
+                <div class="absolute top-1/2 left-0 w-[16%] h-0.5 bg-rapid-sky -translate-y-1/2 rounded-full transition-all duration-500"></div>
+                
+                <div class="relative z-10 flex justify-between">
+                    <div class="step-item active flex flex-col items-center gap-1">
+                        <div class="step-circle w-6 h-6 rounded-full bg-white border-2 border-slate-200 flex items-center justify-center text-[10px] font-bold">1</div>
+                    </div>
+                    <div class="step-item flex flex-col items-center gap-1">
+                        <div class="step-circle w-6 h-6 rounded-full bg-white border-2 border-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-400">2</div>
+                    </div>
+                    <div class="step-item flex flex-col items-center gap-1">
+                        <div class="step-circle w-6 h-6 rounded-full bg-white border-2 border-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-400">3</div>
+                    </div>
+                    <div class="step-item flex flex-col items-center gap-1">
+                        <div class="step-circle w-6 h-6 rounded-full bg-white border-2 border-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-400">4</div>
+                    </div>
+                    <div class="step-item flex flex-col items-center gap-1">
+                        <div class="step-circle w-6 h-6 rounded-full bg-white border-2 border-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-400">5</div>
+                    </div>
+                    <div class="step-item flex flex-col items-center gap-1">
+                        <div class="step-circle w-6 h-6 rounded-full bg-white border-2 border-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-400">6</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Recommendation Banner -->
+        <div class="mx-4 mt-4 bg-rapid-skyLight/40 rounded-xl p-4 border border-rapid-sky/20">
+            <div class="flex items-start gap-3">
+                <div class="w-8 h-8 rounded-full bg-rapid-sky text-white flex items-center justify-center flex-shrink-0">
+                    <i class="fa-solid fa-wand-magic-sparkles text-xs"></i>
+                </div>
+                <div class="flex-1">
+                    <h4 class="text-xs font-bold text-rapid-navy mb-1">AI Recommendation</h4>
+                    <p class="text-xs text-slate-600 leading-relaxed mb-3">
+                        Based on your <span class="font-semibold">mild fever</span>, we suggest a <span class="font-semibold text-rapid-sky">Video Consultation</span>.
+                    </p>
+                    <button class="w-full py-2 bg-white border border-rapid-sky/30 text-rapid-sky text-xs font-bold rounded-lg active:bg-rapid-sky active:text-white">
+                        Apply Suggestion
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Urgency Selection -->
+        <section id="urgency-selector" class="px-4 mt-6">
+            <label class="block text-sm font-bold text-rapid-navy mb-3">How urgent is this?</label>
+            <div class="space-y-3">
+                <div class="service-card cursor-pointer bg-white rounded-xl p-4 border border-slate-200 selected active:scale-[0.98]" onclick="selectUrgency(this)">
+                    <div class="flex items-start gap-3">
+                        <div class="w-11 h-11 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center text-lg flex-shrink-0">
+                            <i class="fa-regular fa-calendar-check"></i>
+                        </div>
+                        <div class="flex-1">
+                            <h3 class="font-bold text-slate-800 mb-1 text-sm">Routine Checkup</h3>
+                            <p class="text-xs text-slate-500 leading-relaxed">Regular follow-ups, non-urgent symptoms. Schedule at your convenience.</p>
+                        </div>
+                        <div class="w-5 h-5 rounded-full border-2 border-rapid-sky bg-rapid-sky flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-check text-white text-[10px]"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="service-card cursor-pointer bg-white rounded-xl p-4 border border-slate-200 active:scale-[0.98]" onclick="selectUrgency(this)">
+                    <div class="flex items-start gap-3">
+                        <div class="w-11 h-11 rounded-xl bg-red-50 text-red-500 flex items-center justify-center text-lg flex-shrink-0">
+                            <i class="fa-solid fa-truck-medical"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-1">
+                                <h3 class="font-bold text-slate-800 text-sm">Urgent Care</h3>
+                                <span class="text-[10px] font-bold bg-red-100 text-red-600 px-2 py-0.5 rounded-full">Priority</span>
+                            </div>
+                            <p class="text-xs text-slate-500 leading-relaxed">Sudden symptoms needing quick attention. We'll prioritize your booking.</p>
+                        </div>
+                        <div class="w-5 h-5 rounded-full border-2 border-slate-300 flex-shrink-0"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Consultation Method -->
+        <section id="method-selector" class="px-4 mt-6">
+            <label class="block text-sm font-bold text-rapid-navy mb-3">Choose Consultation Method</label>
+            <div class="space-y-3">
+                
+                <div class="service-card ai-pulse cursor-pointer bg-white rounded-xl p-4 border-2 border-rapid-sky/30 relative active:scale-[0.98]" onclick="selectMethod(this)">
+                    <div class="absolute top-0 left-0 w-full h-1 bg-rapid-sky rounded-t-xl"></div>
+                    <div class="absolute top-3 right-3">
+                        <span class="bg-gradient-to-r from-rapid-sky to-blue-500 text-white text-[10px] font-bold px-2 py-0.5 rounded">Recommended</span>
+                    </div>
+                    <div class="flex items-start gap-3 mt-2">
+                        <div class="w-12 h-12 rounded-full bg-rapid-skyLight text-rapid-skyDark flex items-center justify-center text-xl flex-shrink-0">
+                            <i class="fa-solid fa-video"></i>
+                        </div>
+                        <div class="flex-1">
+                            <h3 class="font-bold text-slate-800 mb-1 text-sm">Video Call</h3>
+                            <p class="text-xs text-slate-500 leading-relaxed mb-2">Face-to-face via secure HD video. Best for physical exam.</p>
+                            <div class="flex items-center gap-2 text-xs text-slate-600 bg-slate-50 px-2 py-1.5 rounded">
+                                <i class="fa-solid fa-wifi text-slate-400 text-[10px]"></i> 
+                                <span class="text-[11px]">Needs stable internet</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="service-card cursor-pointer bg-white rounded-xl p-4 border border-slate-200 active:scale-[0.98]" onclick="selectMethod(this)">
+                    <div class="flex items-start gap-3">
+                        <div class="w-12 h-12 rounded-full bg-orange-50 text-orange-500 flex items-center justify-center text-xl flex-shrink-0">
+                            <i class="fa-solid fa-phone"></i>
+                        </div>
+                        <div class="flex-1">
+                            <h3 class="font-bold text-slate-800 mb-1 text-sm">Audio Call</h3>
+                            <p class="text-xs text-slate-500 leading-relaxed mb-2">Voice-only. Good for follow-ups or low bandwidth.</p>
+                            <div class="flex items-center gap-2 text-xs text-slate-600 bg-slate-50 px-2 py-1.5 rounded">
+                                <i class="fa-solid fa-signal text-slate-400 text-[10px]"></i> 
+                                <span class="text-[11px]">Low data usage</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="service-card cursor-pointer bg-white rounded-xl p-4 border border-slate-200 active:scale-[0.98]" onclick="selectMethod(this)">
+                    <div class="flex items-start gap-3">
+                        <div class="w-12 h-12 rounded-full bg-purple-50 text-purple-500 flex items-center justify-center text-xl flex-shrink-0">
+                            <i class="fa-regular fa-comments"></i>
+                        </div>
+                        <div class="flex-1">
+                            <h3 class="font-bold text-slate-800 mb-1 text-sm">Chat Consultation</h3>
+                            <p class="text-xs text-slate-500 leading-relaxed mb-2">Text messaging. Send photos and describe symptoms.</p>
+                            <div class="flex items-center gap-2 text-xs text-slate-600 bg-slate-50 px-2 py-1.5 rounded">
+                                <i class="fa-solid fa-clock text-slate-400 text-[10px]"></i> 
+                                <span class="text-[11px]">Reply within 2 hrs</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+    </main>
+
+    <!-- Fixed Bottom Action Bar -->
+    <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-4 z-30" style="max-width: 375px;">
+        <div class="flex items-center justify-between mb-3">
+            <div>
+                <div class="text-[10px] text-slate-500">Estimated Cost</div>
+                <div class="text-sm font-bold text-rapid-navy">₦5,000 - ₦15,000</div>
+            </div>
+            <button class="text-xs text-slate-500 font-medium px-3 py-2 active:bg-slate-100 rounded-lg">
+                Cancel
+            </button>
+        </div>
+        <button onclick="window.location.href='#'" class="w-full bg-rapid-orange text-white font-bold text-sm py-3.5 rounded-xl active:bg-rapid-orangeDark shadow-lg flex items-center justify-center gap-2">
+            Next Step <i class="fa-solid fa-arrow-right text-xs"></i>
+        </button>
+    </div>
+
+    <script>
+        function toggleDrawer() {
+            const drawer = document.getElementById('drawer');
+            const overlay = document.getElementById('drawer-overlay');
+            drawer.classList.toggle('open');
+            overlay.classList.toggle('hidden');
+        }
+
+        function selectUrgency(element) {
+            const container = document.getElementById('urgency-selector');
+            const cards = container.querySelectorAll('.service-card');
+            cards.forEach(card => {
+                card.classList.remove('selected', 'border-rapid-sky');
+                card.classList.add('border-slate-200');
+                const checkmark = card.querySelector('.fa-check')?.parentElement;
+                if(checkmark) {
+                    checkmark.classList.remove('bg-rapid-sky', 'border-rapid-sky');
+                    checkmark.classList.add('border-slate-300');
+                }
+            });
+
+            element.classList.add('selected');
+            element.classList.remove('border-slate-200');
+            const checkmark = element.querySelector('.fa-check')?.parentElement;
+            if(checkmark) {
+                checkmark.classList.add('bg-rapid-sky', 'border-rapid-sky');
+                checkmark.classList.remove('border-slate-300');
+            }
+        }
+
+        function selectMethod(element) {
+            const container = document.getElementById('method-selector');
+            const cards = container.querySelectorAll('.service-card');
+            cards.forEach(card => {
+                card.classList.remove('ring-2', 'ring-rapid-sky', 'bg-rapid-skyLight/10', 'border-rapid-sky');
+                if(!card.classList.contains('ai-pulse')) {
+                   card.classList.add('border-slate-200');
+                } else {
+                     card.classList.add('border-rapid-sky/30');
+                }
+            });
+
+            element.classList.remove('border-slate-200', 'border-rapid-sky/30');
+            element.classList.add('ring-2', 'ring-rapid-sky', 'bg-rapid-skyLight/10', 'border-rapid-sky');
+        }
+    </script>
+</body>
+</html>

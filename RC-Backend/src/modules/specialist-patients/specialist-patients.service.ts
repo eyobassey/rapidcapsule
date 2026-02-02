@@ -219,10 +219,20 @@ export class SpecialistPatientsService {
               completedAppointments: {
                 $sum: { $cond: [{ $eq: ['$status', 'COMPLETED'] }, 1, 0] },
               },
-              lastVisit: { $max: '$start_time' },
+              // Only use COMPLETED appointments for lastVisit
+              lastVisit: {
+                $max: {
+                  $cond: [{ $eq: ['$status', 'COMPLETED'] }, '$start_time', null],
+                },
+              },
             },
           },
         ]);
+
+        // Check if this patient is in the specialist's practice (has had any appointment)
+        const isMyPatient = filter === PatientFilter.ALL
+          ? await this.checkPatientRelationship(specialistId, patientId.toString())
+          : true;
 
         // Get prescription count
         const prescriptionCount = await this.prescriptionModel.countDocuments({
@@ -294,6 +304,7 @@ export class SpecialistPatientsService {
             lastVisit: stats.lastVisit,
           },
           isStarred: flagRecord?.is_starred || false,
+          isMyPatient, // Whether this patient is in the specialist's practice
           riskLevel,
         };
       }),
@@ -432,7 +443,12 @@ export class SpecialistPatientsService {
           completedAppointments: {
             $sum: { $cond: [{ $eq: ['$status', 'COMPLETED'] }, 1, 0] },
           },
-          lastVisit: { $max: '$start_time' },
+          // Only consider completed appointments for lastVisit
+          lastVisit: {
+            $max: {
+              $cond: [{ $eq: ['$status', 'COMPLETED'] }, '$start_time', null],
+            },
+          },
           firstVisit: { $min: '$start_time' },
         },
       },

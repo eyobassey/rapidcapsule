@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Booking Confirmation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        rapid: {
+                            sky: '#4FC3F7',
+                            skyLight: '#E1F5FE',
+                            skyDark: '#0288D1',
+                            orange: '#FF9800',
+                            orangeLight: '#FFF3E0',
+                            orangeDark: '#F57C00',
+                            navy: '#1A365D',
+                            gray: '#F5F9FF',
+                            text: '#334155',
+                            success: '#4CAF50',
+                            error: '#EF4444'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        display: ['Poppins', 'system-ui', 'sans-serif']
+                    },
+                    boxShadow: {
+                        'soft': '0 4px 20px -2px rgba(79, 195, 247, 0.15)',
+                        'card': '0 10px 30px -5px rgba(0, 0, 0, 0.05)',
+                        'glow': '0 0 15px rgba(79, 195, 247, 0.3)',
+                    }
+                }
+            }
+        }
+        window.FontAwesomeConfig = { autoReplaceSvg: 'nest' };
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar { display: none; }
+        
+        @keyframes pop {
+            0% { transform: scale(0.8); opacity: 0; }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop { animation: pop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+        .accordion-content.active {
+            max-height: 1000px;
+        }
+    </style>
+</head>
+<body class="bg-rapid-gray font-sans text-rapid-text antialiased w-[375px] mx-auto">
+
+    <!-- Header -->
+    <header id="header" class="bg-white/95 backdrop-blur-md border-b border-slate-100 sticky top-0 z-50 px-4 py-3">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 bg-gradient-to-br from-rapid-sky to-rapid-skyDark rounded-lg flex items-center justify-center text-white shadow-glow">
+                    <i class="fa-solid fa-heart-pulse text-sm"></i>
+                </div>
+                <span class="text-base font-bold text-rapid-navy font-display">Rapid Capsule</span>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <button class="w-9 h-9 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 active:bg-slate-50 relative">
+                    <i class="fa-regular fa-bell text-sm"></i>
+                    <span class="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-rapid-orange rounded-full border border-white"></span>
+                </button>
+                <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg" class="w-9 h-9 rounded-full object-cover border-2 border-white shadow-sm">
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="pb-24">
+        
+        <!-- Success Hero -->
+        <div id="success-hero" class="text-center px-4 pt-6 pb-4 animate-pop">
+            <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 text-green-600 text-2xl mb-4 shadow-lg shadow-green-100/50">
+                <i class="fa-solid fa-check"></i>
+            </div>
+            <h1 class="text-xl font-display font-bold text-rapid-navy mb-2">Appointment Confirmed!</h1>
+            <p class="text-sm text-slate-500 mb-3">Your session with Dr. Okafor is scheduled</p>
+            <div class="inline-block bg-white border border-slate-200 rounded-full px-3 py-1.5 text-xs font-bold text-slate-600 shadow-sm">
+                ID: <span class="text-rapid-navy">#RC-8821</span>
+            </div>
+        </div>
+
+        <!-- Doctor Profile Card -->
+        <div id="doctor-card" class="mx-4 mb-4 bg-white rounded-2xl p-4 shadow-card border border-slate-100">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="relative flex-none">
+                    <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" class="w-16 h-16 rounded-full object-cover border-2 border-rapid-skyLight">
+                    <div class="absolute bottom-0 right-0 w-5 h-5 bg-rapid-success rounded-full border-2 border-white flex items-center justify-center">
+                        <i class="fa-solid fa-check text-white text-[8px]"></i>
+                    </div>
+                </div>
+                <div class="flex-1">
+                    <h2 class="text-base font-bold text-rapid-navy">Dr. Amara Okafor</h2>
+                    <p class="text-xs text-rapid-sky font-medium mb-1">Cardiologist • MBBS, FWACP</p>
+                    <div class="flex items-center gap-1 text-[10px] text-slate-400">
+                        <i class="fa-solid fa-star text-rapid-orange"></i>
+                        <span class="font-bold text-slate-700">4.9</span>
+                        <span>(128 reviews)</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Appointment Timeline -->
+            <div class="space-y-3 mb-4">
+                <div class="flex items-center gap-3 p-2.5 bg-rapid-skyLight/30 rounded-lg">
+                    <div class="w-8 h-8 rounded-full bg-rapid-sky flex items-center justify-center flex-none">
+                        <i class="fa-solid fa-calendar text-white text-xs"></i>
+                    </div>
+                    <div>
+                        <p class="text-[10px] text-slate-500 font-bold uppercase">Date</p>
+                        <p class="text-sm font-bold text-slate-700">Thursday, Oct 5, 2023</p>
+                    </div>
+                </div>
+                
+                <div class="flex items-center gap-3 p-2.5 bg-rapid-orangeLight/30 rounded-lg">
+                    <div class="w-8 h-8 rounded-full bg-rapid-orange flex items-center justify-center flex-none">
+                        <i class="fa-solid fa-clock text-white text-xs"></i>
+                    </div>
+                    <div>
+                        <p class="text-[10px] text-slate-500 font-bold uppercase">Time</p>
+                        <p class="text-sm font-bold text-slate-700">10:30 AM - 11:00 AM</p>
+                    </div>
+                </div>
+                
+                <div class="flex items-center gap-3 p-2.5 bg-slate-100 rounded-lg">
+                    <div class="w-8 h-8 rounded-full bg-rapid-navy flex items-center justify-center flex-none">
+                        <i class="fa-solid fa-video text-white text-xs"></i>
+                    </div>
+                    <div>
+                        <p class="text-[10px] text-slate-500 font-bold uppercase">Type</p>
+                        <p class="text-sm font-bold text-slate-700">Video Consultation</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex gap-2">
+                <button class="flex-1 bg-rapid-skyLight text-rapid-sky active:bg-rapid-sky active:text-white py-2.5 rounded-lg text-xs font-bold">
+                    View Profile
+                </button>
+                <button class="flex-1 border border-slate-200 text-slate-600 active:border-rapid-sky active:text-rapid-sky py-2.5 rounded-lg text-xs font-bold">
+                    Message
+                </button>
+            </div>
+        </div>
+
+        <!-- Zoom Card -->
+        <div id="zoom-card" class="mx-4 mb-4 bg-white rounded-2xl p-5 shadow-card border-l-4 border-l-blue-500">
+            <div class="flex items-center justify-between mb-4">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/Zoom_Communications_Logo.svg/1200px-Zoom_Communications_Logo.svg.png" class="h-5 object-contain" alt="Zoom">
+                <span class="bg-blue-100 text-blue-700 text-[10px] font-bold px-2 py-1 rounded-full">Video Call</span>
+            </div>
+            <h3 class="text-base font-bold text-rapid-navy mb-1">Join Consultation</h3>
+            <p class="text-xs text-slate-500 mb-4">Link activates 10 mins before appointment</p>
+            
+            <div class="bg-slate-50 rounded-lg p-3 mb-4 border border-slate-100 flex justify-between items-center">
+                <div>
+                    <div class="text-[10px] text-slate-400 uppercase font-bold">Meeting ID</div>
+                    <div class="text-sm font-mono font-bold text-slate-700">882 192 9920</div>
+                </div>
+                <button class="text-slate-400 active:text-rapid-sky w-10 h-10 flex items-center justify-center" title="Copy ID">
+                    <i class="fa-regular fa-copy"></i>
+                </button>
+            </div>
+
+            <button class="w-full bg-blue-500 active:bg-blue-600 text-white font-bold py-3 rounded-xl shadow-lg shadow-blue-200 flex items-center justify-center gap-2">
+                <i class="fa-solid fa-video"></i> Launch Zoom App
+            </button>
+        </div>
+
+        <!-- Reminders Card -->
+        <div id="reminders-card" class="mx-4 mb-4 bg-white rounded-2xl p-5 shadow-card border border-slate-100">
+            <h3 class="text-base font-bold text-rapid-navy mb-4">Manage Reminders</h3>
+            
+            <div class="space-y-3">
+                <div class="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100 active:bg-slate-100">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-orange-50 text-orange-500 flex items-center justify-center flex-none">
+                            <i class="fa-regular fa-calendar-plus"></i>
+                        </div>
+                        <div>
+                            <div class="text-sm font-bold text-slate-700">Add to Calendar</div>
+                            <div class="text-[10px] text-slate-500">Google, Outlook, iCal</div>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-slate-300 text-xs"></i>
+                </div>
+
+                <div class="flex items-center justify-between p-3 rounded-xl bg-green-50/50 border border-green-100">
+                    <div class="flex items-center gap-3 flex-1">
+                        <div class="w-10 h-10 rounded-full bg-green-100 text-green-600 flex items-center justify-center flex-none">
+                            <i class="fa-brands fa-whatsapp text-lg"></i>
+                        </div>
+                        <div>
+                            <div class="text-sm font-bold text-slate-700">WhatsApp Reminders</div>
+                            <div class="text-[10px] text-slate-500">Get notified on +234 80...</div>
+                        </div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer flex-none">
+                        <input type="checkbox" value="" class="sr-only peer" checked>
+                        <div class="w-11 h-6 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pre-Visit Checklist -->
+        <div id="checklist-section" class="mx-4 mb-4">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <h2 class="text-lg font-display font-bold text-rapid-navy">Pre-Visit Checklist</h2>
+                    <p class="text-xs text-slate-500">Complete before consultation</p>
+                </div>
+                <div class="bg-white px-2.5 py-1 rounded-full border border-slate-200 text-[10px] font-bold text-slate-600 shadow-sm">
+                    <span class="text-rapid-success">0/3</span>
+                </div>
+            </div>
+
+            <!-- Accordion Item 1 -->
+            <div class="bg-white rounded-2xl mb-3 shadow-card border border-slate-100 overflow-hidden">
+                <button onclick="toggleAccordion('item1')" class="w-full p-4 flex items-center gap-3 text-left active:bg-slate-50">
+                    <div class="w-10 h-10 rounded-full bg-rapid-skyLight text-rapid-sky flex items-center justify-center flex-none">
+                        <i class="fa-solid fa-laptop-medical text-lg"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h4 class="text-sm font-bold text-rapid-navy">Test Your Device</h4>
+                        <p class="text-[10px] text-slate-500">Camera & microphone check</p>
+                    </div>
+                    <i id="icon1" class="fa-solid fa-chevron-down text-slate-400 text-xs transition-transform"></i>
+                </button>
+                <div id="item1" class="accordion-content px-4 pb-4">
+                    <p class="text-xs text-slate-500 mb-3">Ensure your camera and microphone work properly for the video consultation.</p>
+                    <button class="w-full bg-rapid-sky text-white text-sm font-bold py-3 rounded-xl active:bg-rapid-skyDark">
+                        Start Test
+                    </button>
+                </div>
+            </div>
+
+            <!-- Accordion Item 2 -->
+            <div class="bg-white rounded-2xl mb-3 shadow-card border border-slate-100 overflow-hidden">
+                <button onclick="toggleAccordion('item2')" class="w-full p-4 flex items-center gap-3 text-left active:bg-slate-50">
+                    <div class="w-10 h-10 rounded-full bg-rapid-orangeLight text-rapid-orange flex items-center justify-center flex-none">
+                        <i class="fa-solid fa-heart-pulse text-lg"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h4 class="text-sm font-bold text-rapid-navy">Upload Current Vitals</h4>
+                        <p class="text-[10px] text-slate-500">BP, temperature readings</p>
+                    </div>
+                    <span class="bg-orange-50 text-orange-600 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase mr-2">Required</span>
+                    <i id="icon2" class="fa-solid fa-chevron-down text-slate-400 text-xs transition-transform"></i>
+                </button>
+                <div id="item2" class="accordion-content px-4 pb-4">
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1.5">Blood Pressure</label>
+                            <div class="flex items-center gap-2">
+                                <input type="number" placeholder="120" class="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-rapid-sky">
+                                <span class="text-slate-400">/</span>
+                                <input type="number" placeholder="80" class="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-rapid-sky">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1.5">Temperature (°C)</label>
+                            <div class="relative">
+                                <input type="number" placeholder="36.5" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-rapid-sky">
+                                <i class="fa-solid fa-temperature-half absolute right-3 top-3 text-slate-400 text-xs"></i>
+                            </div>
+                        </div>
+                        <button class="w-full bg-rapid-navy text-white text-sm font-bold py-3 rounded-xl active:bg-slate-800 shadow-lg">
+                            Save Vitals
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Accordion Item 3 -->
+            <div class="bg-white rounded-2xl mb-3 shadow-card border border-slate-100 overflow-hidden">
+                <button onclick="toggleAccordion('item3')" class="w-full p-4 flex items-center gap-3 text-left active:bg-slate-50">
+                    <div class="w-10 h-10 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center flex-none">
+                        <i class="fa-solid fa-robot text-lg"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h4 class="text-sm font-bold text-rapid-navy">AI Pre-Visit Assessment</h4>
+                        <p class="text-[10px] text-slate-500">3 quick questions</p>
+                    </div>
+                    <i id="icon3" class="fa-solid fa-chevron-down text-slate-400 text-xs transition-transform"></i>
+                </button>
+                <div id="item3" class="accordion-content px-4 pb-4">
+                    <div class="bg-slate-50 rounded-xl p-3 border border-slate-200 mb-3">
+                        <div class="flex gap-2 mb-3">
+                            <div class="w-6 h-6 rounded-full bg-purple-600 text-white flex items-center justify-center text-[10px] flex-none mt-0.5">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                            </div>
+                            <p class="text-xs text-slate-700 font-medium">Have you experienced any shortness of breath along with your symptoms?</p>
+                        </div>
+                        <div class="space-y-2">
+                            <button class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-600 active:border-purple-500 active:text-purple-600">Yes, often</button>
+                            <button class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-600 active:border-purple-500 active:text-purple-600">Only with exertion</button>
+                            <button class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-600 active:border-purple-500 active:text-purple-600">No</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Trust Badges -->
+        <div id="trust-section" class="mx-4 mb-4 pt-4 border-t border-slate-200">
+            <p class="text-[10px] font-bold text-slate-400 uppercase text-center mb-3">Powered by trusted partners</p>
+            <div class="flex justify-center items-center gap-4 opacity-60">
+                <div class="flex flex-col items-center gap-1">
+                    <i class="fa-solid fa-shield-virus text-lg text-slate-600"></i>
+                    <span class="text-[9px] font-bold text-slate-600">Infermedica</span>
+                </div>
+                <div class="flex flex-col items-center gap-1">
+                    <i class="fa-solid fa-video text-lg text-slate-600"></i>
+                    <span class="text-[9px] font-bold text-slate-600">Zoom</span>
+                </div>
+                <div class="flex flex-col items-center gap-1">
+                    <i class="fa-solid fa-lock text-lg text-slate-600"></i>
+                    <span class="text-[9px] font-bold text-slate-600">Paystack</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Support Card -->
+        <div id="support-card" class="mx-4 mb-4 bg-slate-50 rounded-xl p-4 border border-slate-200">
+            <div class="flex items-start gap-3 mb-3">
+                <div class="w-8 h-8 rounded-full bg-white flex items-center justify-center text-rapid-sky border border-slate-100 shadow-sm flex-none">
+                    <i class="fa-solid fa-headset text-sm"></i>
+                </div>
+                <div>
+                    <div class="text-xs font-bold text-rapid-navy">Having trouble?</div>
+                    <p class="text-[10px] text-slate-500 leading-relaxed mt-1">Chat with our support team if you need help</p>
+                </div>
+            </div>
+            <button class="w-full bg-white border border-slate-200 text-slate-600 text-xs font-bold py-3 rounded-lg active:bg-slate-50 active:text-rapid-sky active:border-rapid-sky flex items-center justify-center gap-2">
+                <span>Start Support Chat</span>
+                <i class="fa-solid fa-arrow-right text-[10px]"></i>
+            </button>
+        </div>
+
+    </main>
+
+    <!-- Sticky Bottom Navigation -->
+    <div id="bottom-nav" class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-50 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+        <div class="w-[375px] mx-auto px-4 py-3 flex gap-3">
+            <button class="flex-1 border border-slate-200 text-slate-600 font-bold py-3 rounded-xl active:bg-slate-50 text-sm flex items-center justify-center gap-2">
+                <i class="fa-solid fa-arrow-left text-xs"></i> Home
+            </button>
+            <button class="flex-[2] bg-rapid-sky text-white font-bold py-3 rounded-xl active:bg-rapid-skyDark shadow-lg shadow-sky-100 text-sm flex items-center justify-center gap-2">
+                Go to Dashboard <i class="fa-solid fa-arrow-right text-xs"></i>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        function toggleAccordion(id) {
+            const content = document.getElementById(id);
+            const icon = document.getElementById('icon' + id.slice(-1));
+            
+            document.querySelectorAll('.accordion-content').forEach(item => {
+                if (item.id !== id) {
+                    item.classList.remove('active');
+                    const otherIcon = document.getElementById('icon' + item.id.slice(-1));
+                    if (otherIcon) otherIcon.style.transform = 'rotate(0deg)';
+                }
+            });
+            
+            content.classList.toggle('active');
+            if (content.classList.contains('active')) {
+                icon.style.transform = 'rotate(180deg)';
+            } else {
+                icon.style.transform = 'rotate(0deg)';
+            }
+        }
+    </script>
+
+</body>
+</html>

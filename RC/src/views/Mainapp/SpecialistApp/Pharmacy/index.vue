@@ -1,513 +1,524 @@
 <template>
   <div class="page-content">
-    <TopBar showButtons type="avatar" @open-side-nav="$emit('openSideNav')" />
-    <loader v-if="isLoading" :useOverlay="false" style="position: absolute" />
-    <div v-else class="page-content__body">
+    <TopBar showButtons type="title-only" title="Pharmacy" @open-side-nav="$emit('openSideNav')" />
+    <div class="page-content__body">
       <div class="pharmacy-container">
-        <!-- Header -->
-        <div class="pharmacy-header">
-          <div class="pharmacy-header__title">
-            <h1>Pharmacy Dashboard</h1>
-            <p>Manage prescriptions, patients, and drug inventory</p>
-          </div>
-          <div class="pharmacy-header__actions">
-            <button class="btn btn-primary" @click="createPrescription">
-              <rc-icon icon-name="plus" size="sm" />
-              New Prescription
-            </button>
-          </div>
-        </div>
+        <!-- Shimmer Loading -->
+        <template v-if="isLoading">
+          <div class="skeleton-hero" />
+          <div class="skeleton-card skeleton-card--wallet" />
+          <div class="skeleton-card skeleton-card--lg" />
+          <div class="skeleton-card" />
+        </template>
 
-        <!-- Stats Cards -->
-        <div class="stats-grid">
-          <div class="stat-card stat-card--primary">
-            <div class="stat-card__icon">
-              <rc-icon icon-name="prescription" size="md" />
+        <template v-else>
+          <!-- Hero Section -->
+          <div class="hero-section">
+            <div class="hero-content">
+              <div class="hero-text">
+                <span class="hero-badge">
+                  <v-icon name="ri-capsule-line" scale="0.8" />
+                  Pharmacy
+                </span>
+                <h1 class="hero-title">Pharmacy Dashboard</h1>
+                <p class="hero-subtitle">Manage prescriptions, patients, and drug inventory</p>
+              </div>
+              <div class="hero-stats">
+                <div class="hero-stat">
+                  <span class="hero-stat__value">{{ stats.prescriptions_today || 0 }}</span>
+                  <span class="hero-stat__label">Today</span>
+                </div>
+                <div class="hero-stat">
+                  <span class="hero-stat__value">{{ stats.prescriptions_this_week || 0 }}</span>
+                  <span class="hero-stat__label">This Week</span>
+                </div>
+                <div class="hero-stat">
+                  <span class="hero-stat__value">{{ stats.total_patients || 0 }}</span>
+                  <span class="hero-stat__label">Patients</span>
+                </div>
+              </div>
             </div>
-            <div class="stat-card__content">
-              <p class="stat-card__value">{{ stats.prescriptions_today || 0 }}</p>
-              <p class="stat-card__label">Prescriptions Today</p>
-            </div>
-          </div>
-          <div class="stat-card stat-card--info">
-            <div class="stat-card__icon">
-              <rc-icon icon-name="calendar" size="md" />
-            </div>
-            <div class="stat-card__content">
-              <p class="stat-card__value">{{ stats.prescriptions_this_week || 0 }}</p>
-              <p class="stat-card__label">This Week</p>
-            </div>
-          </div>
-          <div class="stat-card stat-card--warning">
-            <div class="stat-card__icon">
-              <rc-icon icon-name="clock" size="md" />
-            </div>
-            <div class="stat-card__content">
-              <p class="stat-card__value">{{ stats.pending_payment || 0 }}</p>
-              <p class="stat-card__label">Pending Payment</p>
-            </div>
-          </div>
-          <div class="stat-card stat-card--success">
-            <div class="stat-card__icon">
-              <rc-icon icon-name="users" size="md" />
-            </div>
-            <div class="stat-card__content">
-              <p class="stat-card__value">{{ stats.total_patients || 0 }}</p>
-              <p class="stat-card__label">Total Patients</p>
+            <div class="hero-actions">
+              <button class="hero-action-btn" @click="createPrescription">
+                <v-icon name="hi-plus" scale="0.85" />
+                New Prescription
+              </button>
             </div>
           </div>
-        </div>
 
-        <!-- Wallet Balance -->
-        <div class="wallet-section">
+          <!-- Wallet Balance -->
           <div class="wallet-card">
-            <div class="wallet-card__header">
-              <h3>Pharmacy Wallet</h3>
+            <div class="wallet-card__left">
+              <div class="wallet-card__icon">
+                <v-icon name="hi-credit-card" scale="1.2" />
+              </div>
+              <div class="wallet-card__info">
+                <span class="wallet-card__title">Pharmacy Wallet</span>
+                <span class="wallet-card__note">Available for prescription payments</span>
+              </div>
+            </div>
+            <div class="wallet-card__right">
+              <div class="wallet-card__balance">
+                <span class="currency">NGN</span>
+                <span class="amount">{{ formatCurrency(stats.wallet_balance || 0) }}</span>
+              </div>
               <router-link to="/app/specialist/specialist-account" class="wallet-link">
                 View Details
+                <v-icon name="hi-chevron-right" scale="0.7" />
               </router-link>
             </div>
-            <div class="wallet-card__balance">
-              <span class="currency">NGN</span>
-              <span class="amount">{{ formatCurrency(stats.wallet_balance || 0) }}</span>
+          </div>
+
+          <!-- Quick Actions -->
+          <div class="section-card">
+            <div class="section-title">
+              <v-icon name="hi-lightning-bolt" scale="0.9" />
+              <h2>Quick Actions</h2>
             </div>
-            <p class="wallet-card__note">Available for prescription payments</p>
+            <div class="actions-grid">
+              <router-link to="/app/specialist/pharmacy/patients" class="action-link">
+                <div class="action-link__icon action-link__icon--teal">
+                  <v-icon name="hi-user-group" scale="1.2" />
+                </div>
+                <div class="action-link__text">
+                  <h3>Search Patients</h3>
+                  <p>Find and manage patient prescriptions</p>
+                </div>
+                <v-icon name="hi-chevron-right" scale="0.8" class="action-link__arrow" />
+              </router-link>
+              <router-link to="/app/specialist/pharmacy/drugs" class="action-link">
+                <div class="action-link__icon action-link__icon--blue">
+                  <v-icon name="ri-capsule-line" scale="1.2" />
+                </div>
+                <div class="action-link__text">
+                  <h3>Drug Catalog</h3>
+                  <p>Browse available medications</p>
+                </div>
+                <v-icon name="hi-chevron-right" scale="0.8" class="action-link__arrow" />
+              </router-link>
+              <router-link to="/app/specialist/pharmacy/prescriptions" class="action-link">
+                <div class="action-link__icon action-link__icon--purple">
+                  <v-icon name="hi-clipboard-list" scale="1.2" />
+                </div>
+                <div class="action-link__text">
+                  <h3>Prescriptions</h3>
+                  <p>View all prescription history</p>
+                </div>
+                <v-icon name="hi-chevron-right" scale="0.8" class="action-link__arrow" />
+              </router-link>
+              <router-link to="/app/specialist/pharmacy/prescriptions/create" class="action-link">
+                <div class="action-link__icon action-link__icon--green">
+                  <v-icon name="hi-plus" scale="1.2" />
+                </div>
+                <div class="action-link__text">
+                  <h3>New Prescription</h3>
+                  <p>Create a new prescription</p>
+                </div>
+                <v-icon name="hi-chevron-right" scale="0.8" class="action-link__arrow" />
+              </router-link>
+            </div>
           </div>
-        </div>
 
-        <!-- Quick Actions -->
-        <div class="quick-actions">
-          <h2>Quick Actions</h2>
-          <div class="actions-grid">
-            <router-link to="/app/specialist/pharmacy/patients" class="action-card">
-              <div class="action-card__icon">
-                <rc-icon icon-name="users" size="lg" />
+          <!-- Recent Prescriptions -->
+          <div class="section-card">
+            <div class="section-header">
+              <div class="section-title">
+                <v-icon name="ri-capsule-line" scale="0.9" />
+                <h2>Recent Prescriptions</h2>
               </div>
-              <h3>Search Patients</h3>
-              <p>Find and manage patient prescriptions</p>
-            </router-link>
-            <router-link to="/app/specialist/pharmacy/drugs" class="action-card">
-              <div class="action-card__icon">
-                <rc-icon icon-name="pill" size="lg" />
-              </div>
-              <h3>Drug Catalog</h3>
-              <p>Browse available medications</p>
-            </router-link>
-            <router-link to="/app/specialist/pharmacy/prescriptions" class="action-card">
-              <div class="action-card__icon">
-                <rc-icon icon-name="list" size="lg" />
-              </div>
-              <h3>Prescriptions</h3>
-              <p>View all prescription history</p>
-            </router-link>
-            <router-link to="/app/specialist/pharmacy/prescriptions/create" class="action-card">
-              <div class="action-card__icon">
-                <rc-icon icon-name="plus" size="lg" />
-              </div>
-              <h3>New Prescription</h3>
-              <p>Create a new prescription</p>
-            </router-link>
-          </div>
-        </div>
+              <router-link to="/app/specialist/pharmacy/prescriptions" class="view-all-link">
+                View All
+                <v-icon name="hi-chevron-right" scale="0.7" />
+              </router-link>
+            </div>
 
-        <!-- Recent Prescriptions -->
-        <div class="recent-prescriptions">
-          <div class="section-header">
-            <h2>Recent Prescriptions</h2>
-            <router-link to="/app/specialist/pharmacy/prescriptions" class="view-all">
-              View All
-            </router-link>
-          </div>
-          <div class="prescriptions-list" v-if="stats.recent_prescriptions?.length">
-            <div
-              v-for="prescription in stats.recent_prescriptions"
-              :key="prescription._id"
-              class="prescription-item"
-              @click="viewPrescription(prescription._id)"
-            >
-              <div class="prescription-item__patient">
-                <div class="avatar">
-                  <img
-                    v-if="prescription.patient_avatar"
-                    :src="prescription.patient_avatar"
-                    :alt="prescription.patient_name"
+            <div v-if="stats.recent_prescriptions?.length" class="prescriptions-list">
+              <div
+                v-for="prescription in stats.recent_prescriptions"
+                :key="prescription._id"
+                class="prescription-item"
+                @click="viewPrescription(prescription._id)"
+              >
+                <div class="prescription-item__left">
+                  <RcAvatar
+                    :model-value="prescription.patient_avatar"
+                    :first-name="getFirstName(prescription.patient_name)"
+                    :last-name="getLastName(prescription.patient_name)"
+                    size="sm"
                   />
-                  <span v-else>{{ getInitials(prescription.patient_name) }}</span>
+                  <div class="prescription-item__info">
+                    <p class="patient-name">{{ prescription.patient_name || 'Unknown Patient' }}</p>
+                    <p v-if="prescription.prescription_number" class="prescription-number">
+                      {{ prescription.prescription_number }}
+                    </p>
+                    <p class="prescription-date">{{ formatDateTime(prescription.created_at) }}</p>
+                  </div>
                 </div>
-                <div class="patient-info">
-                  <p class="patient-name">{{ prescription.patient_name || 'Unknown Patient' }}</p>
-                  <p class="prescription-number" v-if="prescription.prescription_number">{{ prescription.prescription_number }}</p>
-                  <p class="prescription-date">{{ formatDate(prescription.created_at) }}</p>
+                <div class="prescription-item__right">
+                  <PharmacyStatusBadge :status="prescription.status" />
+                  <p class="amount">NGN {{ formatCurrency(prescription.total_amount) }}</p>
                 </div>
-              </div>
-              <div class="prescription-item__details">
-                <span class="items-count">{{ prescription.items_count || 0 }} items</span>
-                <span :class="['status', `status--${prescription.status?.toLowerCase()}`]">
-                  {{ formatStatus(prescription.status) }}
-                </span>
-              </div>
-              <div class="prescription-item__amount">
-                <p class="amount">NGN {{ formatCurrency(prescription.total_amount) }}</p>
-              </div>
-              <div class="prescription-item__arrow">
-                <rc-icon icon-name="chevron-right" size="sm" />
               </div>
             </div>
+
+            <!-- Empty State -->
+            <div v-else class="empty-section">
+              <div class="empty-section__icon">
+                <v-icon name="ri-capsule-line" scale="1.8" />
+              </div>
+              <h3>No recent prescriptions</h3>
+              <p>Create your first prescription to get started</p>
+              <button class="empty-section__action" @click="createPrescription">
+                <v-icon name="hi-plus" scale="0.8" />
+                Create Prescription
+              </button>
+            </div>
           </div>
-          <div v-else class="empty-state">
-            <rc-icon icon-name="prescription" size="xl" />
-            <p>No recent prescriptions</p>
-            <button class="btn btn-secondary" @click="createPrescription">
-              Create First Prescription
-            </button>
-          </div>
-        </div>
+        </template>
       </div>
     </div>
   </div>
 </template>
 
-<script>
-import TopBar from "@/components/Navigation/top-bar";
-import Loader from "@/components/Loader/main-loader";
-import RcIcon from "@/components/RCIcon";
-import apiFactory from "@/services/apiFactory";
-import moment from "moment";
+<script setup>
+import { ref, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
+import { useToast } from 'vue-toast-notification';
+import TopBar from '@/components/Navigation/top-bar';
+import RcAvatar from '@/components/RCAvatar';
+import apiFactory from '@/services/apiFactory';
+import PharmacyStatusBadge from './components/PharmacyStatusBadge.vue';
+import { usePharmacy } from './composables/usePharmacy';
 
-export default {
-  name: "PharmacyDashboard",
-  components: {
-    TopBar,
-    Loader,
-    RcIcon,
-  },
-  data() {
-    return {
-      isLoading: true,
-      stats: {
-        prescriptions_today: 0,
-        prescriptions_this_week: 0,
-        prescriptions_this_month: 0,
-        pending_payment: 0,
-        pending_dispensing: 0,
-        total_prescriptions: 0,
-        total_patients: 0,
-        wallet_balance: 0,
-        recent_prescriptions: [],
-      },
-    };
-  },
-  async mounted() {
-    await this.fetchDashboardStats();
-  },
-  methods: {
-    async fetchDashboardStats() {
-      try {
-        this.isLoading = true;
-        const response = await apiFactory.$_getSpecialistPharmacyDashboard();
-        const result = response.data?.data || response.data?.result;
-        if (result) {
-          this.stats = result;
-        }
-      } catch (error) {
-        console.error("Error fetching dashboard stats:", error);
-        this.$toast.error("Failed to load dashboard data");
-      } finally {
-        this.isLoading = false;
-      }
-    },
-    formatCurrency(amount) {
-      if (!amount) return "0.00";
-      return Number(amount).toLocaleString("en-NG", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      });
-    },
-    formatDate(date) {
-      if (!date) return "";
-      return moment(date).format("MMM D, YYYY h:mm A");
-    },
-    formatStatus(status) {
-      if (!status) return "";
-      return status.replace(/_/g, " ").toLowerCase()
-        .replace(/\b\w/g, l => l.toUpperCase());
-    },
-    getInitials(name) {
-      if (!name) return "?";
-      return name
-        .split(" ")
-        .map(n => n[0])
-        .join("")
-        .toUpperCase()
-        .slice(0, 2);
-    },
-    createPrescription() {
-      this.$router.push("/app/specialist/pharmacy/prescriptions/create");
-    },
-    viewPrescription(id) {
-      this.$router.push(`/app/specialist/pharmacy/prescriptions/${id}`);
-    },
-  },
-};
+const router = useRouter();
+const $toast = useToast();
+const { formatCurrency, formatDateTime } = usePharmacy();
+
+const isLoading = ref(true);
+const stats = ref({
+  prescriptions_today: 0,
+  prescriptions_this_week: 0,
+  prescriptions_this_month: 0,
+  pending_payment: 0,
+  pending_dispensing: 0,
+  total_prescriptions: 0,
+  total_patients: 0,
+  wallet_balance: 0,
+  recent_prescriptions: [],
+});
+
+function getFirstName(name) {
+  if (!name) return '';
+  return name.split(' ')[0] || '';
+}
+
+function getLastName(name) {
+  if (!name) return '';
+  const parts = name.split(' ');
+  return parts.length > 1 ? parts[parts.length - 1] : '';
+}
+
+function createPrescription() {
+  router.push('/app/specialist/pharmacy/prescriptions/create');
+}
+
+function viewPrescription(id) {
+  router.push(`/app/specialist/pharmacy/prescriptions/${id}`);
+}
+
+async function fetchDashboardStats() {
+  try {
+    isLoading.value = true;
+    const response = await apiFactory.$_getSpecialistPharmacyDashboard();
+    const result = response.data?.data || response.data?.result;
+    if (result) {
+      stats.value = result;
+    }
+  } catch (error) {
+    console.error('Error fetching dashboard stats:', error);
+    $toast.error('Failed to load dashboard data');
+  } finally {
+    isLoading.value = false;
+  }
+}
+
+onMounted(() => {
+  fetchDashboardStats();
+});
 </script>
 
 <style scoped lang="scss">
 .page-content {
-  @include flexItem(vertical) {
-    width: 100%;
-    height: 100%;
-    background-color: $color-g-97;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100vh;
+  padding: 0 128px;
+
+  @include responsive(tab-portrait) {
+    padding: 0;
+  }
+
+  @include responsive(phone) {
+    padding: 0;
   }
 
   &__body {
-    flex-grow: 1;
+    width: 100%;
+    padding: $size-24 $size-32;
     overflow-y: auto;
-    padding: $size-24;
 
-    @include responsive(tab-portrait) {
+    @include responsive(phone) {
       padding: $size-16;
+    }
+
+    &::-webkit-scrollbar {
+      display: none;
     }
   }
 }
 
 .pharmacy-container {
-  max-width: 1200px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: 800px;
+  display: flex;
+  flex-direction: column;
+  gap: $size-24;
+  padding-bottom: $size-32;
 }
 
-.pharmacy-header {
+// Hero Section
+.hero-section {
+  background: linear-gradient(135deg, #0EAEC4 0%, #0891b2 50%, #0e7490 100%);
+  border-radius: $size-20;
+  padding: $size-28 $size-32;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: $size-24;
-  gap: $size-16;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(14, 174, 196, 0.25);
+  color: white;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -10%;
+    width: 350px;
+    height: 350px;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
 
   @include responsive(tab-portrait) {
     flex-direction: column;
-  }
-
-  &__title {
-    h1 {
-      font-size: $size-24;
-      font-weight: $fw-semi-bold;
-      color: $color-g-21;
-      margin-bottom: $size-4;
-    }
-
-    p {
-      font-size: $size-15;
-      color: $color-g-54;
-    }
-  }
-
-  &__actions {
-    .btn {
-      display: flex;
-      align-items: center;
-      gap: $size-8;
-    }
-  }
-}
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: $size-16;
-  margin-bottom: $size-24;
-
-  @include responsive(tab-landscape) {
-    grid-template-columns: repeat(2, 1fr);
+    gap: $size-20;
+    padding: $size-24;
+    border-radius: $size-16;
   }
 
   @include responsive(phone) {
-    grid-template-columns: 1fr;
+    padding: $size-20 $size-16;
+    border-radius: $size-12;
+  }
+
+  .hero-content {
+    z-index: 1;
+  }
+
+  .hero-text {
+    margin-bottom: $size-20;
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: $size-6;
+      background: rgba(255, 255, 255, 0.2);
+      padding: $size-4 $size-12;
+      border-radius: $size-16;
+      font-size: $size-12;
+      font-weight: $fw-medium;
+      margin-bottom: $size-12;
+    }
+
+    .hero-title {
+      font-size: $size-22;
+      font-weight: $fw-bold;
+      margin-bottom: $size-4;
+      line-height: 1.3;
+
+      @include responsive(phone) {
+        font-size: $size-20;
+      }
+    }
+
+    .hero-subtitle {
+      font-size: $size-14;
+      opacity: 0.85;
+      font-weight: $fw-regular;
+    }
+  }
+
+  .hero-stats {
+    display: flex;
+    gap: $size-20;
+
+    @include responsive(phone) {
+      gap: $size-16;
+    }
+
+    .hero-stat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.15);
+      padding: $size-12 $size-16;
+      border-radius: $size-12;
+      min-width: 72px;
+
+      &__value {
+        font-size: $size-22;
+        font-weight: $fw-bold;
+        line-height: 1.2;
+      }
+
+      &__label {
+        font-size: $size-11;
+        opacity: 0.85;
+        font-weight: $fw-medium;
+        margin-top: $size-2;
+      }
+    }
+  }
+
+  .hero-actions {
+    z-index: 1;
+    flex-shrink: 0;
+
+    .hero-action-btn {
+      display: flex;
+      align-items: center;
+      gap: $size-8;
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: $size-10;
+      padding: $size-10 $size-20;
+      font-size: $size-14;
+      font-weight: $fw-semi-bold;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.3);
+      }
+    }
   }
 }
 
-.stat-card {
-  background: $color-white;
-  border-radius: $size-12;
-  padding: $size-20;
+// Wallet Card
+.wallet-card {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: $size-16;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  background: white;
+  border-radius: $size-16;
+  padding: $size-24;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border-left: 4px solid #0EAEC4;
+
+  @include responsive(phone) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: $size-16;
+  }
+
+  &__left {
+    display: flex;
+    align-items: center;
+    gap: $size-14;
+  }
 
   &__icon {
-    width: $size-48;
-    height: $size-48;
+    width: 48px;
+    height: 48px;
     border-radius: $size-12;
+    background: rgba(14, 174, 196, 0.1);
     display: flex;
     align-items: center;
     justify-content: center;
-
-    .stat-card--primary & {
-      background: rgba($color-pri, 0.1);
-      color: $color-pri;
-    }
-
-    .stat-card--info & {
-      background: rgba(#3b82f6, 0.1);
-      color: #3b82f6;
-    }
-
-    .stat-card--warning & {
-      background: rgba(#f59e0b, 0.1);
-      color: #f59e0b;
-    }
-
-    .stat-card--success & {
-      background: rgba(#10b981, 0.1);
-      color: #10b981;
-    }
+    color: #0EAEC4;
   }
 
-  &__content {
-    flex: 1;
+  &__info {
+    display: flex;
+    flex-direction: column;
+    gap: $size-2;
   }
 
-  &__value {
-    font-size: $size-28;
-    font-weight: $fw-bold;
+  &__title {
+    font-size: $size-15;
+    font-weight: $fw-semi-bold;
     color: $color-g-21;
-    line-height: 1.2;
   }
 
-  &__label {
+  &__note {
     font-size: $size-12;
     color: $color-g-54;
-    margin-top: $size-4;
   }
-}
 
-.wallet-section {
-  margin-bottom: $size-24;
-}
-
-.wallet-card {
-  background: linear-gradient(135deg, $color-pri 0%, darken($color-pri, 15%) 100%);
-  border-radius: $size-16;
-  padding: $size-24;
-  color: $color-white;
-
-  &__header {
+  &__right {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: $size-16;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: $size-6;
 
-    h3 {
-      font-size: $size-16;
-      font-weight: $fw-medium;
-      opacity: 0.9;
-    }
-
-    .wallet-link {
-      font-size: $size-12;
-      color: $color-white;
-      text-decoration: underline;
-      opacity: 0.8;
-
-      &:hover {
-        opacity: 1;
-      }
+    @include responsive(phone) {
+      align-items: flex-start;
     }
   }
 
   &__balance {
     display: flex;
     align-items: baseline;
-    gap: $size-8;
-    margin-bottom: $size-8;
+    gap: $size-4;
 
     .currency {
-      font-size: $size-18;
+      font-size: $size-14;
       font-weight: $fw-medium;
-      opacity: 0.8;
+      color: $color-g-54;
     }
 
     .amount {
-      font-size: $size-36;
+      font-size: $size-28;
       font-weight: $fw-bold;
+      color: $color-g-21;
     }
   }
-
-  &__note {
-    font-size: $size-12;
-    opacity: 0.7;
-  }
 }
 
-.quick-actions {
-  margin-bottom: $size-32;
-
-  h2 {
-    font-size: $size-18;
-    font-weight: $fw-semi-bold;
-    color: $color-g-21;
-    margin-bottom: $size-16;
-  }
-}
-
-.actions-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: $size-16;
-
-  @include responsive(tab-landscape) {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  @include responsive(phone) {
-    grid-template-columns: 1fr;
-  }
-}
-
-.action-card {
-  background: $color-white;
-  border-radius: $size-12;
-  padding: $size-24;
-  text-align: center;
+.wallet-link {
+  display: flex;
+  align-items: center;
+  gap: $size-4;
+  font-size: $size-13;
+  color: #0EAEC4;
   text-decoration: none;
-  transition: all 0.2s ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  font-weight: $fw-medium;
 
   &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-  }
-
-  &__icon {
-    width: $size-56;
-    height: $size-56;
-    margin: 0 auto $size-16;
-    border-radius: 50%;
-    background: rgba($color-pri, 0.1);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: $color-pri;
-  }
-
-  h3 {
-    font-size: $size-16;
-    font-weight: $fw-semi-bold;
-    color: $color-g-21;
-    margin-bottom: $size-8;
-  }
-
-  p {
-    font-size: $size-12;
-    color: $color-g-54;
-    line-height: 1.4;
+    text-decoration: underline;
   }
 }
 
-.recent-prescriptions {
-  background: $color-white;
+// Section Card
+.section-card {
+  background: white;
   border-radius: $size-16;
   padding: $size-24;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
 
 .section-header {
@@ -515,83 +526,143 @@ export default {
   justify-content: space-between;
   align-items: center;
   margin-bottom: $size-20;
+}
 
-  h2 {
-    font-size: $size-18;
-    font-weight: $fw-semi-bold;
-    color: $color-g-21;
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: $size-8;
+  margin-bottom: $size-20;
+
+  svg {
+    color: #0EAEC4;
   }
 
-  .view-all {
-    font-size: $size-15;
-    color: $color-pri;
-    text-decoration: none;
-    font-weight: $fw-medium;
+  h2 {
+    font-size: $size-16;
+    font-weight: $fw-semi-bold;
+    color: $color-g-21;
+    margin: 0;
+  }
 
-    &:hover {
-      text-decoration: underline;
-    }
+  .section-header & {
+    margin-bottom: 0;
   }
 }
 
+.view-all-link {
+  display: flex;
+  align-items: center;
+  gap: $size-4;
+  font-size: $size-13;
+  color: #0EAEC4;
+  text-decoration: none;
+  font-weight: $fw-medium;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+// Actions Grid
+.actions-grid {
+  display: flex;
+  flex-direction: column;
+  gap: $size-10;
+}
+
+.action-link {
+  display: flex;
+  align-items: center;
+  gap: $size-14;
+  padding: $size-14 $size-16;
+  border-radius: $size-12;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  background: $color-g-97;
+
+  &:hover {
+    background: rgba(14, 174, 196, 0.06);
+
+    .action-link__arrow {
+      color: #0EAEC4;
+      transform: translateX(2px);
+    }
+  }
+
+  &__icon {
+    width: 40px;
+    height: 40px;
+    border-radius: $size-10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+
+    &--teal { background: rgba(14, 174, 196, 0.1); color: #0EAEC4; }
+    &--blue { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+    &--purple { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; }
+    &--green { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+  }
+
+  &__text {
+    flex: 1;
+
+    h3 {
+      font-size: $size-14;
+      font-weight: $fw-semi-bold;
+      color: $color-g-21;
+      margin-bottom: $size-2;
+    }
+
+    p {
+      font-size: $size-12;
+      color: $color-g-54;
+    }
+  }
+
+  &__arrow {
+    color: $color-g-67;
+    transition: all 0.2s ease;
+  }
+}
+
+// Prescriptions List
 .prescriptions-list {
   display: flex;
   flex-direction: column;
-  gap: $size-12;
+  gap: $size-8;
 }
 
 .prescription-item {
   display: flex;
   align-items: center;
-  padding: $size-16;
-  border-radius: $size-10;
-  background: $color-g-97;
+  justify-content: space-between;
+  padding: $size-14 $size-16;
+  border-radius: $size-12;
   cursor: pointer;
-  transition: background 0.2s ease;
-  gap: $size-16;
+  transition: all 0.2s ease;
+  background: $color-g-97;
+  border-left: 3px solid #0EAEC4;
 
   &:hover {
-    background: $color-g-92;
+    background: rgba(14, 174, 196, 0.06);
   }
 
-  &__patient {
+  &__left {
     display: flex;
     align-items: center;
     gap: $size-12;
-    flex: 2;
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__info {
     min-width: 0;
 
-    .avatar {
-      width: $size-40;
-      height: $size-40;
-      border-radius: 50%;
-      background: $color-pri;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      overflow: hidden;
-
-      img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-      }
-
-      span {
-        font-size: $size-15;
-        font-weight: $fw-semi-bold;
-        color: $color-white;
-      }
-    }
-
-    .patient-info {
-      min-width: 0;
-    }
-
     .patient-name {
-      font-size: $size-15;
-      font-weight: $fw-medium;
+      font-size: $size-14;
+      font-weight: $fw-semi-bold;
       color: $color-g-21;
       white-space: nowrap;
       overflow: hidden;
@@ -600,7 +671,7 @@ export default {
 
     .prescription-number {
       font-size: $size-11;
-      color: $color-pri;
+      color: #0EAEC4;
       font-weight: $fw-medium;
       margin-top: $size-2;
     }
@@ -612,131 +683,95 @@ export default {
     }
   }
 
-  &__details {
+  &__right {
     display: flex;
-    align-items: center;
-    gap: $size-12;
-    flex: 1;
-
-    .items-count {
-      font-size: $size-12;
-      color: $color-g-54;
-    }
-
-    .status {
-      font-size: $size-12;
-      padding: $size-4 $size-10;
-      border-radius: $size-16;
-      font-weight: $fw-medium;
-
-      &--draft {
-        background: $color-g-90;
-        color: $color-g-44;
-      }
-
-      &--pending_payment {
-        background: rgba(#f59e0b, 0.1);
-        color: #d97706;
-      }
-
-      &--paid,
-      &--processing {
-        background: rgba(#3b82f6, 0.1);
-        color: #2563eb;
-      }
-
-      &--dispensed,
-      &--shipped {
-        background: rgba(#8b5cf6, 0.1);
-        color: #7c3aed;
-      }
-
-      &--delivered {
-        background: rgba(#10b981, 0.1);
-        color: #059669;
-      }
-
-      &--cancelled {
-        background: rgba(#ef4444, 0.1);
-        color: #dc2626;
-      }
-    }
-  }
-
-  &__amount {
-    flex: 1;
-    text-align: right;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: $size-6;
+    flex-shrink: 0;
 
     .amount {
-      font-size: $size-15;
+      font-size: $size-14;
       font-weight: $fw-semi-bold;
       color: $color-g-21;
     }
   }
-
-  &__arrow {
-    color: $color-g-54;
-  }
-
-  @include responsive(tab-portrait) {
-    flex-wrap: wrap;
-
-    &__patient {
-      flex: 1 1 100%;
-    }
-
-    &__details,
-    &__amount {
-      flex: 1;
-    }
-
-    &__arrow {
-      display: none;
-    }
-  }
 }
 
-.empty-state {
+// Empty Section
+.empty-section {
   text-align: center;
-  padding: $size-48 $size-24;
-  color: $color-g-54;
+  padding: $size-32 $size-20;
+  background: $color-g-97;
+  border-radius: $size-12;
 
-  .icons {
-    margin-bottom: $size-16;
-    opacity: 0.5;
+  &__icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto $size-14;
+    border-radius: 50%;
+    background: rgba(14, 174, 196, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #0EAEC4;
+  }
+
+  h3 {
+    font-size: $size-15;
+    font-weight: $fw-semi-bold;
+    color: $color-g-21;
+    margin-bottom: $size-6;
   }
 
   p {
-    font-size: $size-15;
+    font-size: $size-13;
+    color: $color-g-54;
     margin-bottom: $size-16;
+  }
+
+  &__action {
+    display: inline-flex;
+    align-items: center;
+    gap: $size-6;
+    background: rgba(14, 174, 196, 0.1);
+    color: #0EAEC4;
+    border: none;
+    border-radius: $size-8;
+    padding: $size-10 $size-18;
+    font-size: $size-13;
+    font-weight: $fw-semi-bold;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background: rgba(14, 174, 196, 0.18);
+    }
   }
 }
 
-.btn {
-  padding: $size-12 $size-20;
-  border-radius: $size-8;
-  font-size: $size-15;
-  font-weight: $fw-medium;
-  cursor: pointer;
-  border: none;
-  transition: all 0.2s ease;
+// Skeleton Loading (Shimmer)
+.skeleton-hero {
+  border-radius: $size-20;
+  background: linear-gradient(90deg, rgba(14, 174, 196, 0.15) 25%, rgba(14, 174, 196, 0.08) 50%, rgba(14, 174, 196, 0.15) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  height: 180px;
+}
 
-  &-primary {
-    background: $color-pri;
-    color: $color-white;
+.skeleton-card {
+  border-radius: $size-16;
+  background: linear-gradient(90deg, $color-g-92 25%, $color-g-97 50%, $color-g-92 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  height: 160px;
 
-    &:hover {
-      background: darken($color-pri, 10%);
-    }
-  }
+  &--wallet { height: 100px; }
+  &--lg { height: 240px; }
+}
 
-  &-secondary {
-    background: $color-g-90;
-    color: $color-g-36;
-
-    &:hover {
-      background: $color-g-85;
-    }
-  }
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
 </style>

@@ -38,6 +38,7 @@ import {
   ShipDto,
   DeliverDto,
   CancelPrescriptionDto,
+  LinkRecordsDto,
 } from './dto/specialist-prescription.dto';
 import { SpecialistWalletService } from '../wallets/specialist-wallet.service';
 import { WalletsService } from '../wallets/wallets.service';
@@ -47,6 +48,7 @@ import { PaymentHandler } from '../../common/external/payment/payment.handler';
 import { UsersService } from '../users/users.service';
 import { UserSettingsService } from '../user-settings/user-settings.service';
 import { PrescriptionNumberHelper } from '../../common/helpers/prescription-number.helper';
+import { FileUploadHelper } from '../../common/helpers/file-upload.helpers';
 import {
   prescriptionCreatedEmail,
   prescriptionShippedEmail,
@@ -89,6 +91,7 @@ export class SpecialistPrescriptionService {
     private readonly userSettingsService: UserSettingsService,
     private readonly prescriptionNumberHelper: PrescriptionNumberHelper,
     private readonly prescriptionPdfService: PrescriptionPdfService,
+    private readonly fileUploadHelper: FileUploadHelper,
   ) {}
 
   // ============ EMAIL NOTIFICATIONS ============
@@ -830,6 +833,51 @@ export class SpecialistPrescriptionService {
     const prescriptionNumber = await this.generatePrescriptionNumber();
     const expiresAt = moment().add(RESERVATION_HOURS, 'hours').toDate();
 
+    // Resolve linked appointments
+    let linkedAppointments: Types.ObjectId[] = [];
+    if (dto.linked_appointments?.length) {
+      const appointmentIds = dto.linked_appointments.map(id => new Types.ObjectId(id));
+      // Include legacy appointment_id if present
+      if (dto.appointment_id && !dto.linked_appointments.includes(dto.appointment_id)) {
+        appointmentIds.push(new Types.ObjectId(dto.appointment_id));
+      }
+      // Validate all appointments belong to this specialist + patient and are COMPLETED
+      const AppointmentsCollection = this.connection.collection('appointments');
+      const validAppointments = await AppointmentsCollection.find({
+        _id: { $in: appointmentIds },
+        specialist: specialistId,
+        patient: new Types.ObjectId(dto.patient_id),
+        status: 'COMPLETED',
+      }).toArray();
+      if (validAppointments.length !== appointmentIds.length) {
+        throw new BadRequestException('One or more linked appointments are invalid or not completed');
+      }
+      linkedAppointments = appointmentIds;
+    } else if (dto.appointment_id) {
+      linkedAppointments = [new Types.ObjectId(dto.appointment_id)];
+    }
+
+    // Resolve linked clinical notes
+    let linkedClinicalNotes: Array<{ appointment_id: Types.ObjectId; note_id: string }> = [];
+    if (dto.linked_clinical_notes?.length) {
+      const AppointmentsCollection = this.connection.collection('appointments');
+      for (const noteRef of dto.linked_clinical_notes) {
+        const appt = await AppointmentsCollection.findOne({
+          _id: new Types.ObjectId(noteRef.appointment_id),
+          specialist: specialistId,
+          patient: new Types.ObjectId(dto.patient_id),
+          'clinical_notes.note_id': noteRef.note_id,
+        });
+        if (!appt) {
+          throw new BadRequestException(`Clinical note ${noteRef.note_id} not found in appointment ${noteRef.appointment_id}`);
+        }
+      }
+      linkedClinicalNotes = dto.linked_clinical_notes.map(n => ({
+        appointment_id: new Types.ObjectId(n.appointment_id),
+        note_id: n.note_id,
+      }));
+    }
+
     // Create prescription
     const prescription = await this.prescriptionModel.create({
       prescription_number: prescriptionNumber,
@@ -847,6 +895,8 @@ export class SpecialistPrescriptionService {
       appointment_id: dto.appointment_id
         ? new Types.ObjectId(dto.appointment_id)
         : undefined,
+      linked_appointments: linkedAppointments.length ? linkedAppointments : undefined,
+      linked_clinical_notes: linkedClinicalNotes.length ? linkedClinicalNotes : undefined,
       // Pickup order fields
       is_pickup_order: isPickupOrder,
       pickup_pharmacy_id: pickupPharmacyId,
@@ -981,8 +1031,74 @@ export class SpecialistPrescriptionService {
     // Fetch patient details
     const patient = await this.usersService.findById(prescription.patient_id);
 
+    const patientProfileImage = patient
+      ? await this.fileUploadHelper.resolveProfileImage(patient.profile?.profile_photo)
+      : null;
+
+    // Populate linked appointments
+    let populatedLinkedAppointments: any[] = [];
+    if (prescription.linked_appointments?.length) {
+      const AppointmentsCollection = this.connection.collection('appointments');
+      const appointments = await AppointmentsCollection.find({
+        _id: { $in: prescription.linked_appointments },
+      }).project({
+        _id: 1,
+        start_time: 1,
+        status: 1,
+        meeting_channel: 1,
+        patient_notes: 1,
+        category: 1,
+        clinical_notes: 1,
+      }).toArray();
+      populatedLinkedAppointments = appointments.map(appt => ({
+        _id: appt._id,
+        start_time: appt.start_time,
+        status: appt.status,
+        meeting_channel: appt.meeting_channel,
+        patient_notes: appt.patient_notes,
+        category: appt.category,
+        notes_count: appt.clinical_notes?.length || 0,
+      }));
+    }
+
+    // Populate linked clinical notes
+    let populatedLinkedNotes: any[] = [];
+    if (prescription.linked_clinical_notes?.length) {
+      const AppointmentsCollection = this.connection.collection('appointments');
+      const appointmentIds = [...new Set(prescription.linked_clinical_notes.map(n => n.appointment_id))];
+      const appointments = await AppointmentsCollection.find({
+        _id: { $in: appointmentIds },
+      }).project({
+        _id: 1,
+        start_time: 1,
+        meeting_channel: 1,
+        clinical_notes: 1,
+      }).toArray();
+
+      for (const noteRef of prescription.linked_clinical_notes) {
+        const appt = appointments.find(a => a._id.toString() === noteRef.appointment_id.toString());
+        if (appt) {
+          const note = appt.clinical_notes?.find((n: any) => n.note_id === noteRef.note_id);
+          if (note) {
+            populatedLinkedNotes.push({
+              appointment_id: appt._id,
+              appointment_date: appt.start_time,
+              meeting_channel: appt.meeting_channel,
+              note_id: note.note_id,
+              content: note.content,
+              created_at: note.created_at,
+              platform: note.platform,
+              completed: note.completed,
+            });
+          }
+        }
+      }
+    }
+
     return {
       ...prescription,
+      linked_appointments_populated: populatedLinkedAppointments,
+      linked_clinical_notes_populated: populatedLinkedNotes,
       patient: patient ? {
         _id: patient._id,
         full_name: patient.full_name,
@@ -990,9 +1106,287 @@ export class SpecialistPrescriptionService {
         phone: patient.profile?.contact?.phone?.number
           ? `${patient.profile.contact.phone.country_code || ''}${patient.profile.contact.phone.number}`
           : null,
-        profile_image: patient.profile?.profile_photo,
+        profile_image: patientProfileImage,
       } : null,
     };
+  }
+
+  // ============ LINKED RECORDS MANAGEMENT ============
+
+  /**
+   * Get completed appointments for a specialist-patient pair (for linking UI)
+   */
+  async getCompletedAppointments(
+    specialistId: Types.ObjectId,
+    patientId: Types.ObjectId,
+  ) {
+    const AppointmentsCollection = this.connection.collection('appointments');
+    const appointments = await AppointmentsCollection.find({
+      specialist: specialistId,
+      patient: patientId,
+      status: 'COMPLETED',
+    })
+      .project({
+        _id: 1,
+        start_time: 1,
+        status: 1,
+        meeting_channel: 1,
+        category: 1,
+        appointment_type: 1,
+        clinical_notes: 1,
+      })
+      .sort({ start_time: -1 })
+      .limit(50)
+      .toArray();
+
+    return appointments.map(appt => ({
+      _id: appt._id,
+      start_time: appt.start_time,
+      status: appt.status,
+      meeting_channel: appt.meeting_channel,
+      category: appt.category,
+      appointment_type: appt.appointment_type,
+      clinical_notes: (appt.clinical_notes || []).map((note: any) => ({
+        note_id: note.note_id,
+        content_preview: note.content ? note.content.substring(0, 100) : '',
+        created_at: note.created_at,
+        platform: note.platform,
+        completed: note.completed,
+      })),
+    }));
+  }
+
+  /**
+   * Link appointments and/or clinical notes to an existing prescription
+   */
+  async linkRecords(
+    prescriptionId: Types.ObjectId,
+    specialistId: Types.ObjectId,
+    dto: LinkRecordsDto,
+  ) {
+    const prescription = await this.prescriptionModel.findOne({
+      _id: prescriptionId,
+      specialist_id: specialistId,
+    });
+    if (!prescription) {
+      throw new NotFoundException('Prescription not found');
+    }
+
+    const patientId = prescription.patient_id;
+    const AppointmentsCollection = this.connection.collection('appointments');
+    const updateOps: any = {};
+
+    // Link appointments
+    if (dto.appointments?.length) {
+      const appointmentIds = dto.appointments.map(id => new Types.ObjectId(id));
+      const validAppointments = await AppointmentsCollection.find({
+        _id: { $in: appointmentIds },
+        specialist: specialistId,
+        patient: patientId,
+        status: 'COMPLETED',
+      }).toArray();
+
+      if (validAppointments.length !== appointmentIds.length) {
+        throw new BadRequestException('One or more appointments are invalid or not completed');
+      }
+
+      // Append only new ones (no duplicates)
+      const existingIds = (prescription.linked_appointments || []).map(id => id.toString());
+      const newIds = appointmentIds.filter(id => !existingIds.includes(id.toString()));
+      if (newIds.length) {
+        updateOps.$push = updateOps.$push || {};
+        updateOps.$push.linked_appointments = { $each: newIds };
+      }
+    }
+
+    // Link clinical notes
+    if (dto.clinical_notes?.length) {
+      for (const noteRef of dto.clinical_notes) {
+        const appt = await AppointmentsCollection.findOne({
+          _id: new Types.ObjectId(noteRef.appointment_id),
+          specialist: specialistId,
+          patient: patientId,
+          'clinical_notes.note_id': noteRef.note_id,
+        });
+        if (!appt) {
+          throw new BadRequestException(`Clinical note ${noteRef.note_id} not found in appointment ${noteRef.appointment_id}`);
+        }
+      }
+
+      // Append only new ones (no duplicates)
+      const existingNotes = (prescription.linked_clinical_notes || []).map(
+        n => `${n.appointment_id}:${n.note_id}`,
+      );
+      const newNotes = dto.clinical_notes
+        .filter(n => !existingNotes.includes(`${n.appointment_id}:${n.note_id}`))
+        .map(n => ({
+          appointment_id: new Types.ObjectId(n.appointment_id),
+          note_id: n.note_id,
+        }));
+
+      if (newNotes.length) {
+        updateOps.$push = updateOps.$push || {};
+        updateOps.$push.linked_clinical_notes = { $each: newNotes };
+      }
+    }
+
+    if (Object.keys(updateOps).length === 0) {
+      return { message: 'No new records to link' };
+    }
+
+    await this.prescriptionModel.updateOne({ _id: prescriptionId }, updateOps);
+    return this.getPrescription(prescriptionId, specialistId);
+  }
+
+  /**
+   * Unlink appointments and/or clinical notes from a prescription
+   */
+  async unlinkRecords(
+    prescriptionId: Types.ObjectId,
+    specialistId: Types.ObjectId,
+    dto: LinkRecordsDto,
+  ) {
+    const prescription = await this.prescriptionModel.findOne({
+      _id: prescriptionId,
+      specialist_id: specialistId,
+    });
+    if (!prescription) {
+      throw new NotFoundException('Prescription not found');
+    }
+
+    const updateOps: any = {};
+
+    if (dto.appointments?.length) {
+      const removeIds = dto.appointments.map(id => new Types.ObjectId(id));
+      updateOps.$pull = updateOps.$pull || {};
+      updateOps.$pull.linked_appointments = { $in: removeIds };
+    }
+
+    if (dto.clinical_notes?.length) {
+      // Remove matching clinical notes
+      const notesToRemove = dto.clinical_notes;
+      const remainingNotes = (prescription.linked_clinical_notes || []).filter(existing => {
+        return !notesToRemove.some(
+          toRemove => toRemove.appointment_id === existing.appointment_id.toString() && toRemove.note_id === existing.note_id,
+        );
+      });
+      updateOps.$set = updateOps.$set || {};
+      updateOps.$set.linked_clinical_notes = remainingNotes;
+    }
+
+    if (Object.keys(updateOps).length === 0) {
+      return { message: 'No records to unlink' };
+    }
+
+    await this.prescriptionModel.updateOne({ _id: prescriptionId }, updateOps);
+    return this.getPrescription(prescriptionId, specialistId);
+  }
+
+  /**
+   * Get prescriptions linked to a specific appointment
+   * Used for reverse-lookup from appointment/clinical notes views
+   */
+  async getPrescriptionsForAppointment(
+    specialistId: Types.ObjectId,
+    appointmentId: Types.ObjectId,
+  ): Promise<any[]> {
+    const prescriptions = await this.prescriptionModel.find({
+      specialist_id: specialistId,
+      $or: [
+        { linked_appointments: appointmentId },
+        { 'linked_clinical_notes.appointment_id': appointmentId },
+      ],
+    }).select('_id prescription_number status created_at linked_appointments linked_clinical_notes').lean();
+
+    return prescriptions.map((p: any) => ({
+      _id: p._id,
+      prescription_number: p.prescription_number,
+      status: p.status,
+      created_at: p.created_at,
+      linked_appointment: p.linked_appointments?.some(
+        (id: any) => id.toString() === appointmentId.toString(),
+      ),
+      linked_notes: (p.linked_clinical_notes || [])
+        .filter((n: any) => n.appointment_id?.toString() === appointmentId.toString())
+        .map((n: any) => n.note_id),
+    }));
+  }
+
+  /**
+   * Get prescriptions linked to multiple appointments (batch)
+   * Returns a map of appointmentId -> prescription summaries
+   */
+  async getPrescriptionsForAppointments(
+    specialistId: Types.ObjectId,
+    appointmentIds: Types.ObjectId[],
+  ): Promise<Record<string, any[]>> {
+    if (!appointmentIds.length) return {};
+
+    const prescriptions = await this.prescriptionModel.find({
+      specialist_id: specialistId,
+      $or: [
+        { linked_appointments: { $in: appointmentIds } },
+        { 'linked_clinical_notes.appointment_id': { $in: appointmentIds } },
+      ],
+    }).select('_id prescription_number status created_at linked_appointments linked_clinical_notes').lean();
+
+    const result: Record<string, any[]> = {};
+    for (const apptId of appointmentIds) {
+      const apptIdStr = apptId.toString();
+      result[apptIdStr] = [];
+      for (const p of prescriptions as any[]) {
+        const linkedAppt = p.linked_appointments?.some(
+          (id: any) => id.toString() === apptIdStr,
+        );
+        const linkedNotes = (p.linked_clinical_notes || [])
+          .filter((n: any) => n.appointment_id?.toString() === apptIdStr)
+          .map((n: any) => n.note_id);
+
+        if (linkedAppt || linkedNotes.length) {
+          result[apptIdStr].push({
+            _id: p._id,
+            prescription_number: p.prescription_number,
+            status: p.status,
+            created_at: p.created_at,
+            linked_appointment: linkedAppt,
+            linked_notes: linkedNotes,
+          });
+        }
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Get prescriptions explicitly linked to a specific appointment for the patient
+   * Uses linked_appointments and linked_clinical_notes references
+   */
+  async getPatientPrescriptionsForAppointment(
+    patientId: Types.ObjectId,
+    appointmentId: Types.ObjectId,
+  ): Promise<any[]> {
+    const prescriptions = await this.prescriptionModel.find({
+      patient_id: patientId,
+      $or: [
+        { linked_appointments: appointmentId },
+        { 'linked_clinical_notes.appointment_id': appointmentId },
+      ],
+    }).select('_id prescription_number status created_at items').lean();
+
+    return prescriptions.map((p: any) => ({
+      _id: p._id,
+      prescription_number: p.prescription_number,
+      status: p.status,
+      created_at: p.created_at,
+      medications: (p.items || []).map((item: any) => ({
+        drug_name: item.drug_name,
+        strength: item.drug_strength,
+        dosage: item.dosage,
+        frequency: item.frequency,
+        duration: item.duration,
+      })),
+    }));
   }
 
   /**
@@ -1067,27 +1461,29 @@ export class SpecialistPrescriptionService {
     ]);
 
     // Transform prescriptions to include patient object
-    const enrichedPrescriptions = prescriptions.map((prescription: any) => {
-      let patient: any = null;
+    const enrichedPrescriptions = await Promise.all(
+      prescriptions.map(async (prescription: any) => {
+        let patient: any = null;
 
-      if (prescription.patient_id && typeof prescription.patient_id === 'object') {
-        const patientDoc = prescription.patient_id;
-        const firstName = patientDoc.profile?.first_name || '';
-        const lastName = patientDoc.profile?.last_name || '';
-        patient = {
-          _id: patientDoc._id,
-          full_name: `${firstName} ${lastName}`.trim() || 'Unknown',
-          email: patientDoc.profile?.contact?.email || '',
-          profile_image: patientDoc.profile?.profile_photo || null,
+        if (prescription.patient_id && typeof prescription.patient_id === 'object') {
+          const patientDoc = prescription.patient_id;
+          const firstName = patientDoc.profile?.first_name || '';
+          const lastName = patientDoc.profile?.last_name || '';
+          patient = {
+            _id: patientDoc._id,
+            full_name: `${firstName} ${lastName}`.trim() || 'Unknown',
+            email: patientDoc.profile?.contact?.email || '',
+            profile_image: await this.fileUploadHelper.resolveProfileImage(patientDoc.profile?.profile_photo),
+          };
+        }
+
+        return {
+          ...prescription,
+          patient_id: prescription.patient_id?._id || prescription.patient_id,
+          patient,
         };
-      }
-
-      return {
-        ...prescription,
-        patient_id: prescription.patient_id?._id || prescription.patient_id,
-        patient,
-      };
-    });
+      }),
+    );
 
     return this.generalHelpers.paginate(enrichedPrescriptions, page, limit, total);
   }
@@ -1130,27 +1526,29 @@ export class SpecialistPrescriptionService {
     ]);
 
     // Transform prescriptions to include specialist object
-    const enrichedPrescriptions = prescriptions.map((prescription: any) => {
-      let specialist: any = null;
+    const enrichedPrescriptions = await Promise.all(
+      prescriptions.map(async (prescription: any) => {
+        let specialist: any = null;
 
-      if (prescription.specialist_id && typeof prescription.specialist_id === 'object') {
-        const specialistDoc = prescription.specialist_id;
-        const firstName = specialistDoc.profile?.first_name || '';
-        const lastName = specialistDoc.profile?.last_name || '';
-        specialist = {
-          _id: specialistDoc._id,
-          full_name: `Dr. ${firstName} ${lastName}`.trim(),
-          specialties: specialistDoc.profile?.specialist_info?.specialties || [],
-          profile_image: specialistDoc.profile?.profile_photo || null,
+        if (prescription.specialist_id && typeof prescription.specialist_id === 'object') {
+          const specialistDoc = prescription.specialist_id;
+          const firstName = specialistDoc.profile?.first_name || '';
+          const lastName = specialistDoc.profile?.last_name || '';
+          specialist = {
+            _id: specialistDoc._id,
+            full_name: `Dr. ${firstName} ${lastName}`.trim(),
+            specialties: specialistDoc.profile?.specialist_info?.specialties || [],
+            profile_image: await this.fileUploadHelper.resolveProfileImage(specialistDoc.profile?.profile_photo),
+          };
+        }
+
+        return {
+          ...prescription,
+          specialist_id: prescription.specialist_id?._id || prescription.specialist_id,
+          specialist,
         };
-      }
-
-      return {
-        ...prescription,
-        specialist_id: prescription.specialist_id?._id || prescription.specialist_id,
-        specialist,
-      };
-    });
+      }),
+    );
 
     return this.generalHelpers.paginate(enrichedPrescriptions, page, limit, total);
   }
@@ -1205,7 +1603,7 @@ export class SpecialistPrescriptionService {
       .lean();
 
     // Transform prescriptions for pharmacy use
-    const transformedPrescriptions = prescriptions.map((prescription: any) => {
+    const transformedPrescriptions = await Promise.all(prescriptions.map(async (prescription: any) => {
       let specialist: any = null;
 
       if (
@@ -1220,7 +1618,7 @@ export class SpecialistPrescriptionService {
           full_name: `Dr. ${firstName} ${lastName}`.trim(),
           specialties:
             specialistDoc.profile?.specialist_info?.specialties || [],
-          profile_image: specialistDoc.profile?.profile_photo || null,
+          profile_image: await this.fileUploadHelper.resolveProfileImage(specialistDoc.profile?.profile_photo),
         };
       }
 
@@ -1256,7 +1654,7 @@ export class SpecialistPrescriptionService {
         is_expired:
           prescription.expires_at && new Date() > new Date(prescription.expires_at),
       };
-    });
+    }));
 
     return {
       prescriptions: transformedPrescriptions,
@@ -1541,7 +1939,9 @@ export class SpecialistPrescriptionService {
    */
   async getPatientWalletBalance(patientId: Types.ObjectId) {
     try {
-      const wallet = await this.patientWalletService.getUserWallet(patientId);
+      // Use getUserEarnings which checks unified wallet first, then legacy
+      const earnings = await this.patientWalletService.getUserEarnings(patientId);
+      const availableBalance = earnings.currentBalance || 0;
 
       // Check if patient allows specialist wallet charges
       let allowSpecialistCharge = true; // Default to true
@@ -1555,10 +1955,12 @@ export class SpecialistPrescriptionService {
         allowSpecialistCharge = true;
       }
 
+      // If we got earnings data without error, the wallet exists
+      // (even if balance is 0)
       return {
-        balance: wallet.available_balance || 0,
-        available_balance: wallet.available_balance || 0,
-        has_wallet: true,
+        balance: availableBalance,
+        available_balance: availableBalance,
+        has_wallet: true, // Wallet exists if we got here without error
         allow_specialist_charge: allowSpecialistCharge,
       };
     } catch (error) {
@@ -3063,11 +3465,11 @@ export class SpecialistPrescriptionService {
     const { new_total } = await this.recalculatePrices(prescriptionId);
     const totalAmount = new_total;
 
-    // Check wallet balance
-    const wallet = await this.patientWalletService.getUserWallet(patientId);
-    if (!wallet || wallet.available_balance < totalAmount) {
+    // Check wallet balance (supports both legacy and unified wallets)
+    const earnings = await this.patientWalletService.getUserEarnings(patientId);
+    if (earnings.currentBalance < totalAmount) {
       throw new BadRequestException(
-        `Insufficient wallet balance. Available: ${wallet?.available_balance || 0}, Required: ${totalAmount}`,
+        `Insufficient wallet balance. Available: ${earnings.currentBalance}, Required: ${totalAmount}`,
       );
     }
 
@@ -3318,6 +3720,11 @@ export class SpecialistPrescriptionService {
     // Get specialist details
     const specialist = await this.usersService.findById(prescription.specialist_id);
 
+    // Resolve specialist profile image
+    const specialistProfileImage = specialist
+      ? await this.fileUploadHelper.resolveProfileImage(specialist.profile?.profile_photo)
+      : null;
+
     // Format prescribed_by to match frontend expectations
     const prescribedBy = specialist
       ? {
@@ -3325,7 +3732,7 @@ export class SpecialistPrescriptionService {
           profile: {
             first_name: specialist.profile?.first_name || '',
             last_name: specialist.profile?.last_name || '',
-            profile_photo: specialist.profile?.profile_photo || null,
+            profile_photo: specialistProfileImage,
             professional_practice: (specialist.profile as any)?.professional_practice || {
               area_of_specialty: (specialist.profile as any)?.specialist_info?.specialties?.[0] || 'General Practice',
               years_of_practice: '',
@@ -3338,15 +3745,36 @@ export class SpecialistPrescriptionService {
         }
       : null;
 
+    // Populate linked appointments for patient (dates only, no clinical note content)
+    let relatedAppointments: any[] = [];
+    if (prescription.linked_appointments?.length) {
+      const AppointmentsCollection = this.connection.collection('appointments');
+      const appointments = await AppointmentsCollection.find({
+        _id: { $in: prescription.linked_appointments },
+      }).project({
+        _id: 1,
+        start_time: 1,
+        meeting_channel: 1,
+        category: 1,
+      }).toArray();
+      relatedAppointments = appointments.map(appt => ({
+        _id: appt._id,
+        start_time: appt.start_time,
+        meeting_channel: appt.meeting_channel,
+        category: appt.category,
+      }));
+    }
+
     return {
       ...prescription,
+      related_appointments: relatedAppointments,
       prescribed_by: prescribedBy,
       specialist: specialist
         ? {
             _id: specialist._id,
             full_name: `Dr. ${specialist.profile?.first_name || ''} ${specialist.profile?.last_name || ''}`.trim(),
             specialties: (specialist.profile as any)?.specialist_info?.specialties || [],
-            profile_image: specialist.profile?.profile_photo || null,
+            profile_image: specialistProfileImage,
           }
         : null,
     };
@@ -3370,6 +3798,11 @@ export class SpecialistPrescriptionService {
     // Get specialist details
     const specialist = await this.usersService.findById(prescription.specialist_id);
 
+    // Resolve specialist profile image
+    const specialistProfileImage = specialist
+      ? await this.fileUploadHelper.resolveProfileImage(specialist.profile?.profile_photo)
+      : null;
+
     // Format prescribed_by to match frontend expectations
     const prescribedBy = specialist
       ? {
@@ -3377,7 +3810,7 @@ export class SpecialistPrescriptionService {
           profile: {
             first_name: specialist.profile?.first_name || '',
             last_name: specialist.profile?.last_name || '',
-            profile_photo: specialist.profile?.profile_photo || null,
+            profile_photo: specialistProfileImage,
             professional_practice: (specialist.profile as any)?.professional_practice || {
               area_of_specialty: (specialist.profile as any)?.specialist_info?.specialties?.[0] || 'General Practice',
               years_of_practice: '',
@@ -3398,7 +3831,7 @@ export class SpecialistPrescriptionService {
             _id: specialist._id,
             full_name: `Dr. ${specialist.profile?.first_name || ''} ${specialist.profile?.last_name || ''}`.trim(),
             specialties: (specialist.profile as any)?.specialist_info?.specialties || [],
-            profile_image: specialist.profile?.profile_photo || null,
+            profile_image: specialistProfileImage,
           }
         : null,
     };

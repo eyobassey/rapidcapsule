@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Availability Setup - Rapid Capsule Specialist</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        rapid: {
+                            sky: '#4FC3F7',
+                            skyLight: '#E1F5FE',
+                            skyDark: '#0288D1',
+                            orange: '#FF9800',
+                            orangeLight: '#FFF3E0',
+                            orangeDark: '#F57C00',
+                            navy: '#1A365D',
+                            gray: '#F5F9FF',
+                            text: '#334155',
+                            success: '#4CAF50',
+                            error: '#EF4444',
+                            border: '#E2E8F0'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        display: ['Poppins', 'system-ui', 'sans-serif']
+                    },
+                    boxShadow: {
+                        'soft': '0 4px 20px -2px rgba(79, 195, 247, 0.15)',
+                        'card': '0 10px 30px -5px rgba(0, 0, 0, 0.05)',
+                        'glow': '0 0 15px rgba(79, 195, 247, 0.3)',
+                        'inner-light': 'inset 0 2px 4px 0 rgba(255, 255, 255, 0.3)',
+                        'input-focus': '0 0 0 4px rgba(79, 195, 247, 0.2)'
+                    }
+                }
+            }
+        }
+        window.FontAwesomeConfig = { autoReplaceSvg: 'nest' };
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdn.plot.ly/plotly-3.1.1.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        .step-connector {
+            position: absolute;
+            top: 24px;
+            left: 15px;
+            bottom: -24px;
+            width: 2px;
+            background-color: #E2E8F0;
+            z-index: 0;
+        }
+        
+        .step-item:last-child .step-connector {
+            display: none;
+        }
+
+        .progress-ring__circle {
+            transition: stroke-dashoffset 0.35s;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #4FC3F7;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #4FC3F7;
+        }
+
+        /* Custom Calendar Grid */
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: 60px repeat(7, 1fr);
+            gap: 1px;
+            background-color: #E2E8F0;
+        }
+        .calendar-cell {
+            background-color: white;
+            min-height: 48px;
+            position: relative;
+            transition: all 0.2s;
+        }
+        .calendar-cell:hover {
+            background-color: #F8FAFC;
+        }
+        .time-label {
+            background-color: #F8FAFC;
+            font-size: 10px;
+            color: #64748B;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 500;
+        }
+        .day-header {
+            background-color: #F8FAFC;
+            padding: 12px;
+            text-align: center;
+            font-size: 12px;
+            font-weight: 600;
+            color: #1A365D;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        /* Slot Styling */
+        .slot {
+            position: absolute;
+            left: 2px;
+            right: 2px;
+            border-radius: 4px;
+            padding: 4px;
+            font-size: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            border-left: 3px solid transparent;
+        }
+        .slot:hover {
+            transform: scale(1.02);
+            z-index: 20;
+        }
+        .slot-available {
+            background-color: #E1F5FE;
+            color: #0288D1;
+            border-left-color: #0288D1;
+        }
+        .slot-urgent {
+            background-color: #FFF3E0;
+            color: #F57C00;
+            border-left-color: #F57C00;
+        }
+        .slot-blocked {
+            background-color: #F1F5F9;
+            color: #64748B;
+            border-left-color: #94A3B8;
+            background-image: repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(0,0,0,0.02) 5px, rgba(0,0,0,0.02) 10px);
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+        }
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #cbd5e1;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #4FC3F7;
+        }
+        input:checked + .slider:before {
+            transform: translateX(20px);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 font-sans text-rapid-text antialiased h-[1024px] overflow-hidden flex flex-col relative w-[1440px] mx-auto">
+
+    <!-- Header -->
+    <header id="header" class="bg-white/90 backdrop-blur-md border-b border-slate-100 h-20 z-40 sticky top-0 flex-none px-8">
+        <div class="h-full flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-gradient-to-br from-rapid-sky to-rapid-skyDark rounded-xl flex items-center justify-center text-white shadow-glow">
+                    <i class="fa-solid fa-heart-pulse text-lg"></i>
+                </div>
+                <div>
+                    <span class="text-2xl font-bold text-rapid-navy font-display tracking-tight block leading-none">Rapid Capsule</span>
+                    <span class="text-[10px] font-medium text-slate-500 uppercase tracking-widest">Specialist Portal</span>
+                </div>
+            </div>
+
+            <!-- Setup Progress Tracker (Global) -->
+            <div class="hidden md:flex items-center gap-4 bg-slate-50 px-4 py-2 rounded-xl border border-slate-100">
+                <div class="flex flex-col items-end">
+                    <span class="text-xs font-bold text-rapid-navy">Setup Progress</span>
+                    <span class="text-[10px] text-slate-500">Step 5 of 7 • Availability</span>
+                </div>
+                <div class="relative w-12 h-12">
+                    <svg class="w-12 h-12" viewBox="0 0 100 100">
+                        <circle class="text-slate-200 stroke-current" stroke-width="8" cx="50" cy="50" r="40" fill="transparent"></circle>
+                        <circle class="text-rapid-sky stroke-current progress-ring__circle" stroke-width="8" stroke-linecap="round" cx="50" cy="50" r="40" fill="transparent" stroke-dasharray="251.2" stroke-dashoffset="100"></circle> <!-- ~60% -->
+                    </svg>
+                    <div class="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-rapid-navy">60%</div>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-6">
+                <!-- Help Dropdown -->
+                <div class="relative group">
+                    <button class="flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-rapid-navy transition-colors">
+                        <i class="fa-regular fa-circle-question"></i>
+                        <span>Help Center</span>
+                        <i class="fa-solid fa-chevron-down text-xs"></i>
+                    </button>
+                    <!-- Dropdown Content -->
+                    <div class="absolute right-0 top-full mt-2 w-64 bg-white rounded-xl shadow-xl border border-slate-100 p-2 hidden group-hover:block z-50">
+                        <a href="#" class="flex items-center gap-3 px-3 py-2 hover:bg-slate-50 rounded-lg text-sm text-slate-600">
+                            <i class="fa-solid fa-message text-rapid-sky"></i> Chat with Support
+                        </a>
+                        <a href="#" class="flex items-center gap-3 px-3 py-2 hover:bg-slate-50 rounded-lg text-sm text-slate-600">
+                            <i class="fa-solid fa-book-medical text-rapid-sky"></i> Setup Guide
+                        </a>
+                    </div>
+                </div>
+
+                <div class="h-8 w-px bg-slate-200"></div>
+
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-full bg-slate-200 overflow-hidden border-2 border-white shadow-sm relative">
+                        <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" class="w-full h-full object-cover opacity-50 grayscale" alt="Placeholder">
+                    </div>
+                    <div class="hidden lg:block">
+                        <div class="text-sm font-bold text-rapid-navy leading-tight">Dr. Emmanuel</div>
+                        <div class="text-[10px] text-rapid-orange font-medium bg-rapid-orangeLight px-1.5 py-0.5 rounded inline-block mt-0.5">Setup In Progress</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Layout -->
+    <div class="flex-1 flex overflow-hidden relative z-10">
+        
+        <!-- Left Sidebar Navigation -->
+        <aside id="sidebar-nav" class="w-72 bg-white border-r border-slate-200 flex flex-col h-full flex-shrink-0">
+            <div class="p-6">
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 px-2">Main Menu</h3>
+                <nav class="space-y-1">
+                    <a href="#" class="flex items-center gap-3 px-3 py-2.5 bg-rapid-skyLight/50 text-rapid-skyDark font-bold rounded-xl border border-rapid-sky/20 transition-all">
+                        <i class="fa-solid fa-rocket w-5 text-center"></i>
+                        Setup Dashboard
+                    </a>
+                    <a href="#" class="flex items-center gap-3 px-3 py-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-all cursor-not-allowed opacity-60">
+                        <i class="fa-regular fa-calendar-check w-5 text-center"></i>
+                        Appointments
+                    </a>
+                    <a href="#" class="flex items-center gap-3 px-3 py-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-all cursor-not-allowed opacity-60">
+                        <i class="fa-solid fa-user-group w-5 text-center"></i>
+                        Patient Queue
+                    </a>
+                    <a href="#" class="flex items-center gap-3 px-3 py-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-all cursor-not-allowed opacity-60">
+                        <i class="fa-solid fa-wallet w-5 text-center"></i>
+                        Earnings
+                    </a>
+                </nav>
+
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mt-8 mb-4 px-2">Setup Steps</h3>
+                <div class="relative pl-2 space-y-0">
+                    <!-- Step 1 -->
+                    <div class="step-item relative pb-6 pl-8">
+                        <div class="step-connector bg-rapid-success"></div>
+                        <div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-rapid-success text-white flex items-center justify-center text-[10px] z-10 border-2 border-white shadow-sm">
+                            <i class="fa-solid fa-check"></i>
+                        </div>
+                        <div class="text-sm font-bold text-slate-500 line-through">Account Creation</div>
+                    </div>
+                    <!-- Step 2 -->
+                    <div class="step-item relative pb-6 pl-8">
+                        <div class="step-connector bg-rapid-success"></div>
+                        <div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-rapid-success text-white flex items-center justify-center text-[10px] z-10 border-2 border-white shadow-sm">
+                            <i class="fa-solid fa-check"></i>
+                        </div>
+                        <div class="text-sm font-bold text-slate-500 line-through">Quick Bio</div>
+                    </div>
+                    <!-- Step 3 -->
+                    <div class="step-item relative pb-6 pl-8">
+                        <div class="step-connector bg-rapid-success"></div>
+                        <div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-rapid-success text-white flex items-center justify-center text-[10px] z-10 border-2 border-white shadow-sm">
+                            <i class="fa-solid fa-check"></i>
+                        </div>
+                        <div class="text-sm font-bold text-slate-500 line-through">Setup Dashboard</div>
+                    </div>
+                    <!-- Step 4 -->
+                    <div class="step-item relative pb-6 pl-8">
+                        <div class="step-connector bg-rapid-success"></div>
+                        <div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-rapid-success text-white flex items-center justify-center text-[10px] z-10 border-2 border-white shadow-sm">
+                            <i class="fa-solid fa-check"></i>
+                        </div>
+                        <div class="text-sm font-bold text-slate-500 line-through">Profile Config</div>
+                    </div>
+                    <!-- Step 5 (Current) -->
+                    <div class="step-item relative pb-6 pl-8">
+                        <div class="step-connector bg-slate-200"></div>
+                        <div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-white border-2 border-rapid-sky text-rapid-sky flex items-center justify-center text-[10px] z-10 shadow-glow">
+                            <div class="w-2 h-2 bg-rapid-sky rounded-full"></div>
+                        </div>
+                        <div class="text-sm font-bold text-rapid-navy">Availability</div>
+                    </div>
+                    <!-- Step 6 -->
+                    <div class="step-item relative pb-6 pl-8">
+                        <div class="step-connector"></div>
+                        <div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-slate-100 border-2 border-slate-200 text-slate-400 flex items-center justify-center text-[10px] z-10">
+                            6
+                        </div>
+                        <div class="text-sm font-medium text-slate-400">Identity & Compliance</div>
+                    </div>
+                    <!-- Step 7 -->
+                    <div class="step-item relative pl-8">
+                        <div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-slate-100 border-2 border-slate-200 text-slate-400 flex items-center justify-center text-[10px] z-10">
+                            7
+                        </div>
+                        <div class="text-sm font-medium text-slate-400">Review & Activation</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Actions -->
+            <div class="mt-auto p-6 border-t border-slate-100">
+                <button class="w-full flex items-center justify-center gap-2 text-slate-500 hover:text-rapid-navy text-sm font-medium py-2 rounded-lg hover:bg-slate-50 transition-colors">
+                    <i class="fa-solid fa-gear"></i> Settings
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 flex flex-col bg-slate-50/50 overflow-hidden">
+            
+            <!-- Content Header -->
+            <div class="px-8 pt-8 pb-4 flex justify-between items-center">
+                <div>
+                    <h1 class="text-2xl font-display font-bold text-rapid-navy mb-1">Set Your Availability</h1>
+                    <p class="text-sm text-slate-500">Configure your working hours, time zones, and urgent slot preferences.</p>
+                </div>
+                <div class="flex gap-3">
+                    <button class="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors shadow-sm">
+                        <i class="fa-solid fa-calendar-week mr-2 text-slate-400"></i> Sync Google Calendar
+                    </button>
+                    <button class="px-4 py-2 bg-rapid-skyLight text-rapid-skyDark border border-rapid-sky/20 rounded-lg text-sm font-bold hover:bg-rapid-sky/20 transition-colors">
+                        <i class="fa-solid fa-wand-magic-sparkles mr-2"></i> Auto-Fill (AI)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Configuration Toolbar -->
+            <div class="px-8 pb-4">
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-wrap items-center gap-6">
+                    
+                    <!-- Timezone -->
+                    <div class="flex-1 min-w-[200px]">
+                        <label class="block text-xs font-bold text-slate-500 mb-1">Your Timezone</label>
+                        <div class="relative">
+                            <select class="w-full pl-8 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:border-rapid-sky font-medium appearance-none">
+                                <option>West Africa Time (GMT+1)</option>
+                                <option>Greenwich Mean Time (GMT+0)</option>
+                                <option>Eastern Standard Time (GMT-5)</option>
+                            </select>
+                            <i class="fa-solid fa-globe absolute left-2.5 top-2.5 text-slate-400 text-xs"></i>
+                            <i class="fa-solid fa-chevron-down absolute right-3 top-3 text-slate-400 text-xs pointer-events-none"></i>
+                        </div>
+                    </div>
+
+                    <!-- Slot Duration -->
+                    <div class="w-40">
+                        <label class="block text-xs font-bold text-slate-500 mb-1">Slot Duration</label>
+                        <div class="relative">
+                            <select class="w-full pl-8 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:border-rapid-sky font-medium appearance-none">
+                                <option>15 Min</option>
+                                <option selected>30 Min</option>
+                                <option>60 Min</option>
+                            </select>
+                            <i class="fa-regular fa-clock absolute left-2.5 top-2.5 text-slate-400 text-xs"></i>
+                            <i class="fa-solid fa-chevron-down absolute right-3 top-3 text-slate-400 text-xs pointer-events-none"></i>
+                        </div>
+                    </div>
+
+                    <!-- Buffer Time -->
+                    <div class="w-40">
+                        <label class="block text-xs font-bold text-slate-500 mb-1">Buffer Time</label>
+                        <div class="relative">
+                            <select class="w-full pl-8 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:border-rapid-sky font-medium appearance-none">
+                                <option>None</option>
+                                <option selected>5 Min</option>
+                                <option>10 Min</option>
+                                <option>15 Min</option>
+                            </select>
+                            <i class="fa-solid fa-hourglass-start absolute left-2.5 top-2.5 text-slate-400 text-xs"></i>
+                            <i class="fa-solid fa-chevron-down absolute right-3 top-3 text-slate-400 text-xs pointer-events-none"></i>
+                        </div>
+                    </div>
+
+                    <!-- AI Priority Toggle -->
+                    <div class="flex items-center gap-3 pl-6 border-l border-slate-200">
+                        <label class="switch">
+                            <input type="checkbox" checked>
+                            <span class="slider"></span>
+                        </label>
+                        <div>
+                            <div class="text-sm font-bold text-rapid-navy">AI Triage Priority</div>
+                            <div class="text-[10px] text-slate-500">Auto-open slots for urgent cases</div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Calendar & Summary Split -->
+            <div class="flex-1 flex overflow-hidden px-8 pb-24 gap-6">
+                
+                <!-- Main Calendar View -->
+                <div class="flex-1 bg-white rounded-2xl border border-slate-200 shadow-card flex flex-col overflow-hidden">
+                    <!-- Calendar Header -->
+                    <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                        <div class="flex items-center gap-4">
+                            <button class="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-500 hover:text-rapid-navy hover:border-rapid-sky transition-colors">
+                                <i class="fa-solid fa-chevron-left text-xs"></i>
+                            </button>
+                            <span class="text-sm font-bold text-rapid-navy">Oct 23 - Oct 29, 2023</span>
+                            <button class="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-500 hover:text-rapid-navy hover:border-rapid-sky transition-colors">
+                                <i class="fa-solid fa-chevron-right text-xs"></i>
+                            </button>
+                        </div>
+                        <div class="flex items-center gap-4 text-xs font-medium text-slate-500">
+                            <div class="flex items-center gap-2">
+                                <div class="w-3 h-3 rounded bg-rapid-skyLight border border-rapid-sky"></div> Available
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <div class="w-3 h-3 rounded bg-orange-100 border border-orange-400"></div> Urgent Priority
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <div class="w-3 h-3 rounded bg-slate-100 border border-slate-300"></div> Blocked
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Calendar Grid Container -->
+                    <div class="flex-1 overflow-y-auto relative">
+                        <div class="calendar-grid">
+                            <!-- Header Row -->
+                            <div class="day-header border-b border-r border-slate-200 bg-white sticky left-0 z-20">GMT+1</div>
+                            <div class="day-header border-b border-slate-200">Mon 23</div>
+                            <div class="day-header border-b border-slate-200">Tue 24</div>
+                            <div class="day-header border-b border-slate-200">Wed 25</div>
+                            <div class="day-header border-b border-slate-200">Thu 26</div>
+                            <div class="day-header border-b border-slate-200">Fri 27</div>
+                            <div class="day-header border-b border-slate-200 bg-slate-50 text-slate-400">Sat 28</div>
+                            <div class="day-header border-b border-slate-200 bg-slate-50 text-slate-400">Sun 29</div>
+
+                            <!-- Time Rows (Generated via Loop conceptually) -->
+                            <!-- 08:00 AM -->
+                            <div class="time-label border-r border-b border-slate-200 sticky left-0 z-10 bg-white">08:00</div>
+                            <div class="calendar-cell border-b border-r border-slate-100">
+                                <div class="slot slot-available top-1 h-[40px]" onclick="openSlotModal('Mon 23', '08:00 - 08:30')">Routine</div>
+                            </div>
+                            <div class="calendar-cell border-b border-r border-slate-100"></div>
+                            <div class="calendar-cell border-b border-r border-slate-100">
+                                <div class="slot slot-available top-1 h-[90px]" onclick="openSlotModal('Wed 25', '08:00 - 09:30')">Routine (Long)</div>
+                            </div>
+                            <div class="calendar-cell border-b border-r border-slate-100"></div>
+                            <div class="calendar-cell border-b border-r border-slate-100">
+                                <div class="slot slot-urgent top-1 h-[40px]" onclick="openSlotModal('Fri 27', '08:00 - 08:30')"><i class="fa-solid fa-bolt text-[8px] mr-1"></i>Urgent</div>
+                            </div>
+                            <div class="calendar-cell border-b border-r border-slate-100 bg-slate-50/30"></div>
+                            <div class="calendar-cell border-b border-slate-100 bg-slate-50/30"></div>
+
+                            <!-- 09:00 AM -->
+                            <div class="time-label border-r border-b border-slate-200 sticky left-0 z-10 bg-white">09:00</div>
+                            <div class="calendar-cell border-b border-r border-slate-100">
+                                <div class="slot slot-available top-1 h-[40px]">Routine</div>
+                            </div>
+                            <div class="calendar-cell border-b border-r border-slate-100">
+                                <div class="slot slot-blocked top-1 h-[90px]">Meeting</div>
+                            </div>
+                            <div class="calendar-cell border-b border-r border-slate-100"></div> <!-- Spanning from above -->
+                            <div class="calendar-cell border-b border-r border-slate-100"></div>
+                            <div class="calendar-cell border-b border-r border-slate-100"></div>
+                            <div class="calendar-cell border-b border-r border-slate-100 bg-slate-50/30"></div>
+                            <div class="calendar-cell border-b border-slate-100 bg-slate-50/30"></div>
+
+                            <!-- 10:00 AM -->
+                            <div class="time-label border-r border-b border-slate-200 sticky left-0 z-10 bg-white">10:00</div>
+                            <div class="calendar-cell border-b border-r border-slate-100"></div>
+                            <div class="calendar-cell border-b border-r border-slate-100"></div> <!-- Spanning from above -->
+                            <div class="calendar-cell border-b border-r border-slate-100">
+                                <div class="slot slot-urgent top-1 h-[40px]"><i class="fa-solid fa-bolt text-[8px] mr-1"></i>Urgent</div>
+                            </div>
+                            <div class="calendar-cell border-b border-r border-slate-100">
+                                <div class="slot slot-available top-1 h-[40px]">Routine</div>
+                            </div>
+                            <div class="calendar-cell border-b border-r border-slate-100"></div>
+                            <div class="calendar-cell border-b border-r border-slate-100 bg-slate-50/30"></div>
+                            <div class="calendar-cell border-b border-slate-100 bg-slate-50/30"></div>
+
+                            <!-- 11:00 AM -->
+                            <div class="time-label border-r border-b border-slate-200 sticky left-0 z-10 bg-white">11:00</div>
+                            <div class="calendar-cell border-b border-r border-slate-100">
+                                <div class="slot slot-available top-1 h-[40px]">Routine</div>
+                            </div>
+                            <div class="calendar-cell border-b border-r border-slate-100"></div>
+                            <div class="calendar-cell border-b border-r border-slate-100"></div>
+                            <div class="calendar-cell border-b border-r border-slate-100"></div>
+                            <div class="calendar-cell border-b border-r border-slate-100">
+                                <div class="slot slot-available top-1 h-[40px]">Routine</div>
+                            </div>
+                            <div class="calendar-cell border-b border-r border-slate-100 bg-slate-50/30"></div>
+                            <div class="calendar-cell border-b border-slate-100 bg-slate-50/30"></div>
+                            
+                            <!-- 12:00 PM -->
+                            <div class="time-label border-r border-b border-slate-200 sticky left-0 z-10 bg-white">12:00</div>
+                            <div class="calendar-cell border-b border-r border-slate-100 bg-slate-50/50 flex items-center justify-center text-[10px] text-slate-400 font-medium">Break</div>
+                            <div class="calendar-cell border-b border-r border-slate-100 bg-slate-50/50 flex items-center justify-center text-[10px] text-slate-400 font-medium">Break</div>
+                            <div class="calendar-cell border-b border-r border-slate-100 bg-slate-50/50 flex items-center justify-center text-[10px] text-slate-400 font-medium">Break</div>
+                            <div class="calendar-cell border-b border-r border-slate-100 bg-slate-50/50 flex items-center justify-center text-[10px] text-slate-400 font-medium">Break</div>
+                            <div class="calendar-cell border-b border-r border-slate-100 bg-slate-50/50 flex items-center justify-center text-[10px] text-slate-400 font-medium">Break</div>
+                            <div class="calendar-cell border-b border-r border-slate-100 bg-slate-50/50"></div>
+                            <div class="calendar-cell border-b border-slate-100 bg-slate-50/50"></div>
+
+                             <!-- 01:00 PM -->
+                             <div class="time-label border-r border-b border-slate-200 sticky left-0 z-10 bg-white">13:00</div>
+                             <div class="calendar-cell border-b border-r border-slate-100">
+                                 <div class="slot slot-available top-1 h-[40px]">Routine</div>
+                             </div>
+                             <div class="calendar-cell border-b border-r border-slate-100">
+                                 <div class="slot slot-available top-1 h-[40px]">Routine</div>
+                             </div>
+                             <div class="calendar-cell border-b border-r border-slate-100"></div>
+                             <div class="calendar-cell border-b border-r border-slate-100"></div>
+                             <div class="calendar-cell border-b border-r border-slate-100">
+                                 <div class="slot slot-urgent top-1 h-[40px]"><i class="fa-solid fa-bolt text-[8px] mr-1"></i>Urgent</div>
+                             </div>
+                             <div class="calendar-cell border-b border-r border-slate-100 bg-slate-50/30"></div>
+                             <div class="calendar-cell border-b border-slate-100 bg-slate-50/30"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Sidebar: Summary & Quick Actions -->
+                <div class="w-80 flex flex-col gap-6">
+                    
+                    <!-- Weekly Summary Chart -->
+                    <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-card">
+                        <h3 class="text-sm font-bold text-rapid-navy mb-4">Availability Summary</h3>
+                        <div id="availability-chart" class="h-[180px]"></div>
+                        <div class="mt-4 space-y-3">
+                            <div class="flex justify-between items-center text-xs">
+                                <span class="text-slate-500">Total Hours</span>
+                                <span class="font-bold text-rapid-navy">32 Hrs</span>
+                            </div>
+                            <div class="flex justify-between items-center text-xs">
+                                <span class="text-slate-500">Urgent Slots</span>
+                                <span class="font-bold text-rapid-orange">4 Hrs (12%)</span>
+                            </div>
+                            <div class="flex justify-between items-center text-xs">
+                                <span class="text-slate-500">Potential Earnings</span>
+                                <span class="font-bold text-green-600">₦ 480,000</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Vacation Mode -->
+                    <div class="bg-gradient-to-br from-rapid-navy to-slate-800 rounded-2xl p-5 text-white shadow-lg relative overflow-hidden">
+                        <div class="absolute top-0 right-0 p-3 opacity-10">
+                            <i class="fa-solid fa-plane-departure text-6xl"></i>
+                        </div>
+                        <h3 class="font-bold text-sm mb-2 relative z-10">Taking a Break?</h3>
+                        <p class="text-xs opacity-70 mb-4 relative z-10">Block out dates for vacation. We'll automatically notify your patients.</p>
+                        <button class="w-full py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-xs font-bold transition-all relative z-10">
+                            Add Vacation Block
+                        </button>
+                    </div>
+
+                    <!-- Recurring Patterns -->
+                    <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-card flex-1">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-sm font-bold text-rapid-navy">Recurring</h3>
+                            <button class="text-xs text-rapid-sky font-bold hover:underline">Edit</button>
+                        </div>
+                        <div class="space-y-3">
+                            <div class="flex items-start gap-3 p-3 bg-slate-50 rounded-lg border border-slate-100">
+                                <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs shrink-0">
+                                    <i class="fa-regular fa-clock"></i>
+                                </div>
+                                <div>
+                                    <div class="text-xs font-bold text-slate-700">Weekdays</div>
+                                    <div class="text-[10px] text-slate-500">08:00 - 17:00</div>
+                                    <div class="flex gap-1 mt-1">
+                                        <span class="w-4 h-4 rounded bg-rapid-sky text-white text-[8px] flex items-center justify-center">M</span>
+                                        <span class="w-4 h-4 rounded bg-rapid-sky text-white text-[8px] flex items-center justify-center">T</span>
+                                        <span class="w-4 h-4 rounded bg-rapid-sky text-white text-[8px] flex items-center justify-center">W</span>
+                                        <span class="w-4 h-4 rounded bg-rapid-sky text-white text-[8px] flex items-center justify-center">T</span>
+                                        <span class="w-4 h-4 rounded bg-rapid-sky text-white text-[8px] flex items-center justify-center">F</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Sticky Footer Action Bar -->
+    <div class="fixed bottom-0 left-0 w-full bg-white border-t border-slate-200 z-50 pl-72">
+        <div class="max-w-[1440px] mx-auto px-10 py-4 flex items-center justify-between">
+            <button class="text-slate-500 hover:text-slate-800 font-medium text-sm flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-slate-50 transition-colors">
+                Save as Draft
+            </button>
+            <div class="flex items-center gap-4">
+                <span class="text-xs text-slate-400 hidden md:block">Next: Identity & Compliance</span>
+                <button class="bg-rapid-orange text-white font-bold text-sm px-8 py-3 rounded-xl hover:bg-rapid-orangeDark shadow-lg shadow-orange-100 hover:shadow-orange-200 transition-all flex items-center gap-2">
+                    Save Availability <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Slot Modal (Hidden by default) -->
+    <div id="slot-modal" class="fixed inset-0 z-[60] hidden">
+        <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" onclick="closeSlotModal()"></div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 transform transition-all scale-100">
+            <div class="flex justify-between items-start mb-6">
+                <div>
+                    <h3 class="text-lg font-bold text-rapid-navy">Edit Availability</h3>
+                    <p id="modal-time-label" class="text-xs text-slate-500">Mon 23 • 08:00 - 08:30</p>
+                </div>
+                <button onclick="closeSlotModal()" class="text-slate-400 hover:text-slate-600">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="space-y-4 mb-6">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-2">Slot Type</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <label class="cursor-pointer">
+                            <input type="radio" name="slotType" class="peer sr-only" checked>
+                            <div class="px-4 py-2 rounded-lg border border-slate-200 text-center text-sm text-slate-600 peer-checked:bg-rapid-skyLight peer-checked:border-rapid-sky peer-checked:text-rapid-skyDark transition-all">
+                                Routine
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="slotType" class="peer sr-only">
+                            <div class="px-4 py-2 rounded-lg border border-slate-200 text-center text-sm text-slate-600 peer-checked:bg-orange-50 peer-checked:border-orange-400 peer-checked:text-orange-600 transition-all">
+                                <i class="fa-solid fa-bolt mr-1"></i> Urgent
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-2">Recurrence</label>
+                    <select class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:border-rapid-sky">
+                        <option>This slot only</option>
+                        <option>Every Monday</option>
+                        <option>Every Weekday</option>
+                    </select>
+                </div>
+                
+                <div class="p-3 bg-yellow-50 border border-yellow-100 rounded-lg flex gap-2">
+                    <i class="fa-solid fa-triangle-exclamation text-yellow-500 text-xs mt-0.5"></i>
+                    <p class="text-[10px] text-yellow-700 leading-tight">
+                        Changing this slot might affect existing draft appointments.
+                    </p>
+                </div>
+            </div>
+
+            <div class="flex gap-3">
+                <button class="flex-1 py-2.5 bg-white border border-red-200 text-red-500 text-sm font-bold rounded-xl hover:bg-red-50 transition-colors">
+                    Remove Slot
+                </button>
+                <button onclick="closeSlotModal()" class="flex-1 py-2.5 bg-rapid-sky text-white text-sm font-bold rounded-xl hover:bg-rapid-skyDark shadow-lg shadow-sky-100 transition-colors">
+                    Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Modal Logic
+        function openSlotModal(date, time) {
+            document.getElementById('modal-time-label').innerText = `${date} • ${time}`;
+            document.getElementById('slot-modal').classList.remove('hidden');
+        }
+
+        function closeSlotModal() {
+            document.getElementById('slot-modal').classList.add('hidden');
+        }
+
+        // Chart Logic
+        window.addEventListener('load', function() {
+            try {
+                var data = [{
+                    values: [28, 4],
+                    labels: ['Routine', 'Urgent'],
+                    type: 'pie',
+                    marker: {
+                        colors: ['#4FC3F7', '#FF9800']
+                    },
+                    textinfo: 'none',
+                    hole: .6
+                }];
+
+                var layout = {
+                    height: 180,
+                    margin: { t: 0, r: 0, b: 0, l: 0 },
+                    showlegend: false,
+                    paper_bgcolor: 'rgba(0,0,0,0)',
+                    plot_bgcolor: 'rgba(0,0,0,0)'
+                };
+
+                var config = {responsive: true, displayModeBar: false};
+                Plotly.newPlot('availability-chart', data, layout, config);
+            } catch(e) {
+                console.error("Chart error:", e);
+            }
+        });
+    </script>
+</body>
+</html>

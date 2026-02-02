@@ -256,13 +256,60 @@ export class Appointment {
   @Prop(
     raw([
       {
+        // Existing fields (backward compatible)
         note_id: { type: String },
-        content: { type: String },
+        content: { type: String }, // Auto-generated summary for legacy systems
         created_at: { type: Date, default: () => new Date() },
         updated_at: { type: Date },
         completed: { type: Boolean, default: false },
         created_by: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
         platform: { type: String, default: 'custom' }, // 'zoom', 'custom'
+
+        // New structured fields
+        chief_complaint: { type: String },
+        history_of_present_illness: { type: String },
+
+        physical_examination: {
+          general_appearance: { type: String }, // Well-appearing, Ill-appearing, In distress, Alert and oriented
+          level_of_consciousness: { type: String }, // Alert, Drowsy, Confused, Unresponsive
+          vital_signs: {
+            blood_pressure: { type: String }, // "120/80"
+            pulse: { type: Number },
+            temperature: { type: Number },
+            temperature_unit: { type: String, enum: ['C', 'F'], default: 'C' },
+            respiratory_rate: { type: Number },
+          },
+          additional_findings: { type: String },
+        },
+
+        assessment_diagnosis: {
+          primary_diagnosis: { type: String }, // ICD-10 code or text
+          differential_diagnosis: { type: String },
+          clinical_impression: { type: String },
+        },
+
+        treatment_plan: {
+          medications_prescribed: [
+            {
+              name: { type: String },
+              dosage: { type: String },
+              frequency: { type: String },
+              duration: { type: String },
+              instructions: { type: String },
+            },
+          ],
+          lab_tests_ordered: { type: String },
+          patient_instructions: { type: String },
+          follow_up_required: { type: String }, // Yes - Schedule appointment, No follow-up needed, As needed basis, Urgent follow-up required
+          follow_up_timeframe: { type: String }, // 1 week, 2 weeks, 1 month, 3 months, 6 months
+        },
+
+        additional_notes: { type: String },
+
+        // Metadata
+        is_draft: { type: Boolean, default: true },
+        confirmed_accurate: { type: Boolean, default: false },
+        version: { type: Number, default: 1 },
       },
     ]),
   )
@@ -358,8 +405,116 @@ export class Appointment {
   @Prop({ type: Number })
   duration_minutes: number;
 
+  // New fields for specialist appointment creation
+  @Prop({ type: String })
+  appointment_type_name: string;
+
+  @Prop({ type: Number, default: 500 })
+  platform_fee: number;
+
+  @Prop({ type: Number })
+  total_amount: number;
+
+  @Prop({
+    type: String,
+    enum: ['specialist_wallet', 'patient_wallet', 'card'],
+    default: 'patient_wallet',
+  })
+  payment_source: string;
+
+  @Prop({ type: [String], default: [] })
+  clinical_flags: string[];
+
+  // Escrow tracking for appointment payments
+  @Prop(
+    raw({
+      status: {
+        type: String,
+        enum: ['none', 'held', 'refunded', 'settled'],
+        default: 'none',
+      },
+      hold_batch_id: { type: String },
+      settlement_batch_id: { type: String },
+      held_at: { type: Date },
+      settled_at: { type: Date },
+      refunded_at: { type: Date },
+      settlement_type: { type: String, enum: ['completed', 'no_show', 'cancelled'] },
+      consultation_fee_settled: { type: Number },
+      platform_fee_settled: { type: Number },
+    }),
+  )
+  escrow: {
+    status: 'none' | 'held' | 'refunded' | 'settled';
+    hold_batch_id?: string;
+    settlement_batch_id?: string;
+    held_at?: Date;
+    settled_at?: Date;
+    refunded_at?: Date;
+    settlement_type?: 'completed' | 'no_show' | 'cancelled';
+    consultation_fee_settled?: number;
+    platform_fee_settled?: number;
+  };
+
+  @Prop(
+    raw({
+      email: {
+        enabled: { type: Boolean, default: true },
+        timing: { type: String, default: '24h' },
+      },
+      sms: {
+        enabled: { type: Boolean, default: true },
+        timing: { type: String, default: '1h' },
+      },
+    }),
+  )
+  reminder_settings: {
+    email: { enabled: boolean; timing: string };
+    sms: { enabled: boolean; timing: string };
+  };
+
+  @Prop(
+    raw({
+      platform: { type: String },
+      auto_generate_link: { type: Boolean, default: true },
+      enable_waiting_room: { type: Boolean, default: true },
+      record_session: { type: Boolean, default: false },
+    }),
+  )
+  video_settings: {
+    platform?: string;
+    auto_generate_link?: boolean;
+    enable_waiting_room?: boolean;
+    record_session?: boolean;
+  };
+
+  @Prop(
+    raw([
+      {
+        name: { type: String },
+        url: { type: String },
+        type: { type: String },
+        size: { type: Number },
+      },
+    ]),
+  )
+  attachments: Array<{
+    name: string;
+    url: string;
+    type?: string;
+    size?: number;
+  }>;
+
   @Prop({ type: Date })
   rescheduled_at: Date;
+
+  @Prop({ type: String })
+  reschedule_reason: string;
+
+  @Prop({ type: Boolean, default: false })
+  email_reminder_sent: boolean;
+
+  @Prop({ type: Boolean, default: false })
+  sms_reminder_sent: boolean;
 }
 const AppointmentSchema = SchemaFactory.createForClass(Appointment);
 AppointmentSchema.pre('find', function (next) {

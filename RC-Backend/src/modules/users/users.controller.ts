@@ -30,6 +30,7 @@ import { CreateCertificationsDto } from './dto/create-certifications.dto';
 import { FileUploadHelper } from '../../common/helpers/file-upload.helpers';
 import { BasicHealthScoreService } from '../basic-health-score/basic-health-score.service';
 import { ScoreChangeTrigger } from '../basic-health-score/entities/basic-health-score-history.entity';
+import { UpdateIdentityVerificationDto } from './dto/update-identity-verification.dto';
 
 @Controller('users')
 export class UsersController {
@@ -131,6 +132,20 @@ export class UsersController {
     return sendSuccessResponse(Messages.CREATED, result);
   }
 
+  // Identity Verification PATCH - MUST be before :id route
+  @UseGuards(JwtAuthGuard)
+  @Patch('identity-verification')
+  async updateIdentityVerification(
+    @Body() updateIdentityVerificationDto: UpdateIdentityVerificationDto,
+    @Request() req,
+  ) {
+    const result = await this.usersService.updateIdentityVerification(
+      req.user.sub,
+      updateIdentityVerificationDto,
+    );
+    return sendSuccessResponse(Messages.UPDATED, result);
+  }
+
   @UseGuards(JwtAuthGuard)
   @Patch(':id')
   async updateUser(
@@ -173,10 +188,29 @@ export class UsersController {
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
+  // Identity Verification GET - MUST be before :id route
+  @UseGuards(JwtAuthGuard)
+  @Get('identity-verification')
+  async getIdentityVerification(@Request() req) {
+    const result = await this.usersService.getIdentityVerification(req.user.sub);
+    return sendSuccessResponse(Messages.RETRIEVED, result);
+  }
+
   @UseGuards(JwtAuthGuard)
   @Get(':id')
   async getUser(@Param('id') id: Types.ObjectId) {
-    const result = await this.usersService.findOne({ _id: id });
+    const result: any = await this.usersService.findOne({ _id: id });
+    // Presign profile photo if stored as S3 URL/key
+    if (result?.profile?.profile_photo) {
+      try {
+        result.profile.profile_photo = await this.fileUploadHelper.resolveProfileImage(result.profile.profile_photo);
+      } catch (e) {}
+    }
+    if (result?.profile?.profile_image) {
+      try {
+        result.profile.profile_image = await this.fileUploadHelper.resolveProfileImage(result.profile.profile_image);
+      } catch (e) {}
+    }
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 

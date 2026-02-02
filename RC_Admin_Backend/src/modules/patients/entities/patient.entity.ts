@@ -302,6 +302,12 @@ export class User {
 
   @Prop({ type: Boolean, default: false })
   enable_claude_health_summary: boolean;
+
+  @Prop({ type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Language' }], default: [] })
+  languages: mongoose.Types.ObjectId[];
+
+  @Prop({ type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'SpecialistCategory' }], default: [] })
+  specialist_categories: mongoose.Types.ObjectId[];
 }
 
 const UserSchema = SchemaFactory.createForClass(User);

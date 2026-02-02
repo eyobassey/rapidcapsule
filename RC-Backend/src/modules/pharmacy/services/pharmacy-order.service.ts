@@ -1609,11 +1609,11 @@ export class PharmacyOrderService {
     // Use order's actual total amount for payment (ignore frontend amount mismatch)
     const paymentAmount = order.total_amount;
 
-    // Check wallet balance against order total
-    const wallet = await this.walletsService.getUserWallet(userId);
-    if (wallet.available_balance < paymentAmount) {
+    // Check wallet balance against order total (supports both legacy and unified wallets)
+    const earnings = await this.walletsService.getUserEarnings(userId);
+    if (earnings.currentBalance < paymentAmount) {
       throw new BadRequestException(
-        `Insufficient wallet balance. Required: ${paymentAmount}, Available: ${wallet.available_balance}`,
+        `Insufficient wallet balance. Required: ${paymentAmount}, Available: ${earnings.currentBalance}`,
       );
     }
 
@@ -1685,8 +1685,8 @@ export class PharmacyOrderService {
     // Debit wallet if paying with wallet
     let newBalance = 0;
     if (paymentDto.wallet_amount > 0) {
-      const wallet = await this.walletsService.getUserWallet(userId);
-      if (wallet.available_balance < paymentDto.wallet_amount) {
+      const earnings = await this.walletsService.getUserEarnings(userId);
+      if (earnings.currentBalance < paymentDto.wallet_amount) {
         throw new BadRequestException('Insufficient wallet balance');
       }
 

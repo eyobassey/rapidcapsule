@@ -1,0 +1,269 @@
+// Specialist Portal Color Palette
+// Matches Appointmentsv2 color system for consistency
+
+$sp-sky: #4FC3F7;
+$sp-sky-light: #E1F5FE;
+$sp-sky-dark: #0288D1;
+$sp-orange: #FF9800;
+$sp-orange-light: #FFF3E0;
+$sp-orange-dark: #F57C00;
+$sp-navy: #1A365D;
+$sp-gray-bg: #F5F9FF;
+$sp-success: #4CAF50;
+$sp-error: #EF4444;
+$sp-border: #E2E8F0;
+$sp-text: #334155;
+
+// CSS Custom Properties for Vue components
+:root {
+  --sp-sky: #{$sp-sky};
+  --sp-sky-light: #{$sp-sky-light};
+  --sp-sky-dark: #{$sp-sky-dark};
+  --sp-orange: #{$sp-orange};
+  --sp-orange-light: #{$sp-orange-light};
+  --sp-orange-dark: #{$sp-orange-dark};
+  --sp-navy: #{$sp-navy};
+  --sp-gray-bg: #{$sp-gray-bg};
+  --sp-success: #{$sp-success};
+  --sp-error: #{$sp-error};
+  --sp-border: #{$sp-border};
+  --sp-text: #{$sp-text};
+}
+
+// Shadow utilities
+$shadow-soft: 0 4px 20px -2px rgba(79, 195, 247, 0.15);
+$shadow-card: 0 10px 30px -5px rgba(0, 0, 0, 0.05);
+$shadow-glow: 0 0 15px rgba(79, 195, 247, 0.3);
+$shadow-input-focus: 0 0 0 4px rgba(79, 195, 247, 0.2);
+
+// Font families
+$font-sans: 'Inter', system-ui, sans-serif;
+$font-display: 'Poppins', system-ui, sans-serif;
+
+// Mixins
+@mixin card-base {
+  background: white;
+  border: 1px solid $sp-border;
+  border-radius: 1rem;
+  box-shadow: $shadow-card;
+}
+
+@mixin input-focus {
+  outline: none;
+  border-color: $sp-sky;
+  box-shadow: $shadow-input-focus;
+}
+
+@mixin button-primary {
+  background: $sp-orange;
+  color: white;
+  font-weight: 700;
+  padding: 0.75rem 2rem;
+  border-radius: 0.75rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3);
+
+  &:hover {
+    background: $sp-orange-dark;
+    box-shadow: 0 6px 16px rgba(255, 152, 0, 0.4);
+  }
+
+  &:disabled {
+    background: #CBD5E1;
+    color: #94A3B8;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+}
+
+@mixin button-secondary {
+  background: white;
+  color: $sp-text;
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid $sp-border;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: #F8FAFC;
+    border-color: $sp-sky;
+    color: $sp-sky-dark;
+  }
+}
+
+// Step connector styles
+.step-connector {
+  position: absolute;
+  top: 24px;
+  left: 15px;
+  bottom: -24px;
+  width: 2px;
+  background-color: $sp-border;
+  z-index: 0;
+
+  &.completed {
+    background-color: $sp-success;
+  }
+}
+
+.step-item:last-child .step-connector {
+  display: none;
+}
+
+// Progress ring animation
+.progress-ring__circle {
+  transition: stroke-dashoffset 0.35s;
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+}
+
+// Custom scrollbar
+.sp-scrollbar {
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: #f1f1f1;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+
+    &:hover {
+      background: #94a3b8;
+    }
+  }
+}
+
+// Toggle switch styles
+.sp-toggle {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+
+  input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #cbd5e1;
+    transition: 0.4s;
+    border-radius: 34px;
+
+    &:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: 0.4s;
+      border-radius: 50%;
+    }
+  }
+
+  input:checked + .slider {
+    background-color: $sp-sky;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(20px);
+  }
+}
+
+// Drag & drop zone
+.sp-drag-drop-zone {
+  background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='16' ry='16' stroke='%23CBD5E1FF' stroke-width='2' stroke-dasharray='12%2c 12' stroke-dashoffset='0' stroke-linecap='square'/%3e%3c/svg%3e");
+  transition: all 0.3s ease;
+
+  &:hover,
+  &.drag-active {
+    background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='16' ry='16' stroke='%234FC3F7FF' stroke-width='2' stroke-dasharray='12%2c 12' stroke-dashoffset='0' stroke-linecap='square'/%3e%3c/svg%3e");
+    background-color: rgba(79, 195, 247, 0.05);
+  }
+}
+
+// Status badge styles
+.sp-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  border-radius: 9999px;
+
+  &--pending {
+    background: #FEF3C7;
+    color: #92400E;
+    border: 1px solid #FCD34D;
+  }
+
+  &--verified {
+    background: #D1FAE5;
+    color: #065F46;
+    border: 1px solid #6EE7B7;
+  }
+
+  &--rejected {
+    background: #FEE2E2;
+    color: #991B1B;
+    border: 1px solid #FCA5A5;
+  }
+
+  &--active {
+    background: $sp-sky-light;
+    color: $sp-sky-dark;
+    border: 1px solid rgba($sp-sky, 0.3);
+  }
+
+  &--locked {
+    background: #F1F5F9;
+    color: #64748B;
+    border: 1px solid #E2E8F0;
+  }
+}
+
+// Animation keyframes
+@keyframes pulse-border {
+  0% { box-shadow: 0 0 0 0 rgba(255, 152, 0, 0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(255, 152, 0, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 152, 0, 0); }
+}
+
+@keyframes pulse-scan {
+  0% { transform: translateY(-100%); opacity: 0; }
+  50% { opacity: 1; }
+  100% { transform: translateY(100%); opacity: 0; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.sp-action-pulse {
+  animation: pulse-border 2s infinite;
+}
+
+.sp-float {
+  animation: float 6s ease-in-out infinite;
+}

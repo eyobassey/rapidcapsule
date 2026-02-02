@@ -23,6 +23,18 @@ export class HealthCheckupService {
     private healthCheckupModel: Model<HealthCheckupDocument>,
   ) {}
 
+  /**
+   * Batch check which patients have at least one health checkup
+   */
+  async getPatientsWithCheckups(patientIds: Types.ObjectId[]): Promise<Set<string>> {
+    if (!patientIds.length) return new Set();
+    const results = await this.healthCheckupModel.aggregate([
+      { $match: { user: { $in: patientIds } } },
+      { $group: { _id: '$user' } },
+    ]);
+    return new Set(results.map((r: any) => r._id.toString()));
+  }
+
   // Create a new Infermedica instance for each health checkup session
   private createInfermedicaInstance(interviewId?: string) {
     return new Infermedica(interviewId);

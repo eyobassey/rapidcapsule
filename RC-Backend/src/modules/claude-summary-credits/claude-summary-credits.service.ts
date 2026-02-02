@@ -256,10 +256,10 @@ export class ClaudeSummaryCreditsService {
       ? `${user.profile.first_name} ${user.profile.last_name || ''}`.trim()
       : 'Valued Customer';
 
-    // Check wallet balance and debit
-    const wallet = await this.walletsService.getUserWallet(userIdObj);
-    const walletBalanceBefore = wallet.available_balance;
-    if (wallet.available_balance < plan.price) {
+    // Check wallet balance (supports both legacy and unified wallets)
+    const earnings = await this.walletsService.getUserEarnings(userIdObj);
+    const walletBalanceBefore = earnings.currentBalance;
+    if (earnings.currentBalance < plan.price) {
       throw new BadRequestException('Insufficient wallet balance');
     }
 

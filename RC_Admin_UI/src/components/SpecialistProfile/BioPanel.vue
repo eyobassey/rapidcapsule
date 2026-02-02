@@ -1,7 +1,11 @@
 <script setup>
+import { ref, computed, onMounted, watch } from 'vue'
 import {
   avatarText,
 } from '@core/utils/formatters'
+import { useLanguagesStore } from '@/stores/languages'
+import { useSpecialistCategoriesStore } from '@/stores/specialist-categories'
+import { useSpecialistStore } from '@/stores/specialist'
 
 const props = defineProps({
   userData: {
@@ -12,13 +16,29 @@ const props = defineProps({
 
 const emit = defineEmits(['update:userData'])
 
+const languagesStore = useLanguagesStore()
+const categoriesStore = useSpecialistCategoriesStore()
+const specialistStore = useSpecialistStore()
+
 const isUserInfoEditDialogVisible = ref(false)
+const isLanguagesCategoriesDialogVisible = ref(false)
+const savingLanguagesCategories = ref(false)
+
 const editForm = ref({
   category: '',
   specialization: '',
   years_of_experience: '',
   consultation_fee: '',
 })
+
+const languagesCategoriesForm = ref({
+  selectedLanguages: [],
+  selectedCategories: [],
+})
+
+// Current assignments from the specialist
+const currentLanguages = ref([])
+const currentCategories = ref([])
 
 const specialistCategories = [
   'General Practitioner',
@@ -28,6 +48,47 @@ const specialistCategories = [
   'Nurse',
   'Physiotherapist',
 ]
+
+// Computed for dropdown items
+const languageOptions = computed(() => {
+  return languagesStore.languages.map(l => ({
+    title: l.name,
+    value: l._id,
+  }))
+})
+
+const categoryOptions = computed(() => {
+  return categoriesStore.categories.map(c => ({
+    title: c.name,
+    value: c._id,
+  }))
+})
+
+// Load languages and categories on mount
+onMounted(async () => {
+  await Promise.all([
+    languagesStore.fetchLanguages({ limit: 100 }),
+    categoriesStore.fetchCategories({ limit: 100 }),
+  ])
+  await loadSpecialistAssignments()
+})
+
+// Watch for userData changes to reload assignments
+watch(() => props.userData?._id, async () => {
+  if (props.userData?._id) {
+    await loadSpecialistAssignments()
+  }
+})
+
+const loadSpecialistAssignments = async () => {
+  if (!props.userData?._id) return
+
+  const data = await specialistStore.getSpecialistLanguagesAndCategories(props.userData._id)
+  if (data) {
+    currentLanguages.value = data.languages || []
+    currentCategories.value = data.specialist_categories || []
+  }
+}
 
 const openEditDialog = () => {
   editForm.value = {
@@ -40,10 +101,37 @@ const openEditDialog = () => {
   isUserInfoEditDialogVisible.value = true
 }
 
+const openLanguagesCategoriesDialog = () => {
+  languagesCategoriesForm.value = {
+    selectedLanguages: currentLanguages.value.map(l => l._id),
+    selectedCategories: currentCategories.value.map(c => c._id),
+  }
+  isLanguagesCategoriesDialogVisible.value = true
+}
+
 const saveChanges = async () => {
   // Emit update event to parent
   emit('update:userData', editForm.value)
   isUserInfoEditDialogVisible.value = false
+}
+
+const saveLanguagesCategories = async () => {
+  if (!props.userData?._id) return
+
+  savingLanguagesCategories.value = true
+  try {
+    const [langResult, catResult] = await Promise.all([
+      specialistStore.assignLanguages(props.userData._id, languagesCategoriesForm.value.selectedLanguages),
+      specialistStore.assignCategories(props.userData._id, languagesCategoriesForm.value.selectedCategories),
+    ])
+
+    if (langResult !== 'error' && catResult !== 'error') {
+      await loadSpecialistAssignments()
+      isLanguagesCategoriesDialogVisible.value = false
+    }
+  } finally {
+    savingLanguagesCategories.value = false
+  }
 }
 
 const resolveUserStatusVariant = stat => {
@@ -251,6 +339,65 @@ const resolveUserRoleVariant = role => {
           </VList>
           <VDivider class="my-4" />
 
+          <!-- 👉 Languages & Specialist Categories -->
+          <VList class="card-list mt-2">
+            <div class="d-flex justify-space-between align-center mb-4">
+              <h6 class="text-body-1 text-medium-emphasis mt-2">
+                Languages & Specialist Categories
+              </h6>
+              <VBtn
+                size="small"
+                variant="outlined"
+                color="primary"
+                @click="openLanguagesCategoriesDialog"
+              >
+                Edit
+              </VBtn>
+            </div>
+            <VListItem>
+              <VListItemTitle>
+                <span class="font-weight-medium">Languages:</span>
+              </VListItemTitle>
+              <div class="mt-2">
+                <VChip
+                  v-for="lang in currentLanguages"
+                  :key="lang._id"
+                  size="small"
+                  color="primary"
+                  variant="tonal"
+                  class="me-2 mb-2"
+                >
+                  {{ lang.name }}
+                </VChip>
+                <span v-if="currentLanguages.length === 0" class="text-medium-emphasis">
+                  No languages assigned
+                </span>
+              </div>
+            </VListItem>
+            <VListItem>
+              <VListItemTitle>
+                <span class="font-weight-medium">Specialist Categories:</span>
+              </VListItemTitle>
+              <div class="mt-2">
+                <VChip
+                  v-for="cat in currentCategories"
+                  :key="cat._id"
+                  size="small"
+                  color="info"
+                  variant="tonal"
+                  class="me-2 mb-2"
+                >
+                  {{ cat.name }}
+                </VChip>
+                <span v-if="currentCategories.length === 0" class="text-medium-emphasis">
+                  No categories assigned
+                </span>
+              </div>
+            </VListItem>
+          </VList>
+
+          <VDivider class="my-4" />
+
           <!-- 👉 Earnings list -->
           <VList class="card-list mt-2">
             <h6 class="text-body-1 text-medium-emphasis mt-2 mb-4">
@@ -377,6 +524,70 @@ const resolveUserRoleVariant = role => {
           <VBtn
             color="success"
             @click="saveChanges"
+          >
+            Save Changes
+          </VBtn>
+        </VCardActions>
+      </VCard>
+    </VDialog>
+
+    <!-- 👉 Edit Languages & Categories Dialog -->
+    <VDialog
+      v-model="isLanguagesCategoriesDialogVisible"
+      max-width="600"
+    >
+      <VCard title="Edit Languages & Specialist Categories">
+        <VCardText>
+          <VForm @submit.prevent="saveLanguagesCategories">
+            <VRow>
+              <VCol cols="12">
+                <VSelect
+                  v-model="languagesCategoriesForm.selectedLanguages"
+                  label="Languages Spoken"
+                  :items="languageOptions"
+                  item-title="title"
+                  item-value="value"
+                  multiple
+                  chips
+                  closable-chips
+                  density="compact"
+                  hint="Select all languages this specialist speaks"
+                  persistent-hint
+                />
+              </VCol>
+
+              <VCol cols="12">
+                <VSelect
+                  v-model="languagesCategoriesForm.selectedCategories"
+                  label="Specialist Categories"
+                  :items="categoryOptions"
+                  item-title="title"
+                  item-value="value"
+                  multiple
+                  chips
+                  closable-chips
+                  density="compact"
+                  hint="Select all specialist categories this specialist belongs to"
+                  persistent-hint
+                />
+              </VCol>
+            </VRow>
+          </VForm>
+        </VCardText>
+
+        <VCardActions>
+          <VSpacer />
+          <VBtn
+            color="error"
+            variant="outlined"
+            @click="isLanguagesCategoriesDialogVisible = false"
+          >
+            Cancel
+          </VBtn>
+          <VBtn
+            color="success"
+            :loading="savingLanguagesCategories"
+            @click="saveLanguagesCategories"
           >
             Save Changes
           </VBtn>

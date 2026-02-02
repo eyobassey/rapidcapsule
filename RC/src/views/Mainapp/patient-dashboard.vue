@@ -27,6 +27,64 @@
 				</div>
 			</div>
 
+			<!-- Profile Completion Banner -->
+			<section v-if="showProfileBanner" class="profile-completion-banner" :class="{ 'profile-completion-banner--complete': profileProgress >= 100 }">
+				<div class="banner-header">
+					<div class="banner-info">
+						<h2 class="banner-title">{{ profileProgress >= 100 ? 'Profile Complete!' : 'Complete Your Profile' }}</h2>
+						<p class="banner-subtitle">{{ profileProgress >= 100 ? 'Great job! Your health profile is up to date.' : 'Add optional details for better care recommendations' }}</p>
+					</div>
+					<div class="banner-progress">
+						<div class="progress-ring-container" :class="{ 'progress-ring-container--complete': profileProgress >= 100 }">
+							<svg class="progress-ring" viewBox="0 0 60 60">
+								<circle class="progress-ring__bg" cx="30" cy="30" r="26" />
+								<circle
+									class="progress-ring__progress"
+									:class="{ 'progress-ring__progress--complete': profileProgress >= 100 }"
+									cx="30" cy="30" r="26"
+									:style="{ strokeDashoffset: profileProgressOffset }"
+								/>
+							</svg>
+							<span class="progress-percent" :class="{ 'progress-percent--complete': profileProgress >= 100 }">
+								<v-icon v-if="profileProgress >= 100" name="hi-check" scale="1" />
+								<template v-else>{{ profileProgress }}%</template>
+							</span>
+						</div>
+					</div>
+					<button class="banner-dismiss" @click="dismissProfileBanner" title="Dismiss">
+						<v-icon name="hi-x" scale="0.9" />
+					</button>
+				</div>
+				<!-- Show incomplete steps if not 100% -->
+				<div v-if="profileProgress < 100" class="incomplete-steps">
+					<router-link
+						v-for="step in incompleteProfileSteps"
+						:key="step.key"
+						:to="step.route"
+						class="step-card"
+					>
+						<div class="step-card__icon" :style="{ background: step.color }">
+							<v-icon :name="step.icon" scale="0.9" />
+						</div>
+						<div class="step-card__content">
+							<h4>{{ step.title }}</h4>
+							<p>{{ step.description }}</p>
+						</div>
+						<div class="step-card__arrow">
+							<v-icon name="hi-arrow-right" scale="0.8" />
+						</div>
+					</router-link>
+				</div>
+				<!-- Show success message if 100% -->
+				<div v-else class="complete-message">
+					<p>Your specialists will have all the information they need to provide you with the best care.</p>
+				</div>
+				<router-link to="/app/patient/onboarding" class="banner-cta">
+					<v-icon name="hi-clipboard-list" scale="0.9" />
+					{{ profileProgress >= 100 ? 'View or Update Health Profile' : 'View All Health Profile Steps' }}
+				</router-link>
+			</section>
+
 			<!-- Quick Actions -->
 			<section class="quick-actions">
 				<div class="section-header">
@@ -723,6 +781,9 @@ export default {
 				"Blood Sugar Level": { min: 70, max: 100, unit: "mg/dL" },
 				"Blood Pressure": { systolic: { min: 90, max: 120 }, diastolic: { min: 60, max: 80 } },
 			},
+
+			// Profile completion banner
+			profileBannerDismissed: false,
 		};
 	},
 
@@ -893,6 +954,108 @@ export default {
 			}
 			return !this.hasPremiumScore && this.healthScoreData.isComplete;
 		},
+
+		// Profile completion banner computed properties
+		profileSteps() {
+			const profile = this.userProfile?.profile || {};
+			const hasHeight = profile?.basic_health_info?.height?.value > 0;
+			const hasWeight = profile?.basic_health_info?.weight?.value > 0;
+			const hasBloodType = !!profile?.blood_type;
+			// Emergency contacts are at root level, not inside profile
+			const hasEmergencyContact = this.userProfile?.emergency_contacts?.length > 0;
+			// Address is stored in profile.contact, not profile.address
+			const hasAddress = !!(profile?.contact?.state || profile?.contact?.country || profile?.contact?.address1);
+			// Check allergies at root level
+			const userAllergies = this.userProfile?.allergies;
+			const hasAllergies = userAllergies?.has_allergies !== undefined && userAllergies?.has_allergies !== null;
+			// Check medical history at root level
+			const medicalHistory = this.userProfile?.medical_history;
+			const hasMedicalHistory = !!(
+				medicalHistory?.chronic_conditions?.length > 0 ||
+				medicalHistory?.current_medications?.length > 0 ||
+				medicalHistory?.past_surgeries?.length > 0 ||
+				medicalHistory?.lifestyle?.smoking ||
+				medicalHistory?.lifestyle?.alcohol
+			);
+
+			return [
+				{
+					key: 'personalDetails',
+					title: 'Personal Details',
+					description: 'Basic info and health data',
+					icon: 'hi-user',
+					color: '#4FC3F7',
+					route: '/app/patient/onboarding/personal-details',
+					completed: hasHeight && hasWeight,
+					required: true,
+				},
+				{
+					key: 'addressEmergency',
+					title: 'Address & Emergency',
+					description: 'Contact information',
+					icon: 'hi-location-marker',
+					color: '#81C784',
+					route: '/app/patient/onboarding/address-emergency',
+					completed: hasAddress && hasEmergencyContact,
+					required: true,
+				},
+				{
+					key: 'vitalsMetrics',
+					title: 'Vitals & Metrics',
+					description: 'Health measurements',
+					icon: 'hi-heart',
+					color: '#FF8A65',
+					route: '/app/patient/onboarding/vitals-metrics',
+					completed: this.hasVitals,
+					required: false,
+				},
+				{
+					key: 'allergies',
+					title: 'Allergies',
+					description: 'Drug & food allergies',
+					icon: 'hi-exclamation-triangle',
+					color: '#FFD54F',
+					route: '/app/patient/onboarding/allergies',
+					completed: hasAllergies,
+					required: false,
+				},
+				{
+					key: 'medicalHistory',
+					title: 'Medical History',
+					description: 'Conditions & medications',
+					icon: 'hi-clipboard-list',
+					color: '#BA68C8',
+					route: '/app/patient/onboarding/medical-history',
+					completed: hasMedicalHistory,
+					required: false,
+				},
+			];
+		},
+
+		profileProgress() {
+			const completed = this.profileSteps.filter(s => s.completed).length;
+			return Math.round((completed / this.profileSteps.length) * 100);
+		},
+
+		profileProgressOffset() {
+			// SVG circle circumference = 2 * PI * r = 2 * 3.14159 * 26 ≈ 163.36
+			const circumference = 163.36;
+			const progress = this.profileProgress / 100;
+			return circumference * (1 - progress);
+		},
+
+		incompleteProfileSteps() {
+			return this.profileSteps.filter(s => !s.completed).slice(0, 3);
+		},
+
+		showProfileBanner() {
+			if (this.profileBannerDismissed) return false;
+			// Check if dismissed in localStorage
+			const dismissed = localStorage.getItem('profileBannerDismissed');
+			if (dismissed === 'true') return false;
+			// Always show banner (whether complete or not)
+			return true;
+		},
 	},
 
 	created() {
@@ -936,6 +1099,11 @@ export default {
 				'unknown': 'breakdown-status--unknown',
 			};
 			return statusClasses[status] || 'breakdown-status--unknown';
+		},
+
+		dismissProfileBanner() {
+			this.profileBannerDismissed = true;
+			localStorage.setItem('profileBannerDismissed', 'true');
 		},
 
 		async fetchHealthCheckups() {
@@ -3648,6 +3816,308 @@ export default {
 	&:hover {
 		transform: translateY(-2px);
 		box-shadow: 0 6px 20px rgba($color-sec, 0.4);
+	}
+}
+
+// Profile Completion Banner
+.profile-completion-banner {
+	background: linear-gradient(135deg, #E1F5FE 0%, #B3E5FC 100%);
+	border-radius: $size-16;
+	padding: $size-24;
+	margin-bottom: $size-32;
+	border: 1px solid rgba(79, 195, 247, 0.3);
+
+	@include responsive(phone) {
+		padding: $size-16;
+		margin-bottom: $size-24;
+	}
+}
+
+.banner-header {
+	display: flex;
+	align-items: center;
+	gap: $size-16;
+	margin-bottom: $size-20;
+
+	@include responsive(phone) {
+		flex-wrap: wrap;
+		gap: $size-12;
+	}
+}
+
+.banner-info {
+	flex: 1;
+	min-width: 0;
+}
+
+.banner-title {
+	font-size: $size-20;
+	font-weight: $fw-bold;
+	color: #0277BD;
+	margin: 0 0 $size-4 0;
+
+	@include responsive(phone) {
+		font-size: $size-18;
+	}
+}
+
+.banner-subtitle {
+	font-size: $size-14;
+	color: #0288D1;
+	margin: 0;
+	opacity: 0.8;
+
+	@include responsive(phone) {
+		font-size: $size-13;
+	}
+}
+
+.banner-progress {
+	flex-shrink: 0;
+}
+
+.progress-ring-container {
+	position: relative;
+	width: 60px;
+	height: 60px;
+
+	@include responsive(phone) {
+		width: 50px;
+		height: 50px;
+	}
+}
+
+.progress-ring {
+	width: 100%;
+	height: 100%;
+	transform: rotate(-90deg);
+
+	&__bg {
+		fill: none;
+		stroke: rgba(255, 255, 255, 0.6);
+		stroke-width: 4;
+	}
+
+	&__progress {
+		fill: none;
+		stroke: #0288D1;
+		stroke-width: 4;
+		stroke-linecap: round;
+		stroke-dasharray: 163.36;
+		transition: stroke-dashoffset 0.5s ease;
+	}
+}
+
+.progress-percent {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	font-size: $size-14;
+	font-weight: $fw-bold;
+	color: #0277BD;
+
+	@include responsive(phone) {
+		font-size: $size-12;
+	}
+}
+
+.banner-dismiss {
+	flex-shrink: 0;
+	width: 32px;
+	height: 32px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: rgba(255, 255, 255, 0.5);
+	border: none;
+	border-radius: 50%;
+	color: #0288D1;
+	cursor: pointer;
+	transition: all 0.2s ease;
+
+	&:hover {
+		background: rgba(255, 255, 255, 0.8);
+		color: #01579B;
+	}
+
+	svg {
+		width: 16px;
+		height: 16px;
+	}
+}
+
+.incomplete-steps {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: $size-12;
+	margin-bottom: $size-16;
+
+	@include responsive(tab-portrait) {
+		grid-template-columns: repeat(2, 1fr);
+	}
+
+	@include responsive(phone) {
+		grid-template-columns: 1fr;
+	}
+}
+
+.step-card {
+	display: flex;
+	align-items: center;
+	gap: $size-12;
+	padding: $size-14;
+	background: white;
+	border-radius: $size-12;
+	text-decoration: none;
+	transition: all 0.2s ease;
+	border: 1px solid rgba(255, 255, 255, 0.5);
+
+	&:hover {
+		transform: translateY(-2px);
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+
+		.step-card__arrow {
+			transform: translateX(4px);
+			opacity: 1;
+		}
+	}
+
+	&__icon {
+		width: 40px;
+		height: 40px;
+		border-radius: $size-10;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		flex-shrink: 0;
+
+		svg {
+			width: 20px;
+			height: 20px;
+			color: white;
+		}
+	}
+
+	&__content {
+		flex: 1;
+		min-width: 0;
+
+		h4 {
+			font-size: $size-14;
+			font-weight: $fw-semi-bold;
+			color: $color-black;
+			margin: 0 0 $size-2 0;
+		}
+
+		p {
+			font-size: $size-12;
+			color: $color-g-54;
+			margin: 0;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+	}
+
+	&__arrow {
+		flex-shrink: 0;
+		opacity: 0.4;
+		transition: all 0.2s ease;
+
+		svg {
+			width: 16px;
+			height: 16px;
+			color: $color-g-54;
+		}
+	}
+}
+
+.banner-cta {
+	display: inline-flex;
+	align-items: center;
+	gap: $size-8;
+	padding: $size-10 $size-16;
+	background: rgba(2, 136, 209, 0.1);
+	border-radius: $size-8;
+	font-size: $size-13;
+	font-weight: $fw-semi-bold;
+	color: #0277BD;
+	text-decoration: none;
+	transition: all 0.2s ease;
+
+	&:hover {
+		background: rgba(2, 136, 209, 0.2);
+	}
+
+	svg {
+		width: 16px;
+		height: 16px;
+	}
+}
+
+// Complete state styles
+.profile-completion-banner--complete {
+	background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%);
+	border-color: rgba(129, 199, 132, 0.4);
+
+	.banner-title {
+		color: #2E7D32;
+	}
+
+	.banner-subtitle {
+		color: #388E3C;
+	}
+
+	.banner-cta {
+		background: rgba(46, 125, 50, 0.1);
+		color: #2E7D32;
+
+		&:hover {
+			background: rgba(46, 125, 50, 0.2);
+		}
+	}
+
+	.banner-dismiss {
+		color: #388E3C;
+
+		&:hover {
+			color: #1B5E20;
+		}
+	}
+}
+
+.progress-ring-container--complete {
+	.progress-ring__bg {
+		stroke: rgba(255, 255, 255, 0.7);
+	}
+}
+
+.progress-ring__progress--complete {
+	stroke: #4CAF50;
+}
+
+.progress-percent--complete {
+	color: #2E7D32;
+
+	svg {
+		width: 24px;
+		height: 24px;
+	}
+}
+
+.complete-message {
+	background: white;
+	border-radius: $size-12;
+	padding: $size-16 $size-20;
+	margin-bottom: $size-16;
+	border: 1px solid rgba(129, 199, 132, 0.3);
+
+	p {
+		margin: 0;
+		font-size: $size-14;
+		color: #2E7D32;
+		line-height: 1.5;
 	}
 }
 </style>

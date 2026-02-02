@@ -86,6 +86,31 @@ export class DeliveryAddressDto {
   additional_info?: string;
 }
 
+// ============ LINKED RECORDS DTOs ============
+
+export class LinkedClinicalNoteDto {
+  @IsMongoId()
+  @IsNotEmpty()
+  appointment_id: string;
+
+  @IsString()
+  @IsNotEmpty()
+  note_id: string;
+}
+
+export class LinkRecordsDto {
+  @IsArray()
+  @IsMongoId({ each: true })
+  @IsOptional()
+  appointments?: string[];
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => LinkedClinicalNoteDto)
+  @IsOptional()
+  clinical_notes?: LinkedClinicalNoteDto[];
+}
+
 // ============ CREATE PRESCRIPTION DTO ============
 
 export class CreateSpecialistPrescriptionDto {
@@ -119,6 +144,17 @@ export class CreateSpecialistPrescriptionDto {
   @IsMongoId()
   @IsOptional()
   appointment_id?: string;
+
+  @IsArray()
+  @IsMongoId({ each: true })
+  @IsOptional()
+  linked_appointments?: string[];
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => LinkedClinicalNoteDto)
+  @IsOptional()
+  linked_clinical_notes?: LinkedClinicalNoteDto[];
 
   @IsBoolean()
   @IsOptional()

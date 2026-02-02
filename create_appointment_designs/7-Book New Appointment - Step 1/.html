@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book New Appointment - Patient</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>::-webkit-scrollbar { display: none;}</style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Inter', 'sans-serif']
+                    },
+                    colors: {
+                        'primary': '#3B82F6',
+                        'primary-dark': '#2563EB',
+                        'success': '#10B981',
+                        'danger': '#EF4444',
+                        'warning': '#F59E0B',
+                        'gray-50': '#F9FAFB',
+                        'gray-100': '#F3F4F6',
+                        'gray-200': '#E5E7EB',
+                        'gray-300': '#D1D5DB',
+                        'gray-400': '#9CA3AF',
+                        'gray-500': '#6B7280',
+                        'gray-600': '#4B5563',
+                        'gray-700': '#374151',
+                        'gray-800': '#1F2937',
+                        'gray-900': '#111827'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 font-sans">
+
+<div id="sidebar" class="fixed left-0 top-0 h-full w-64 bg-white border-r border-gray-200 z-50">
+    <div class="p-6 border-b border-gray-200">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+                <i class="fa-solid fa-video text-white text-lg"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold text-gray-900">TeleHealth</h1>
+                <p class="text-xs text-gray-500">Medical Platform</p>
+            </div>
+        </div>
+    </div>
+    
+    <nav id="main-navigation" class="p-4">
+        <div class="space-y-1">
+            <a href="#" class="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+                <i class="fa-solid fa-calendar-days w-5 text-gray-400"></i>
+                <span class="font-medium">Dashboard</span>
+            </a>
+            <a href="#" class="flex items-center space-x-3 px-4 py-3 text-white bg-primary rounded-lg">
+                <i class="fa-solid fa-clock w-5"></i>
+                <span class="font-medium">Appointments</span>
+            </a>
+            <a href="#" class="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+                <i class="fa-solid fa-users w-5 text-gray-400"></i>
+                <span class="font-medium">Patients</span>
+            </a>
+            <a href="#" class="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+                <i class="fa-solid fa-file-medical w-5 text-gray-400"></i>
+                <span class="font-medium">Clinical Notes</span>
+            </a>
+            <a href="#" class="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+                <i class="fa-solid fa-prescription-bottle-medical w-5 text-gray-400"></i>
+                <span class="font-medium">Pharmacy</span>
+            </a>
+            <a href="#" class="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+                <i class="fa-solid fa-chart-line w-5 text-gray-400"></i>
+                <span class="font-medium">Analytics</span>
+            </a>
+        </div>
+        
+        <div class="mt-8 pt-8 border-t border-gray-200">
+            <p class="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Settings</p>
+            <div class="space-y-1">
+                <a href="#" class="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+                    <i class="fa-solid fa-gear w-5 text-gray-400"></i>
+                    <span class="font-medium">Practice Settings</span>
+                </a>
+                <a href="#" class="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+                    <i class="fa-solid fa-user-circle w-5 text-gray-400"></i>
+                    <span class="font-medium">Account</span>
+                </a>
+            </div>
+        </div>
+    </nav>
+    
+    <div id="sidebar-footer" class="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 bg-white">
+        <div class="flex items-center space-x-3 px-2">
+            <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt="Doctor" class="w-10 h-10 rounded-full object-cover">
+            <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold text-gray-900 truncate">Dr. John Smith</p>
+                <p class="text-xs text-gray-500 truncate">Cardiologist</p>
+            </div>
+            <button class="text-gray-400 hover:text-gray-600">
+                <i class="fa-solid fa-ellipsis-vertical"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<div id="header" class="fixed top-0 left-64 right-0 bg-white border-b border-gray-200 z-40">
+    <div class="px-8 py-4">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <button onclick="window.history.back()" class="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors">
+                    <i class="fa-solid fa-chevron-left"></i>
+                    <span class="font-medium">Back</span>
+                </button>
+            </div>
+            <div class="flex items-center space-x-3">
+                <button onclick="window.history.back()" class="px-5 py-2.5 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors">
+                    <i class="fa-solid fa-xmark mr-2"></i>Cancel
+                </button>
+                <button class="relative p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">
+                    <i class="fa-solid fa-bell text-lg"></i>
+                    <span class="absolute top-1 right-1 w-2 h-2 bg-danger rounded-full"></span>
+                </button>
+                <div class="flex items-center space-x-3 pl-4 border-l border-gray-200">
+                    <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt="Profile" class="w-9 h-9 rounded-full object-cover">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<main id="main-content" class="ml-64 pt-20 pb-24">
+    <div class="px-8 max-w-7xl mx-auto">
+        
+        <section id="appointment-booking-header" class="mb-8">
+            <div class="mb-6">
+                <h1 class="text-3xl font-bold text-gray-900 mb-2">Book New Appointment</h1>
+                <p class="text-gray-500 text-lg">Step 1 of 6: Select Patient</p>
+            </div>
+
+            <div id="progress-indicator" class="flex items-center justify-between mb-8">
+                <div class="flex items-center space-x-3 flex-1">
+                    <div class="flex items-center justify-center w-10 h-10 bg-primary text-white font-bold rounded-full">1</div>
+                    <div>
+                        <p class="font-semibold text-gray-900">Patient</p>
+                        <p class="text-xs text-gray-500">Select patient</p>
+                    </div>
+                </div>
+                <div class="flex-1 h-0.5 bg-gray-200 mx-4"></div>
+                <div class="flex items-center space-x-3 flex-1">
+                    <div class="flex items-center justify-center w-10 h-10 bg-gray-200 text-gray-500 font-bold rounded-full">2</div>
+                    <div>
+                        <p class="font-semibold text-gray-500">Type</p>
+                        <p class="text-xs text-gray-400">Appointment type</p>
+                    </div>
+                </div>
+                <div class="flex-1 h-0.5 bg-gray-200 mx-4"></div>
+                <div class="flex items-center space-x-3 flex-1">
+                    <div class="flex items-center justify-center w-10 h-10 bg-gray-200 text-gray-500 font-bold rounded-full">3</div>
+                    <div>
+                        <p class="font-semibold text-gray-500">Schedule</p>
+                        <p class="text-xs text-gray-400">Date & time</p>
+                    </div>
+                </div>
+                <div class="flex-1 h-0.5 bg-gray-200 mx-4"></div>
+                <div class="flex items-center space-x-3 flex-1">
+                    <div class="flex items-center justify-center w-10 h-10 bg-gray-200 text-gray-500 font-bold rounded-full">4</div>
+                    <div>
+                        <p class="font-semibold text-gray-500">Fee & Channel</p>
+                        <p class="text-xs text-gray-400">Payment</p>
+                    </div>
+                </div>
+                <div class="flex-1 h-0.5 bg-gray-200 mx-4"></div>
+                <div class="flex items-center space-x-3 flex-1">
+                    <div class="flex items-center justify-center w-10 h-10 bg-gray-200 text-gray-500 font-bold rounded-full">5</div>
+                    <div>
+                        <p class="font-semibold text-gray-500">Notes</p>
+                        <p class="text-xs text-gray-400">Additional info</p>
+                    </div>
+                </div>
+                <div class="flex-1 h-0.5 bg-gray-200 mx-4"></div>
+                <div class="flex items-center space-x-3 flex-1">
+                    <div class="flex items-center justify-center w-10 h-10 bg-gray-200 text-gray-500 font-bold rounded-full">6</div>
+                    <div>
+                        <p class="font-semibold text-gray-500">Review</p>
+                        <p class="text-xs text-gray-400">Confirm</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="grid grid-cols-12 gap-6">
+            
+            <div class="col-span-8">
+                
+                <section id="patient-selection-tabs" class="bg-white rounded-xl border border-gray-200 mb-6">
+                    <div class="border-b border-gray-200">
+                        <div class="flex items-center px-6">
+                            <button onclick="showTab('existing')" id="tab-existing" class="px-6 py-4 text-primary font-semibold border-b-2 border-primary">
+                                <i class="fa-solid fa-users mr-2"></i>Existing Patients
+                            </button>
+                            <button onclick="showTab('platform')" id="tab-platform" class="px-6 py-4 text-gray-600 font-medium hover:text-gray-900 hover:bg-gray-50 transition-colors">
+                                <i class="fa-solid fa-magnifying-glass mr-2"></i>Platform Search
+                            </button>
+                            <button onclick="showTab('new')" id="tab-new" class="px-6 py-4 text-gray-600 font-medium hover:text-gray-900 hover:bg-gray-50 transition-colors">
+                                <i class="fa-solid fa-user-plus mr-2"></i>Manual Entry
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="tab-content-existing" class="p-6">
+                        <div class="mb-6">
+                            <label class="block text-sm font-semibold text-gray-700 mb-3">Search Your Patients</label>
+                            <div class="relative">
+                                <input type="text" id="search-existing" placeholder="Search by name, email, phone, patient ID, DOB..." class="w-full pl-11 pr-4 py-3.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm">
+                                <i class="fa-solid fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                            </div>
+                        </div>
+
+                        <div class="mb-5 flex items-center justify-between">
+                            <p class="text-sm font-semibold text-gray-700">Your Patients <span class="text-gray-500 font-normal">(248 total)</span></p>
+                            <div class="flex items-center space-x-2">
+                                <select class="px-3 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
+                                    <option>Recent visits</option>
+                                    <option>Name A-Z</option>
+                                    <option>Last visit date</option>
+                                    <option>Patient ID</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="space-y-3 max-h-[620px] overflow-y-auto pr-2">
+                            <div onclick="selectPatient(this, 'existing')" class="flex items-center justify-between p-5 border-2 border-gray-200 rounded-xl hover:border-primary hover:bg-blue-50 cursor-pointer transition-all group">
+                                <div class="flex items-center space-x-4 flex-1">
+                                    <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-1.jpg" alt="Patient" class="w-14 h-14 rounded-full object-cover border-2 border-gray-100 group-hover:border-primary transition-colors">
+                                    <div class="flex-1">
+                                        <p class="font-bold text-gray-900 text-lg mb-0.5">Sarah Johnson</p>
+                                        <p class="text-sm text-gray-600 mb-2">sarah.johnson@email.com</p>
+                                        <div class="flex items-center space-x-4 text-xs text-gray-500">
+                                            <span><i class="fa-solid fa-phone mr-1.5"></i>+1 555-0123</span>
+                                            <span><i class="fa-solid fa-id-card mr-1.5"></i>PT-2847</span>
+                                            <span><i class="fa-solid fa-calendar mr-1.5"></i>DOB: 05/12/1985</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <span class="inline-flex items-center px-3 py-1.5 bg-green-100 text-success text-xs font-bold rounded-full mb-2">
+                                        <i class="fa-solid fa-circle-check mr-1.5"></i>Active
+                                    </span>
+                                    <p class="text-xs text-gray-500">Last visit: <span class="font-semibold">Jan 15, 2026</span></p>
+                                </div>
+                            </div>
+
+                            <div onclick="selectPatient(this, 'existing')" class="flex items-center justify-between p-5 border-2 border-gray-200 rounded-xl hover:border-primary hover:bg-blue-50 cursor-pointer transition-all group">
+                                <div class="flex items-center space-x-4 flex-1">
+                                    <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt="Patient" class="w-14 h-14 rounded-full object-cover border-2 border-gray-100 group-hover:border-primary transition-colors">
+                                    <div class="flex-1">
+                                        <p class="font-bold text-gray-900 text-lg mb-0.5">Michael Chen</p>
+                                        <p class="text-sm text-gray-600 mb-2">michael.chen@email.com</p>
+                                        <div class="flex items-center space-x-4 text-xs text-gray-500">
+                                            <span><i class="fa-solid fa-phone mr-1.5"></i>+1 555-0124</span>
+                                            <span><i class="fa-solid fa-id-card mr-1.5"></i>PT-2846</span>
+                                            <span><i class="fa-solid fa-calendar mr-1.5"></i>DOB: 08/23/1978</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <span class="inline-flex items-center px-3 py-1.5 bg-green-100 text-success text-xs font-bold rounded-full mb-2">
+                                        <i class="fa-solid fa-circle-check mr-1.5"></i>Active
+                                    </span>
+                                    <p class="text-xs text-gray-500">Last visit: <span class="font-semibold">Jan 10, 2026</span></p>
+                                </div>
+                            </div>
+
+                            <div onclick="selectPatient(this, 'existing')" class="flex items-center justify-between p-5 border-2 border-gray-200 rounded-xl hover:border-primary hover:bg-blue-50 cursor-pointer transition-all group">
+                                <div class="flex items-center space-x-4 flex-1">
+                                    <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg" alt="Patient" class="w-14 h-14 rounded-full object-cover border-2 border-gray-100 group-hover:border-primary transition-colors">
+                                    <div class="flex-1">
+                                        <p class="font-bold text-gray-900 text-lg mb-0.5">Emma Williams</p>
+                                        <p class="text-sm text-gray-600 mb-2">emma.w@email.com</p>
+                                        <div class="flex items-center space-x-4 text-xs text-gray-500">
+                                            <span><i class="fa-solid fa-phone mr-1.5"></i>+1 555-0125</span>
+                                            <span><i class="fa-solid fa-id-card mr-1.5"></i>PT-2845</span>
+                                            <span><i class="fa-solid fa-calendar mr-1.5"></i>DOB: 11/30/1992</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <span class="inline-flex items-center px-3 py-1.5 bg-green-100 text-success text-xs font-bold rounded-full mb-2">
+                                        <i class="fa-solid fa-circle-check mr-1.5"></i>Active
+                                    </span>
+                                    <p class="text-xs text-gray-500">Last visit: <span class="font-semibold">Jan 8, 2026</span></p>
+                                </div>
+                            </div>
+
+                            <div onclick="selectPatient(this, 'existing')" class="flex items-center justify-between p-5 border-2 border-gray-200 rounded-xl hover:border-primary hover:bg-blue-50 cursor-pointer transition-all group">
+                                <div class="flex items-center space-x-4 flex-1">
+                                    <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-3.jpg" alt="Patient" class="w-14 h-14 rounded-full object-cover border-2 border-gray-100 group-hover:border-primary transition-colors">
+                                    <div class="flex-1">
+                                        <p class="font-bold text-gray-900 text-lg mb-0.5">James Anderson</p>
+                                        <p class="text-sm text-gray-600 mb-2">james.anderson@email.com</p>
+                                        <div class="flex items-center space-x-4 text-xs text-gray-500">
+                                            <span><i class="fa-solid fa-phone mr-1.5"></i>+1 555-0126</span>
+                                            <span><i class="fa-solid fa-id-card mr-1.5"></i>PT-2844</span>
+                                            <span><i class="fa-solid fa-calendar mr-1.5"></i>DOB: 03/17/1988</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <span class="inline-flex items-center px-3 py-1.5 bg-green-100 text-success text-xs font-bold rounded-full mb-2">
+                                        <i class="fa-solid fa-circle-check mr-1.5"></i>Active
+                                    </span>
+                                    <p class="text-xs text-gray-500">Last visit: <span class="font-semibold">Jan 5, 2026</span></p>
+                                </div>
+                            </div>
+
+                            <div onclick="selectPatient(this, 'existing')" class="flex items-center justify-between p-5 border-2 border-gray-200 rounded-xl hover:border-primary hover:bg-blue-50 cursor-pointer transition-all group">
+                                <div class="flex items-center space-x-4 flex-1">
+                                    <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-6.jpg" alt="Patient" class="w-14 h-14 rounded-full object-cover border-2 border-gray-100 group-hover:border-primary transition-colors">
+                                    <div class="flex-1">
+                                        <p class="font-bold text-gray-900 text-lg mb-0.5">Olivia Martinez</p>
+                                        <p class="text-sm text-gray-600 mb-2">olivia.m@email.com</p>
+                                        <div class="flex items-center space-x-4 text-xs text-gray-500">
+                                            <span><i class="fa-solid fa-phone mr-1.5"></i>+1 555-0127</span>
+                                            <span><i class="fa-solid fa-id-card mr-1.5"></i>PT-2843</span>
+                                            <span><i class="fa-solid fa-calendar mr-1.5"></i>DOB: 07/09/1995</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <span class="inline-flex items-center px-3 py-1.5 bg-green-100 text-success text-xs font-bold rounded-full mb-2">
+                                        <i class="fa-solid fa-circle-check mr-1.5"></i>Active
+                                    </span>
+                                    <p class="text-xs text-gray-500">Last visit: <span class="font-semibold">Jan 2, 2026</span></p>
+                                </div>
+                            </div>
+
+                            <div onclick="selectPatient(this, 'existing')" class="flex items-center justify-between p-5 border-2 border-gray-200 rounded-xl hover:border-primary hover:bg-blue-50 cursor-pointer transition-all group">
+                                <div class="flex items-center space-x-4 flex-1">
+                                    <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-4.jpg" alt="Patient" class="w-14 h-14 rounded-full object-cover border-2 border-gray-100 group-hover:border-primary transition-colors">
+                                    <div class="flex-1">
+                                        <p class="font-bold text-gray-900 text-lg mb-0.5">David Thompson</p>
+                                        <p class="text-sm text-gray-600 mb-2">david.t@email.com</p>
+                                        <div class="flex items-center space-x-4 text-xs text-gray-500">
+                                            <span><i class="fa-solid fa-phone mr-1.5"></i>+1 555-0128</span>
+                                            <span><i class="fa-solid fa-id-card mr-1.5"></i>PT-2842</span>
+                                            <span><i class="fa-solid fa-calendar mr-1.5"></i>DOB: 02/14/1980</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <span class="inline-flex items-center px-3 py-1.5 bg-green-100 text-success text-xs font-bold rounded-full mb-2">
+                                        <i class="fa-solid fa-circle-check mr-1.5"></i>Active
+                                    </span>
+                                    <p class="text-xs text-gray-500">Last visit: <span class="font-semibold">Dec 28, 2025</span></p>
+                                </div>
+                            </div>
+
+                            <div onclick="selectPatient(this, 'existing')" class="flex items-center justify-between p-5 border-2 border-gray-200 rounded-xl hover:border-primary hover:bg-blue-50 cursor-pointer transition-all group">
+                                <div class="flex items-center space-x-4 flex-1">
+                                    <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-7.jpg" alt="Patient" class="w-14 h-14 rounded-full object-cover border-2 border-gray-100 group-hover:border-primary transition-colors">
+                                    <div class="flex-1">
+                                        <p class="font-bold text-gray-900 text-lg mb-0.5">Sophia Rodriguez</p>
+                                        <p class="text-sm text-gray-600 mb-2">sophia.r@email.com</p>
+                                        <div class="flex items-center space-x-4 text-xs text-gray-500">
+                                            <span><i class="fa-solid fa-phone mr-1.5"></i>+1 555-0129</span>
+                                            <span><i class="fa-solid fa-id-card mr-1.5"></i>PT-2841</span>
+                                            <span><i class="fa-solid fa-calendar mr-1.5"></i>DOB: 09/25/1987</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <span class="inline-flex items-center px-3 py-1.5 bg-green-100 text-success text-xs font-bold rounded-full mb-2">
+                                        <i class="fa-solid fa-circle-check mr-1.5"></i>Active
+                                    </span>
+                                    <p class="text-xs text-gray-500">Last visit: <span class="font-semibold">Dec 20, 2025</span></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="tab-content-platform" class="p-6 hidden">
+                        <div class="bg-purple-50 border-l-4 border-purple-500 rounded-lg p-5 mb-6">
+                            <div class="flex items-start space-x-3">
+                                <i class="fa-solid fa-circle-info text-purple-600 text-xl mt-0.5"></i>
+                                <div>
+                                    <p class="font-bold text-gray-900 mb-2 text-lg">Platform-Wide Patient Search</p>
+                                    <p class="text-sm text-gray-700 leading-relaxed">Search for any patient registered on the TeleHealth platform. If the patient is not currently associated with your practice, you will need to confirm you have their permission to schedule an appointment on their behalf.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-6">
+                            <label class="block text-sm font-semibold text-gray-700 mb-3">Search All Platform Patients</label>
+                            <div class="relative">
+                                <input type="text" id="search-platform" placeholder="Search across entire platform by name, email, phone, patient ID..." class="w-full pl-11 pr-4 py-3.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm">
+                                <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                            </div>
+                        </div>
+
+                        <div id="platform-search-results" class="space-y-3 max-h-[620px] overflow-y-auto pr-2">
+                            <div onclick="selectPatient(this, 'platform')" class="flex items-center justify-between p-5 border-2 border-purple-200 rounded-xl hover:border-purple-500 hover:bg-purple-50 cursor-pointer transition-all group">
+                                <div class="flex items-center space-x-4 flex-1">
+                                    <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-8.jpg" alt="Patient" class="w-14 h-14 rounded-full object-cover border-2 border-purple-100 group-hover:border-purple-500 transition-colors">
+                                    <div class="flex-1">
+                                        <p class="font-bold text-gray-900 text-lg mb-0.5">Robert Wilson</p>
+                                        <p class="text-sm text-gray-600 mb-2">robert.wilson@email.com</p>
+                                        <div class="flex items-center space-x-4 text-xs text-gray-500">
+                                            <span><i class="fa-solid fa-phone mr-1.5"></i>+1 555-0130</span>
+                                            <span><i class="fa-solid fa-id-card mr-1.5"></i>PT-1456</span>
+                                            <span><i class="fa-solid fa-calendar mr-1.5"></i>DOB: 04/18/1975</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <span class="inline-flex items-center px-3 py-1.5 bg-purple-100 text-purple-700 text-xs font-bold rounded-full mb-2">
+                                        <i class="fa-solid fa-globe mr-1.5"></i>Platform Patient
+                                    </span>
+                                    <p class="text-xs text-gray-500">Not in your practice</p>
+                                </div>
+                            </div>
+
+                            <div onclick="selectPatient(this, 'platform')" class="flex items-center justify-between p-5 border-2 border-purple-200 rounded-xl hover:border-purple-500 hover:bg-purple-50 cursor-pointer transition-all group">
+                                <div class="flex items-center space-x-4 flex-1">
+                                    <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-9.jpg" alt="Patient" class="w-14 h-14 rounded-full object-cover border-2 border-purple-100 group-hover:border-purple-500 transition-colors">
+                                    <div class="flex-1">
+                                        <p class="font-bold text-gray-900 text-lg mb-0.5">Daniel Brown</p>
+                                        <p class="text-sm text-gray-600 mb-2">daniel.brown@email.com</p>
+                                        <div class="flex items-center space-x-4 text-xs text-gray-500">
+                                            <span><i class="fa-solid fa-phone mr-1.5"></i>+1 555-0131</span>
+                                            <span><i class="fa-solid fa-id-card mr-1.5"></i>PT-1789</span>
+                                            <span><i class="fa-solid fa-calendar mr-1.5"></i>DOB: 06/22/1990</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <span class="inline-flex items-center px-3 py-1.5 bg-purple-100 text-purple-700 text-xs font-bold rounded-full mb-2">
+                                        <i class="fa-solid fa-globe mr-1.5"></i>Platform Patient
+                                    </span>
+                                    <p class="text-xs text-gray-500">Not in your practice</p>
+                                </div>
+                            </div>
+
+                            <div class="bg-gray-50 rounded-xl p-12 text-center border-2 border-dashed border-gray-300">
+                                <i class="fa-solid fa-magnifying-glass text-gray-300 text-6xl mb-4"></i>
+                                <p class="text-gray-600 font-semibold mb-2 text-lg">Start searching</p>
+                                <p class="text-sm text-gray-500">Type to search for patients across the entire platform</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="tab-content-new" class="p-6 hidden">
+                        <div class="bg-yellow-50 border-l-4 border-warning rounded-lg p-5 mb-6">
+                            <div class="flex items-start space-x-3">
+                                <i class="fa-solid fa-triangle-exclamation text-warning text-xl mt-0.5"></i>
+                                <div>
+                                    <p class="font-bold text-gray-900 mb-2 text-lg">Manual Patient Entry</p>
+                                    <p class="text-sm text-gray-700 leading-relaxed mb-3">You are creating an appointment for a patient who is not currently in the system or associated with your practice. By proceeding, you confirm that you have the patient's permission to schedule this appointment on their behalf.</p>
+                                    <p class="text-sm text-gray-700 leading-relaxed">The patient will be added to the platform and will receive a notification about this appointment.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <form id="new-patient-form" class="space-y-6">
+                            <div class="grid grid-cols-2 gap-6">
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">First Name <span class="text-danger">*</span></label>
+                                    <input type="text" required placeholder="Enter first name" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">Last Name <span class="text-danger">*</span></label>
+                                    <input type="text" required placeholder="Enter last name" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Email Address <span class="text-danger">*</span></label>
+                                <input type="email" required placeholder="patient@email.com" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                                <p class="text-xs text-gray-500 mt-1.5">Patient will receive appointment notifications at this email</p>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Phone Number <span class="text-danger">*</span></label>
+                                <input type="tel" required placeholder="+1 (555) 000-0000" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-6">
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">Date of Birth</label>
+                                    <input type="date" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">Gender</label>
+                                    <select class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                                        <option value="">Select gender</option>
+                                        <option>Male</option>
+                                        <option>Female</option>
+                                        <option>Other</option>
+                                        <option>Prefer not to say</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="border-t border-gray-200 pt-6">
+                                <h3 class="text-lg font-bold text-gray-900 mb-4">Consent & Permission</h3>
+                                
+                                <div class="bg-white border-2 border-warning rounded-lg p-5">
+                                    <div class="flex items-start space-x-3 mb-4">
+                                        <input type="checkbox" id="consent-checkbox" required class="mt-1 w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary cursor-pointer">
+                                        <label for="consent-checkbox" class="text-sm text-gray-700 cursor-pointer">
+                                            <span class="font-bold text-gray-900 block mb-1">I confirm that I have permission to schedule this appointment</span>
+                                            <span>I verify that the patient has authorized me to book this appointment on their behalf. I understand that the patient will be added to the platform and notified about this appointment.</span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="mt-4">
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">Relationship to Patient <span class="text-gray-500 font-normal">(Optional)</span></label>
+                                    <select class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                                        <option value="">Select relationship</option>
+                                        <option>Referring physician</option>
+                                        <option>Family member</option>
+                                        <option>Legal guardian</option>
+                                        <option>Healthcare proxy</option>
+                                        <option>Other</option>
+                                    </select>
+                                </div>
+
+                                <div class="mt-4">
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">Reason for Scheduling <span class="text-gray-500 font-normal">(Optional)</span></label>
+                                    <textarea rows="3" placeholder="Brief explanation of why you're scheduling on behalf of this patient..." class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent resize-none"></textarea>
+                                </div>
+
+                                <div class="mt-5 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                    <div class="flex items-start space-x-3">
+                                        <i class="fa-solid fa-shield-halved text-primary text-lg mt-0.5"></i>
+                                        <div>
+                                            <p class="text-sm font-semibold text-gray-900 mb-1">Compliance Note</p>
+                                            <p class="text-xs text-gray-700 leading-relaxed">This information is collected to ensure HIPAA compliance and maintain proper authorization records. All data is encrypted and stored securely.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </section>
+
+            </div>
+
+            <div class="col-span-4">
+                
+                <section id="selected-patient-card" class="bg-white rounded-xl border border-gray-200 p-6 mb-6 sticky top-24">
+                    <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                        <i class="fa-solid fa-user-check text-primary mr-2"></i>Selected Patient
+                    </h3>
+                    
+                    <div id="no-patient-selected" class="text-center py-10">
+                        <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fa-solid fa-user-slash text-gray-300 text-3xl"></i>
+                        </div>
+                        <p class="text-gray-700 font-semibold mb-2">No patient selected</p>
+                        <p class="text-sm text-gray-500 leading-relaxed">Select an existing patient, search the platform, or manually enter patient details to continue</p>
+                    </div>
+
+                    <div id="patient-selected" class="hidden">
+                        <div class="flex items-center space-x-4 mb-6 pb-6 border-b border-gray-200">
+                            <img id="selected-patient-avatar" src="" alt="Patient" class="w-16 h-16 rounded-full object-cover border-2 border-primary">
+                            <div class="flex-1">
+                                <p id="selected-patient-name" class="font-bold text-gray-900 text-lg mb-0.5"></p>
+                                <p id="selected-patient-email" class="text-sm text-gray-600"></p>
+                            </div>
+                        </div>
+
+                        <div class="space-y-4 mb-6">
+                            <div class="flex items-center justify-between py-2">
+                                <span class="text-sm text-gray-600 flex items-center">
+                                    <i class="fa-solid fa-id-card text-gray-400 mr-2 w-4"></i>Patient ID
+                                </span>
+                                <span id="selected-patient-id" class="font-semibold text-gray-900"></span>
+                            </div>
+                            <div class="flex items-center justify-between py-2">
+                                <span class="text-sm text-gray-600 flex items-center">
+                                    <i class="fa-solid fa-phone text-gray-400 mr-2 w-4"></i>Phone
+                                </span>
+                                <span id="selected-patient-phone" class="font-semibold text-gray-900"></span>
+                            </div>
+                            <div class="flex items-center justify-between py-2">
+                                <span class="text-sm text-gray-600 flex items-center">
+                                    <i class="fa-solid fa-calendar text-gray-400 mr-2 w-4"></i>DOB
+                                </span>
+                                <span id="selected-patient-dob" class="font-semibold text-gray-900"></span>
+                            </div>
+                            <div class="flex items-center justify-between py-2">
+                                <span class="text-sm text-gray-600 flex items-center">
+                                    <i class="fa-solid fa-circle-check text-gray-400 mr-2 w-4"></i>Status
+                                </span>
+                                <span id="selected-patient-status" class="px-3 py-1 bg-green-100 text-success text-xs font-bold rounded-full">Active</span>
+                            </div>
+                            <div id="selected-patient-last-visit" class="flex items-center justify-between py-2">
+                                <span class="text-sm text-gray-600 flex items-center">
+                                    <i class="fa-solid fa-clock text-gray-400 mr-2 w-4"></i>Last Visit
+                                </span>
+                                <span class="font-semibold text-gray-900"></span>
+                            </div>
+                        </div>
+
+                        <div id="consent-indicator" class="hidden bg-yellow-50 border border-warning rounded-lg p-3 mb-4">
+                            <div class="flex items-center space-x-2">
+                                <i class="fa-solid fa-shield-halved text-warning"></i>
+                                <p class="text-xs font-semibold text-gray-900">Consent Required</p>
+                            </div>
+                            <p class="text-xs text-gray-600 mt-1">Not in your practice</p>
+                        </div>
+
+                        <button onclick="clearSelection()" class="w-full px-4 py-3 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-colors mb-3">
+                            <i class="fa-solid fa-xmark mr-2"></i>Clear Selection
+                        </button>
+                        <button class="w-full px-4 py-3 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors">
+                            <i class="fa-solid fa-user mr-2"></i>View Full Profile
+                        </button>
+                    </div>
+                </section>
+
+                <section id="appointment-summary-card" class="bg-gradient-to-br from-blue-50 to-white rounded-xl border border-blue-200 p-6 mb-6">
+                    <h3 class="text-lg font-bold text-gray-900 mb-5 flex items-center">
+                        <i class="fa-solid fa-list-check text-primary mr-2"></i>Booking Progress
+                    </h3>
+                    
+                    <div class="space-y-4">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-9 h-9 bg-primary text-white rounded-full flex items-center justify-center font-bold text-sm shadow-md">
+                                1
+                            </div>
+                            <div class="flex-1">
+                                <p class="font-bold text-gray-900">Patient Selection</p>
+                                <p class="text-xs text-primary font-medium">Current step</p>
+                            </div>
+                            <i class="fa-solid fa-circle-dot text-primary"></i>
+                        </div>
+
+                        <div class="flex items-center space-x-3 opacity-40">
+                            <div class="w-9 h-9 bg-gray-200 text-gray-500 rounded-full flex items-center justify-center font-bold text-sm">2</div>
+                            <div class="flex-1">
+                                <p class="font-semibold text-gray-600">Appointment Type</p>
+                                <p class="text-xs text-gray-400">Pending</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center space-x-3 opacity-40">
+                            <div class="w-9 h-9 bg-gray-200 text-gray-500 rounded-full flex items-center justify-center font-bold text-sm">3</div>
+                            <div class="flex-1">
+                                <p class="font-semibold text-gray-600">Schedule</p>
+                                <p class="text-xs text-gray-400">Pending</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center space-x-3 opacity-40">
+                            <div class="w-9 h-9 bg-gray-200 text-gray-500 rounded-full flex items-center justify-center font-bold text-sm">4</div>
+                            <div class="flex-1">
+                                <p class="font-semibold text-gray-600">Fee & Channel</p>
+                                <p class="text-xs text-gray-400">Pending</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center space-x-3 opacity-40">
+                            <div class="w-9 h-9 bg-gray-200 text-gray-500 rounded-full flex items-center justify-center font-bold text-sm">5</div>
+                            <div class="flex-1">
+                                <p class="font-semibold text-gray-600">Notes</p>
+                                <p class="text-xs text-gray-400">Pending</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center space-x-3 opacity-40">
+                            <div class="w-9 h-9 bg-gray-200 text-gray-500 rounded-full flex items-center justify-center font-bold text-sm">6</div>
+                            <div class="flex-1">
+                                <p class="font-semibold text-gray-600">Review & Confirm</p>
+                                <p class="text-xs text-gray-400">Pending</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="help-card" class="bg-white rounded-xl border border-gray-200 p-6">
+                    <div class="flex items-start space-x-3 mb-5">
+                        <div class="w-11 h-11 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-circle-question text-primary text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-gray-900 mb-1">Need Help?</h3>
+                            <p class="text-sm text-gray-600">Learn more about patient selection</p>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-2">
+                        <button class="w-full text-left px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-lg text-sm font-medium text-gray-700 transition-colors flex items-center justify-between">
+                            <span><i class="fa-solid fa-book mr-2 text-primary"></i>View Documentation</span>
+                            <i class="fa-solid fa-arrow-right text-gray-400"></i>
+                        </button>
+                        <button class="w-full text-left px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-lg text-sm font-medium text-gray-700 transition-colors flex items-center justify-between">
+                            <span><i class="fa-solid fa-video mr-2 text-primary"></i>Watch Tutorial</span>
+                            <i class="fa-solid fa-arrow-right text-gray-400"></i>
+                        </button>
+                        <button class="w-full text-left px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-lg text-sm font-medium text-gray-700 transition-colors flex items-center justify-between">
+                            <span><i class="fa-solid fa-headset mr-2 text-primary"></i>Contact Support</span>
+                            <i class="fa-solid fa-arrow-right text-gray-400"></i>
+                        </button>
+                    </div>
+                </section>
+
+            </div>
+
+        </div>
+
+    </div>
+</main>
+
+<section id="navigation-buttons" class="fixed bottom-0 left-64 right-0 bg-white border-t border-gray-200 px-8 py-4 z-30 shadow-lg">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+        <button onclick="window.history.back()" class="px-6 py-3 bg-white border-2 border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors">
+            <i class="fa-solid fa-chevron-left mr-2"></i>Back
+        </button>
+        <div class="flex items-center space-x-3">
+            <button onclick="saveDraft()" class="px-6 py-3 bg-white border-2 border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors">
+                <i class="fa-solid fa-floppy-disk mr-2"></i>Save Draft
+            </button>
+            <button id="continue-btn" disabled class="px-8 py-3 bg-gray-300 text-gray-500 font-semibold rounded-lg cursor-not-allowed shadow-sm">
+                Next: Appointment Type<i class="fa-solid fa-chevron-right ml-2"></i>
+            </button>
+        </div>
+    </div>
+</section>
+
+<script>
+let selectedPatientType = null;
+
+function showTab(tabName) {
+    document.getElementById('tab-content-existing').classList.add('hidden');
+    document.getElementById('tab-content-new').classList.add('hidden');
+    document.getElementById('tab-content-platform').classList.add('hidden');
+    
+    document.getElementById('tab-existing').classList.remove('text-primary', 'border-b-2', 'border-primary');
+    document.getElementById('tab-new').classList.remove('text-primary', 'border-b-2', 'border-primary');
+    document.getElementById('tab-platform').classList.remove('text-primary', 'border-b-2', 'border-primary');
+    
+    document.getElementById('tab-existing').classList.add('text-gray-600');
+    document.getElementById('tab-new').classList.add('text-gray-600');
+    document.getElementById('tab-platform').classList.add('text-gray-600');
+    
+    if (tabName === 'existing') {
+        document.getElementById('tab-content-existing').classList.remove('hidden');
+        document.getElementById('tab-existing').classList.add('text-primary', 'border-b-2', 'border-primary');
+        document.getElementById('tab-existing').classList.remove('text-gray-600');
+    } else if (tabName === 'new') {
+        document.getElementById('tab-content-new').classList.remove('hidden');
+        document.getElementById('tab-new').classList.add('text-primary', 'border-b-2', 'border-primary');
+        document.getElementById('tab-new').classList.remove('text-gray-600');
+    } else if (tabName === 'platform') {
+        document.getElementById('tab-content-platform').classList.remove('hidden');
+        document.getElementById('tab-platform').classList.add('text-primary', 'border-b-2', 'border-primary');
+        document.getElementById('tab-platform').classList.remove('text-gray-600');
+    }
+    
+    clearSelection();
+}
+
+function selectPatient(element, type) {
+    selectedPatientType = type;
+    
+    if (type === 'platform') {
+        const confirmed = confirm('This patient is not in your practice.\n\nDo you confirm that you have permission to book an appointment on their behalf?\n\nThe patient will be notified about this appointment.');
+        if (!confirmed) {
+            return;
+        }
+    }
+    
+    const parentDiv = element.parentElement;
+    parentDiv.querySelectorAll('div').forEach(el => {
+        el.classList.remove('border-primary', 'bg-blue-50', 'border-purple-500', 'bg-purple-50');
+        el.classList.add('border-gray-200');
+    });
+    
+    if (type === 'platform') {
+        element.classList.add('border-purple-500', 'bg-purple-50');
+        element.classList.remove('border-gray-200');
+    } else {
+        element.classList.add('border-primary', 'bg-blue-50');
+        element.classList.remove('border-gray-200');
+    }
+    
+    const name = element.querySelector('.font-bold').textContent;
+    const email = element.querySelectorAll('.text-sm.text-gray-600')[0].textContent;
+    const phoneElement = element.querySelector('.fa-phone').parentElement.textContent.trim();
+    const idElement = element.querySelector('.fa-id-card').parentElement.textContent.trim();
+    const dobElement = element.querySelector('.fa-calendar').parentElement.textContent.replace('DOB:', '').trim();
+    const avatar = element.querySelector('img').src;
+    
+    let lastVisit = '';
+    const lastVisitElements = element.querySelectorAll('.text-xs.text-gray-500');
+    lastVisitElements.forEach(el => {
+        if (el.textContent.includes('Last visit:')) {
+            lastVisit = el.querySelector('.font-semibold').textContent;
+        }
+    });
+    
+    document.getElementById('no-patient-selected').classList.add('hidden');
+    document.getElementById('patient-selected').classList.remove('hidden');
+    
+    document.getElementById('selected-patient-name').textContent = name;
+    document.getElementById('selected-patient-email').textContent = email;
+    document.getElementById('selected-patient-phone').textContent = phoneElement;
+    document.getElementById('selected-patient-id').textContent = idElement;
+    document.getElementById('selected-patient-dob').textContent = dobElement;
+    document.getElementById('selected-patient-avatar').src = avatar;
+    
+    if (lastVisit) {
+        document.getElementById('selected-patient-last-visit').classList.remove('hidden');
+        document.getElementById('selected-patient-last-visit').querySelector('.font-semibold').textContent = lastVisit;
+    } else {
+        document.getElementById('selected-patient-last-visit').classList.add('hidden');
+    }
+    
+    if (type === 'platform') {
+        document.getElementById('consent-indicator').classList.remove('hidden');
+    } else {
+        document.getElementById('consent-indicator').classList.add('hidden');
+    }
+    
+    document.getElementById('continue-btn').disabled = false;
+    document.getElementById('continue-btn').classList.remove('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+    document.getElementById('continue-btn').classList.add('bg-primary', 'text-white', 'hover:bg-primary-dark', 'cursor-pointer');
+}
+
+function clearSelection() {
+    selectedPatientType = null;
+    
+    document.getElementById('no-patient-selected').classList.remove('hidden');
+    document.getElementById('patient-selected').classList.add('hidden');
+    
+    document.querySelectorAll('#tab-content-existing .space-y-3 > div, #tab-content-platform .space-y-3 > div').forEach(el => {
+        el.classList.remove('border-primary', 'bg-blue-50', 'border-purple-500', 'bg-purple-50');
+        if (!el.classList.contains('bg-gray-50')) {
+            el.classList.add('border-gray-200');
+        }
+    });
+    
+    document.getElementById('continue-btn').disabled = true;
+    document.getElementById('continue-btn').classList.add('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+    document.getElementById('continue-btn').classList.remove('bg-primary', 'text-white', 'hover:bg-primary-dark', 'cursor-pointer');
+}
+
+function saveDraft() {
+    alert('Draft saved successfully!\n\nYou can continue this booking later from your drafts.');
+}
+
+document.getElementById('search-existing').addEventListener('input', function(e) {
+    const searchTerm = e.target.value.toLowerCase();
+    const patients = document.querySelectorAll('#tab-content-existing .space-y-3 > div');
+    
+    patients.forEach(patient => {
+        if (patient.classList.contains('bg-gray-50')) return;
+        
+        const name = patient.querySelector('.font-bold').textContent.toLowerCase();
+        const email = patient.querySelector('.text-sm.text-gray-600').textContent.toLowerCase();
+        const phone = patient.querySelector('.fa-phone') ? patient.querySelector('.fa-phone').parentElement.textContent.toLowerCase() : '';
+        const id = patient.querySelector('.fa-id-card') ? patient.querySelector('.fa-id-card').parentElement.textContent.toLowerCase() : '';
+        
+        if (name.includes(searchTerm) || email.includes(searchTerm) || phone.includes(searchTerm) || id.includes(searchTerm)) {
+            patient.style.display = 'flex';
+        } else {
+            patient.style.display = 'none';
+        }
+    });
+});
+
+document.getElementById('consent-checkbox').addEventListener('change', function(e) {
+    validateNewPatientForm();
+});
+
+document.getElementById('new-patient-form').addEventListener('input', function() {
+    validateNewPatientForm();
+});
+
+function validateNewPatientForm() {
+    const form = document.getElementById('new-patient-form');
+    const inputs = form.querySelectorAll('input[required]');
+    const consentCheckbox = document.getElementById('consent-checkbox');
+    
+    let allFilled = true;
+    inputs.forEach(input => {
+        if (!input.value || input.value.trim() === '') {
+            allFilled = false;
+        }
+    });
+    
+    if (consentCheckbox.checked && allFilled) {
+        document.getElementById('continue-btn').disabled = false;
+        document.getElementById('continue-btn').classList.remove('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+        document.getElementById('continue-btn').classList.add('bg-primary', 'text-white', 'hover:bg-primary-dark', 'cursor-pointer');
+    } else {
+        document.getElementById('continue-btn').disabled = true;
+        document.getElementById('continue-btn').classList.add('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+        document.getElementById('continue-btn').classList.remove('bg-primary', 'text-white', 'hover:bg-primary-dark', 'cursor-pointer');
+    }
+}
+</script>
+
+</body>
+</html>

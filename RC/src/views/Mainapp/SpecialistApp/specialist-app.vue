@@ -33,25 +33,48 @@ export default {
 
 <style scoped lang="scss">
 .main-wrapper {
-	@include flexItem(horizontal) {
-		height: 100%;
-		overflow: hidden;
-		width: 100%;
-	}
+	display: flex;
+	flex-direction: row;
+	height: 100vh;
+	width: 100%;
+	overflow: hidden;
 }
 
 .content {
-	@include flexItem(horizontal) {
-		justify-content: center;
-		flex-grow: 1;
-		background-color: $color-g-97;
-		border-right: $size-1 solid $color-g-85;
-		height: 100%;
-		min-width: 10%;
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	background-color: $color-g-97;
+	border-right: $size-1 solid $color-g-85;
+	height: 100vh;
+	width: 100%;
+	overflow-y: auto;
+	overflow-x: hidden;
 
-		@include responsive(phone) {
-			border-right: none;
-		}
+	@include responsive(phone) {
+		border-right: none;
+	}
+
+	// Mobile: white background, no padding
+	@media (max-width: 767px) {
+		background-color: white;
+		border-right: none;
+		padding: 0 !important;
+		margin: 0 !important;
+	}
+}
+
+// Mobile overrides
+@media (max-width: 767px) {
+	.main-wrapper {
+		overflow: visible;
+	}
+
+	.content {
+		padding: 0 !important;
+		margin: 0 !important;
+		background: white !important;
+		overflow-y: auto;
 	}
 }
 </style>

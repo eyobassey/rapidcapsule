@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Appointments</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        rapid: {
+                            sky: '#4FC3F7',
+                            skyLight: '#E1F5FE',
+                            skyDark: '#0288D1',
+                            orange: '#FF9800',
+                            orangeLight: '#FFF3E0',
+                            orangeDark: '#F57C00',
+                            navy: '#1A365D',
+                            gray: '#F5F9FF',
+                            text: '#334155',
+                            success: '#4CAF50',
+                            error: '#EF4444',
+                            warning: '#FFC107'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        display: ['Poppins', 'system-ui', 'sans-serif']
+                    },
+                    boxShadow: {
+                        'soft': '0 4px 20px -2px rgba(79, 195, 247, 0.15)',
+                        'card': '0 10px 30px -5px rgba(0, 0, 0, 0.05)',
+                        'glow': '0 0 15px rgba(79, 195, 247, 0.3)',
+                    }
+                }
+            }
+        }
+        window.FontAwesomeConfig = { autoReplaceSvg: 'nest' };
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+        }
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+        }
+        .status-confirmed { background-color: #E3F2FD; color: #0288D1; }
+        .status-pending { background-color: #FFF3E0; color: #F57C00; }
+        .status-completed { background-color: #E8F5E9; color: #2E7D32; }
+        .status-cancelled { background-color: #FFEBEE; color: #C62828; }
+        
+        .tab-active {
+            border-bottom: 2px solid #4FC3F7;
+            color: #1A365D;
+            font-weight: 600;
+        }
+        .tab-inactive {
+            border-bottom: 2px solid transparent;
+            color: #64748b;
+        }
+        .tab-inactive:hover {
+            color: #1A365D;
+            border-bottom-color: #cbd5e1;
+        }
+    </style>
+</head>
+<body class="bg-rapid-gray font-sans text-rapid-text antialiased h-[1024px] overflow-hidden flex flex-col w-[1440px] mx-auto">
+
+    <!-- Header -->
+    <header id="header" class="bg-white/90 backdrop-blur-md border-b border-slate-100 h-16 z-40 sticky top-0 flex-none">
+        <div class="max-w-[1440px] mx-auto px-6 h-full flex items-center justify-between">
+            <div class="flex items-center gap-3 cursor-pointer">
+                <div class="w-8 h-8 bg-gradient-to-br from-rapid-sky to-rapid-skyDark rounded-lg flex items-center justify-center text-white shadow-glow">
+                    <i class="fa-solid fa-heart-pulse text-sm"></i>
+                </div>
+                <span class="text-xl font-bold text-rapid-navy font-display tracking-tight">Rapid Capsule</span>
+            </div>
+            
+            <nav class="hidden md:flex items-center gap-1">
+                <a href="#" class="px-4 py-2 text-sm font-medium text-slate-500 hover:text-rapid-navy hover:bg-slate-50 rounded-lg transition-colors">Dashboard</a>
+                <a href="#" class="px-4 py-2 text-sm font-medium text-slate-500 hover:text-rapid-navy hover:bg-slate-50 rounded-lg transition-colors">Book Appointment</a>
+                <a href="#" class="px-4 py-2 text-sm font-bold text-rapid-sky bg-rapid-skyLight/50 rounded-lg transition-colors">My Appointments</a>
+                <a href="#" class="px-4 py-2 text-sm font-medium text-slate-500 hover:text-rapid-navy hover:bg-slate-50 rounded-lg transition-colors">Messages</a>
+                <a href="#" class="px-4 py-2 text-sm font-medium text-slate-500 hover:text-rapid-navy hover:bg-slate-50 rounded-lg transition-colors">Profile</a>
+            </nav>
+
+            <div class="flex items-center gap-4">
+                <button class="w-9 h-9 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:border-rapid-sky hover:text-rapid-sky transition-all relative">
+                    <i class="fa-regular fa-bell"></i>
+                    <span class="absolute top-2 right-2 w-1.5 h-1.5 bg-rapid-orange rounded-full border border-white"></span>
+                </button>
+                <div class="flex items-center gap-2 pl-4 border-l border-slate-200">
+                    <div class="text-right hidden sm:block">
+                        <div class="text-xs font-bold text-rapid-navy">Sarah Johnson</div>
+                        <div class="text-[10px] text-slate-500">Patient ID: #RC-8821</div>
+                    </div>
+                    <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg" class="w-9 h-9 rounded-full object-cover border-2 border-white shadow-sm">
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main id="appointments-main" class="flex-1 overflow-y-auto p-8 relative">
+        <!-- Decorative Background Elements -->
+        <div class="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-rapid-skyLight/30 to-transparent pointer-events-none -z-10"></div>
+        <div class="absolute right-0 top-20 w-64 h-64 bg-rapid-sky/5 rounded-full blur-3xl pointer-events-none -z-10"></div>
+
+        <div class="max-w-7xl mx-auto space-y-8">
+            
+            <!-- Page Header -->
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-display font-bold text-rapid-navy">My Appointments</h1>
+                    <p class="text-slate-500 mt-1">Manage your upcoming visits and view past history.</p>
+                </div>
+                <button class="bg-rapid-sky hover:bg-rapid-skyDark text-white font-bold py-3 px-6 rounded-xl shadow-lg shadow-sky-100 transition-all flex items-center gap-2">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>Book New Appointment</span>
+                </button>
+            </div>
+
+            <!-- Tabs & Filters -->
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-slate-200 pb-1">
+                <div class="flex items-center gap-8 w-full sm:w-auto overflow-x-auto">
+                    <button class="tab-active pb-3 px-2 text-sm whitespace-nowrap">Upcoming (3)</button>
+                    <button class="tab-inactive pb-3 px-2 text-sm whitespace-nowrap transition-all">Past Visits (12)</button>
+                    <button class="tab-inactive pb-3 px-2 text-sm whitespace-nowrap transition-all">Cancelled</button>
+                </div>
+                <div class="flex items-center gap-3 w-full sm:w-auto">
+                    <div class="relative w-full sm:w-64">
+                        <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                        <input type="text" placeholder="Search doctor or specialty..." class="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:border-rapid-sky focus:ring-2 focus:ring-rapid-sky/20 outline-none transition-all">
+                    </div>
+                    <button class="px-3 py-2 border border-slate-200 rounded-lg bg-white text-slate-600 hover:text-rapid-navy hover:border-rapid-sky transition-colors">
+                        <i class="fa-solid fa-filter"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Appointments List -->
+            <div class="space-y-6">
+
+                <!-- 1. Confirmed Appointment (Next Up) -->
+                <div id="appointment-card-1" class="bg-white rounded-2xl border border-slate-200 shadow-card overflow-hidden group hover:shadow-soft transition-all duration-300 relative">
+                    <div class="absolute top-0 left-0 w-1 h-full bg-rapid-sky"></div>
+                    <div class="p-6">
+                        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                            
+                            <!-- Date & Time Column -->
+                            <div class="flex items-start gap-4 min-w-[180px]">
+                                <div class="bg-rapid-skyLight/50 rounded-xl p-3 text-center min-w-[70px]">
+                                    <div class="text-xs font-bold text-rapid-sky uppercase mb-1">Oct</div>
+                                    <div class="text-2xl font-bold text-rapid-navy">05</div>
+                                    <div class="text-xs text-slate-500 font-medium">Today</div>
+                                </div>
+                                <div>
+                                    <div class="text-lg font-bold text-rapid-navy">10:30 AM</div>
+                                    <div class="text-sm text-slate-500 mb-2">30 min duration</div>
+                                    <span class="status-badge status-confirmed">
+                                        <i class="fa-solid fa-circle-check text-[10px]"></i> Confirmed
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- Doctor Info Column -->
+                            <div class="flex-1 border-t lg:border-t-0 lg:border-l border-slate-100 pt-4 lg:pt-0 lg:pl-6">
+                                <div class="flex items-center gap-4">
+                                    <div class="relative">
+                                        <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" class="w-14 h-14 rounded-xl object-cover border border-slate-100">
+                                        <div class="absolute -bottom-1 -right-1 bg-green-500 w-3 h-3 rounded-full border-2 border-white"></div>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-bold text-rapid-navy text-lg">Dr. Amara Okafor</h3>
+                                        <div class="text-sm text-slate-500">Cardiology Consultation</div>
+                                        <div class="flex items-center gap-2 mt-1 text-xs text-slate-400">
+                                            <i class="fa-solid fa-video text-rapid-sky"></i> Video Consultation
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Actions Column -->
+                            <div class="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto pt-4 lg:pt-0 border-t lg:border-t-0 border-slate-100">
+                                <button class="w-full sm:w-auto bg-rapid-orange hover:bg-rapid-orangeDark text-white font-bold py-2.5 px-6 rounded-xl shadow-sm transition-all flex items-center justify-center gap-2">
+                                    <i class="fa-solid fa-video"></i>
+                                    <span>Join Call</span>
+                                </button>
+                                <div class="relative group/dropdown w-full sm:w-auto">
+                                    <button class="w-full sm:w-auto px-4 py-2.5 border border-slate-200 rounded-xl text-slate-600 font-medium hover:border-rapid-sky hover:text-rapid-sky transition-colors flex items-center justify-center gap-2">
+                                        <span>Manage</span>
+                                        <i class="fa-solid fa-chevron-down text-xs"></i>
+                                    </button>
+                                    <!-- Dropdown Menu -->
+                                    <div class="hidden group-hover/dropdown:block absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-100 z-20 py-1">
+                                        <a href="#" class="block px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-rapid-navy">
+                                            <i class="fa-regular fa-calendar text-slate-400 mr-2 w-4"></i> Reschedule
+                                        </a>
+                                        <a href="#" class="block px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-rapid-navy">
+                                            <i class="fa-solid fa-receipt text-slate-400 mr-2 w-4"></i> View Receipt
+                                        </a>
+                                        <div class="h-px bg-slate-100 my-1"></div>
+                                        <a href="#" class="block px-4 py-2 text-sm text-red-500 hover:bg-red-50">
+                                            <i class="fa-solid fa-ban mr-2 w-4"></i> Cancel
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                    <!-- Footer Info -->
+                    <div class="bg-slate-50 px-6 py-3 flex items-center justify-between border-t border-slate-100">
+                        <div class="text-xs text-slate-500 flex items-center gap-2">
+                            <i class="fa-solid fa-info-circle text-rapid-sky"></i>
+                            Please join 5 minutes early to test your audio/video.
+                        </div>
+                        <div class="text-xs font-medium text-slate-400">ID: #APT-29384</div>
+                    </div>
+                </div>
+
+                <!-- 2. Pending Payment Appointment -->
+                <div id="appointment-card-2" class="bg-white rounded-2xl border border-slate-200 shadow-card overflow-hidden hover:shadow-soft transition-all duration-300 relative opacity-95">
+                     <div class="absolute top-0 left-0 w-1 h-full bg-rapid-orange"></div>
+                    <div class="p-6">
+                        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                            
+                            <div class="flex items-start gap-4 min-w-[180px]">
+                                <div class="bg-orange-50 rounded-xl p-3 text-center min-w-[70px]">
+                                    <div class="text-xs font-bold text-rapid-orange uppercase mb-1">Oct</div>
+                                    <div class="text-2xl font-bold text-rapid-navy">12</div>
+                                    <div class="text-xs text-slate-500 font-medium">Thu</div>
+                                </div>
+                                <div>
+                                    <div class="text-lg font-bold text-rapid-navy">02:00 PM</div>
+                                    <div class="text-sm text-slate-500 mb-2">45 min duration</div>
+                                    <span class="status-badge status-pending">
+                                        <i class="fa-solid fa-clock text-[10px]"></i> Awaiting Payment
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="flex-1 border-t lg:border-t-0 lg:border-l border-slate-100 pt-4 lg:pt-0 lg:pl-6">
+                                <div class="flex items-center gap-4">
+                                    <div class="relative">
+                                        <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-3.jpg" class="w-14 h-14 rounded-xl object-cover border border-slate-100 grayscale opacity-70">
+                                    </div>
+                                    <div>
+                                        <h3 class="font-bold text-rapid-navy text-lg">Dr. Babatunde Alabi</h3>
+                                        <div class="text-sm text-slate-500">Dermatology Follow-up</div>
+                                        <div class="flex items-center gap-2 mt-1 text-xs text-slate-400">
+                                            <i class="fa-solid fa-hospital text-slate-400"></i> In-Person Visit • Lagos General
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto pt-4 lg:pt-0 border-t lg:border-t-0 border-slate-100">
+                                <button class="w-full sm:w-auto bg-rapid-navy hover:bg-slate-800 text-white font-bold py-2.5 px-6 rounded-xl shadow-sm transition-all flex items-center justify-center gap-2">
+                                    <span>Complete Payment</span>
+                                    <i class="fa-solid fa-arrow-right text-xs"></i>
+                                </button>
+                                <button class="w-full sm:w-auto px-4 py-2.5 border border-slate-200 rounded-xl text-red-500 font-medium hover:bg-red-50 hover:border-red-200 transition-colors">
+                                    Cancel
+                                </button>
+                            </div>
+
+                        </div>
+                    </div>
+                     <div class="bg-orange-50/50 px-6 py-3 flex items-center gap-2 border-t border-orange-100">
+                        <i class="fa-solid fa-triangle-exclamation text-rapid-orange text-xs"></i>
+                        <span class="text-xs text-orange-800 font-medium">This slot is reserved for 23h 45m more. Please pay to confirm.</span>
+                    </div>
+                </div>
+
+                <!-- 3. Confirmed Appointment (Future) -->
+                <div id="appointment-card-3" class="bg-white rounded-2xl border border-slate-200 shadow-card overflow-hidden hover:shadow-soft transition-all duration-300 relative">
+                     <div class="absolute top-0 left-0 w-1 h-full bg-rapid-sky"></div>
+                    <div class="p-6">
+                        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                            
+                            <div class="flex items-start gap-4 min-w-[180px]">
+                                <div class="bg-slate-50 rounded-xl p-3 text-center min-w-[70px]">
+                                    <div class="text-xs font-bold text-slate-500 uppercase mb-1">Nov</div>
+                                    <div class="text-2xl font-bold text-rapid-navy">01</div>
+                                    <div class="text-xs text-slate-500 font-medium">Wed</div>
+                                </div>
+                                <div>
+                                    <div class="text-lg font-bold text-rapid-navy">09:15 AM</div>
+                                    <div class="text-sm text-slate-500 mb-2">15 min duration</div>
+                                    <span class="status-badge status-confirmed">
+                                        <i class="fa-solid fa-circle-check text-[10px]"></i> Confirmed
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="flex-1 border-t lg:border-t-0 lg:border-l border-slate-100 pt-4 lg:pt-0 lg:pl-6">
+                                <div class="flex items-center gap-4">
+                                    <div class="relative">
+                                        <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-6.jpg" class="w-14 h-14 rounded-xl object-cover border border-slate-100">
+                                    </div>
+                                    <div>
+                                        <h3 class="font-bold text-rapid-navy text-lg">Dr. Chioma Nnadi</h3>
+                                        <div class="text-sm text-slate-500">General Checkup</div>
+                                        <div class="flex items-center gap-2 mt-1 text-xs text-slate-400">
+                                            <i class="fa-solid fa-video text-rapid-sky"></i> Video Consultation
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto pt-4 lg:pt-0 border-t lg:border-t-0 border-slate-100">
+                                <button disabled class="w-full sm:w-auto bg-slate-100 text-slate-400 font-bold py-2.5 px-6 rounded-xl cursor-not-allowed flex items-center justify-center gap-2">
+                                    <i class="fa-solid fa-video"></i>
+                                    <span>Join Call</span>
+                                </button>
+                                <div class="relative group/dropdown w-full sm:w-auto">
+                                    <button class="w-full sm:w-auto px-4 py-2.5 border border-slate-200 rounded-xl text-slate-600 font-medium hover:border-rapid-sky hover:text-rapid-sky transition-colors flex items-center justify-center gap-2">
+                                        <span>Manage</span>
+                                        <i class="fa-solid fa-chevron-down text-xs"></i>
+                                    </button>
+                                    <!-- Dropdown Menu -->
+                                    <div class="hidden group-hover/dropdown:block absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-100 z-20 py-1">
+                                        <a href="#" class="block px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-rapid-navy">Reschedule</a>
+                                        <a href="#" class="block px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-rapid-navy">View Receipt</a>
+                                        <div class="h-px bg-slate-100 my-1"></div>
+                                        <a href="#" class="block px-4 py-2 text-sm text-red-500 hover:bg-red-50">Cancel</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Past Appointment Section Title -->
+                <div class="pt-8 pb-2">
+                    <h3 class="text-lg font-bold text-rapid-navy flex items-center gap-2">
+                        <i class="fa-solid fa-clock-rotate-left text-rapid-sky"></i>
+                        Recent History
+                    </h3>
+                </div>
+
+                <!-- 4. Completed Appointment (Past) -->
+                <div id="appointment-card-4" class="bg-slate-50 rounded-2xl border border-slate-200 overflow-hidden relative opacity-80 hover:opacity-100 transition-all">
+                    <div class="p-6">
+                        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                            
+                            <div class="flex items-start gap-4 min-w-[180px]">
+                                <div class="bg-white border border-slate-200 rounded-xl p-3 text-center min-w-[70px]">
+                                    <div class="text-xs font-bold text-slate-400 uppercase mb-1">Sep</div>
+                                    <div class="text-2xl font-bold text-slate-600">28</div>
+                                </div>
+                                <div>
+                                    <div class="text-lg font-bold text-slate-700">11:00 AM</div>
+                                    <span class="status-badge status-completed mt-2">
+                                        <i class="fa-solid fa-check text-[10px]"></i> Completed
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="flex-1 lg:pl-6">
+                                <div class="flex items-center gap-4">
+                                    <div class="relative">
+                                        <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" class="w-14 h-14 rounded-xl object-cover border border-slate-100 grayscale">
+                                    </div>
+                                    <div>
+                                        <h3 class="font-bold text-slate-700 text-lg">Dr. Amara Okafor</h3>
+                                        <div class="text-sm text-slate-500">Initial Cardiology Assessment</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto pt-4 lg:pt-0 border-t lg:border-t-0 border-slate-200">
+                                <button class="w-full sm:w-auto px-4 py-2.5 border border-slate-200 rounded-xl text-rapid-sky font-medium bg-white hover:border-rapid-sky transition-colors flex items-center justify-center gap-2">
+                                    <i class="fa-solid fa-prescription text-sm"></i>
+                                    <span>Prescription</span>
+                                </button>
+                                <button class="w-full sm:w-auto px-4 py-2.5 border border-slate-200 rounded-xl text-slate-600 font-medium bg-white hover:bg-slate-50 transition-colors flex items-center justify-center gap-2">
+                                    <i class="fa-solid fa-file-invoice text-sm"></i>
+                                    <span>Receipt</span>
+                                </button>
+                                <button class="w-full sm:w-auto px-4 py-2.5 bg-rapid-skyLight text-rapid-skyDark rounded-xl font-bold hover:bg-rapid-sky hover:text-white transition-colors">
+                                    Book Again
+                                </button>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            
+            <!-- Pagination -->
+            <div class="flex items-center justify-center gap-2 mt-8 pb-12">
+                <button class="w-10 h-10 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:text-rapid-navy hover:border-rapid-navy transition-colors disabled:opacity-50">
+                    <i class="fa-solid fa-chevron-left"></i>
+                </button>
+                <button class="w-10 h-10 rounded-lg bg-rapid-navy text-white font-bold flex items-center justify-center shadow-md">1</button>
+                <button class="w-10 h-10 rounded-lg border border-slate-200 text-slate-600 font-medium flex items-center justify-center hover:bg-slate-50 transition-colors">2</button>
+                <button class="w-10 h-10 rounded-lg border border-slate-200 text-slate-600 font-medium flex items-center justify-center hover:bg-slate-50 transition-colors">3</button>
+                <button class="w-10 h-10 rounded-lg border border-slate-200 flex items-center justify-center text-slate-600 hover:text-rapid-navy hover:border-rapid-navy transition-colors">
+                    <i class="fa-solid fa-chevron-right"></i>
+                </button>
+            </div>
+
+        </div>
+    </main>
+
+</body>
+</html>

@@ -2545,6 +2545,7 @@ export class AppointmentsService {
 
           return {
             id: apt._id,
+            _id: apt._id,  // Include _id for modal API calls
             date: apt.start_time,
             start_time: apt.start_time,
             status: apt.status,
@@ -2562,7 +2563,9 @@ export class AppointmentsService {
               specialty: specialistProfile?.specialty || 'General',
               profile_image: profileImageUrl,
             },
+            patient: apt.patient,  // Include patient reference for modal
             notes: apt.notes || null,
+            clinical_notes: apt.clinical_notes || [],  // Include clinical notes for editing
             call_duration: apt.call_duration || null,
             cancellation_reason: apt.cancellation_reason || null,
             join_url: apt.meeting?.join_url || null,

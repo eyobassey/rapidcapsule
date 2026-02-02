@@ -20,6 +20,10 @@ import { GupshupModule } from './common/external/gupshup';
 import { ClaudeSummaryModule } from './modules/claude-summary/claude-summary.module';
 import { AdvancedHealthScoreAdminModule } from './modules/advanced-health-score/advanced-health-score-admin.module';
 import { ReferralsModule } from './modules/referrals/referrals.module';
+import { FinanceModule } from './modules/finance/finance.module';
+import { LanguagesModule } from './modules/languages/languages.module';
+import { SpecialistCategoriesModule } from './modules/specialist-categories/specialist-categories.module';
+import { ConsultationServicesModule } from './modules/consultation-services/consultation-services.module';
 
 dotenv.config();
 @Module({
@@ -42,6 +46,10 @@ dotenv.config();
     ClaudeSummaryModule,
     AdvancedHealthScoreAdminModule,
     ReferralsModule,
+    FinanceModule,
+    LanguagesModule,
+    SpecialistCategoriesModule,
+    ConsultationServicesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -135,10 +135,10 @@ export default {
           isExpanded: false,
         },
         {
-          link: "/app/patient/appointments",
+          link: "/app/patient/appointmentsv2",
           label: "Appointments",
           children: [],
-          icon: "cross",
+          icon: "alarm-clock",
           iconColor: "",
         },
         {
@@ -180,6 +180,11 @@ export default {
           link: "/app/patient/referals-and-rewards",
           label: "Referals & Rewards",
           icon: "gift-box",
+        },
+        {
+          link: "/app/patient/onboarding",
+          label: "Health Profile",
+          icon: "user-circle",
         },
         { link: "/app/patient/account", label: "Account", icon: "user" },
         {

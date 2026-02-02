@@ -13,6 +13,10 @@ import {
   SpecialistPreferences,
   SpecialistPreferencesSchema,
 } from './entities/specialist-preferences.entity';
+import {
+  PatientPreferences,
+  PatientPreferencesSchema,
+} from './entities/patient-preferences.entity';
 import { ReferralsModule } from '../referrals/referrals.module';
 import { WalletsModule } from "../wallets/wallets.module";
 import { BasicHealthScoreModule } from '../basic-health-score/basic-health-score.module';
@@ -26,6 +30,7 @@ import { BasicHealthScoreModule } from '../basic-health-score/basic-health-score
     MongooseModule.forFeature([
       { name: User.name, schema: UserSchema },
       { name: SpecialistPreferences.name, schema: SpecialistPreferencesSchema },
+      { name: PatientPreferences.name, schema: PatientPreferencesSchema },
     ]),
     forwardRef(() => BasicHealthScoreModule),
   ],

@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book New Appointment - Schedule</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>::-webkit-scrollbar { display: none;}</style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Inter', 'sans-serif']
+                    },
+                    colors: {
+                        'primary': '#3B82F6',
+                        'primary-dark': '#2563EB',
+                        'success': '#10B981',
+                        'danger': '#EF4444',
+                        'warning': '#F59E0B',
+                        'gray-50': '#F9FAFB',
+                        'gray-100': '#F3F4F6',
+                        'gray-200': '#E5E7EB',
+                        'gray-300': '#D1D5DB',
+                        'gray-400': '#9CA3AF',
+                        'gray-500': '#6B7280',
+                        'gray-600': '#4B5563',
+                        'gray-700': '#374151',
+                        'gray-800': '#1F2937',
+                        'gray-900': '#111827'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 font-sans">
+
+<div id="sidebar" class="fixed left-0 top-0 h-full w-64 bg-white border-r border-gray-200 z-50">
+    <div class="p-6 border-b border-gray-200">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+                <i class="fa-solid fa-video text-white text-lg"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold text-gray-900">TeleHealth</h1>
+                <p class="text-xs text-gray-500">Medical Platform</p>
+            </div>
+        </div>
+    </div>
+    
+    <nav id="main-navigation" class="p-4">
+        <div class="space-y-1">
+            <a href="#" class="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+                <i class="fa-solid fa-calendar-days w-5 text-gray-400"></i>
+                <span class="font-medium">Dashboard</span>
+            </a>
+            <a href="#" class="flex items-center space-x-3 px-4 py-3 text-white bg-primary rounded-lg">
+                <i class="fa-solid fa-clock w-5"></i>
+                <span class="font-medium">Appointments</span>
+            </a>
+            <a href="#" class="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+                <i class="fa-solid fa-users w-5 text-gray-400"></i>
+                <span class="font-medium">Patients</span>
+            </a>
+            <a href="#" class="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+                <i class="fa-solid fa-file-medical w-5 text-gray-400"></i>
+                <span class="font-medium">Clinical Notes</span>
+            </a>
+            <a href="#" class="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+                <i class="fa-solid fa-prescription-bottle-medical w-5 text-gray-400"></i>
+                <span class="font-medium">Pharmacy</span>
+            </a>
+            <a href="#" class="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+                <i class="fa-solid fa-chart-line w-5 text-gray-400"></i>
+                <span class="font-medium">Analytics</span>
+            </a>
+        </div>
+        
+        <div class="mt-8 pt-8 border-t border-gray-200">
+            <p class="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Settings</p>
+            <div class="space-y-1">
+                <a href="#" class="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+                    <i class="fa-solid fa-gear w-5 text-gray-400"></i>
+                    <span class="font-medium">Practice Settings</span>
+                </a>
+                <a href="#" class="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+                    <i class="fa-solid fa-user-circle w-5 text-gray-400"></i>
+                    <span class="font-medium">Account</span>
+                </a>
+            </div>
+        </div>
+    </nav>
+    
+    <div id="sidebar-footer" class="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 bg-white">
+        <div class="flex items-center space-x-3 px-2">
+            <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt="Doctor" class="w-10 h-10 rounded-full object-cover">
+            <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold text-gray-900 truncate">Dr. John Smith</p>
+                <p class="text-xs text-gray-500 truncate">Cardiologist</p>
+            </div>
+            <button class="text-gray-400 hover:text-gray-600">
+                <i class="fa-solid fa-ellipsis-vertical"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<div id="header" class="fixed top-0 left-64 right-0 bg-white border-b border-gray-200 z-40">
+    <div class="px-8 py-4">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <button onclick="window.history.back()" class="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors">
+                    <i class="fa-solid fa-chevron-left"></i>
+                    <span class="font-medium">Back</span>
+                </button>
+            </div>
+            <div class="flex items-center space-x-3">
+                <button onclick="window.history.back()" class="px-5 py-2.5 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors">
+                    <i class="fa-solid fa-xmark mr-2"></i>Cancel
+                </button>
+                <button class="relative p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">
+                    <i class="fa-solid fa-bell text-lg"></i>
+                    <span class="absolute top-1 right-1 w-2 h-2 bg-danger rounded-full"></span>
+                </button>
+                <div class="flex items-center space-x-3 pl-4 border-l border-gray-200">
+                    <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt="Profile" class="w-9 h-9 rounded-full object-cover">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<main id="main-content" class="ml-64 pt-20 pb-24">
+    <div class="px-8 max-w-7xl mx-auto">
+        
+        <section id="appointment-booking-header" class="mb-8">
+            <div class="mb-6">
+                <h1 class="text-3xl font-bold text-gray-900 mb-2">Book New Appointment</h1>
+                <p class="text-gray-500 text-lg">Step 3 of 6: Schedule Appointment</p>
+            </div>
+
+            <div id="progress-indicator" class="flex items-center justify-between mb-8">
+                <div class="flex items-center space-x-3 flex-1">
+                    <div class="flex items-center justify-center w-10 h-10 bg-success text-white font-bold rounded-full">
+                        <i class="fa-solid fa-check text-sm"></i>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-900">Patient</p>
+                        <p class="text-xs text-gray-500">Selected</p>
+                    </div>
+                </div>
+                <div class="flex-1 h-0.5 bg-success mx-4"></div>
+                <div class="flex items-center space-x-3 flex-1">
+                    <div class="flex items-center justify-center w-10 h-10 bg-success text-white font-bold rounded-full">
+                        <i class="fa-solid fa-check text-sm"></i>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-900">Type</p>
+                        <p class="text-xs text-gray-500">Completed</p>
+                    </div>
+                </div>
+                <div class="flex-1 h-0.5 bg-success mx-4"></div>
+                <div class="flex items-center space-x-3 flex-1">
+                    <div class="flex items-center justify-center w-10 h-10 bg-primary text-white font-bold rounded-full">3</div>
+                    <div>
+                        <p class="font-semibold text-gray-900">Schedule</p>
+                        <p class="text-xs text-primary font-medium">Current step</p>
+                    </div>
+                </div>
+                <div class="flex-1 h-0.5 bg-gray-200 mx-4"></div>
+                <div class="flex items-center space-x-3 flex-1">
+                    <div class="flex items-center justify-center w-10 h-10 bg-gray-200 text-gray-500 font-bold rounded-full">4</div>
+                    <div>
+                        <p class="font-semibold text-gray-500">Fee & Channel</p>
+                        <p class="text-xs text-gray-400">Pending</p>
+                    </div>
+                </div>
+                <div class="flex-1 h-0.5 bg-gray-200 mx-4"></div>
+                <div class="flex items-center space-x-3 flex-1">
+                    <div class="flex items-center justify-center w-10 h-10 bg-gray-200 text-gray-500 font-bold rounded-full">5</div>
+                    <div>
+                        <p class="font-semibold text-gray-500">Notes</p>
+                        <p class="text-xs text-gray-400">Pending</p>
+                    </div>
+                </div>
+                <div class="flex-1 h-0.5 bg-gray-200 mx-4"></div>
+                <div class="flex items-center space-x-3 flex-1">
+                    <div class="flex items-center justify-center w-10 h-10 bg-gray-200 text-gray-500 font-bold rounded-full">6</div>
+                    <div>
+                        <p class="font-semibold text-gray-500">Review</p>
+                        <p class="text-xs text-gray-400">Pending</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="grid grid-cols-12 gap-6">
+            
+            <div class="col-span-8">
+                
+                <section id="calendar-view-toggle" class="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-xl font-bold text-gray-900">Select Date & Time</h2>
+                        <div class="flex items-center space-x-2 bg-gray-100 rounded-lg p-1">
+                            <button onclick="switchView('day')" id="day-view-btn" class="px-4 py-2 bg-white text-gray-900 font-medium rounded-md shadow-sm">
+                                <i class="fa-solid fa-calendar-day mr-2"></i>Day
+                            </button>
+                            <button onclick="switchView('week')" id="week-view-btn" class="px-4 py-2 text-gray-600 font-medium rounded-md hover:bg-gray-50">
+                                <i class="fa-solid fa-calendar-week mr-2"></i>Week
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="calendar-navigation" class="flex items-center justify-between mb-6">
+                        <button onclick="previousPeriod()" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                            <i class="fa-solid fa-chevron-left text-gray-600"></i>
+                        </button>
+                        <div class="text-center">
+                            <h3 id="current-date-display" class="text-2xl font-bold text-gray-900">January 29, 2026</h3>
+                            <p class="text-sm text-gray-500">Thursday</p>
+                        </div>
+                        <button onclick="nextPeriod()" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                            <i class="fa-solid fa-chevron-right text-gray-600"></i>
+                        </button>
+                    </div>
+
+                    <div id="day-calendar-view" class="grid grid-cols-7 gap-2 mb-6">
+                        <div onclick="selectDate(this, '27')" class="text-center p-4 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                            <p class="text-xs text-gray-500 mb-1">Tue</p>
+                            <p class="text-lg font-semibold text-gray-400">27</p>
+                        </div>
+                        <div onclick="selectDate(this, '28')" class="text-center p-4 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                            <p class="text-xs text-gray-500 mb-1">Wed</p>
+                            <p class="text-lg font-semibold text-gray-400">28</p>
+                        </div>
+                        <div onclick="selectDate(this, '29')" class="text-center p-4 rounded-lg bg-primary text-white cursor-pointer selected-date">
+                            <p class="text-xs mb-1">Thu</p>
+                            <p class="text-lg font-semibold">29</p>
+                        </div>
+                        <div onclick="selectDate(this, '30')" class="text-center p-4 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                            <p class="text-xs text-gray-500 mb-1">Fri</p>
+                            <p class="text-lg font-semibold text-gray-900">30</p>
+                        </div>
+                        <div onclick="selectDate(this, '31')" class="text-center p-4 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                            <p class="text-xs text-gray-500 mb-1">Sat</p>
+                            <p class="text-lg font-semibold text-gray-900">31</p>
+                        </div>
+                        <div onclick="selectDate(this, '1')" class="text-center p-4 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                            <p class="text-xs text-gray-500 mb-1">Sun</p>
+                            <p class="text-lg font-semibold text-gray-900">1</p>
+                        </div>
+                        <div onclick="selectDate(this, '2')" class="text-center p-4 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                            <p class="text-xs text-gray-500 mb-1">Mon</p>
+                            <p class="text-lg font-semibold text-gray-900">2</p>
+                        </div>
+                    </div>
+
+                    <div id="week-calendar-view" class="hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead>
+                                    <tr class="border-b border-gray-200">
+                                        <th class="text-left py-3 px-2 text-xs font-semibold text-gray-500 uppercase">Time</th>
+                                        <th class="text-center py-3 px-2 text-xs font-semibold text-gray-700">Mon 27</th>
+                                        <th class="text-center py-3 px-2 text-xs font-semibold text-gray-700">Tue 28</th>
+                                        <th class="text-center py-3 px-2 text-xs font-semibold text-primary bg-blue-50">Wed 29</th>
+                                        <th class="text-center py-3 px-2 text-xs font-semibold text-gray-700">Thu 30</th>
+                                        <th class="text-center py-3 px-2 text-xs font-semibold text-gray-700">Fri 31</th>
+                                        <th class="text-center py-3 px-2 text-xs font-semibold text-gray-700">Sat 1</th>
+                                        <th class="text-center py-3 px-2 text-xs font-semibold text-gray-700">Sun 2</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="week-time-slots">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between pt-4 border-t border-gray-200">
+                        <div class="flex items-center space-x-4 text-sm">
+                            <div class="flex items-center space-x-2">
+                                <div class="w-3 h-3 bg-success rounded-full"></div>
+                                <span class="text-gray-600">Available</span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <div class="w-3 h-3 bg-gray-300 rounded-full"></div>
+                                <span class="text-gray-600">Booked</span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <div class="w-3 h-3 bg-danger rounded-full"></div>
+                                <span class="text-gray-600">Conflict</span>
+                            </div>
+                        </div>
+                        <button onclick="showFullCalendar()" class="text-primary font-medium hover:text-primary-dark transition-colors">
+                            <i class="fa-solid fa-calendar-days mr-2"></i>View Full Calendar
+                        </button>
+                    </div>
+                </section>
+
+                <section id="time-slot-selection" class="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <div>
+                            <h2 class="text-xl font-bold text-gray-900">Available Time Slots</h2>
+                            <p class="text-sm text-gray-600 mt-1">Duration: 30 minutes</p>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <div class="flex items-center space-x-2 text-sm text-gray-600">
+                                <i class="fa-solid fa-clock text-gray-400"></i>
+                                <span id="timezone-display" class="font-medium">GMT+0 (London)</span>
+                            </div>
+                            <button onclick="changeTimezone()" class="px-3 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors">
+                                <i class="fa-solid fa-globe mr-1"></i>Change
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="morning-slots" class="mb-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-bold text-gray-900 flex items-center">
+                                <i class="fa-solid fa-sun text-warning mr-2"></i>Morning (8:00 AM - 12:00 PM)
+                            </h3>
+                            <span class="text-sm text-gray-500">12 slots available</span>
+                        </div>
+                        <div class="grid grid-cols-4 gap-3">
+                            <button onclick="selectTimeSlot(this, '08:00')" class="time-slot px-4 py-3 border-2 border-gray-200 rounded-lg hover:border-primary hover:bg-blue-50 transition-all text-center">
+                                <p class="font-semibold text-gray-900">08:00 AM</p>
+                                <p class="text-xs text-success mt-1"><i class="fa-solid fa-circle-check mr-1"></i>Available</p>
+                            </button>
+                            <button onclick="selectTimeSlot(this, '08:30')" class="time-slot px-4 py-3 border-2 border-gray-200 rounded-lg hover:border-primary hover:bg-blue-50 transition-all text-center">
+                                <p class="font-semibold text-gray-900">08:30 AM</p>
+                                <p class="text-xs text-success mt-1"><i class="fa-solid fa-circle-check mr-1"></i>Available</p>
+                            </button>
+                            <button onclick="selectTimeSlot(this, '09:00')" class="time-slot px-4 py-3 border-2 border-gray-200 rounded-lg hover:border-primary hover:bg-blue-50 transition-all text-center">
+                                <p class="font-semibold text-gray-900">09:00 AM</p>
+                                <p class="text-xs text-success mt-1"><i class="fa-solid fa-circle-check mr-1"></i>Available</p>
+                            </button>
+                            <button onclick="selectTimeSlot(this, '09:30')" class="time-slot px-4 py-3 border-2 border-primary bg-blue-50 rounded-lg text-center selected-time">
+                                <p class="font-semibold text-gray-900">09:30 AM</p>
+                                <p class="text-xs text-primary mt-1"><i class="fa-solid fa-circle-dot mr-1"></i>Selected</p>
+                            </button>
+                            <button onclick="selectTimeSlot(this, '10:00')" class="time-slot px-4 py-3 border-2 border-gray-200 rounded-lg hover:border-primary hover:bg-blue-50 transition-all text-center">
+                                <p class="font-semibold text-gray-900">10:00 AM</p>
+                                <p class="text-xs text-success mt-1"><i class="fa-solid fa-circle-check mr-1"></i>Available</p>
+                            </button>
+                            <button onclick="selectTimeSlot(this, '10:30')" class="time-slot px-4 py-3 border-2 border-gray-200 rounded-lg hover:border-primary hover:bg-blue-50 transition-all text-center">
+                                <p class="font-semibold text-gray-900">10:30 AM</p>
+                                <p class="text-xs text-success mt-1"><i class="fa-solid fa-circle-check mr-1"></i>Available</p>
+                            </button>
+                            <button disabled class="time-slot px-4 py-3 border-2 border-gray-200 bg-gray-50 rounded-lg text-center cursor-not-allowed opacity-60">
+                                <p class="font-semibold text-gray-500">11:00 AM</p>
+                                <p class="text-xs text-gray-400 mt-1"><i class="fa-solid fa-ban mr-1"></i>Booked</p>
+                            </button>
+                            <button onclick="selectTimeSlot(this, '11:30')" class="time-slot px-4 py-3 border-2 border-gray-200 rounded-lg hover:border-primary hover:bg-blue-50 transition-all text-center">
+                                <p class="font-semibold text-gray-900">11:30 AM</p>
+                                <p class="text-xs text-success mt-1"><i class="fa-solid fa-circle-check mr-1"></i>Available</p>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="afternoon-slots" class="mb-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-bold text-gray-900 flex items-center">
+                                <i class="fa-solid fa-cloud-sun text-warning mr-2"></i>Afternoon (12:00 PM - 5:00 PM)
+                            </h3>
+                            <span class="text-sm text-gray-500">8 slots available</span>
+                        </div>
+                        <div class="grid grid-cols-4 gap-3">
+                            <button onclick="selectTimeSlot(this, '12:00')" class="time-slot px-4 py-3 border-2 border-gray-200 rounded-lg hover:border-primary hover:bg-blue-50 transition-all text-center">
+                                <p class="font-semibold text-gray-900">12:00 PM</p>
+                                <p class="text-xs text-success mt-1"><i class="fa-solid fa-circle-check mr-1"></i>Available</p>
+                            </button>
+                            <button disabled class="time-slot px-4 py-3 border-2 border-gray-200 bg-gray-50 rounded-lg text-center cursor-not-allowed opacity-60">
+                                <p class="font-semibold text-gray-500">12:30 PM</p>
+                                <p class="text-xs text-gray-400 mt-1"><i class="fa-solid fa-ban mr-1"></i>Booked</p>
+                            </button>
+                            <button onclick="selectTimeSlot(this, '13:00')" class="time-slot px-4 py-3 border-2 border-gray-200 rounded-lg hover:border-primary hover:bg-blue-50 transition-all text-center">
+                                <p class="font-semibold text-gray-900">01:00 PM</p>
+                                <p class="text-xs text-success mt-1"><i class="fa-solid fa-circle-check mr-1"></i>Available</p>
+                            </button>
+                            <button onclick="selectTimeSlot(this, '13:30')" class="time-slot px-4 py-3 border-2 border-gray-200 rounded-lg hover:border-primary hover:bg-blue-50 transition-all text-center">
+                                <p class="font-semibold text-gray-900">01:30 PM</p>
+                                <p class="text-xs text-success mt-1"><i class="fa-solid fa-circle-check mr-1"></i>Available</p>
+                            </button>
+                            <button onclick="selectTimeSlot(this, '14:00')" class="time-slot px-4 py-3 border-2 border-gray-200 rounded-lg hover:border-primary hover:bg-blue-50 transition-all text-center">
+                                <p class="font-semibold text-gray-900">02:00 PM</p>
+                                <p class="text-xs text-success mt-1"><i class="fa-solid fa-circle-check mr-1"></i>Available</p>
+                            </button>
+                            <button onclick="selectTimeSlot(this, '14:30')" class="time-slot px-4 py-3 border-2 border-danger bg-red-50 rounded-lg text-center cursor-not-allowed">
+                                <p class="font-semibold text-gray-900">02:30 PM</p>
+                                <p class="text-xs text-danger mt-1"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Conflict</p>
+                            </button>
+                            <button onclick="selectTimeSlot(this, '15:00')" class="time-slot px-4 py-3 border-2 border-gray-200 rounded-lg hover:border-primary hover:bg-blue-50 transition-all text-center">
+                                <p class="font-semibold text-gray-900">03:00 PM</p>
+                                <p class="text-xs text-success mt-1"><i class="fa-solid fa-circle-check mr-1"></i>Available</p>
+                            </button>
+                            <button onclick="selectTimeSlot(this, '15:30')" class="time-slot px-4 py-3 border-2 border-gray-200 rounded-lg hover:border-primary hover:bg-blue-50 transition-all text-center">
+                                <p class="font-semibold text-gray-900">03:30 PM</p>
+                                <p class="text-xs text-success mt-1"><i class="fa-solid fa-circle-check mr-1"></i>Available</p>
+                            </button>
+                            <button onclick="selectTimeSlot(this, '16:00')" class="time-slot px-4 py-3 border-2 border-gray-200 rounded-lg hover:border-primary hover:bg-blue-50 transition-all text-center">
+                                <p class="font-semibold text-gray-900">04:00 PM</p>
+                                <p class="text-xs text-success mt-1"><i class="fa-solid fa-circle-check mr-1"></i>Available</p>
+                            </button>
+                            <button onclick="selectTimeSlot(this, '16:30')" class="time-slot px-4 py-3 border-2 border-gray-200 rounded-lg hover:border-primary hover:bg-blue-50 transition-all text-center">
+                                <p class="font-semibold text-gray-900">04:30 PM</p>
+                                <p class="text-xs text-success mt-1"><i class="fa-solid fa-circle-check mr-1"></i>Available</p>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="evening-slots">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-bold text-gray-900 flex items-center">
+                                <i class="fa-solid fa-moon text-purple-600 mr-2"></i>Evening (5:00 PM - 8:00 PM)
+                            </h3>
+                            <span class="text-sm text-gray-500">4 slots available</span>
+                        </div>
+                        <div class="grid grid-cols-4 gap-3">
+                            <button onclick="selectTimeSlot(this, '17:00')" class="time-slot px-4 py-3 border-2 border-gray-200 rounded-lg hover:border-primary hover:bg-blue-50 transition-all text-center">
+                                <p class="font-semibold text-gray-900">05:00 PM</p>
+                                <p class="text-xs text-success mt-1"><i class="fa-solid fa-circle-check mr-1"></i>Available</p>
+                            </button>
+                            <button onclick="selectTimeSlot(this, '17:30')" class="time-slot px-4 py-3 border-2 border-gray-200 rounded-lg hover:border-primary hover:bg-blue-50 transition-all text-center">
+                                <p class="font-semibold text-gray-900">05:30 PM</p>
+                                <p class="text-xs text-success mt-1"><i class="fa-solid fa-circle-check mr-1"></i>Available</p>
+                            </button>
+                            <button disabled class="time-slot px-4 py-3 border-2 border-gray-200 bg-gray-50 rounded-lg text-center cursor-not-allowed opacity-60">
+                                <p class="font-semibold text-gray-500">06:00 PM</p>
+                                <p class="text-xs text-gray-400 mt-1"><i class="fa-solid fa-ban mr-1"></i>Booked</p>
+                            </button>
+                            <button onclick="selectTimeSlot(this, '18:30')" class="time-slot px-4 py-3 border-2 border-gray-200 rounded-lg hover:border-primary hover:bg-blue-50 transition-all text-center">
+                                <p class="font-semibold text-gray-900">06:30 PM</p>
+                                <p class="text-xs text-success mt-1"><i class="fa-solid fa-circle-check mr-1"></i>Available</p>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <div class="flex items-start space-x-3">
+                            <i class="fa-solid fa-triangle-exclamation text-warning text-lg mt-0.5"></i>
+                            <div>
+                                <p class="font-semibold text-gray-900 mb-1">Conflict Detected</p>
+                                <p class="text-sm text-gray-700">The 02:30 PM slot has a scheduling conflict with another appointment. Please select a different time or resolve the conflict.</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="suggested-times-section" class="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <div>
+                            <h2 class="text-xl font-bold text-gray-900">AI Suggested Times</h2>
+                            <p class="text-sm text-gray-600 mt-1">Based on patient preferences and availability patterns</p>
+                        </div>
+                        <span class="px-3 py-1 bg-purple-100 text-purple-700 text-xs font-bold rounded-full">
+                            <i class="fa-solid fa-sparkles mr-1"></i>AI Powered
+                        </span>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-4">
+                        <div onclick="selectSuggestedTime(this)" class="p-5 border-2 border-purple-200 bg-purple-50 rounded-xl hover:border-purple-400 cursor-pointer transition-all">
+                            <div class="flex items-center justify-between mb-3">
+                                <i class="fa-solid fa-star text-purple-600 text-xl"></i>
+                                <span class="px-2 py-1 bg-purple-200 text-purple-700 text-xs font-bold rounded">Best Match</span>
+                            </div>
+                            <p class="font-bold text-gray-900 text-lg mb-1">Tomorrow, 10:00 AM</p>
+                            <p class="text-sm text-gray-600 mb-3">January 30, 2026</p>
+                            <div class="flex items-center space-x-2 text-xs text-gray-600">
+                                <i class="fa-solid fa-check-circle text-success"></i>
+                                <span>95% compatibility</span>
+                            </div>
+                        </div>
+
+                        <div onclick="selectSuggestedTime(this)" class="p-5 border-2 border-gray-200 rounded-xl hover:border-primary hover:bg-blue-50 cursor-pointer transition-all">
+                            <div class="flex items-center justify-between mb-3">
+                                <i class="fa-solid fa-thumbs-up text-primary text-xl"></i>
+                                <span class="px-2 py-1 bg-blue-100 text-primary text-xs font-bold rounded">Good</span>
+                            </div>
+                            <p class="font-bold text-gray-900 text-lg mb-1">Friday, 02:00 PM</p>
+                            <p class="text-sm text-gray-600 mb-3">January 31, 2026</p>
+                            <div class="flex items-center space-x-2 text-xs text-gray-600">
+                                <i class="fa-solid fa-check-circle text-success"></i>
+                                <span>82% compatibility</span>
+                            </div>
+                        </div>
+
+                        <div onclick="selectSuggestedTime(this)" class="p-5 border-2 border-gray-200 rounded-xl hover:border-primary hover:bg-blue-50 cursor-pointer transition-all">
+                            <div class="flex items-center justify-between mb-3">
+                                <i class="fa-solid fa-clock text-gray-500 text-xl"></i>
+                                <span class="px-2 py-1 bg-gray-100 text-gray-700 text-xs font-bold rounded">Alternative</span>
+                            </div>
+                            <p class="font-bold text-gray-900 text-lg mb-1">Monday, 09:00 AM</p>
+                            <p class="text-sm text-gray-600 mb-3">February 3, 2026</p>
+                            <div class="flex items-center space-x-2 text-xs text-gray-600">
+                                <i class="fa-solid fa-check-circle text-success"></i>
+                                <span>76% compatibility</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="reminders-buffer-section" class="bg-white rounded-xl border border-gray-200 p-6">
+                    <h2 class="text-xl font-bold text-gray-900 mb-6">Reminders & Buffer Time</h2>
+                    
+                    <div class="mb-6">
+                        <h3 class="font-bold text-gray-900 mb-4">Set Reminders</h3>
+                        <div class="space-y-3">
+                            <label class="flex items-center justify-between p-4 border-2 border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                                <div class="flex items-center space-x-3">
+                                    <input type="checkbox" checked class="w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary">
+                                    <div>
+                                        <p class="font-semibold text-gray-900">Email Reminder</p>
+                                        <p class="text-xs text-gray-600">Send to patient and doctor</p>
+                                    </div>
+                                </div>
+                                <select class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent">
+                                    <option>24 hours before</option>
+                                    <option>12 hours before</option>
+                                    <option>6 hours before</option>
+                                    <option>3 hours before</option>
+                                    <option>1 hour before</option>
+                                </select>
+                            </label>
+
+                            <label class="flex items-center justify-between p-4 border-2 border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                                <div class="flex items-center space-x-3">
+                                    <input type="checkbox" checked class="w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary">
+                                    <div>
+                                        <p class="font-semibold text-gray-900">SMS Reminder</p>
+                                        <p class="text-xs text-gray-600">Text message notification</p>
+                                    </div>
+                                </div>
+                                <select class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent">
+                                    <option>1 hour before</option>
+                                    <option>3 hours before</option>
+                                    <option>6 hours before</option>
+                                    <option>12 hours before</option>
+                                </select>
+                            </label>
+
+                            <label class="flex items-center justify-between p-4 border-2 border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                                <div class="flex items-center space-x-3">
+                                    <input type="checkbox" class="w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary">
+                                    <div>
+                                        <p class="font-semibold text-gray-900">Push Notification</p>
+                                        <p class="text-xs text-gray-600">Mobile app notification</p>
+                                    </div>
+                                </div>
+                                <select class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent">
+                                    <option>30 minutes before</option>
+                                    <option>1 hour before</option>
+                                    <option>3 hours before</option>
+                                </select>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="border-t border-gray-200 pt-6">
+                        <h3 class="font-bold text-gray-900 mb-4">Buffer Time Settings</h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Before Appointment</label>
+                                <select class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                                    <option value="0">No buffer</option>
+                                    <option value="5">5 minutes</option>
+                                    <option value="10" selected>10 minutes</option>
+                                    <option value="15">15 minutes</option>
+                                    <option value="30">30 minutes</option>
+                                </select>
+                                <p class="text-xs text-gray-500 mt-1.5">Time before appointment starts</p>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">After Appointment</label>
+                                <select class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                                    <option value="0">No buffer</option>
+                                    <option value="5" selected>5 minutes</option>
+                                    <option value="10">10 minutes</option>
+                                    <option value="15">15 minutes</option>
+                                    <option value="30">30 minutes</option>
+                                </select>
+                                <p class="text-xs text-gray-500 mt-1.5">Time after appointment ends</p>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                            <div class="flex items-start space-x-3">
+                                <i class="fa-solid fa-info-circle text-primary text-lg mt-0.5"></i>
+                                <div>
+                                    <p class="font-semibold text-gray-900 mb-1">Buffer Time Benefits</p>
+                                    <p class="text-sm text-gray-700">Buffer time helps prevent back-to-back scheduling, allows for preparation, and provides flexibility for appointments that run over time.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+
+            <div class="col-span-4">
+                
+                <section id="selected-datetime-card" class="bg-gradient-to-br from-blue-50 to-white rounded-xl border border-blue-200 p-6 mb-6 sticky top-24">
+                    <h3 class="text-lg font-bold text-gray-900 mb-5 flex items-center">
+                        <i class="fa-solid fa-calendar-check text-primary mr-2"></i>Selected Date & Time
+                    </h3>
+                    
+                    <div class="bg-white rounded-xl p-5 border border-gray-200 mb-5">
+                        <div class="flex items-center space-x-4 mb-4">
+                            <div class="w-14 h-14 bg-primary rounded-lg flex flex-col items-center justify-center text-white">
+                                <p class="text-xs font-semibold">JAN</p>
+                                <p class="text-2xl font-bold">29</p>
+                            </div>
+                            <div>
+                                <p class="font-bold text-gray-900 text-lg">Thursday</p>
+                                <p class="text-sm text-gray-600">January 29, 2026</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-3 py-3 border-t border-gray-100">
+                            <i class="fa-solid fa-clock text-primary"></i>
+                            <div>
+                                <p class="text-xs text-gray-500">Time</p>
+                                <p class="font-bold text-gray-900">09:30 AM - 10:00 AM</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-3 py-3 border-t border-gray-100">
+                            <i class="fa-solid fa-hourglass-half text-primary"></i>
+                            <div>
+                                <p class="text-xs text-gray-500">Duration</p>
+                                <p class="font-bold text-gray-900">30 minutes</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-3 py-3 border-t border-gray-100">
+                            <i class="fa-solid fa-globe text-primary"></i>
+                            <div>
+                                <p class="text-xs text-gray-500">Timezone</p>
+                                <p class="font-bold text-gray-900">GMT+0 (London)</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3">
+                        <div class="bg-green-50 border border-green-200 rounded-lg p-3">
+                            <div class="flex items-center space-x-2 text-sm">
+                                <i class="fa-solid fa-shield-check text-success"></i>
+                                <span class="text-gray-700 font-medium">No scheduling conflicts</span>
+                            </div>
+                        </div>
+
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                            <div class="flex items-center space-x-2 text-sm">
+                                <i class="fa-solid fa-bell text-primary"></i>
+                                <span class="text-gray-700 font-medium">2 reminders active</span>
+                            </div>
+                        </div>
+
+                        <div class="bg-purple-50 border border-purple-200 rounded-lg p-3">
+                            <div class="flex items-center space-x-2 text-sm">
+                                <i class="fa-solid fa-clock text-purple-600"></i>
+                                <span class="text-gray-700 font-medium">15 min buffer time</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="patient-preferences-card" class="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+                    <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                        <i class="fa-solid fa-user-clock text-gray-600 mr-2"></i>Patient Preferences
+                    </h3>
+                    
+                    <div class="space-y-4">
+                        <div class="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
+                            <i class="fa-solid fa-sun text-warning mt-1"></i>
+                            <div>
+                                <p class="text-sm font-semibold text-gray-900">Preferred Time</p>
+                                <p class="text-xs text-gray-600">Morning (9:00 AM - 11:00 AM)</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
+                            <i class="fa-solid fa-calendar-days text-primary mt-1"></i>
+                            <div>
+                                <p class="text-sm font-semibold text-gray-900">Preferred Days</p>
+                                <p class="text-xs text-gray-600">Monday, Wednesday, Thursday</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
+                            <i class="fa-solid fa-language text-purple-600 mt-1"></i>
+                            <div>
+                                <p class="text-sm font-semibold text-gray-900">Language</p>
+                                <p class="text-xs text-gray-600">English (Primary)</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
+                            <i class="fa-solid fa-bell text-success mt-1"></i>
+                            <div>
+                                <p class="text-sm font-semibold text-gray-900">Notification Preference</p>
+                                <p class="text-xs text-gray-600">Email & SMS</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="appointment-summary-card" class="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+                    <h3 class="text-lg font-bold text-gray-900 mb-5 flex items-center">
+                        <i class="fa-solid fa-list-check text-gray-600 mr-2"></i>Appointment Summary
+                    </h3>
+                    
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between py-2 border-b border-gray-100">
+                            <span class="text-sm text-gray-600">Patient</span>
+                            <span class="font-semibold text-gray-900">Sarah Johnson</span>
+                        </div>
+
+                        <div class="flex items-center justify-between py-2 border-b border-gray-100">
+                            <span class="text-sm text-gray-600">Channel</span>
+                            <span class="font-semibold text-gray-900">Video Call</span>
+                        </div>
+
+                        <div class="flex items-center justify-between py-2 border-b border-gray-100">
+                            <span class="text-sm text-gray-600">Type</span>
+                            <span class="font-semibold text-gray-900">Initial Consultation</span>
+                        </div>
+
+                        <div class="flex items-center justify-between py-2 border-b border-gray-100">
+                            <span class="text-sm text-gray-600">Specialty</span>
+                            <span class="font-semibold text-gray-900">Cardiology</span>
+                        </div>
+
+                        <div class="flex items-center justify-between py-2 border-b border-gray-100">
+                            <span class="text-sm text-gray-600">Date</span>
+                            <span class="font-semibold text-gray-900">Jan 29, 2026</span>
+                        </div>
+
+                        <div class="flex items-center justify-between py-2 border-b border-gray-100">
+                            <span class="text-sm text-gray-600">Time</span>
+                            <span class="font-semibold text-gray-900">09:30 AM</span>
+                        </div>
+
+                        <div class="flex items-center justify-between py-2">
+                            <span class="text-sm text-gray-600">Duration</span>
+                            <span class="font-semibold text-gray-900">30 minutes</span>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="quick-tips-card" class="bg-white rounded-xl border border-gray-200 p-6">
+                    <div class="flex items-start space-x-3 mb-5">
+                        <div class="w-11 h-11 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-lightbulb text-purple-600 text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-gray-900 mb-1">Scheduling Tips</h3>
+                            <p class="text-sm text-gray-600">Best practices for appointments</p>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-3">
+                        <div class="flex items-start space-x-3 text-sm">
+                            <i class="fa-solid fa-check-circle text-success mt-0.5"></i>
+                            <p class="text-gray-700">Consider patient's timezone for virtual appointments</p>
+                        </div>
+                        <div class="flex items-start space-x-3 text-sm">
+                            <i class="fa-solid fa-check-circle text-success mt-0.5"></i>
+                            <p class="text-gray-700">Allow buffer time between appointments</p>
+                        </div>
+                        <div class="flex items-start space-x-3 text-sm">
+                            <i class="fa-solid fa-check-circle text-success mt-0.5"></i>
+                            <p class="text-gray-700">Set multiple reminders to reduce no-shows</p>
+                        </div>
+                        <div class="flex items-start space-x-3 text-sm">
+                            <i class="fa-solid fa-check-circle text-success mt-0.5"></i>
+                            <p class="text-gray-700">Review conflicts before finalizing schedule</p>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+
+        </div>
+
+    </div>
+</main>
+
+<section id="navigation-buttons" class="fixed bottom-0 left-64 right-0 bg-white border-t border-gray-200 px-8 py-4 z-30 shadow-lg">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+        <button onclick="window.history.back()" class="px-6 py-3 bg-white border-2 border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors">
+            <i class="fa-solid fa-chevron-left mr-2"></i>Back
+        </button>
+        <div class="flex items-center space-x-3">
+            <button onclick="saveDraft()" class="px-6 py-3 bg-white border-2 border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors">
+                <i class="fa-solid fa-floppy-disk mr-2"></i>Save Draft
+            </button>
+            <button id="continue-btn" class="px-8 py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition-colors shadow-sm">
+                Next: Fee & Channel<i class="fa-solid fa-chevron-right ml-2"></i>
+            </button>
+        </div>
+    </div>
+</section>
+
+<script>
+let currentView = 'day';
+let selectedDate = '29';
+let selectedTime = '09:30';
+
+function switchView(view) {
+    currentView = view;
+    
+    if (view === 'day') {
+        document.getElementById('day-view-btn').classList.add('bg-white', 'text-gray-900', 'shadow-sm');
+        document.getElementById('day-view-btn').classList.remove('text-gray-600', 'hover:bg-gray-50');
+        document.getElementById('week-view-btn').classList.remove('bg-white', 'text-gray-900', 'shadow-sm');
+        document.getElementById('week-view-btn').classList.add('text-gray-600', 'hover:bg-gray-50');
+        
+        document.getElementById('day-calendar-view').classList.remove('hidden');
+        document.getElementById('week-calendar-view').classList.add('hidden');
+    } else {
+        document.getElementById('week-view-btn').classList.add('bg-white', 'text-gray-900', 'shadow-sm');
+        document.getElementById('week-view-btn').classList.remove('text-gray-600', 'hover:bg-gray-50');
+        document.getElementById('day-view-btn').classList.remove('bg-white', 'text-gray-900', 'shadow-sm');
+        document.getElementById('day-view-btn').classList.add('text-gray-600', 'hover:bg-gray-50');
+        
+        document.getElementById('day-calendar-view').classList.add('hidden');
+        document.getElementById('week-calendar-view').classList.remove('hidden');
+        generateWeekView();
+    }
+}
+
+function generateWeekView() {
+    const tbody = document.getElementById('week-time-slots');
+    tbody.innerHTML = '';
+    
+    const times = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'];
+    
+    times.forEach(time => {
+        const row = document.createElement('tr');
+        row.className = 'border-b border-gray-100';
+        row.innerHTML = `
+            <td class="py-3 px-2 text-xs text-gray-600 font-medium">${time}</td>
+            <td class="py-3 px-2 text-center"><div class="h-12 bg-gray-100 rounded"></div></td>
+            <td class="py-3 px-2 text-center"><div class="h-12 bg-success bg-opacity-20 rounded hover:bg-opacity-40 cursor-pointer"></div></td>
+            <td class="py-3 px-2 text-center"><div class="h-12 bg-primary bg-opacity-30 rounded"></div></td>
+            <td class="py-3 px-2 text-center"><div class="h-12 bg-success bg-opacity-20 rounded hover:bg-opacity-40 cursor-pointer"></div></td>
+            <td class="py-3 px-2 text-center"><div class="h-12 bg-success bg-opacity-20 rounded hover:bg-opacity-40 cursor-pointer"></div></td>
+            <td class="py-3 px-2 text-center"><div class="h-12 bg-gray-100 rounded"></div></td>
+            <td class="py-3 px-2 text-center"><div class="h-12 bg-gray-100 rounded"></div></td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+function previousPeriod() {
+    alert('Navigate to previous period');
+}
+
+function nextPeriod() {
+    alert('Navigate to next period');
+}
+
+function selectDate(element, date) {
+    selectedDate = date;
+    
+    document.querySelectorAll('#day-calendar-view > div').forEach(el => {
+        el.classList.remove('bg-primary', 'text-white', 'selected-date');
+        el.classList.add('hover:bg-gray-50');
+        const p = el.querySelectorAll('p');
+        p[0].classList.remove('text-white');
+        p[0].classList.add('text-gray-500');
+        p[1].classList.remove('text-white');
+        p[1].classList.add('text-gray-900');
+    });
+    
+    element.classList.add('bg-primary', 'text-white', 'selected-date');
+    element.classList.remove('hover:bg-gray-50');
+    const p = element.querySelectorAll('p');
+    p[0].classList.add('text-white');
+    p[0].classList.remove('text-gray-500');
+    p[1].classList.add('text-white');
+    p[1].classList.remove('text-gray-900', 'text-gray-400');
+}
+
+function selectTimeSlot(element, time) {
+    if (element.disabled) return;
+    
+    selectedTime = time;
+    
+    document.querySelectorAll('.time-slot:not([disabled])').forEach(el => {
+        el.classList.remove('border-primary', 'bg-blue-50', 'selected-time');
+        el.classList.add('border-gray-200');
+        const status = el.querySelector('.text-xs');
+        if (status && !status.textContent.includes('Conflict')) {
+            status.innerHTML = '<i class="fa-solid fa-circle-check mr-1"></i>Available';
+            status.classList.remove('text-primary');
+            status.classList.add('text-success');
+        }
+    });
+    
+    element.classList.add('border-primary', 'bg-blue-50', 'selected-time');
+    element.classList.remove('border-gray-200');
+    const status = element.querySelector('.text-xs');
+    if (status) {
+        status.innerHTML = '<i class="fa-solid fa-circle-dot mr-1"></i>Selected';
+        status.classList.remove('text-success');
+        status.classList.add('text-primary');
+    }
+}
+
+function selectSuggestedTime(element) {
+    alert('Apply suggested time to calendar');
+}
+
+function changeTimezone() {
+    alert('Open timezone selector');
+}
+
+function showFullCalendar() {
+    alert('Open full calendar view');
+}
+
+function saveDraft() {
+    alert('Draft saved successfully!\n\nYou can continue this booking later from your drafts.');
+}
+</script>
+
+</body>
+</html>

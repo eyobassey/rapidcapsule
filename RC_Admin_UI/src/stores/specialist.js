@@ -92,5 +92,48 @@ export const useSpecialistStore = defineStore('specialist',{
         return 'error'
       }
     },
+    async getSpecialistLanguagesAndCategories(id) {
+      try {
+        const response = await axios.get(`${apiBaseURl}/specialists/${id}/languages-categories`)
+
+        if(response.status === 200) {
+          return response.data.data
+        }
+        return null
+      } catch(error) {
+        console.error('Error fetching specialist languages/categories:', error)
+        return null
+      }
+    },
+    async assignLanguages(id, languageIds) {
+      try {
+        const response = await axios.patch(`${apiBaseURl}/specialists/${id}/languages`, {
+          language_ids: languageIds
+        })
+
+        if(response.status === 200) {
+          return response.data
+        }
+        return 'error'
+      } catch(error) {
+        console.error('Error assigning languages:', error)
+        return 'error'
+      }
+    },
+    async assignCategories(id, categoryIds) {
+      try {
+        const response = await axios.patch(`${apiBaseURl}/specialists/${id}/categories`, {
+          category_ids: categoryIds
+        })
+
+        if(response.status === 200) {
+          return response.data
+        }
+        return 'error'
+      } catch(error) {
+        console.error('Error assigning categories:', error)
+        return 'error'
+      }
+    },
   },
 })

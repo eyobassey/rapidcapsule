@@ -44,6 +44,40 @@ export default [
     icon: { icon: 'bx-bar-chart-square' },
   },
   {
+    title: 'Finance',
+    icon: { icon: 'mdi-wallet' },
+    children: [
+      {
+        title: 'Dashboard',
+        to: { name: 'finance' },
+      },
+      {
+        title: 'Wallets',
+        to: { name: 'finance-wallets' },
+      },
+      {
+        title: 'Transactions',
+        to: { name: 'finance-transactions' },
+      },
+      {
+        title: 'Ledger',
+        to: { name: 'finance-ledger' },
+      },
+      {
+        title: 'Chart of Accounts',
+        to: { name: 'finance-accounts' },
+      },
+      {
+        title: 'Journal Entries',
+        to: { name: 'finance-journal-entries' },
+      },
+      {
+        title: 'Reports',
+        to: { name: 'finance-reports' },
+      },
+    ],
+  },
+  {
     title: 'LifeGuards',
     to: { name: 'lifeguards' },
     icon: { icon: 'tabler:heartbeat' },
@@ -77,6 +111,24 @@ export default [
       {
         title: 'Questions',
         to: { name: 'advanced-health-score-questions' },
+      },
+    ],
+  },
+  {
+    title: 'Settings',
+    icon: { icon: 'bx-cog' },
+    children: [
+      {
+        title: 'Languages',
+        to: { name: 'languages' },
+      },
+      {
+        title: 'Specialist Categories',
+        to: { name: 'specialist-categories' },
+      },
+      {
+        title: 'Consultation Services',
+        to: { name: 'consultation-services' },
       },
     ],
   },

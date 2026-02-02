@@ -40,6 +40,10 @@ import { ClaudeSummaryCreditsModule } from './modules/claude-summary-credits/cla
 import { AdvancedHealthScoreModule } from './modules/advanced-health-score/advanced-health-score.module';
 import { BasicHealthScoreModule } from './modules/basic-health-score/basic-health-score.module';
 import { SpecialistPatientsModule } from './modules/specialist-patients/specialist-patients.module';
+import { AccountingModule } from './modules/accounting/accounting.module';
+import { LanguagesModule } from './modules/languages/languages.module';
+import { SpecialistCategoriesModule } from './modules/specialist-categories/specialist-categories.module';
+import { ConsultationServicesModule } from './modules/consultation-services/consultation-services.module';
 
 dotenv.config();
 
@@ -83,6 +87,10 @@ dotenv.config();
     AdvancedHealthScoreModule,
     BasicHealthScoreModule,
     SpecialistPatientsModule,
+    AccountingModule,
+    LanguagesModule,
+    SpecialistCategoriesModule,
+    ConsultationServicesModule,
   ],
   controllers: [AppController],
   providers: [AppService, WebsocketGateway],

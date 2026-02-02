@@ -1,10 +1,12 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Model, Types } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { User, UserDocument, ProfileStatus } from '../patients/entities/patient.entity';
 import { SpecialistAdvancedFilterDto } from './dto/specialist-advanced-filter.dto';
 import { PatientsService } from '../patients/patients.service';
 import { GeneralHelpers } from '../../common/helpers/general.helpers';
+import { FinanceService } from '../finance/finance.service';
+import { WalletOwnerType } from '../finance/entities/unified-wallet.entity';
 import { Appointment, AppointmentDocument } from '../appointments/entities/appointment.entity';
 import { UserType } from '../users/types/profile.types';
 import {
@@ -34,6 +36,8 @@ import {
 
 @Injectable()
 export class SpecialistsService {
+  private readonly logger = new Logger(SpecialistsService.name);
+
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(WalletTransaction.name)
@@ -42,6 +46,7 @@ export class SpecialistsService {
     private appointmentModel: Model<AppointmentDocument>,
     private readonly patientsService: PatientsService,
     private readonly generalHelpers: GeneralHelpers,
+    private readonly financeService: FinanceService,
   ) {}
 
   async getSpecialists(
@@ -134,6 +139,24 @@ export class SpecialistsService {
   }
 
   async getSpecialistEarnings(userId: Types.ObjectId) {
+    // Try unified wallet first
+    try {
+      const unifiedWallet = await this.financeService.getWalletByUserId(
+        userId.toString(),
+        WalletOwnerType.SPECIALIST,
+      );
+      if (unifiedWallet && (unifiedWallet.wallet.total_credited > 0 || unifiedWallet.wallet.available_balance > 0)) {
+        return {
+          totalEarnings: unifiedWallet.wallet.total_credited,
+          totalWithdrawals: unifiedWallet.wallet.total_debited,
+          currentBalance: unifiedWallet.wallet.available_balance,
+        };
+      }
+    } catch (error) {
+      // Fall through to legacy
+    }
+
+    // Fallback to legacy wallet transactions
     const [earnings, withdrawals] = await Promise.all([
       find(this.walletTxnModel, {
         type: TransactionType.CREDIT,
@@ -170,9 +193,26 @@ export class SpecialistsService {
   }
 
   async getWalletTransactions(userId: Types.ObjectId) {
-    return (await find(this.walletTxnModel, {
+    const legacyTransactions = (await find(this.walletTxnModel, {
       userId,
     })) as WalletDocument[];
+
+    // If no legacy transactions, check unified wallet
+    if (!legacyTransactions || legacyTransactions.length === 0) {
+      try {
+        const unifiedWallet = await this.financeService.getWalletByUserId(
+          userId.toString(),
+          WalletOwnerType.SPECIALIST,
+        );
+        if (unifiedWallet && unifiedWallet.recent_transactions) {
+          return unifiedWallet.recent_transactions;
+        }
+      } catch (error) {
+        this.logger.warn(`No unified wallet found for specialist: ${error.message}`);
+      }
+    }
+
+    return legacyTransactions;
   }
 
   getSelectedFields() {
@@ -514,5 +554,34 @@ export class SpecialistsService {
       { _id: userId },
       updateFields,
     );
+  }
+
+  async assignLanguages(userId: Types.ObjectId, languageIds: Types.ObjectId[]) {
+    return updateOneAndReturn(
+      this.userModel,
+      { _id: userId },
+      { languages: languageIds },
+    );
+  }
+
+  async assignCategories(userId: Types.ObjectId, categoryIds: Types.ObjectId[]) {
+    return updateOneAndReturn(
+      this.userModel,
+      { _id: userId },
+      { specialist_categories: categoryIds },
+    );
+  }
+
+  async getSpecialistLanguagesAndCategories(userId: Types.ObjectId) {
+    const specialist = await this.userModel
+      .findById(userId)
+      .populate('languages')
+      .populate('specialist_categories')
+      .select('languages specialist_categories')
+      .exec();
+    return {
+      languages: specialist?.languages || [],
+      specialist_categories: specialist?.specialist_categories || [],
+    };
   }
 }

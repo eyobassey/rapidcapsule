@@ -28,6 +28,7 @@ import {
   ShipDto,
   DeliverDto,
   CancelPrescriptionDto,
+  LinkRecordsDto,
 } from './dto/specialist-prescription.dto';
 import { PrescriptionPaymentMethod } from './entities/specialist-prescription.entity';
 import { RefillService } from './services/refill.service';
@@ -96,6 +97,58 @@ export class SpecialistPrescriptionController {
   async getPatientWalletBalance(@Param('patientId') patientId: string) {
     const result = await this.prescriptionService.getPatientWalletBalance(
       new Types.ObjectId(patientId),
+    );
+    return sendSuccessResponse(Messages.RETRIEVED, result);
+  }
+
+  /**
+   * GET /api/specialist/prescriptions/linkable-appointments/:patientId
+   * Get completed appointments for a specialist-patient pair (for linking UI)
+   */
+  @UseGuards(JwtAuthGuard)
+  @Get('linkable-appointments/:patientId')
+  async getLinkableAppointments(
+    @Request() req,
+    @Param('patientId') patientId: string,
+  ) {
+    const result = await this.prescriptionService.getCompletedAppointments(
+      new Types.ObjectId(req.user.sub),
+      new Types.ObjectId(patientId),
+    );
+    return sendSuccessResponse(Messages.RETRIEVED, result);
+  }
+
+  /**
+   * GET /api/specialist/prescriptions/for-appointment/:appointmentId
+   * Get prescriptions linked to a specific appointment (reverse-lookup)
+   */
+  @UseGuards(JwtAuthGuard)
+  @Get('for-appointment/:appointmentId')
+  async getPrescriptionsForAppointment(
+    @Request() req,
+    @Param('appointmentId') appointmentId: string,
+  ) {
+    const result = await this.prescriptionService.getPrescriptionsForAppointment(
+      new Types.ObjectId(req.user.sub),
+      new Types.ObjectId(appointmentId),
+    );
+    return sendSuccessResponse(Messages.RETRIEVED, result);
+  }
+
+  /**
+   * POST /api/specialist/prescriptions/for-appointments
+   * Get prescriptions linked to multiple appointments (batch reverse-lookup)
+   */
+  @UseGuards(JwtAuthGuard)
+  @Post('for-appointments')
+  async getPrescriptionsForAppointments(
+    @Request() req,
+    @Body('appointment_ids') appointmentIds: string[],
+  ) {
+    const ids = (appointmentIds || []).map(id => new Types.ObjectId(id));
+    const result = await this.prescriptionService.getPrescriptionsForAppointments(
+      new Types.ObjectId(req.user.sub),
+      ids,
     );
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
@@ -341,6 +394,46 @@ export class SpecialistPrescriptionController {
     );
     return sendSuccessResponse(Messages.UPDATED, result);
   }
+
+  // ============ LINKED RECORDS ============
+
+  /**
+   * POST /api/specialist/prescriptions/:id/link-records
+   * Link appointments and/or clinical notes to a prescription
+   */
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/link-records')
+  async linkRecords(
+    @Request() req,
+    @Param('id') id: string,
+    @Body() dto: LinkRecordsDto,
+  ) {
+    const result = await this.prescriptionService.linkRecords(
+      new Types.ObjectId(id),
+      new Types.ObjectId(req.user.sub),
+      dto,
+    );
+    return sendSuccessResponse(Messages.UPDATED, result);
+  }
+
+  /**
+   * POST /api/specialist/prescriptions/:id/unlink-records
+   * Unlink appointments and/or clinical notes from a prescription
+   */
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/unlink-records')
+  async unlinkRecords(
+    @Request() req,
+    @Param('id') id: string,
+    @Body() dto: LinkRecordsDto,
+  ) {
+    const result = await this.prescriptionService.unlinkRecords(
+      new Types.ObjectId(id),
+      new Types.ObjectId(req.user.sub),
+      dto,
+    );
+    return sendSuccessResponse(Messages.UPDATED, result);
+  }
 }
 
 // ============ PATIENT ENDPOINTS ============
@@ -403,6 +496,23 @@ export class PatientPrescriptionController {
     const result = await this.prescriptionService.getPatientPrescriptionsForPharmacy(
       new Types.ObjectId(req.user.sub),
       parsedDrugIds,
+    );
+    return sendSuccessResponse(Messages.RETRIEVED, result);
+  }
+
+  /**
+   * GET /api/patient/prescriptions/for-appointment/:appointmentId
+   * Get prescriptions linked to a specific appointment for this patient
+   */
+  @UseGuards(JwtAuthGuard)
+  @Get('for-appointment/:appointmentId')
+  async getPrescriptionsForAppointment(
+    @Request() req,
+    @Param('appointmentId') appointmentId: string,
+  ) {
+    const result = await this.prescriptionService.getPatientPrescriptionsForAppointment(
+      new Types.ObjectId(req.user.sub),
+      new Types.ObjectId(appointmentId),
     );
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }

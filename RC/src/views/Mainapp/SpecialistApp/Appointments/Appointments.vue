@@ -1,3 +1,24 @@
+<!--
+  ============================================================================
+  DEPRECATED - Appointments V1
+  ============================================================================
+  This component and the entire /Appointments folder has been deprecated.
+
+  Please use Appointments V2 located at:
+  /views/Mainapp/SpecialistApp/SpecialistAppointments/
+
+  Route: /app/specialist/appointments-v2
+
+  V2 Features:
+  - Modern 6-step appointment creation wizard
+  - Better mobile responsiveness
+  - Improved patient selection (existing, platform search, manual entry)
+  - Payment source options (specialist wallet, patient wallet, card)
+  - Enhanced scheduling with time slots
+
+  Deprecated: February 2026
+  ============================================================================
+-->
 <template>
 	<div class="page-content">
 		<top-bar showButtons type="title-only" title="Appointments" @open-side-nav="$emit('openSideNav')" />
@@ -130,6 +151,10 @@
 											<span v-if="isToday(appointment.start_time)" class="today-badge">
 												<v-icon name="hi-lightning-bolt" scale="0.7" />
 												Today
+											</span>
+											<span v-if="appointment.rating?.score" class="rating-badge">
+												<v-icon name="bi-star-fill" scale="0.65" />
+												{{ appointment.rating.score }}/5
 											</span>
 										</div>
 										<div class="footer-right">
@@ -799,6 +824,22 @@ async function fetchStats() {
 	font-size: $size-12;
 	font-weight: $fw-semi-bold;
 	border-radius: $size-6;
+}
+
+.rating-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: $size-4;
+	padding: $size-4 $size-10;
+	background: rgba(245, 158, 11, 0.1);
+	color: #f59e0b;
+	font-size: $size-12;
+	font-weight: $fw-semi-bold;
+	border-radius: $size-6;
+
+	svg {
+		color: #f59e0b;
+	}
 }
 
 .view-btn {

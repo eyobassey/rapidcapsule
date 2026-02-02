@@ -77,6 +77,30 @@
           </div>
         </div>
 
+        <!-- Related Appointments -->
+        <div v-if="prescription.related_appointments?.length" class="info-card related-appointments-card">
+          <h3>
+            <v-icon name="hi-calendar" scale="0.8" />
+            Related Appointments
+          </h3>
+          <p class="related-appointments-note">
+            This prescription was created based on your consultation{{ prescription.related_appointments.length > 1 ? 's' : '' }}.
+          </p>
+          <div class="related-appointments-list">
+            <div
+              v-for="appt in prescription.related_appointments"
+              :key="appt._id"
+              class="related-appointment-item"
+            >
+              <v-icon name="hi-calendar" scale="0.7" class="related-appointment-icon" />
+              <div class="related-appointment-info">
+                <span class="related-appointment-date">{{ formatAppointmentDate(appt.start_time) }}</span>
+                <span v-if="appt.meeting_channel" class="related-appointment-channel">{{ appt.meeting_channel }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Medications -->
         <div class="info-card">
           <h3>Medications ({{ medicationsList?.length || 0 }})</h3>
@@ -1326,6 +1350,10 @@ export default {
     formatDateTime(date) {
       if (!date) return "";
       return moment(date).format("MMM D, YYYY h:mm A");
+    },
+    formatAppointmentDate(date) {
+      if (!date) return "";
+      return moment(date).format("MMMM D, YYYY [at] h:mm A");
     },
     formatStatus(status) {
       if (!status) return "";
@@ -3554,5 +3582,61 @@ export default {
   to {
     transform: rotate(360deg);
   }
+}
+
+// Related Appointments
+.related-appointments-card {
+  h3 {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+}
+
+.related-appointments-note {
+  font-size: 13px;
+  color: #6b7280;
+  margin: 8px 0 12px;
+}
+
+.related-appointments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.related-appointment-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.related-appointment-icon {
+  color: #0EAEC4;
+}
+
+.related-appointment-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.related-appointment-date {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1f2937;
+}
+
+.related-appointment-channel {
+  font-size: 11px;
+  color: #6b7280;
+  background: #e5e7eb;
+  padding: 2px 6px;
+  border-radius: 4px;
 }
 </style>

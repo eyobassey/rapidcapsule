@@ -16,6 +16,18 @@ export class VitalsService {
     @InjectModel(Vital.name) private vitalModel: Model<VitalDocument>,
     private readonly generalHelpers: GeneralHelpers,
   ) {}
+  /**
+   * Batch check which patients have at least one vital record
+   */
+  async getPatientsWithVitals(patientIds: Types.ObjectId[]): Promise<Set<string>> {
+    if (!patientIds.length) return new Set();
+    const results = await this.vitalModel.find(
+      { userId: { $in: patientIds } },
+      { userId: 1 },
+    ).lean();
+    return new Set(results.map((r: any) => r.userId.toString()));
+  }
+
   async createVitals(createVitalDto: CreateVitalDto, userId: Types.ObjectId) {
     for (const vitalDtoKey in createVitalDto) {
       await this.vitalModel.updateOne(

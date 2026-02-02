@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsArray, IsNotEmpty, ValidateNested } from 'class-validator';
+import { IsArray, IsIn, IsMongoId, IsNotEmpty, IsOptional, IsString, ValidateNested } from 'class-validator';
 
 export class TimesParam {
   @Type(() => Date)
@@ -12,4 +12,17 @@ export class AvailableTimesDto {
   @ValidateNested({ each: true })
   @Type(() => TimesParam)
   preferredDates: TimesParam[];
+
+  @IsOptional()
+  @IsMongoId()
+  specialistId?: string;
+
+  @IsOptional()
+  @IsMongoId()
+  patientId?: string; // Check for patient's existing appointments to prevent double-booking
+
+  @IsOptional()
+  @IsString()
+  @IsIn(['routine', 'urgent'])
+  urgency?: string; // Filter slots by urgency type (also includes 'both' slots)
 }

@@ -15,6 +15,7 @@ import {
   RecordingStatus,
 } from '../../appointments/entities/appointment.entity';
 import { Zoom, ZoomParticipant } from '../../../common/external/zoom/zoom';
+import { AppointmentEscrowService } from '../../accounting/services/appointment-escrow.service';
 
 @Injectable()
 export class ZoomWebhookService {
@@ -24,6 +25,7 @@ export class ZoomWebhookService {
     @InjectModel(ZoomWebhook.name) private zoomWebhookModel: Model<ZoomWebhookDocument>,
     @InjectModel(Appointment.name) private appointmentModel: Model<AppointmentDocument>,
     private readonly zoom: Zoom,
+    private readonly appointmentEscrowService: AppointmentEscrowService,
   ) {}
 
   /**
@@ -219,6 +221,32 @@ export class ZoomWebhookService {
         'call_duration.formatted_string': `${duration || 0} Minutes`,
       },
     );
+
+    // Settle escrow if funds were held (release to specialist and platform)
+    if (appointment.escrow?.status === 'held') {
+      const settlementType = finalStatus === AppointmentStatus.COMPLETED ? 'completed' : 'no_show';
+      try {
+        const settleBatch = await this.appointmentEscrowService.settleAppointmentFunds({
+          appointment_id: appointment._id.toString(),
+          settlement_type: settlementType,
+        });
+        this.logger.log(`Escrow settled (${settlementType}) for appointment ${appointment._id}. Batch: ${settleBatch.batch_id}`);
+
+        // Update appointment with settlement details
+        await this.appointmentModel.updateOne(
+          { _id: appointment._id },
+          {
+            'escrow.status': 'settled',
+            'escrow.settled_at': new Date(),
+            'escrow.settlement_batch_id': settleBatch.batch_id,
+            'escrow.settlement_type': settlementType,
+          },
+        );
+      } catch (escrowError) {
+        this.logger.error(`Failed to settle escrow for appointment ${appointment._id}: ${escrowError.message}`);
+        // Continue - the scheduled task will retry settlement later
+      }
+    }
   }
 
   /**
@@ -438,46 +466,59 @@ export class ZoomWebhookService {
     payload: any,
   ): Promise<void> {
     const object = payload?.object;
-    const meetingUuid = object?.uuid || appointment.meeting_platform_data?.zoom_meeting_uuid;
-    const meetingId = object?.id?.toString() || appointment.meeting_id;
+    const meetingUuid = object?.meeting_uuid || object?.uuid || appointment.meeting_platform_data?.zoom_meeting_uuid;
+    const meetingId = object?.meeting_id?.toString() || object?.id?.toString() || appointment.meeting_id;
 
-    this.logger.log(`Meeting summary completed for appointment ${appointment._id}`);
+    this.logger.log(`Meeting summary completed for appointment ${appointment._id}, meeting: ${meetingId}`);
 
-    // The summary might be in the payload directly
-    const summaryData = object?.meeting_summary || payload?.meeting_summary;
+    // Extract summary data from webhook payload
+    const summaryTitle = object?.summary_title;
+    const summaryCreatedTime = object?.summary_created_time;
 
-    const updateFields: any = {};
+    // The summary content might be in the payload directly (some Zoom plans)
+    const summaryData = object?.summary_details || object?.meeting_summary || payload?.meeting_summary;
 
-    if (summaryData) {
-      // Summary included in webhook payload
-      this.logger.log('Summary data found in webhook payload');
+    const updateFields: any = {
+      'meeting_summary.ai_generated': true,
+      'meeting_summary.summary_status': 'available',
+      'meeting_summary.created_at': summaryCreatedTime ? new Date(summaryCreatedTime) : new Date(),
+    };
+
+    if (summaryTitle) {
+      updateFields['meeting_summary.title'] = summaryTitle;
+    }
+
+    if (summaryData?.summary_overview || summaryData?.summary) {
+      // Summary content included in webhook payload
+      this.logger.log('Summary content found in webhook payload');
       updateFields['meeting_summary.summary'] = summaryData.summary_overview || summaryData.summary;
       updateFields['meeting_summary.next_steps'] = summaryData.next_steps || [];
-      updateFields['meeting_summary.ai_generated'] = true;
     } else {
-      // Try to fetch summary from Zoom API
+      // Try to fetch summary from Zoom API (requires double-encoding for UUIDs)
       try {
         const meetingIdToUse = meetingUuid || meetingId;
         this.logger.log(`Fetching summary from API for meeting: ${meetingIdToUse}`);
         const summary = await this.zoom.getMeetingSummary(meetingIdToUse);
 
         if (summary?.summary) {
-          this.logger.log(`Meeting summary retrieved for appointment ${appointment._id}`);
+          this.logger.log(`Meeting summary content retrieved for appointment ${appointment._id}`);
           updateFields['meeting_summary.summary'] = summary.summary;
           updateFields['meeting_summary.next_steps'] = summary.next_steps || [];
-          updateFields['meeting_summary.ai_generated'] = true;
         } else {
-          this.logger.warn(`No summary content returned for appointment ${appointment._id}`);
+          // Zoom API returned metadata but not content - common limitation
+          this.logger.log(`Summary generated but content not available via API for appointment ${appointment._id}`);
+          // Mark as available so UI can show it's generated (viewable in Zoom)
+          updateFields['meeting_summary.summary'] = 'AI meeting summary has been generated. View the full summary in your Zoom account.';
         }
       } catch (error) {
         this.logger.warn(`Failed to fetch meeting summary: ${error.message}`);
+        // Still mark as available since webhook confirmed it was generated
+        updateFields['meeting_summary.summary'] = 'AI meeting summary has been generated. View the full summary in your Zoom account.';
       }
     }
 
-    if (Object.keys(updateFields).length > 0) {
-      await this.appointmentModel.updateOne({ _id: appointment._id }, { $set: updateFields });
-      this.logger.log(`Meeting summary saved for appointment ${appointment._id}`);
-    }
+    await this.appointmentModel.updateOne({ _id: appointment._id }, { $set: updateFields });
+    this.logger.log(`Meeting summary saved for appointment ${appointment._id}`);
   }
 
   /**

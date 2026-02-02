@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Appointment - Step 5</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        rapid: {
+                            sky: '#4FC3F7',
+                            skyLight: '#E1F5FE',
+                            skyDark: '#0288D1',
+                            orange: '#FF9800',
+                            orangeLight: '#FFF3E0',
+                            orangeDark: '#F57C00',
+                            navy: '#1A365D',
+                            gray: '#F5F9FF',
+                            text: '#334155',
+                            success: '#4CAF50',
+                            error: '#EF4444'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        display: ['Poppins', 'system-ui', 'sans-serif']
+                    },
+                    boxShadow: {
+                        'soft': '0 4px 20px -2px rgba(79, 195, 247, 0.15)',
+                        'card': '0 10px 30px -5px rgba(0, 0, 0, 0.05)',
+                        'glow': '0 0 15px rgba(79, 195, 247, 0.3)'
+                    }
+                }
+            }
+        }
+        window.FontAwesomeConfig = { autoReplaceSvg: 'nest' };
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar { display: none; }
+        
+        .step-item.active .step-circle {
+            background-color: #4FC3F7;
+            color: white;
+            box-shadow: 0 0 0 3px #E1F5FE;
+        }
+
+        .step-item.completed .step-circle {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .doctor-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .doctor-card.selected {
+            border-color: #4FC3F7;
+            background-color: #F0F9FF;
+            box-shadow: 0 0 0 2px #4FC3F7;
+        }
+
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #4FC3F7;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #4FC3F7;
+        }
+
+        .ai-drawer {
+            transform: translateY(100%);
+            transition: transform 0.3s ease-out;
+        }
+        .ai-drawer.open {
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body class="bg-rapid-gray font-sans text-rapid-text antialiased w-[375px] h-[840px] overflow-hidden flex flex-col mx-auto">
+
+    <header id="header" class="bg-white/95 backdrop-blur-md border-b border-slate-200 h-14 z-50 flex-none sticky top-0">
+        <div class="px-4 h-full flex items-center justify-between">
+            <button class="w-9 h-9 rounded-lg hover:bg-slate-50 flex items-center justify-center text-slate-600">
+                <i class="fa-solid fa-arrow-left"></i>
+            </button>
+            
+            <div class="flex items-center gap-2">
+                <div class="w-7 h-7 bg-gradient-to-br from-rapid-sky to-rapid-skyDark rounded-lg flex items-center justify-center text-white shadow-glow">
+                    <i class="fa-solid fa-heart-pulse text-xs"></i>
+                </div>
+                <span class="text-base font-bold text-rapid-navy font-display">Rapid Capsule</span>
+            </div>
+
+            <button class="w-9 h-9 rounded-lg hover:bg-slate-50 flex items-center justify-center text-slate-600 relative">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+        </div>
+    </header>
+
+    <div id="progress-section" class="bg-white px-4 py-4 border-b border-slate-100 flex-none">
+        <div class="mb-3">
+            <h1 class="text-lg font-display font-bold text-rapid-navy">Select a Specialist</h1>
+            <p class="text-xs text-slate-500">Step 5 of 6 • Choose your doctor</p>
+        </div>
+
+        <div class="relative">
+            <div class="absolute top-1/2 left-0 w-full h-0.5 bg-slate-100 -translate-y-1/2 rounded-full"></div>
+            <div class="absolute top-1/2 left-0 w-[83%] h-0.5 bg-rapid-sky -translate-y-1/2 rounded-full transition-all duration-500"></div>
+            
+            <div class="relative z-10 flex justify-between w-full">
+                <div class="step-item completed flex flex-col items-center gap-1">
+                    <div class="step-circle w-6 h-6 rounded-full bg-white border-2 border-slate-200 flex items-center justify-center text-[10px] font-bold">
+                        <i class="fa-solid fa-check"></i>
+                    </div>
+                </div>
+                <div class="step-item completed flex flex-col items-center gap-1">
+                    <div class="step-circle w-6 h-6 rounded-full bg-white border-2 border-slate-200 flex items-center justify-center text-[10px] font-bold">
+                        <i class="fa-solid fa-check"></i>
+                    </div>
+                </div>
+                <div class="step-item completed flex flex-col items-center gap-1">
+                    <div class="step-circle w-6 h-6 rounded-full bg-white border-2 border-slate-200 flex items-center justify-center text-[10px] font-bold">
+                        <i class="fa-solid fa-check"></i>
+                    </div>
+                </div>
+                <div class="step-item completed flex flex-col items-center gap-1">
+                    <div class="step-circle w-6 h-6 rounded-full bg-white border-2 border-slate-200 flex items-center justify-center text-[10px] font-bold">
+                        <i class="fa-solid fa-check"></i>
+                    </div>
+                </div>
+                <div class="step-item active flex flex-col items-center gap-1">
+                    <div class="step-circle w-6 h-6 rounded-full bg-white border-2 border-slate-200 flex items-center justify-center text-[10px] font-bold">5</div>
+                </div>
+                <div class="step-item flex flex-col items-center gap-1">
+                    <div class="step-circle w-6 h-6 rounded-full bg-white border-2 border-slate-200 flex items-center justify-center text-[10px] font-bold">6</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="ai-banner" class="bg-gradient-to-r from-rapid-skyLight to-white px-4 py-3 border-b border-rapid-sky/20 flex items-center justify-between flex-none">
+        <div class="flex items-center gap-2">
+            <div class="w-7 h-7 rounded-full bg-rapid-sky text-white flex items-center justify-center text-xs animate-pulse">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+            </div>
+            <div>
+                <div class="text-xs font-bold text-rapid-navy">AI Best Match</div>
+                <div class="text-[10px] text-slate-500">Dr. A. Okafor • 98% match</div>
+            </div>
+        </div>
+        <button id="ai-drawer-btn" class="text-xs text-rapid-sky font-bold">View <i class="fa-solid fa-chevron-up"></i></button>
+    </div>
+
+    <div id="filters-section" class="bg-white px-4 py-3 border-b border-slate-100 flex-none">
+        <div class="flex items-center gap-2 mb-3">
+            <div class="relative flex-1">
+                <input type="text" placeholder="Search doctors..." class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-rapid-sky">
+                <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+            </div>
+            <button class="w-9 h-9 border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-500 flex items-center justify-center">
+                <i class="fa-solid fa-filter text-sm"></i>
+            </button>
+        </div>
+
+        <div class="flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2 bg-slate-50 px-2 py-1.5 rounded-lg border border-slate-200">
+                <span class="text-[10px] font-bold text-slate-500">Local</span>
+                <div class="relative inline-block w-8 h-4 align-middle select-none">
+                    <input type="checkbox" name="diaspora-toggle" id="diaspora-toggle" class="toggle-checkbox absolute block w-2.5 h-2.5 rounded-full bg-white border-4 appearance-none cursor-pointer top-0.5 left-0.5 shadow-sm"/>
+                    <label for="diaspora-toggle" class="toggle-label block overflow-hidden h-4 rounded-full bg-slate-300 cursor-pointer"></label>
+                </div>
+                <div class="flex items-center gap-1">
+                    <span class="text-[10px] font-bold text-rapid-navy">Diaspora</span>
+                    <i class="fa-solid fa-earth-africa text-rapid-orange text-[10px]"></i>
+                </div>
+            </div>
+
+            <select class="text-xs font-bold text-rapid-navy focus:outline-none cursor-pointer bg-transparent">
+                <option>Recommended</option>
+                <option>Highest Rated</option>
+                <option>Lowest Price</option>
+                <option>Experience</option>
+            </select>
+        </div>
+    </div>
+
+    <main id="main-content" class="flex-1 overflow-y-auto bg-slate-50/50 px-4 py-4">
+        <div class="space-y-4 pb-24">
+            
+            <div class="doctor-card selected bg-white rounded-xl p-4 border-2 border-slate-200 cursor-pointer" data-doctor="Dr. Amara Okafor">
+                <div class="flex items-start gap-3 mb-3">
+                    <div class="relative flex-shrink-0">
+                        <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" class="w-16 h-16 rounded-lg object-cover shadow-sm">
+                        <div class="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5 shadow-sm">
+                            <div class="w-5 h-5 bg-rapid-sky text-white rounded-full flex items-center justify-center text-[10px]">
+                                <i class="fa-solid fa-check"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-start justify-between gap-2 mb-1">
+                            <h3 class="text-base font-bold text-rapid-navy flex items-center gap-1">
+                                Dr. Amara Okafor
+                                <i class="fa-solid fa-certificate text-rapid-orange text-[10px]"></i>
+                            </h3>
+                            <span class="bg-rapid-skyLight text-rapid-skyDark text-[9px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                                <i class="fa-regular fa-clock"></i> Now
+                            </span>
+                        </div>
+                        <p class="text-xs font-medium text-slate-500 mb-1">Cardiologist • MBBS, FWACP</p>
+                        <div class="flex items-center gap-2 text-[10px] text-slate-500 mb-2">
+                            <div class="flex items-center gap-1 text-rapid-orange">
+                                <i class="fa-solid fa-star"></i>
+                                <span class="font-bold">4.9</span>
+                                <span class="text-slate-400">(128)</span>
+                            </div>
+                            <span class="w-1 h-1 bg-slate-300 rounded-full"></span>
+                            <span>12 yrs exp.</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 flex-wrap mb-2">
+                            <span class="px-1.5 py-0.5 bg-slate-50 border border-slate-100 rounded text-[9px] text-slate-600">English</span>
+                            <span class="px-1.5 py-0.5 bg-slate-50 border border-slate-100 rounded text-[9px] text-slate-600">Igbo</span>
+                            <span class="px-1.5 py-0.5 bg-slate-50 border border-slate-100 rounded text-[9px] text-slate-600">Yoruba</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <div class="w-7 h-7 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
+                            <i class="fa-solid fa-video text-[10px]"></i>
+                        </div>
+                        <div class="w-7 h-7 rounded-full bg-green-50 text-green-600 flex items-center justify-center">
+                            <i class="fa-solid fa-comments text-[10px]"></i>
+                        </div>
+                        <div class="w-7 h-7 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center">
+                            <i class="fa-solid fa-phone text-[10px]"></i>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="text-right">
+                            <div class="text-base font-bold text-rapid-navy">₦15,000</div>
+                            <div class="text-[9px] text-slate-400">per session</div>
+                        </div>
+                        <button class="doctor-select-btn bg-rapid-sky text-white text-xs font-bold px-4 py-2 rounded-lg min-w-[80px]">
+                            Selected
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="doctor-card bg-white rounded-xl p-4 border-2 border-slate-200 cursor-pointer" data-doctor="Dr. Chioma Adebayo">
+                <div class="flex items-start gap-3 mb-3">
+                    <div class="relative flex-shrink-0">
+                        <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-6.jpg" class="w-16 h-16 rounded-lg object-cover shadow-sm">
+                        <div class="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5 shadow-sm">
+                            <div class="w-5 h-5 bg-rapid-sky text-white rounded-full flex items-center justify-center text-[10px]">
+                                <i class="fa-solid fa-check"></i>
+                            </div>
+                        </div>
+                        <div class="absolute -top-1 -left-1 bg-white rounded-full p-0.5 shadow-sm border border-slate-100">
+                            <div class="w-5 h-5 rounded-full overflow-hidden">
+                                <img src="https://flagcdn.com/w40/gb.png" class="w-full h-full object-cover">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-start justify-between gap-2 mb-1">
+                            <h3 class="text-base font-bold text-rapid-navy">
+                                Dr. Chioma Adebayo
+                            </h3>
+                            <span class="bg-green-100 text-green-700 text-[9px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                                <i class="fa-solid fa-bolt"></i> Online
+                            </span>
+                        </div>
+                        <p class="text-xs font-medium text-slate-500 mb-1">General Practitioner • Diaspora</p>
+                        <div class="flex items-center gap-2 text-[10px] text-slate-500 mb-2">
+                            <div class="flex items-center gap-1 text-rapid-orange">
+                                <i class="fa-solid fa-star"></i>
+                                <span class="font-bold">4.8</span>
+                                <span class="text-slate-400">(45)</span>
+                            </div>
+                            <span class="w-1 h-1 bg-slate-300 rounded-full"></span>
+                            <span>8 yrs exp.</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 flex-wrap mb-2">
+                            <span class="px-1.5 py-0.5 bg-slate-50 border border-slate-100 rounded text-[9px] text-slate-600">English</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <div class="w-7 h-7 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
+                            <i class="fa-solid fa-video text-[10px]"></i>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="text-right">
+                            <div class="text-base font-bold text-rapid-navy">₦25,000</div>
+                            <div class="text-[9px] text-slate-400">per session</div>
+                        </div>
+                        <button class="doctor-select-btn bg-white border border-slate-200 text-slate-600 text-xs font-bold px-4 py-2 rounded-lg min-w-[80px]">
+                            Select
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="doctor-card bg-white rounded-xl p-4 border-2 border-slate-200 cursor-pointer" data-doctor="Dr. Tunde Bakare">
+                <div class="flex items-start gap-3 mb-3">
+                    <div class="relative flex-shrink-0">
+                        <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-3.jpg" class="w-16 h-16 rounded-lg object-cover shadow-sm">
+                        <div class="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5 shadow-sm">
+                            <div class="w-5 h-5 bg-rapid-sky text-white rounded-full flex items-center justify-center text-[10px]">
+                                <i class="fa-solid fa-check"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-start justify-between gap-2 mb-1">
+                            <h3 class="text-base font-bold text-rapid-navy">
+                                Dr. Tunde Bakare
+                            </h3>
+                            <span class="bg-slate-100 text-slate-500 text-[9px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                                <i class="fa-regular fa-calendar"></i> Tomorrow
+                            </span>
+                        </div>
+                        <p class="text-xs font-medium text-slate-500 mb-1">Internal Medicine</p>
+                        <div class="flex items-center gap-2 text-[10px] text-slate-500 mb-2">
+                            <div class="flex items-center gap-1 text-rapid-orange">
+                                <i class="fa-solid fa-star"></i>
+                                <span class="font-bold">4.7</span>
+                                <span class="text-slate-400">(82)</span>
+                            </div>
+                            <span class="w-1 h-1 bg-slate-300 rounded-full"></span>
+                            <span>15 yrs exp.</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 flex-wrap mb-2">
+                            <span class="px-1.5 py-0.5 bg-slate-50 border border-slate-100 rounded text-[9px] text-slate-600">English</span>
+                            <span class="px-1.5 py-0.5 bg-slate-50 border border-slate-100 rounded text-[9px] text-slate-600">Yoruba</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <div class="w-7 h-7 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
+                            <i class="fa-solid fa-video text-[10px]"></i>
+                        </div>
+                        <div class="w-7 h-7 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center">
+                            <i class="fa-solid fa-phone text-[10px]"></i>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="text-right">
+                            <div class="text-base font-bold text-rapid-navy">₦12,000</div>
+                            <div class="text-[9px] text-slate-400">per session</div>
+                        </div>
+                        <button class="doctor-select-btn bg-white border border-slate-200 text-slate-600 text-xs font-bold px-4 py-2 rounded-lg min-w-[80px]">
+                            Select
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="doctor-card bg-white rounded-xl p-4 border-2 border-slate-200 cursor-pointer" data-doctor="Dr. Sarah Johnson">
+                <div class="flex items-start gap-3 mb-3">
+                    <div class="relative flex-shrink-0">
+                        <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-7.jpg" class="w-16 h-16 rounded-lg object-cover shadow-sm">
+                        <div class="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5 shadow-sm">
+                            <div class="w-5 h-5 bg-rapid-sky text-white rounded-full flex items-center justify-center text-[10px]">
+                                <i class="fa-solid fa-check"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-start justify-between gap-2 mb-1">
+                            <h3 class="text-base font-bold text-rapid-navy">
+                                Dr. Sarah Johnson
+                            </h3>
+                            <span class="bg-slate-100 text-slate-500 text-[9px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                                <i class="fa-regular fa-calendar"></i> Oct 7
+                            </span>
+                        </div>
+                        <p class="text-xs font-medium text-slate-500 mb-1">Cardiologist</p>
+                        <div class="flex items-center gap-2 text-[10px] text-slate-500 mb-2">
+                            <div class="flex items-center gap-1 text-rapid-orange">
+                                <i class="fa-solid fa-star"></i>
+                                <span class="font-bold">5.0</span>
+                                <span class="text-slate-400">(12)</span>
+                            </div>
+                            <span class="w-1 h-1 bg-slate-300 rounded-full"></span>
+                            <span>5 yrs exp.</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 flex-wrap mb-2">
+                            <span class="px-1.5 py-0.5 bg-slate-50 border border-slate-100 rounded text-[9px] text-slate-600">English</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <div class="w-7 h-7 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
+                            <i class="fa-solid fa-video text-[10px]"></i>
+                        </div>
+                        <div class="w-7 h-7 rounded-full bg-green-50 text-green-600 flex items-center justify-center">
+                            <i class="fa-solid fa-comments text-[10px]"></i>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="text-right">
+                            <div class="text-base font-bold text-rapid-navy">₦18,000</div>
+                            <div class="text-[9px] text-slate-400">per session</div>
+                        </div>
+                        <button class="doctor-select-btn bg-white border border-slate-200 text-slate-600 text-xs font-bold px-4 py-2 rounded-lg min-w-[80px]">
+                            Select
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <div id="footer" class="bg-white border-t-2 border-slate-200 px-4 py-3 flex-none sticky bottom-0 z-40">
+        <div class="flex items-center justify-between mb-2">
+            <div class="flex-1">
+                <div class="text-[9px] text-slate-400 uppercase font-bold tracking-wider">Selected Specialist</div>
+                <div id="selected-doctor-name" class="text-sm font-bold text-rapid-navy flex items-center gap-1.5">
+                    <i class="fa-solid fa-user-doctor text-rapid-sky"></i>
+                    Dr. Amara Okafor
+                </div>
+            </div>
+            <div class="text-right">
+                <div class="text-[9px] text-slate-400 uppercase font-bold tracking-wider">Appointment</div>
+                <div class="text-sm font-bold text-rapid-navy">Oct 5, 10:30 AM</div>
+            </div>
+        </div>
+        <button class="w-full bg-rapid-orange hover:bg-rapid-orangeDark text-white font-bold text-sm py-3 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-orange-100">
+            Confirm Selection <i class="fa-solid fa-arrow-right"></i>
+        </button>
+    </div>
+
+    <div id="ai-drawer" class="ai-drawer fixed bottom-0 left-0 right-0 bg-white border-t-2 border-rapid-sky/30 rounded-t-3xl z-50 shadow-2xl max-w-[375px] mx-auto">
+        <div class="px-4 py-4">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-full bg-rapid-sky text-white flex items-center justify-center text-xs shadow-glow animate-pulse">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    </div>
+                    <h3 class="text-base font-bold text-rapid-navy">AI Recommendation</h3>
+                </div>
+                <button id="close-drawer" class="w-8 h-8 rounded-full hover:bg-slate-50 flex items-center justify-center text-slate-400">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="bg-gradient-to-br from-rapid-skyLight to-white border border-rapid-sky/20 rounded-2xl p-4 mb-4">
+                <p class="text-xs text-slate-600 leading-relaxed mb-3">
+                    Based on your recent symptoms and health history, we recommend a specialist with experience in <span class="font-bold text-rapid-navy">Preventive Cardiology</span>.
+                </p>
+                
+                <div class="bg-white rounded-xl p-3 border border-rapid-sky/10 flex items-center gap-3">
+                    <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" class="w-12 h-12 rounded-lg object-cover">
+                    <div class="flex-1">
+                        <div class="text-sm font-bold text-rapid-navy">Dr. A. Okafor</div>
+                        <div class="text-xs text-rapid-sky font-medium">98% Match Score</div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-slate-300"></i>
+                </div>
+            </div>
+
+            <div class="bg-slate-50 border border-slate-100 rounded-xl p-3">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-bold text-slate-700">Your Latest Vitals</span>
+                    <span class="text-[10px] text-slate-400">Today, 8:00 AM</span>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="bg-white p-2 rounded border border-slate-100">
+                        <div class="text-[10px] text-slate-400">Blood Pressure</div>
+                        <div class="text-sm font-bold text-slate-700">118/78</div>
+                    </div>
+                    <div class="bg-white p-2 rounded border border-slate-100">
+                        <div class="text-[10px] text-slate-400">Heart Rate</div>
+                        <div class="text-sm font-bold text-slate-700">72 <span class="text-[10px] font-normal">bpm</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const cards = document.querySelectorAll('.doctor-card');
+        const selectedDoctorName = document.getElementById('selected-doctor-name');
+        const aiDrawer = document.getElementById('ai-drawer');
+        const aiDrawerBtn = document.getElementById('ai-drawer-btn');
+        const closeDrawer = document.getElementById('close-drawer');
+
+        cards.forEach(card => {
+            card.addEventListener('click', function() {
+                cards.forEach(c => {
+                    c.classList.remove('selected', 'border-rapid-sky', 'bg-[#F0F9FF]');
+                    c.classList.add('border-slate-200', 'bg-white');
+                    const btn = c.querySelector('.doctor-select-btn');
+                    btn.className = "doctor-select-btn bg-white border border-slate-200 text-slate-600 text-xs font-bold px-4 py-2 rounded-lg min-w-[80px]";
+                    btn.textContent = "Select";
+                });
+                
+                this.classList.add('selected', 'border-rapid-sky', 'bg-[#F0F9FF]');
+                this.classList.remove('border-slate-200', 'bg-white');
+                const btn = this.querySelector('.doctor-select-btn');
+                btn.className = "doctor-select-btn bg-rapid-sky text-white text-xs font-bold px-4 py-2 rounded-lg min-w-[80px]";
+                btn.textContent = "Selected";
+
+                const docName = this.getAttribute('data-doctor');
+                selectedDoctorName.innerHTML = `<i class="fa-solid fa-user-doctor text-rapid-sky"></i> ${docName}`;
+            });
+        });
+
+        const toggle = document.getElementById('diaspora-toggle');
+        toggle.addEventListener('change', function() {
+            if(this.checked) {
+                cards.forEach(card => {
+                    if(!card.innerHTML.includes('Diaspora')) {
+                        card.style.opacity = '0.5';
+                    } else {
+                        card.style.opacity = '1';
+                    }
+                });
+            } else {
+                cards.forEach(card => card.style.opacity = '1');
+            }
+        });
+
+        aiDrawerBtn.addEventListener('click', function() {
+            aiDrawer.classList.add('open');
+        });
+
+        closeDrawer.addEventListener('click', function() {
+            aiDrawer.classList.remove('open');
+        });
+    </script>
+</body>
+</html>

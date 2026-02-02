@@ -25,20 +25,31 @@ export class BanksService {
   async createBank(createBankDto: CreateBankDto, userId: Types.ObjectId) {
     const { account_number, account_name, bank_name, recipient_type } =
       createBankDto;
-    const response = await this.paystack.createTransferRecipient({
-      name: account_name,
-      account_number,
-      bank_name,
-      type: recipient_type,
-    });
-    if (response.status === SUCCESS) {
-      return await create(this.bankModel, {
-        ...createBankDto,
-        recipient_code: response.data.data.recipient_code,
-        userId,
+
+    let recipient_code = null;
+
+    // Try to create Paystack transfer recipient, but don't fail if it doesn't work
+    try {
+      const response = await this.paystack.createTransferRecipient({
+        name: account_name,
+        account_number,
+        bank_name,
+        type: recipient_type,
       });
+      if (response.status === SUCCESS) {
+        recipient_code = response.data.data.recipient_code;
+      }
+    } catch (error) {
+      // Log error but continue - allow saving bank without Paystack validation
+      console.warn('Paystack createTransferRecipient failed:', error.message);
     }
-    return null;
+
+    // Save bank account regardless of Paystack validation
+    return await create(this.bankModel, {
+      ...createBankDto,
+      recipient_code,
+      userId,
+    });
   }
 
   async getUserBanks(userId: Types.ObjectId) {

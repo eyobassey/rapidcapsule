@@ -1225,7 +1225,7 @@
 													</a>
 												</template>
 												<template v-if="normalizeAppointmentStatus(apt) === 'completed'">
-													<button class="apt-action-btn notes" title="Clinical Notes" @click="addClinicalNote">
+													<button class="apt-action-btn notes" title="Clinical Notes" @click="addClinicalNote(apt)">
 														<v-icon name="hi-document-text" scale="0.9" />
 													</button>
 												</template>
@@ -1246,7 +1246,7 @@
 															<v-icon name="hi-x-circle" scale="0.8" />
 															<span>Cancel</span>
 														</button>
-														<button @click="addClinicalNote">
+														<button @click="addClinicalNote(apt)">
 															<v-icon name="hi-document-text" scale="0.8" />
 															<span>Clinical Notes</span>
 														</button>
@@ -1436,6 +1436,15 @@
 			</div>
 		</div>
 	</div>
+
+	<!-- Clinical Note Modal -->
+	<ClinicalNoteModal
+		:is-open="showClinicalNoteModal"
+		:appointment="selectedAppointmentForNote"
+		:existing-note="editingClinicalNote"
+		@close="closeClinicalNoteModal"
+		@saved="handleClinicalNoteSaved"
+	/>
 </template>
 
 <script setup>
@@ -1445,6 +1454,7 @@ import moment from 'moment';
 import TopBar from "@/components/Navigation/top-bar";
 import Loader from "@/components/Loader/main-loader";
 import RcAvatar from "@/components/RCAvatar";
+import ClinicalNoteModal from "@/views/Mainapp/SpecialistApp/SpecialistAppointments/modals/ClinicalNoteModal.vue";
 
 defineEmits(["openSideNav"]);
 
@@ -1470,6 +1480,9 @@ const appointments = ref(null);
 const appointmentsData = ref({ items: [], pagination: null });
 const appointmentStatusFilter = ref('');  // '', 'OPEN', 'COMPLETED', 'CANCELLED', 'MISSED'
 const activeAptMenu = ref(null);  // Track which appointment's dropdown menu is open
+const showClinicalNoteModal = ref(false);  // Clinical note modal visibility
+const selectedAppointmentForNote = ref(null);  // Appointment selected for clinical note
+const editingClinicalNote = ref(null);  // Existing note being edited
 const purchases = ref(null);
 const timeline = ref(null);
 const timelineData = ref({ items: [], pagination: null });
@@ -1768,11 +1781,31 @@ function writePrescription() {
 	router.push(`/app/specialist/pharmacy/patients/${patientId.value}`);
 }
 
-function addClinicalNote() {
-	router.push({
-		path: '/app/specialist/clinical-notes',
-		query: { patientId: patientId.value },
-	});
+function addClinicalNote(apt = null) {
+	activeAptMenu.value = null;  // Close any open dropdown
+	selectedAppointmentForNote.value = apt;
+	// If appointment has existing clinical notes, load the most recent one for editing
+	if (apt?.clinical_notes?.length > 0) {
+		editingClinicalNote.value = apt.clinical_notes[0];  // Most recent note
+	} else {
+		editingClinicalNote.value = null;
+	}
+	showClinicalNoteModal.value = true;
+}
+
+function closeClinicalNoteModal() {
+	showClinicalNoteModal.value = false;
+	selectedAppointmentForNote.value = null;
+	editingClinicalNote.value = null;
+}
+
+function handleClinicalNoteSaved(note) {
+	showClinicalNoteModal.value = false;
+	selectedAppointmentForNote.value = null;
+	editingClinicalNote.value = null;
+	$toast?.success('Clinical note saved successfully');
+	// Refresh appointments data to show the new note
+	fetchAppointmentsData();
 }
 
 function callPatient() {

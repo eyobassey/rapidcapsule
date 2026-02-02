@@ -1,0 +1,38 @@
+// Appointmentsv2 Color Palette
+// These are scoped variables for v2 booking wizard only
+
+$v2-sky: #4FC3F7;
+$v2-sky-light: #E1F5FE;
+$v2-sky-dark: #0288D1;
+$v2-orange: #FF9800;
+$v2-orange-light: #FFF3E0;
+$v2-orange-dark: #F57C00;
+$v2-navy: #1A365D;
+$v2-gray-bg: #F5F9FF;
+$v2-success: #4CAF50;
+$v2-error: #EF4444;
+$v2-purple: #9C27B0;
+$v2-purple-light: #F3E5F5;
+
+// Gradients
+$v2-gradient-primary: linear-gradient(135deg, $v2-sky 0%, $v2-sky-dark 100%);
+$v2-gradient-orange: linear-gradient(135deg, $v2-orange 0%, $v2-orange-dark 100%);
+
+// Shadows
+$v2-shadow-sm: 0 2px 8px rgba(79, 195, 247, 0.1);
+$v2-shadow-md: 0 4px 16px rgba(79, 195, 247, 0.15);
+$v2-shadow-lg: 0 8px 32px rgba(79, 195, 247, 0.2);
+
+// Border radius
+$v2-radius-sm: 8px;
+$v2-radius-md: 12px;
+$v2-radius-lg: 16px;
+$v2-radius-xl: 20px;
+
+// Spacing
+$v2-sidebar-width: 320px;
+
+// Breakpoints
+$v2-mobile: 600px;
+$v2-tablet: 768px;
+$v2-desktop: 1024px;

@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Review & Activation - Rapid Capsule Specialist</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        rapid: {
+                            sky: '#4FC3F7',
+                            skyLight: '#E1F5FE',
+                            skyDark: '#0288D1',
+                            orange: '#FF9800',
+                            orangeLight: '#FFF3E0',
+                            orangeDark: '#F57C00',
+                            navy: '#1A365D',
+                            gray: '#F5F9FF',
+                            text: '#334155',
+                            success: '#4CAF50',
+                            error: '#EF4444',
+                            border: '#E2E8F0'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        display: ['Poppins', 'system-ui', 'sans-serif']
+                    },
+                    boxShadow: {
+                        'soft': '0 4px 20px -2px rgba(79, 195, 247, 0.15)',
+                        'card': '0 10px 30px -5px rgba(0, 0, 0, 0.05)',
+                        'glow': '0 0 15px rgba(79, 195, 247, 0.3)',
+                        'inner-light': 'inset 0 2px 4px 0 rgba(255, 255, 255, 0.3)',
+                        'input-focus': '0 0 0 4px rgba(79, 195, 247, 0.2)'
+                    }
+                }
+            }
+        }
+        window.FontAwesomeConfig = { autoReplaceSvg: 'nest' };
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        .step-connector {
+            position: absolute;
+            top: 24px;
+            left: 15px;
+            bottom: -24px;
+            width: 2px;
+            background-color: #E2E8F0;
+            z-index: 0;
+        }
+        
+        .step-item:last-child .step-connector {
+            display: none;
+        }
+
+        .progress-ring__circle {
+            transition: stroke-dashoffset 0.35s;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+
+        .review-card {
+            transition: all 0.2s ease;
+        }
+        .review-card:hover {
+            border-color: #4FC3F7;
+            box-shadow: 0 4px 20px -5px rgba(79, 195, 247, 0.15);
+        }
+        
+        .verified-badge {
+            background: linear-gradient(135deg, #4CAF50 0%, #43A047 100%);
+        }
+
+        @keyframes pulse-border {
+            0% { box-shadow: 0 0 0 0 rgba(255, 152, 0, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(255, 152, 0, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 152, 0, 0); }
+        }
+        
+        .action-pulse {
+            animation: pulse-border 2s infinite;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 font-sans text-rapid-text antialiased h-[1024px] overflow-hidden flex flex-col relative w-[1440px] mx-auto">
+
+    <!-- Header -->
+    <header id="header" class="bg-white/90 backdrop-blur-md border-b border-slate-100 h-20 z-40 sticky top-0 flex-none px-8">
+        <div class="h-full flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-gradient-to-br from-rapid-sky to-rapid-skyDark rounded-xl flex items-center justify-center text-white shadow-glow">
+                    <i class="fa-solid fa-heart-pulse text-lg"></i>
+                </div>
+                <div>
+                    <span class="text-2xl font-bold text-rapid-navy font-display tracking-tight block leading-none">Rapid Capsule</span>
+                    <span class="text-[10px] font-medium text-slate-500 uppercase tracking-widest">Specialist Portal</span>
+                </div>
+            </div>
+
+            <!-- Setup Progress Tracker -->
+            <div class="hidden md:flex items-center gap-4 bg-slate-50 px-4 py-2 rounded-xl border border-slate-100">
+                <div class="flex flex-col items-end">
+                    <span class="text-xs font-bold text-rapid-navy">Setup Progress</span>
+                    <span class="text-[10px] text-slate-500">Step 9 of 9 • Review</span>
+                </div>
+                <div class="relative w-12 h-12">
+                    <svg class="w-12 h-12" viewBox="0 0 100 100">
+                        <circle class="text-slate-200 stroke-current" stroke-width="8" cx="50" cy="50" r="40" fill="transparent"></circle>
+                        <circle class="text-rapid-sky stroke-current progress-ring__circle" stroke-width="8" stroke-linecap="round" cx="50" cy="50" r="40" fill="transparent" stroke-dasharray="251.2" stroke-dashoffset="0"></circle> <!-- 100% -->
+                    </svg>
+                    <div class="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-rapid-navy">100%</div>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-6">
+                <!-- Help Dropdown -->
+                <div class="relative group">
+                    <button class="flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-rapid-navy transition-colors">
+                        <i class="fa-regular fa-circle-question"></i>
+                        <span>Help Center</span>
+                        <i class="fa-solid fa-chevron-down text-xs"></i>
+                    </button>
+                </div>
+
+                <div class="h-8 w-px bg-slate-200"></div>
+
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-full bg-slate-200 overflow-hidden border-2 border-white shadow-sm relative">
+                        <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" class="w-full h-full object-cover opacity-80" alt="Dr. Emmanuel">
+                        <div class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></div>
+                    </div>
+                    <div class="hidden lg:block">
+                        <div class="text-sm font-bold text-rapid-navy leading-tight">Dr. Emmanuel</div>
+                        <div class="text-[10px] text-rapid-orange font-medium bg-rapid-orangeLight px-1.5 py-0.5 rounded inline-block mt-0.5">Ready to Activate</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Layout -->
+    <div class="flex-1 flex overflow-hidden relative z-10">
+        
+        <!-- Left Sidebar Navigation -->
+        <aside id="sidebar-nav" class="w-72 bg-white border-r border-slate-200 flex flex-col h-full flex-shrink-0">
+            <div class="p-6">
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 px-2">Main Menu</h3>
+                <nav class="space-y-1">
+                    <a href="#" class="flex items-center gap-3 px-3 py-2.5 bg-rapid-skyLight/50 text-rapid-skyDark font-bold rounded-xl border border-rapid-sky/20 transition-all">
+                        <i class="fa-solid fa-rocket w-5 text-center"></i>
+                        Setup Dashboard
+                    </a>
+                    <a href="#" class="flex items-center gap-3 px-3 py-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-all cursor-not-allowed opacity-60">
+                        <i class="fa-regular fa-calendar-check w-5 text-center"></i>
+                        Appointments
+                    </a>
+                    <a href="#" class="flex items-center gap-3 px-3 py-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-all cursor-not-allowed opacity-60">
+                        <i class="fa-solid fa-user-group w-5 text-center"></i>
+                        Patient Queue
+                    </a>
+                    <a href="#" class="flex items-center gap-3 px-3 py-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-all cursor-not-allowed opacity-60">
+                        <i class="fa-solid fa-wallet w-5 text-center"></i>
+                        Earnings
+                    </a>
+                </nav>
+
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mt-8 mb-4 px-2">Setup Steps</h3>
+                <div class="relative pl-2 space-y-0">
+                    <!-- Steps 1-8 (Completed) -->
+                    <div class="step-item relative pb-6 pl-8">
+                        <div class="step-connector bg-rapid-success"></div>
+                        <div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-rapid-success text-white flex items-center justify-center text-[10px] z-10 border-2 border-white shadow-sm"><i class="fa-solid fa-check"></i></div>
+                        <div class="text-sm font-bold text-slate-500 line-through">Account Creation</div>
+                    </div>
+                    <div class="step-item relative pb-6 pl-8">
+                        <div class="step-connector bg-rapid-success"></div>
+                        <div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-rapid-success text-white flex items-center justify-center text-[10px] z-10 border-2 border-white shadow-sm"><i class="fa-solid fa-check"></i></div>
+                        <div class="text-sm font-bold text-slate-500 line-through">Quick Bio</div>
+                    </div>
+                    <div class="step-item relative pb-6 pl-8">
+                        <div class="step-connector bg-rapid-success"></div>
+                        <div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-rapid-success text-white flex items-center justify-center text-[10px] z-10 border-2 border-white shadow-sm"><i class="fa-solid fa-check"></i></div>
+                        <div class="text-sm font-bold text-slate-500 line-through">Profile Config</div>
+                    </div>
+                    <div class="step-item relative pb-6 pl-8">
+                        <div class="step-connector bg-rapid-success"></div>
+                        <div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-rapid-success text-white flex items-center justify-center text-[10px] z-10 border-2 border-white shadow-sm"><i class="fa-solid fa-check"></i></div>
+                        <div class="text-sm font-bold text-slate-500 line-through">Availability</div>
+                    </div>
+                    <div class="step-item relative pb-6 pl-8">
+                        <div class="step-connector bg-rapid-success"></div>
+                        <div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-rapid-success text-white flex items-center justify-center text-[10px] z-10 border-2 border-white shadow-sm"><i class="fa-solid fa-check"></i></div>
+                        <div class="text-sm font-bold text-slate-500 line-through">Rate Cards</div>
+                    </div>
+                    <div class="step-item relative pb-6 pl-8">
+                        <div class="step-connector bg-rapid-success"></div>
+                        <div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-rapid-success text-white flex items-center justify-center text-[10px] z-10 border-2 border-white shadow-sm"><i class="fa-solid fa-check"></i></div>
+                        <div class="text-sm font-bold text-slate-500 line-through">Identity & Compliance</div>
+                    </div>
+                    <div class="step-item relative pb-6 pl-8">
+                        <div class="step-connector bg-rapid-success"></div>
+                        <div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-rapid-success text-white flex items-center justify-center text-[10px] z-10 border-2 border-white shadow-sm"><i class="fa-solid fa-check"></i></div>
+                        <div class="text-sm font-bold text-slate-500 line-through">Security & Prefs</div>
+                    </div>
+                    
+                    <!-- Step 9 (Current) -->
+                    <div class="step-item relative pl-8">
+                        <div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-white border-2 border-rapid-sky text-rapid-sky flex items-center justify-center text-[10px] z-10 shadow-glow">
+                            <div class="w-2 h-2 bg-rapid-sky rounded-full"></div>
+                        </div>
+                        <div class="text-sm font-bold text-rapid-navy">Review & Activation</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-auto p-6 border-t border-slate-100">
+                <button class="w-full flex items-center justify-center gap-2 text-slate-500 hover:text-rapid-navy text-sm font-medium py-2 rounded-lg hover:bg-slate-50 transition-colors">
+                    <i class="fa-solid fa-gear"></i> Settings
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 flex flex-col bg-slate-50/50 overflow-hidden">
+            
+            <!-- Content Header -->
+            <div class="px-8 pt-8 pb-4 flex justify-between items-start">
+                <div>
+                    <h1 class="text-2xl font-display font-bold text-rapid-navy mb-1">Final Review</h1>
+                    <p class="text-sm text-slate-500 max-w-2xl">Verify your information before going live. Your profile will be visible to patients immediately upon activation.</p>
+                </div>
+                <div class="flex items-center gap-2 px-3 py-1.5 bg-rapid-success/10 text-rapid-success border border-rapid-success/20 rounded-lg text-xs font-bold">
+                    <i class="fa-solid fa-check-double"></i>
+                    <span>All Steps Complete</span>
+                </div>
+            </div>
+
+            <!-- Scrollable Content Area -->
+            <div class="flex-1 overflow-y-auto px-8 pb-32">
+                <div class="max-w-6xl mx-auto flex gap-8">
+                    
+                    <!-- Left Column: Review Sections -->
+                    <div class="flex-1 space-y-6">
+                        
+                        <!-- 1. Profile Summary -->
+                        <div class="review-card bg-white rounded-2xl border border-slate-200 overflow-hidden group">
+                            <div class="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                                <h3 class="font-bold text-rapid-navy flex items-center gap-2 text-sm">
+                                    <i class="fa-solid fa-user-doctor text-slate-400"></i>
+                                    Professional Profile
+                                </h3>
+                                <a href="#" class="text-xs font-bold text-rapid-sky hover:text-rapid-navy transition-colors opacity-0 group-hover:opacity-100">Edit <i class="fa-solid fa-pen ml-1"></i></a>
+                            </div>
+                            <div class="p-5 flex gap-5">
+                                <div class="w-16 h-16 rounded-xl bg-slate-200 overflow-hidden flex-shrink-0">
+                                    <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" class="w-full h-full object-cover">
+                                </div>
+                                <div class="flex-1 grid grid-cols-2 gap-y-3 gap-x-6">
+                                    <div>
+                                        <div class="text-[10px] text-slate-400 uppercase tracking-wide font-bold mb-0.5">Full Name</div>
+                                        <div class="text-sm font-bold text-slate-800">Dr. Emmanuel Okonkwo</div>
+                                    </div>
+                                    <div>
+                                        <div class="text-[10px] text-slate-400 uppercase tracking-wide font-bold mb-0.5">Specialization</div>
+                                        <div class="text-sm font-bold text-slate-800">General Practitioner <span class="text-slate-400 font-normal">• Pediatrics</span></div>
+                                    </div>
+                                    <div>
+                                        <div class="text-[10px] text-slate-400 uppercase tracking-wide font-bold mb-0.5">Languages</div>
+                                        <div class="flex gap-1">
+                                            <span class="px-2 py-0.5 bg-slate-100 text-slate-600 text-[10px] rounded font-medium">English</span>
+                                            <span class="px-2 py-0.5 bg-slate-100 text-slate-600 text-[10px] rounded font-medium">Yoruba</span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="text-[10px] text-slate-400 uppercase tracking-wide font-bold mb-0.5">Bio Preview</div>
+                                        <div class="text-xs text-slate-500 truncate w-48">Dedicated GP with 10+ years experience in...</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 2. Verification & Compliance -->
+                        <div class="review-card bg-white rounded-2xl border border-slate-200 overflow-hidden group">
+                            <div class="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                                <h3 class="font-bold text-rapid-navy flex items-center gap-2 text-sm">
+                                    <i class="fa-solid fa-certificate text-slate-400"></i>
+                                    Credentials & Compliance
+                                </h3>
+                                <div class="flex items-center gap-3">
+                                    <span class="flex items-center gap-1 text-[10px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full border border-green-100">
+                                        <i class="fa-solid fa-shield-check"></i> Verified
+                                    </span>
+                                    <a href="#" class="text-xs font-bold text-rapid-sky hover:text-rapid-navy transition-colors opacity-0 group-hover:opacity-100">Edit <i class="fa-solid fa-pen ml-1"></i></a>
+                                </div>
+                            </div>
+                            <div class="p-5">
+                                <div class="grid grid-cols-3 gap-4">
+                                    <div class="bg-slate-50 p-3 rounded-lg border border-slate-100 flex items-center gap-3">
+                                        <div class="w-8 h-8 rounded bg-white flex items-center justify-center text-slate-400 shadow-sm border border-slate-100">
+                                            <i class="fa-solid fa-id-card"></i>
+                                        </div>
+                                        <div>
+                                            <div class="text-[10px] text-slate-400 font-bold uppercase">Medical License</div>
+                                            <div class="text-xs font-bold text-slate-700">MDCN-882190</div>
+                                        </div>
+                                        <i class="fa-solid fa-check-circle text-green-500 ml-auto text-sm"></i>
+                                    </div>
+                                    <div class="bg-slate-50 p-3 rounded-lg border border-slate-100 flex items-center gap-3">
+                                        <div class="w-8 h-8 rounded bg-white flex items-center justify-center text-slate-400 shadow-sm border border-slate-100">
+                                            <i class="fa-solid fa-passport"></i>
+                                        </div>
+                                        <div>
+                                            <div class="text-[10px] text-slate-400 font-bold uppercase">Identity</div>
+                                            <div class="text-xs font-bold text-slate-700">Passport Verified</div>
+                                        </div>
+                                        <i class="fa-solid fa-check-circle text-green-500 ml-auto text-sm"></i>
+                                    </div>
+                                    <div class="bg-slate-50 p-3 rounded-lg border border-slate-100 flex items-center gap-3">
+                                        <div class="w-8 h-8 rounded bg-white flex items-center justify-center text-slate-400 shadow-sm border border-slate-100">
+                                            <i class="fa-solid fa-user-graduate"></i>
+                                        </div>
+                                        <div>
+                                            <div class="text-[10px] text-slate-400 font-bold uppercase">Degree</div>
+                                            <div class="text-xs font-bold text-slate-700">MBBS (Unilag)</div>
+                                        </div>
+                                        <i class="fa-solid fa-check-circle text-green-500 ml-auto text-sm"></i>
+                                    </div>
+                                </div>
+                                <div class="mt-3 flex items-center gap-2 text-[10px] text-slate-500">
+                                    <i class="fa-solid fa-lock text-slate-400"></i> Credentials secured via Blockchain & NDPR compliant storage.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 3. Availability & Rates -->
+                        <div class="review-card bg-white rounded-2xl border border-slate-200 overflow-hidden group">
+                            <div class="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                                <h3 class="font-bold text-rapid-navy flex items-center gap-2 text-sm">
+                                    <i class="fa-solid fa-calendar-check text-slate-400"></i>
+                                    Availability & Pricing
+                                </h3>
+                                <a href="#" class="text-xs font-bold text-rapid-sky hover:text-rapid-navy transition-colors opacity-0 group-hover:opacity-100">Edit <i class="fa-solid fa-pen ml-1"></i></a>
+                            </div>
+                            <div class="p-5 grid grid-cols-2 gap-6">
+                                <div>
+                                    <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Weekly Schedule</h4>
+                                    <div class="flex flex-wrap gap-1 mb-2">
+                                        <span class="w-6 h-6 rounded bg-rapid-sky text-white text-[10px] font-bold flex items-center justify-center">M</span>
+                                        <span class="w-6 h-6 rounded bg-rapid-sky text-white text-[10px] font-bold flex items-center justify-center">T</span>
+                                        <span class="w-6 h-6 rounded bg-rapid-sky text-white text-[10px] font-bold flex items-center justify-center">W</span>
+                                        <span class="w-6 h-6 rounded bg-slate-100 text-slate-400 text-[10px] font-bold flex items-center justify-center">T</span>
+                                        <span class="w-6 h-6 rounded bg-rapid-sky text-white text-[10px] font-bold flex items-center justify-center">F</span>
+                                        <span class="w-6 h-6 rounded bg-slate-100 text-slate-400 text-[10px] font-bold flex items-center justify-center">S</span>
+                                        <span class="w-6 h-6 rounded bg-slate-100 text-slate-400 text-[10px] font-bold flex items-center justify-center">S</span>
+                                    </div>
+                                    <div class="text-xs text-slate-600">09:00 AM - 05:00 PM (WAT)</div>
+                                </div>
+                                <div class="border-l border-slate-100 pl-6">
+                                    <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Service Rates</h4>
+                                    <div class="space-y-2">
+                                        <div class="flex justify-between items-center text-xs">
+                                            <span class="text-slate-600">Video Consult (30m)</span>
+                                            <span class="font-bold text-rapid-navy">₦15,000</span>
+                                        </div>
+                                        <div class="flex justify-between items-center text-xs">
+                                            <span class="text-slate-600">Chat Consult</span>
+                                            <span class="font-bold text-rapid-navy">₦5,000</span>
+                                        </div>
+                                        <div class="flex justify-between items-center text-xs">
+                                            <span class="text-slate-600">Urgent Triage</span>
+                                            <span class="font-bold text-rapid-orange">+20%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 4. Payout & Security -->
+                        <div class="review-card bg-white rounded-2xl border border-slate-200 overflow-hidden group">
+                            <div class="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                                <h3 class="font-bold text-rapid-navy flex items-center gap-2 text-sm">
+                                    <i class="fa-solid fa-wallet text-slate-400"></i>
+                                    Payout & Security
+                                </h3>
+                                <a href="#" class="text-xs font-bold text-rapid-sky hover:text-rapid-navy transition-colors opacity-0 group-hover:opacity-100">Edit <i class="fa-solid fa-pen ml-1"></i></a>
+                            </div>
+                            <div class="p-5 flex justify-between items-center">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 border border-slate-200">
+                                        <i class="fa-solid fa-building-columns"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-xs font-bold text-slate-800">GTBank •••• 4592</div>
+                                        <div class="text-[10px] text-slate-500">Scheduled: Weekly (Fridays)</div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-4">
+                                    <div class="text-right">
+                                        <div class="text-[10px] text-slate-400 uppercase font-bold">Security</div>
+                                        <div class="text-xs font-bold text-rapid-success flex items-center justify-end gap-1">
+                                            <i class="fa-solid fa-shield-halved"></i> Strong
+                                        </div>
+                                    </div>
+                                    <div class="h-8 w-px bg-slate-100"></div>
+                                    <div class="text-right">
+                                        <div class="text-[10px] text-slate-400 uppercase font-bold">2FA Method</div>
+                                        <div class="text-xs font-bold text-slate-700">SMS Active</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Right Column: Readiness Score & Action -->
+                    <div class="w-80 flex flex-col gap-6">
+                        
+                        <!-- Readiness Score -->
+                        <div class="bg-gradient-to-br from-rapid-navy to-slate-900 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
+                            <div class="absolute -right-6 -top-6 text-white/5 text-9xl">
+                                <i class="fa-solid fa-rocket"></i>
+                            </div>
+                            
+                            <div class="relative z-10 text-center">
+                                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Practice Readiness Score</h3>
+                                
+                                <div class="relative w-32 h-32 mx-auto mb-4">
+                                    <svg class="w-full h-full transform -rotate-90">
+                                        <circle cx="64" cy="64" r="56" stroke="currentColor" stroke-width="8" fill="transparent" class="text-slate-700" />
+                                        <circle cx="64" cy="64" r="56" stroke="currentColor" stroke-width="8" fill="transparent" stroke-dasharray="351.86" stroke-dashoffset="35.18" class="text-rapid-success" stroke-linecap="round" />
+                                    </svg>
+                                    <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">
+                                        <span class="text-3xl font-bold block">90%</span>
+                                        <span class="text-[10px] text-slate-400 uppercase">Excellent</span>
+                                    </div>
+                                </div>
+
+                                <div class="bg-white/10 rounded-lg p-3 text-left mb-2">
+                                    <div class="flex items-start gap-2">
+                                        <i class="fa-solid fa-triangle-exclamation text-rapid-orange text-xs mt-0.5"></i>
+                                        <div>
+                                            <div class="text-xs font-bold text-white">1 Suggestion</div>
+                                            <p class="text-[10px] text-slate-300 leading-snug">Adding more availability slots increases patient matching by 40%.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Final Consents -->
+                        <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-card">
+                            <h3 class="text-sm font-bold text-rapid-navy mb-4">Final Agreements</h3>
+                            <div class="space-y-3">
+                                <label class="flex items-start gap-3 cursor-pointer group">
+                                    <div class="relative flex items-center mt-0.5">
+                                        <input type="checkbox" class="peer sr-only" id="terms-check">
+                                        <div class="w-5 h-5 border-2 border-slate-300 rounded peer-checked:bg-rapid-sky peer-checked:border-rapid-sky transition-all flex items-center justify-center">
+                                            <i class="fa-solid fa-check text-white text-xs opacity-0 peer-checked:opacity-100"></i>
+                                        </div>
+                                    </div>
+                                    <div class="text-xs text-slate-600 leading-snug group-hover:text-slate-800">
+                                        I agree to the <a href="#" class="text-rapid-sky font-bold hover:underline">Code of Conduct</a> for Specialists.
+                                    </div>
+                                </label>
+                                <label class="flex items-start gap-3 cursor-pointer group">
+                                    <div class="relative flex items-center mt-0.5">
+                                        <input type="checkbox" class="peer sr-only" id="indemnity-check">
+                                        <div class="w-5 h-5 border-2 border-slate-300 rounded peer-checked:bg-rapid-sky peer-checked:border-rapid-sky transition-all flex items-center justify-center">
+                                            <i class="fa-solid fa-check text-white text-xs opacity-0 peer-checked:opacity-100"></i>
+                                        </div>
+                                    </div>
+                                    <div class="text-xs text-slate-600 leading-snug group-hover:text-slate-800">
+                                        I accept the <a href="#" class="text-rapid-sky font-bold hover:underline">Professional Indemnity Terms</a>.
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <!-- Trust Badges -->
+                        <div class="flex flex-wrap gap-2 justify-center opacity-70 grayscale hover:grayscale-0 transition-all duration-500">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/Paystack_Logo.png/1200px-Paystack_Logo.png" class="h-4 object-contain" alt="Paystack">
+                            <div class="h-4 w-px bg-slate-300"></div>
+                            <div class="flex items-center gap-1 text-[10px] text-slate-500 font-bold border border-slate-200 px-1.5 rounded bg-white">
+                                <i class="fa-solid fa-shield-cat text-green-500"></i> NDPR
+                            </div>
+                            <div class="h-4 w-px bg-slate-300"></div>
+                            <div class="flex items-center gap-1 text-[10px] text-slate-500 font-bold border border-slate-200 px-1.5 rounded bg-white">
+                                <i class="fa-solid fa-robot text-rapid-sky"></i> AI Verified
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Sticky Footer Action Bar -->
+    <div class="fixed bottom-0 left-0 w-full bg-white border-t border-slate-200 z-50 pl-72">
+        <div class="max-w-[1440px] mx-auto px-10 py-4 flex items-center justify-between">
+            <button class="text-slate-500 hover:text-slate-800 font-medium text-sm flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-slate-50 transition-colors">
+                <i class="fa-solid fa-arrow-left"></i> Back to Security
+            </button>
+            <div class="flex items-center gap-6">
+                <div class="hidden md:flex flex-col items-end">
+                    <span class="text-xs text-rapid-orange font-bold animate-pulse">Action Required</span>
+                    <span class="text-[10px] text-slate-400">Accept terms to activate</span>
+                </div>
+                <button id="activate-btn" class="bg-slate-200 text-slate-400 font-bold text-sm px-8 py-3 rounded-xl cursor-not-allowed transition-all flex items-center gap-2" disabled>
+                    Go Live & Start Practice <i class="fa-solid fa-rocket"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const termsCheck = document.getElementById('terms-check');
+        const indemnityCheck = document.getElementById('indemnity-check');
+        const activateBtn = document.getElementById('activate-btn');
+
+        function checkConsents() {
+            if (termsCheck.checked && indemnityCheck.checked) {
+                activateBtn.disabled = false;
+                activateBtn.classList.remove('bg-slate-200', 'text-slate-400', 'cursor-not-allowed');
+                activateBtn.classList.add('bg-rapid-orange', 'text-white', 'hover:bg-rapid-orangeDark', 'shadow-lg', 'shadow-orange-100', 'hover:shadow-orange-200', 'action-pulse');
+            } else {
+                activateBtn.disabled = true;
+                activateBtn.classList.add('bg-slate-200', 'text-slate-400', 'cursor-not-allowed');
+                activateBtn.classList.remove('bg-rapid-orange', 'text-white', 'hover:bg-rapid-orangeDark', 'shadow-lg', 'shadow-orange-100', 'hover:shadow-orange-200', 'action-pulse');
+            }
+        }
+
+        termsCheck.addEventListener('change', checkConsents);
+        indemnityCheck.addEventListener('change', checkConsents);
+    </script>
+</body>
+</html>

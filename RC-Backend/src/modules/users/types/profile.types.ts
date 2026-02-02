@@ -4,12 +4,33 @@ export enum Gender {
   MALE = 'Male',
   FEMALE = 'Female',
 }
+
 export enum MaritalStatus {
   MARRIED = 'Married',
   SINGLE = 'Single',
   DIVORCED = 'Divorced',
   WIDOW = 'Widow',
   WIDOWER = 'Widower',
+}
+
+export enum BloodType {
+  A_POSITIVE = 'A+',
+  A_NEGATIVE = 'A-',
+  B_POSITIVE = 'B+',
+  B_NEGATIVE = 'B-',
+  AB_POSITIVE = 'AB+',
+  AB_NEGATIVE = 'AB-',
+  O_POSITIVE = 'O+',
+  O_NEGATIVE = 'O-',
+}
+
+export enum Genotype {
+  AA = 'AA',
+  AS = 'AS',
+  SS = 'SS',
+  AC = 'AC',
+  SC = 'SC',
+  CC = 'CC',
 }
 
 export enum Relationship {
@@ -43,6 +64,11 @@ export class HealthRiskFactors {
   is_smoker?: boolean | string;
   weight_status?: string;
   has_recent_injuries?: boolean | string;
+  alcohol_consumption?: 'never' | 'occasional' | 'moderate' | 'heavy';
+  exercise_frequency?: 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active';
+  diet_type?: string;
+  sleep_hours?: number;
+  stress_level?: 'low' | 'moderate' | 'high' | 'very_high';
 }
 
 export class Phone {
@@ -61,9 +87,12 @@ export class Profile {
     phone: Phone;
     address1: string;
     address2?: string;
+    city?: string;
     state: string;
     country: string;
     zip_code: string;
+    is_diaspora?: boolean;
+    practice_type?: string; // 'clinic' | 'home_office' | 'virtual_only'
   };
   marital_status?: MaritalStatus;
   basic_health_info: BasicHealthInfo;

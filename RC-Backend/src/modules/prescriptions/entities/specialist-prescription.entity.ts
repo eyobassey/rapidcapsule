@@ -458,6 +458,22 @@ export class SpecialistPrescription {
   @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Appointment' })
   appointment_id: mongoose.Types.ObjectId;
 
+  @Prop([{ type: mongoose.Schema.Types.ObjectId, ref: 'Appointment' }])
+  linked_appointments: mongoose.Types.ObjectId[];
+
+  @Prop(
+    raw([
+      {
+        appointment_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Appointment' },
+        note_id: { type: String },
+      },
+    ]),
+  )
+  linked_clinical_notes: Array<{
+    appointment_id: mongoose.Types.ObjectId;
+    note_id: string;
+  }>;
+
   // ============ METADATA ============
 
   @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'User' })

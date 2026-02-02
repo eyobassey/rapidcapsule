@@ -22,11 +22,13 @@ import { PaymentHandler } from '../../common/external/payment/payment.handler';
 import { BanksModule } from '../banks/banks.module';
 import { AdminSettingsModule } from '../admin-settings/admin-settings.module';
 import { Paystack } from '../../common/external/payment/providers/paystack';
+import { AccountingModule } from '../accounting/accounting.module';
 
 @Module({
   imports: [
     BanksModule,
     AdminSettingsModule,
+    AccountingModule,
     MongooseModule.forFeature([
       { name: Wallet.name, schema: WalletSchema },
       { name: WalletTransaction.name, schema: WalletTransactionSchema },

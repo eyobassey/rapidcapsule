@@ -98,6 +98,102 @@
 					</div>
 				</div>
 
+				<!-- Meeting Summary Card (for completed/past appointments) -->
+				<div v-if="showMeetingSummary" class="meeting-summary-card">
+					<h3 class="section-title">
+						<v-icon name="hi-video-camera" scale="0.9" />
+						Meeting Summary
+						<span class="status-badge" :class="getStatusClass(appointmentInfo.status)">
+							{{ appointmentInfo.status }}
+						</span>
+					</h3>
+
+					<!-- Attendance Status -->
+					<div class="attendance-section">
+						<h4 class="subsection-title-sm">Attendance</h4>
+						<div class="attendance-indicators">
+							<div class="attendance-item" :class="{ 'attended': appointmentInfo.attendance?.patient_joined }">
+								<v-icon :name="appointmentInfo.attendance?.patient_joined ? 'hi-check-circle' : 'hi-x-circle'" scale="0.9" />
+								<span>Patient</span>
+								<small v-if="appointmentInfo.attendance?.patient_joined_at">
+									Joined {{ formatTime(appointmentInfo.attendance.patient_joined_at) }}
+								</small>
+							</div>
+							<div class="attendance-item" :class="{ 'attended': appointmentInfo.attendance?.specialist_joined }">
+								<v-icon :name="appointmentInfo.attendance?.specialist_joined ? 'hi-check-circle' : 'hi-x-circle'" scale="0.9" />
+								<span>Specialist</span>
+								<small v-if="appointmentInfo.attendance?.specialist_joined_at">
+									Joined {{ formatTime(appointmentInfo.attendance.specialist_joined_at) }}
+								</small>
+							</div>
+						</div>
+					</div>
+
+					<!-- Call Duration -->
+					<div v-if="appointmentInfo.call_duration?.time_taken" class="duration-section">
+						<h4 class="subsection-title-sm">Call Duration</h4>
+						<div class="duration-display">
+							<v-icon name="hi-clock" scale="1.2" />
+							<span class="duration-value">{{ formatDuration(appointmentInfo.call_duration.time_taken) }}</span>
+						</div>
+						<div v-if="appointmentInfo.meeting_platform_data?.actual_start_time" class="duration-times">
+							<span>Started: {{ formatDateTime(appointmentInfo.meeting_platform_data.actual_start_time) }}</span>
+							<span v-if="appointmentInfo.meeting_platform_data?.actual_end_time">
+								Ended: {{ formatDateTime(appointmentInfo.meeting_platform_data.actual_end_time) }}
+							</span>
+						</div>
+					</div>
+
+					<!-- Participants -->
+					<div v-if="appointmentInfo.participants?.length > 0" class="participants-section">
+						<h4 class="subsection-title-sm">Participants ({{ appointmentInfo.participants.length }})</h4>
+						<div class="participants-list">
+							<div v-for="(participant, index) in appointmentInfo.participants" :key="index" class="participant-item">
+								<div class="participant-avatar">
+									<v-icon name="hi-user" scale="0.8" />
+								</div>
+								<div class="participant-info">
+									<span class="participant-name">{{ participant.name }}</span>
+									<span v-if="participant.email" class="participant-email">{{ participant.email }}</span>
+								</div>
+								<div class="participant-time">
+									<span v-if="participant.duration_minutes" class="participant-duration">
+										{{ participant.duration_minutes }} min
+									</span>
+									<small v-if="participant.join_time">
+										{{ formatTime(participant.join_time) }} - {{ formatTime(participant.leave_time) }}
+									</small>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<!-- Recording -->
+					<div v-if="appointmentInfo.recording?.recording_url" class="recording-section">
+						<h4 class="subsection-title-sm">Recording</h4>
+						<div class="recording-card">
+							<div class="recording-info">
+								<v-icon name="hi-film" scale="1" />
+								<div class="recording-details">
+									<span class="recording-status" :class="appointmentInfo.recording.recording_status">
+										{{ appointmentInfo.recording.recording_status || 'Available' }}
+									</span>
+									<span v-if="appointmentInfo.recording.recording_duration_minutes" class="recording-duration">
+										{{ appointmentInfo.recording.recording_duration_minutes }} min
+									</span>
+								</div>
+							</div>
+							<a :href="appointmentInfo.recording.recording_url" target="_blank" class="recording-link">
+								<v-icon name="hi-play" scale="0.8" />
+								View Recording
+							</a>
+						</div>
+						<p v-if="appointmentInfo.recording.recording_expires_at" class="recording-expiry">
+							Expires: {{ formatDate(appointmentInfo.recording.recording_expires_at) }}
+						</p>
+					</div>
+				</div>
+
 				<!-- Patient Health Dashboard -->
 				<div class="health-dashboard">
 					<div class="health-dashboard__header">
@@ -249,9 +345,10 @@
 									<v-icon name="hi-calendar" scale="0.7" />
 									{{ format(new Date(apt.start_time), 'MMM dd, yyyy') }}
 								</div>
-								<div v-if="apt.notes" class="prev-apt-notes">
+								<div v-if="apt.notes && apt.notes.length" class="prev-apt-notes">
 									<span class="notes-label">Notes:</span>
-									{{ apt.notes }}
+									<span v-if="typeof apt.notes === 'string'">{{ apt.notes }}</span>
+									<span v-else>{{ apt.notes.map(n => n.content).join('; ') }}</span>
 								</div>
 								<div v-else class="prev-apt-notes no-notes">No notes recorded</div>
 							</div>
@@ -740,6 +837,68 @@ const hasHealthData = computed(() => {
 		healthScores.value.advanced !== null;
 });
 
+// Show meeting summary for completed/missed appointments
+const showMeetingSummary = computed(() => {
+	const status = appointmentInfo.value?.status?.toUpperCase();
+	return ['COMPLETED', 'MISSED', 'CLOSED'].includes(status) ||
+		appointmentInfo.value?.attendance?.attendance_status ||
+		appointmentInfo.value?.participants?.length > 0 ||
+		appointmentInfo.value?.call_duration?.time_taken > 0;
+});
+
+// Format duration in minutes to human-readable
+function formatDuration(minutes) {
+	if (!minutes) return '-';
+	if (minutes < 60) return `${Math.round(minutes)} minutes`;
+	const hours = Math.floor(minutes / 60);
+	const mins = Math.round(minutes % 60);
+	return mins > 0 ? `${hours}h ${mins}m` : `${hours} hour${hours > 1 ? 's' : ''}`;
+}
+
+// Format time from date
+function formatTime(dateStr) {
+	if (!dateStr) return '-';
+	try {
+		return format(new Date(dateStr), 'hh:mm a');
+	} catch {
+		return '-';
+	}
+}
+
+// Format date and time
+function formatDateTime(dateStr) {
+	if (!dateStr) return '-';
+	try {
+		return format(new Date(dateStr), 'MMM dd, hh:mm a');
+	} catch {
+		return '-';
+	}
+}
+
+// Format date only
+function formatDate(dateStr) {
+	if (!dateStr) return '-';
+	try {
+		return format(new Date(dateStr), 'MMM dd, yyyy');
+	} catch {
+		return '-';
+	}
+}
+
+// Get status badge class
+function getStatusClass(status) {
+	if (!status) return '';
+	const s = status.toUpperCase();
+	return {
+		'COMPLETED': 'status-completed',
+		'MISSED': 'status-missed',
+		'OPEN': 'status-open',
+		'ONGOING': 'status-ongoing',
+		'CANCELLED': 'status-cancelled',
+		'CLOSED': 'status-closed',
+	}[s] || '';
+}
+
 // Health score modal
 const showScoreModal = ref(false);
 const selectedScore = ref(null);
@@ -1214,6 +1373,281 @@ const viewCheckupDetails = (checkup) => {
 	border-radius: $size-16;
 	padding: $size-24;
 	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+// Meeting Summary Card
+.meeting-summary-card {
+	background: white;
+	border-radius: $size-16;
+	padding: $size-24;
+	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+
+	.section-title {
+		.status-badge {
+			margin-left: auto;
+			padding: 4px 12px;
+			border-radius: 20px;
+			font-size: 11px;
+			font-weight: 600;
+			text-transform: uppercase;
+
+			&.status-completed {
+				background: #E8F5E9;
+				color: #2E7D32;
+			}
+			&.status-missed {
+				background: #FFEBEE;
+				color: #C62828;
+			}
+			&.status-open {
+				background: #E3F2FD;
+				color: #1565C0;
+			}
+			&.status-ongoing {
+				background: #FFF3E0;
+				color: #EF6C00;
+			}
+			&.status-cancelled {
+				background: #FAFAFA;
+				color: #757575;
+			}
+			&.status-closed {
+				background: #F3E5F5;
+				color: #7B1FA2;
+			}
+		}
+	}
+
+	.subsection-title-sm {
+		font-size: 13px;
+		font-weight: 600;
+		color: #666;
+		margin: 0 0 12px 0;
+	}
+
+	.attendance-section {
+		margin-bottom: 20px;
+		padding-bottom: 20px;
+		border-bottom: 1px solid #f0f0f0;
+
+		.attendance-indicators {
+			display: flex;
+			gap: 24px;
+
+			@include responsive(phone) {
+				flex-direction: column;
+				gap: 12px;
+			}
+		}
+
+		.attendance-item {
+			display: flex;
+			align-items: center;
+			gap: 8px;
+			padding: 12px 16px;
+			background: #FFEBEE;
+			border-radius: 8px;
+			flex: 1;
+
+			svg {
+				color: #C62828;
+			}
+
+			span {
+				font-weight: 500;
+				color: #C62828;
+			}
+
+			small {
+				margin-left: auto;
+				font-size: 11px;
+				color: #666;
+			}
+
+			&.attended {
+				background: #E8F5E9;
+
+				svg, span {
+					color: #2E7D32;
+				}
+			}
+		}
+	}
+
+	.duration-section {
+		margin-bottom: 20px;
+		padding-bottom: 20px;
+		border-bottom: 1px solid #f0f0f0;
+
+		.duration-display {
+			display: flex;
+			align-items: center;
+			gap: 12px;
+			padding: 16px;
+			background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%);
+			border-radius: 12px;
+			margin-bottom: 8px;
+
+			svg {
+				color: #1565C0;
+			}
+
+			.duration-value {
+				font-size: 24px;
+				font-weight: 700;
+				color: #1565C0;
+			}
+		}
+
+		.duration-times {
+			display: flex;
+			gap: 16px;
+			font-size: 12px;
+			color: #666;
+			padding: 0 4px;
+
+			@include responsive(phone) {
+				flex-direction: column;
+				gap: 4px;
+			}
+		}
+	}
+
+	.participants-section {
+		margin-bottom: 20px;
+		padding-bottom: 20px;
+		border-bottom: 1px solid #f0f0f0;
+
+		.participants-list {
+			display: flex;
+			flex-direction: column;
+			gap: 8px;
+		}
+
+		.participant-item {
+			display: flex;
+			align-items: center;
+			gap: 12px;
+			padding: 12px;
+			background: #f8f9fa;
+			border-radius: 8px;
+
+			.participant-avatar {
+				width: 36px;
+				height: 36px;
+				border-radius: 50%;
+				background: #e0e0e0;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+
+				svg {
+					color: #666;
+				}
+			}
+
+			.participant-info {
+				flex: 1;
+				display: flex;
+				flex-direction: column;
+
+				.participant-name {
+					font-weight: 500;
+					color: #333;
+				}
+
+				.participant-email {
+					font-size: 12px;
+					color: #666;
+				}
+			}
+
+			.participant-time {
+				text-align: right;
+				display: flex;
+				flex-direction: column;
+
+				.participant-duration {
+					font-weight: 600;
+					color: #0EAEC4;
+				}
+
+				small {
+					font-size: 11px;
+					color: #999;
+				}
+			}
+		}
+	}
+
+	.recording-section {
+		.recording-card {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			padding: 16px;
+			background: linear-gradient(135deg, #FFF3E0 0%, #FFE0B2 100%);
+			border-radius: 12px;
+
+			.recording-info {
+				display: flex;
+				align-items: center;
+				gap: 12px;
+
+				svg {
+					color: #EF6C00;
+				}
+
+				.recording-details {
+					display: flex;
+					flex-direction: column;
+
+					.recording-status {
+						font-weight: 600;
+						color: #EF6C00;
+						text-transform: capitalize;
+
+						&.available {
+							color: #2E7D32;
+						}
+						&.expired {
+							color: #C62828;
+						}
+					}
+
+					.recording-duration {
+						font-size: 12px;
+						color: #666;
+					}
+				}
+			}
+
+			.recording-link {
+				display: flex;
+				align-items: center;
+				gap: 6px;
+				padding: 8px 16px;
+				background: #EF6C00;
+				color: white;
+				border-radius: 6px;
+				text-decoration: none;
+				font-weight: 500;
+				font-size: 13px;
+				transition: background 0.2s;
+
+				&:hover {
+					background: #E65100;
+				}
+			}
+		}
+
+		.recording-expiry {
+			margin-top: 8px;
+			font-size: 11px;
+			color: #999;
+			padding: 0 4px;
+		}
+	}
 }
 
 .section-title {

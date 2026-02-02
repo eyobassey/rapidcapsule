@@ -56,8 +56,8 @@ export class SpecialistPharmacyService {
 
     // If searching my patients, first get patient IDs from appointments
     if (type === PatientSearchType.MY_PATIENTS) {
-      const appointments = await AppointmentsCollection.distinct('patient_id', {
-        specialist_id: specialistId,
+      const appointments = await AppointmentsCollection.distinct('patient', {
+        specialist: specialistId,
       });
       patientIds = appointments.map((id) => new Types.ObjectId(id));
 
@@ -94,7 +94,7 @@ export class SpecialistPharmacyService {
         'profile.contact.phone': 1,
         'profile.bio.gender': 1,
         'profile.bio.date_of_birth': 1,
-        'profile.bio.profile_image': 1,
+        'profile.profile_photo': 1,
         created_at: 1,
       },
     })
@@ -111,15 +111,15 @@ export class SpecialistPharmacyService {
         const [appointmentCount, prescriptionCount, lastAppointment, lastPrescription] =
           await Promise.all([
             AppointmentsCollection.countDocuments({
-              specialist_id: specialistId,
-              patient_id: patient._id,
+              specialist: specialistId,
+              patient: patient._id,
             }),
             this.prescriptionModel.countDocuments({
               specialist_id: specialistId,
               patient_id: patient._id,
             }),
             AppointmentsCollection.findOne(
-              { specialist_id: specialistId, patient_id: patient._id },
+              { specialist: specialistId, patient: patient._id },
               { sort: { appointment_date: -1 }, projection: { appointment_date: 1 } },
             ),
             this.prescriptionModel
@@ -134,6 +134,8 @@ export class SpecialistPharmacyService {
 
         const firstName = patient.profile?.first_name || '';
         const lastName = patient.profile?.last_name || '';
+        const rawImage = patient.profile?.profile_photo || patient.profile?.bio?.profile_image || null;
+        const profileImage = await this.fileUploadHelper.resolveProfileImage(rawImage);
         return {
           _id: patient._id,
           full_name: `${firstName} ${lastName}`.trim() || 'Unknown',
@@ -145,7 +147,7 @@ export class SpecialistPharmacyService {
             : null,
           gender: patient.profile?.bio?.gender,
           date_of_birth: patient.profile?.bio?.date_of_birth,
-          profile_image: patient.profile?.bio?.profile_image,
+          profile_image: profileImage,
           total_appointments: appointmentCount,
           total_prescriptions: prescriptionCount,
           last_appointment_date: lastAppointment?.appointment_date,
@@ -193,15 +195,19 @@ export class SpecialistPharmacyService {
       phone = `${phoneObj.country_code || ''} ${phoneObj.number}`.trim();
     }
 
+    // Resolve profile image to a usable URL
+    const rawImage = patient.profile?.profile_photo || patient.profile?.bio?.profile_image || null;
+    const profileImage = await this.fileUploadHelper.resolveProfileImage(rawImage);
+
     // Return flattened structure for frontend
     return {
       _id: patient._id,
       full_name: fullName,
       email: patient.profile?.contact?.email || null,
       phone,
-      date_of_birth: patient.profile?.date_of_birth || null,
-      gender: patient.profile?.gender || null,
-      profile_image: patient.profile?.profile_photo || patient.profile?.profile_image || null,
+      date_of_birth: patient.profile?.bio?.date_of_birth || patient.profile?.date_of_birth || null,
+      gender: patient.profile?.bio?.gender || patient.profile?.gender || null,
+      profile_image: profileImage,
       address: patient.profile?.contact?.address1
         ? `${patient.profile.contact.address1}, ${patient.profile.contact.state || ''}, ${patient.profile.contact.country || ''}`.trim()
         : null,
@@ -295,57 +301,63 @@ export class SpecialistPharmacyService {
       .toArray();
 
     // Transform to frontend-friendly format
-    return vitals.map((vital: any) => {
-      const records: any[] = [];
+    // Each vital field (blood_pressure, pulse_rate, etc.) is an array of { value, unit, updatedAt }
+    const records: any[] = [];
 
-      if (vital.blood_pressure) {
+    for (const vital of vitals) {
+      if (Array.isArray(vital.blood_pressure) && vital.blood_pressure.length > 0) {
+        const latest = vital.blood_pressure[vital.blood_pressure.length - 1];
         records.push({
           _id: `${vital._id}_bp`,
           type: 'blood_pressure',
-          value: `${vital.blood_pressure.systolic}/${vital.blood_pressure.diastolic}`,
-          unit: 'mmHg',
-          recorded_at: vital.created_at,
+          value: latest.value || 'N/A',
+          unit: latest.unit || 'mmHg',
+          recorded_at: latest.updatedAt || vital.created_at,
         });
       }
-      if (vital.pulse_rate) {
+      if (Array.isArray(vital.pulse_rate) && vital.pulse_rate.length > 0) {
+        const latest = vital.pulse_rate[vital.pulse_rate.length - 1];
         records.push({
           _id: `${vital._id}_hr`,
           type: 'heart_rate',
-          value: vital.pulse_rate,
-          unit: 'bpm',
-          recorded_at: vital.created_at,
+          value: latest.value || 'N/A',
+          unit: latest.unit || 'bpm',
+          recorded_at: latest.updatedAt || vital.created_at,
         });
       }
-      if (vital.body_temp) {
+      if (Array.isArray(vital.body_temp) && vital.body_temp.length > 0) {
+        const latest = vital.body_temp[vital.body_temp.length - 1];
         records.push({
           _id: `${vital._id}_temp`,
           type: 'temperature',
-          value: vital.body_temp,
-          unit: '°C',
-          recorded_at: vital.created_at,
+          value: latest.value || 'N/A',
+          unit: latest.unit || '°C',
+          recorded_at: latest.updatedAt || vital.created_at,
         });
       }
-      if (vital.body_weight) {
+      if (Array.isArray(vital.body_weight) && vital.body_weight.length > 0) {
+        const latest = vital.body_weight[vital.body_weight.length - 1];
         records.push({
           _id: `${vital._id}_weight`,
           type: 'weight',
-          value: vital.body_weight,
-          unit: 'kg',
-          recorded_at: vital.created_at,
+          value: latest.value || 'N/A',
+          unit: latest.unit || 'kg',
+          recorded_at: latest.updatedAt || vital.created_at,
         });
       }
-      if (vital.blood_sugar_level) {
+      if (Array.isArray(vital.blood_sugar_level) && vital.blood_sugar_level.length > 0) {
+        const latest = vital.blood_sugar_level[vital.blood_sugar_level.length - 1];
         records.push({
           _id: `${vital._id}_sugar`,
           type: 'blood_sugar',
-          value: vital.blood_sugar_level,
-          unit: 'mg/dL',
-          recorded_at: vital.created_at,
+          value: latest.value || 'N/A',
+          unit: latest.unit || 'mg/dL',
+          recorded_at: latest.updatedAt || vital.created_at,
         });
       }
+    }
 
-      return records;
-    }).flat();
+    return records;
   }
 
   /**
@@ -990,7 +1002,7 @@ export class SpecialistPharmacyService {
     const enrichedPrescriptions = await Promise.all(
       recentPrescriptions.map(async (prescription: any) => {
         let patientName = 'Unknown Patient';
-        let patientAvatar = null;
+        let patientAvatar: string | null = null;
 
         if (prescription.patient_id) {
           try {
@@ -1018,7 +1030,7 @@ export class SpecialistPharmacyService {
                 projection: {
                   'profile.first_name': 1,
                   'profile.last_name': 1,
-                  'profile.bio.profile_image': 1,
+                  'profile.profile_photo': 1,
                 },
               },
             );
@@ -1027,7 +1039,8 @@ export class SpecialistPharmacyService {
               const firstName = patient.profile.first_name || '';
               const lastName = patient.profile.last_name || '';
               patientName = `${firstName} ${lastName}`.trim() || 'Unknown Patient';
-              patientAvatar = patient.profile.bio?.profile_image || null;
+              const rawAvatar = patient.profile.profile_photo || patient.profile.bio?.profile_image || null;
+              patientAvatar = await this.fileUploadHelper.resolveProfileImage(rawAvatar);
             }
           } catch (e) {
             // Log but continue - don't break dashboard for one bad prescription

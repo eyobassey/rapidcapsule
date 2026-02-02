@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Booking Confirmation & Pre-Visit Checklist</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        rapid: {
+                            sky: '#4FC3F7',
+                            skyLight: '#E1F5FE',
+                            skyDark: '#0288D1',
+                            orange: '#FF9800',
+                            orangeLight: '#FFF3E0',
+                            orangeDark: '#F57C00',
+                            navy: '#1A365D',
+                            gray: '#F5F9FF',
+                            text: '#334155',
+                            success: '#4CAF50',
+                            error: '#EF4444'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        display: ['Poppins', 'system-ui', 'sans-serif']
+                    },
+                    boxShadow: {
+                        'soft': '0 4px 20px -2px rgba(79, 195, 247, 0.15)',
+                        'card': '0 10px 30px -5px rgba(0, 0, 0, 0.05)',
+                        'glow': '0 0 15px rgba(79, 195, 247, 0.3)',
+                    }
+                }
+            }
+        }
+        window.FontAwesomeConfig = { autoReplaceSvg: 'nest' };
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdn.plot.ly/plotly-3.1.1.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        .checklist-item { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .checklist-item:hover { transform: translateY(-2px); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05); }
+        
+        .confetti-piece {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: #4FC3F7;
+            top: 0;
+            opacity: 0;
+        }
+        
+        @keyframes pop {
+            0% { transform: scale(0.8); opacity: 0; }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop { animation: pop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+    </style>
+</head>
+<body class="bg-rapid-gray font-sans text-rapid-text antialiased h-[1024px] overflow-hidden flex flex-col w-[1440px] mx-auto">
+
+    <!-- Header -->
+    <header id="header" class="bg-white/90 backdrop-blur-md border-b border-slate-100 h-16 z-40 sticky top-0 flex-none">
+        <div class="max-w-[1440px] mx-auto px-6 h-full flex items-center justify-between">
+            <div class="flex items-center gap-3 cursor-pointer">
+                <div class="w-8 h-8 bg-gradient-to-br from-rapid-sky to-rapid-skyDark rounded-lg flex items-center justify-center text-white shadow-glow">
+                    <i class="fa-solid fa-heart-pulse text-sm"></i>
+                </div>
+                <span class="text-xl font-bold text-rapid-navy font-display tracking-tight">Rapid Capsule</span>
+            </div>
+            
+            <nav class="hidden md:flex items-center gap-1">
+                <a href="#" class="px-4 py-2 text-sm font-medium text-slate-500 hover:text-rapid-navy hover:bg-slate-50 rounded-lg transition-colors">Dashboard</a>
+                <a href="#" class="px-4 py-2 text-sm font-bold text-rapid-sky bg-rapid-skyLight/50 rounded-lg transition-colors">Book Appointment</a>
+                <a href="#" class="px-4 py-2 text-sm font-medium text-slate-500 hover:text-rapid-navy hover:bg-slate-50 rounded-lg transition-colors">My Appointments</a>
+                <a href="#" class="px-4 py-2 text-sm font-medium text-slate-500 hover:text-rapid-navy hover:bg-slate-50 rounded-lg transition-colors">Messages</a>
+                <a href="#" class="px-4 py-2 text-sm font-medium text-slate-500 hover:text-rapid-navy hover:bg-slate-50 rounded-lg transition-colors">Profile</a>
+            </nav>
+
+            <div class="flex items-center gap-4">
+                <button class="w-9 h-9 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:border-rapid-sky hover:text-rapid-sky transition-all relative">
+                    <i class="fa-regular fa-bell"></i>
+                    <span class="absolute top-2 right-2 w-1.5 h-1.5 bg-rapid-orange rounded-full border border-white"></span>
+                </button>
+                <div class="flex items-center gap-2 pl-4 border-l border-slate-200">
+                    <div class="text-right hidden sm:block">
+                        <div class="text-xs font-bold text-rapid-navy">Sarah Johnson</div>
+                        <div class="text-[10px] text-slate-500">Patient ID: #RC-8821</div>
+                    </div>
+                    <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg" class="w-9 h-9 rounded-full object-cover border-2 border-white shadow-sm">
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Grid -->
+    <div class="flex-1 flex overflow-hidden max-w-[1440px] mx-auto w-full relative">
+        
+        <!-- Sidebar: Appointment Details -->
+        <aside id="sidebar-details" class="w-80 bg-white border-r border-slate-200 h-full overflow-y-auto hidden lg:flex flex-col flex-none z-20">
+            <div class="p-6">
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Your Specialist</h3>
+                
+                <!-- Doctor Profile Card -->
+                <div class="bg-white border border-slate-100 rounded-2xl p-4 shadow-card mb-6 text-center">
+                    <div class="relative w-24 h-24 mx-auto mb-3">
+                        <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" class="w-full h-full rounded-full object-cover border-4 border-rapid-skyLight">
+                        <div class="absolute bottom-1 right-1 w-6 h-6 bg-rapid-success rounded-full border-2 border-white flex items-center justify-center text-white text-[10px]">
+                            <i class="fa-solid fa-check"></i>
+                        </div>
+                    </div>
+                    <h2 class="text-lg font-bold text-rapid-navy">Dr. Amara Okafor</h2>
+                    <p class="text-xs text-rapid-sky font-medium mb-1">Cardiologist • MBBS, FWACP</p>
+                    <div class="flex justify-center items-center gap-1 text-[10px] text-slate-400 mb-4">
+                        <i class="fa-solid fa-star text-rapid-orange"></i>
+                        <span class="font-bold text-slate-700">4.9</span>
+                        <span>(128 reviews)</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <button class="flex-1 bg-rapid-skyLight text-rapid-sky hover:bg-rapid-sky hover:text-white transition-colors py-2 rounded-lg text-xs font-bold">
+                            View Profile
+                        </button>
+                        <button class="flex-1 border border-slate-200 text-slate-600 hover:border-rapid-sky hover:text-rapid-sky transition-colors py-2 rounded-lg text-xs font-bold">
+                            Message
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Appointment Timeline -->
+                <div class="relative pl-4 border-l-2 border-slate-100 space-y-6 mb-8">
+                    <div class="relative">
+                        <div class="absolute -left-[21px] top-1 w-3 h-3 rounded-full bg-rapid-sky border-2 border-white shadow-sm"></div>
+                        <p class="text-[10px] text-slate-400 uppercase font-bold mb-1">Date</p>
+                        <p class="text-sm font-bold text-slate-700">Thursday, Oct 5, 2023</p>
+                    </div>
+                    <div class="relative">
+                        <div class="absolute -left-[21px] top-1 w-3 h-3 rounded-full bg-rapid-orange border-2 border-white shadow-sm"></div>
+                        <p class="text-[10px] text-slate-400 uppercase font-bold mb-1">Time</p>
+                        <p class="text-sm font-bold text-slate-700">10:30 AM - 11:00 AM</p>
+                        <p class="text-[10px] text-slate-500">(West Africa Time)</p>
+                    </div>
+                    <div class="relative">
+                        <div class="absolute -left-[21px] top-1 w-3 h-3 rounded-full bg-rapid-navy border-2 border-white shadow-sm"></div>
+                        <p class="text-[10px] text-slate-400 uppercase font-bold mb-1">Type</p>
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-video text-rapid-navy text-xs"></i>
+                            <span class="text-sm font-bold text-slate-700">Video Consultation</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Support Box -->
+                <div class="mt-auto bg-slate-50 rounded-xl p-5 border border-slate-200">
+                    <div class="flex items-start gap-3 mb-3">
+                        <div class="w-8 h-8 rounded-full bg-white flex items-center justify-center text-rapid-sky border border-slate-100 shadow-sm flex-none">
+                            <i class="fa-solid fa-headset"></i>
+                        </div>
+                        <div>
+                            <div class="text-xs font-bold text-rapid-navy">Having trouble?</div>
+                            <p class="text-[10px] text-slate-500 leading-relaxed mt-1">Chat with our support team if you need to reschedule or have technical issues.</p>
+                        </div>
+                    </div>
+                    <button class="w-full bg-white border border-slate-200 text-slate-600 text-xs font-bold py-2.5 rounded-lg hover:bg-slate-50 hover:text-rapid-sky hover:border-rapid-sky transition-all flex items-center justify-center gap-2 group">
+                        <span>Start Support Chat</span>
+                        <i class="fa-solid fa-arrow-right text-[10px] group-hover:translate-x-1 transition-transform"></i>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Area -->
+        <main class="flex-1 flex flex-col bg-slate-50/50 overflow-y-auto relative scroll-smooth">
+            
+            <!-- Confetti Background (Subtle) -->
+            <div class="absolute inset-0 overflow-hidden pointer-events-none">
+                <div class="absolute top-10 left-1/4 text-rapid-sky/20 text-4xl animate-bounce"><i class="fa-solid fa-star"></i></div>
+                <div class="absolute top-20 right-1/3 text-rapid-orange/20 text-2xl animate-pulse"><i class="fa-solid fa-circle"></i></div>
+            </div>
+
+            <div class="max-w-4xl mx-auto w-full p-8 pb-32">
+                
+                <!-- Success Hero -->
+                <div class="text-center mb-10 animate-pop">
+                    <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-100 text-green-600 text-3xl mb-6 shadow-lg shadow-green-100/50">
+                        <i class="fa-solid fa-check"></i>
+                    </div>
+                    <h1 class="text-3xl font-display font-bold text-rapid-navy mb-2">Appointment Confirmed!</h1>
+                    <p class="text-slate-500 mb-4">Your session with Dr. Okafor is scheduled. A confirmation email has been sent to sarah.j@example.com</p>
+                    <div class="inline-block bg-white border border-slate-200 rounded-full px-4 py-1.5 text-xs font-bold text-slate-600 shadow-sm">
+                        Appointment ID: <span class="text-rapid-navy select-all">#RC-8821</span>
+                    </div>
+                </div>
+
+                <!-- Main Action Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+                    
+                    <!-- Zoom Card -->
+                    <div class="bg-white rounded-2xl p-6 shadow-card border-l-4 border-l-blue-500 relative overflow-hidden group">
+                        <div class="absolute right-0 top-0 w-32 h-32 bg-blue-50 rounded-bl-full -mr-10 -mt-10 transition-transform group-hover:scale-110"></div>
+                        <div class="relative z-10">
+                            <div class="flex items-center justify-between mb-4">
+                                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/Zoom_Communications_Logo.svg/1200px-Zoom_Communications_Logo.svg.png" class="h-6 object-contain" alt="Zoom">
+                                <span class="bg-blue-100 text-blue-700 text-[10px] font-bold px-2 py-1 rounded-full">Video Call</span>
+                            </div>
+                            <h3 class="text-lg font-bold text-rapid-navy mb-1">Join Consultation</h3>
+                            <p class="text-xs text-slate-500 mb-6">Link activates 10 mins before appointment time.</p>
+                            
+                            <div class="bg-slate-50 rounded-lg p-3 mb-4 border border-slate-100 flex justify-between items-center">
+                                <div>
+                                    <div class="text-[10px] text-slate-400 uppercase font-bold">Meeting ID</div>
+                                    <div class="text-sm font-mono font-bold text-slate-700">882 192 9920</div>
+                                </div>
+                                <button class="text-slate-400 hover:text-rapid-sky transition-colors" title="Copy ID">
+                                    <i class="fa-regular fa-copy"></i>
+                                </button>
+                            </div>
+
+                            <button class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-xl shadow-lg shadow-blue-200 transition-all flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-video"></i> Launch Zoom App
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Reminders Card -->
+                    <div class="bg-white rounded-2xl p-6 shadow-card border border-slate-100 flex flex-col">
+                        <h3 class="text-lg font-bold text-rapid-navy mb-4">Manage Reminders</h3>
+                        
+                        <div class="space-y-4 flex-1">
+                            <!-- Calendar -->
+                            <div class="flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100 cursor-pointer group">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-full bg-orange-50 text-orange-500 flex items-center justify-center">
+                                        <i class="fa-regular fa-calendar-plus"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-sm font-bold text-slate-700">Add to Calendar</div>
+                                        <div class="text-[10px] text-slate-500">Google, Outlook, iCal</div>
+                                    </div>
+                                </div>
+                                <i class="fa-solid fa-chevron-right text-slate-300 group-hover:text-rapid-sky text-xs"></i>
+                            </div>
+
+                            <!-- WhatsApp -->
+                            <div class="flex items-center justify-between p-3 rounded-xl bg-green-50/50 border border-green-100">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-full bg-green-100 text-green-600 flex items-center justify-center">
+                                        <i class="fa-brands fa-whatsapp text-lg"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-sm font-bold text-slate-700">WhatsApp Reminders</div>
+                                        <div class="text-[10px] text-slate-500">Get notified on +234 80...</div>
+                                    </div>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" value="" class="sr-only peer" checked>
+                                    <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500"></div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pre-Visit Checklist Section -->
+                <div class="mb-12">
+                    <div class="flex items-center justify-between mb-6">
+                        <div>
+                            <h2 class="text-xl font-display font-bold text-rapid-navy">Pre-Visit Checklist</h2>
+                            <p class="text-sm text-slate-500">Complete these steps now to save time during your consultation.</p>
+                        </div>
+                        <div class="bg-white px-3 py-1 rounded-full border border-slate-200 text-xs font-bold text-slate-600 shadow-sm">
+                            <span class="text-rapid-success mr-1">0/3</span> Completed
+                        </div>
+                    </div>
+
+                    <div class="space-y-4">
+                        <!-- Step 1: Tech Check -->
+                        <div class="checklist-item bg-white rounded-2xl p-5 border border-slate-100 shadow-sm flex flex-col md:flex-row gap-6 items-start md:items-center">
+                            <div class="flex-none w-12 h-12 rounded-full bg-rapid-skyLight text-rapid-sky flex items-center justify-center text-xl">
+                                <i class="fa-solid fa-laptop-medical"></i>
+                            </div>
+                            <div class="flex-1">
+                                <h4 class="text-base font-bold text-rapid-navy mb-1">Test Your Device</h4>
+                                <p class="text-xs text-slate-500">Check your camera and microphone to ensure the doctor can see and hear you clearly.</p>
+                            </div>
+                            <button class="bg-white border border-slate-200 hover:border-rapid-sky hover:text-rapid-sky text-slate-600 text-sm font-bold px-6 py-2.5 rounded-xl transition-all shadow-sm">
+                                Start Test
+                            </button>
+                        </div>
+
+                        <!-- Step 2: Vitals Upload -->
+                        <div class="checklist-item bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
+                            <div class="flex flex-col md:flex-row gap-6 items-start">
+                                <div class="flex-none w-12 h-12 rounded-full bg-rapid-orangeLight text-rapid-orange flex items-center justify-center text-xl">
+                                    <i class="fa-solid fa-heart-pulse"></i>
+                                </div>
+                                <div class="flex-1 w-full">
+                                    <div class="flex justify-between items-start mb-4">
+                                        <div>
+                                            <h4 class="text-base font-bold text-rapid-navy mb-1">Upload Current Vitals</h4>
+                                            <p class="text-xs text-slate-500">Please provide recent readings if available.</p>
+                                        </div>
+                                        <span class="bg-orange-50 text-orange-600 text-[10px] font-bold px-2 py-1 rounded uppercase">Required</span>
+                                    </div>
+                                    
+                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div>
+                                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Blood Pressure (SYS/DIA)</label>
+                                            <div class="flex items-center gap-2">
+                                                <input type="number" placeholder="120" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-rapid-sky">
+                                                <span class="text-slate-400">/</span>
+                                                <input type="number" placeholder="80" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-rapid-sky">
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Temperature (°C)</label>
+                                            <div class="relative">
+                                                <input type="number" placeholder="36.5" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-rapid-sky">
+                                                <i class="fa-solid fa-temperature-half absolute right-3 top-2.5 text-slate-400 text-xs"></i>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-end">
+                                            <button class="w-full bg-rapid-navy text-white text-sm font-bold px-4 py-2 rounded-lg hover:bg-slate-800 transition-colors shadow-lg shadow-slate-200">
+                                                Save Vitals
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 3: AI Prep -->
+                        <div class="checklist-item bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
+                            <div class="flex flex-col md:flex-row gap-6 items-start">
+                                <div class="flex-none w-12 h-12 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center text-xl">
+                                    <i class="fa-solid fa-robot"></i>
+                                </div>
+                                <div class="flex-1 w-full">
+                                    <div class="flex justify-between items-start mb-4">
+                                        <div>
+                                            <h4 class="text-base font-bold text-rapid-navy mb-1">AI Pre-Visit Assessment</h4>
+                                            <p class="text-xs text-slate-500">Dr. Okafor uses Infermedica AI to prep. Answer 3 quick questions.</p>
+                                        </div>
+                                        <span class="bg-purple-100 text-purple-600 text-[10px] font-bold px-2 py-1 rounded uppercase">Recommended</span>
+                                    </div>
+
+                                    <div class="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                                        <div class="flex gap-3 mb-3">
+                                            <div class="w-6 h-6 rounded-full bg-purple-600 text-white flex items-center justify-center text-xs flex-none mt-0.5">
+                                                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                                            </div>
+                                            <p class="text-sm text-slate-700 font-medium">Have you experienced any shortness of breath along with your symptoms?</p>
+                                        </div>
+                                        <div class="pl-9 flex gap-3">
+                                            <button class="px-4 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-600 hover:border-purple-500 hover:text-purple-600 transition-colors">Yes, often</button>
+                                            <button class="px-4 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-600 hover:border-purple-500 hover:text-purple-600 transition-colors">Only with exertion</button>
+                                            <button class="px-4 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-600 hover:border-purple-500 hover:text-purple-600 transition-colors">No</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Trust Badges & Footer Links -->
+                <div class="border-t border-slate-200 pt-8 pb-4">
+                    <div class="flex flex-col md:flex-row items-center justify-between gap-6 opacity-60 grayscale hover:grayscale-0 transition-all duration-500">
+                        <div class="text-xs font-bold text-slate-400">Powered by trusted partners:</div>
+                        <div class="flex items-center gap-8">
+                            <div class="flex items-center gap-2">
+                                <i class="fa-solid fa-shield-virus text-2xl"></i>
+                                <span class="font-bold text-slate-600">Infermedica</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <i class="fa-solid fa-video text-2xl"></i>
+                                <span class="font-bold text-slate-600">Zoom Health</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <i class="fa-solid fa-lock text-2xl"></i>
+                                <span class="font-bold text-slate-600">Paystack</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            
+            <!-- Sticky Bottom Action (Mobile/Tablet primarily, but good for desktop CTA) -->
+            <div class="sticky bottom-0 bg-white border-t border-slate-200 p-4 z-30 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+                <div class="max-w-[1440px] mx-auto flex justify-between items-center">
+                    <a href="#" class="text-sm font-bold text-slate-500 hover:text-rapid-navy flex items-center gap-2">
+                        <i class="fa-solid fa-arrow-left"></i> Back to Home
+                    </a>
+                    <button class="bg-rapid-sky hover:bg-rapid-skyDark text-white font-bold px-8 py-3 rounded-xl transition-all shadow-lg shadow-sky-100 flex items-center gap-2">
+                        Go to Dashboard <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+</body>
+</html>

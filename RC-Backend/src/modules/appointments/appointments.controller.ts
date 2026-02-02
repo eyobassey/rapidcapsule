@@ -12,7 +12,10 @@ import {
   Patch,
   BadRequestException,
   SetMetadata,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { AppointmentsService } from './appointments.service';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -30,12 +33,18 @@ import { AvailableSpecialistDto } from './dto/available-specialist.dto';
 import { AvailableTimesDto } from './dto/available-times.dto';
 import { RescheduleAppointmentDto } from './dto/reschedule-appointment.dto';
 import { CreateSpecialistAppointmentDto } from './dto/create-specialist-appointment.dto';
+import { ProcessAppointmentPaymentDto } from './dto/process-appointment-payment.dto';
 import { AdminOrJwtGuard } from './guards/admin-or-jwt.guard';
+import { FileUploadHelper } from '../../common/helpers/file-upload.helpers';
+import { Types } from 'mongoose';
 
 @UseGuards(AdminOrJwtGuard)
 @Controller('appointments')
 export class AppointmentsController {
-  constructor(private readonly appointmentsService: AppointmentsService) {}
+  constructor(
+    private readonly appointmentsService: AppointmentsService,
+    private readonly fileUploadHelper: FileUploadHelper,
+  ) {}
   @UseGuards(DoesUserHaveCard)
   @Post()
   async create(
@@ -69,6 +78,35 @@ export class AppointmentsController {
     return sendSuccessResponse(Messages.CREATED, result);
   }
 
+  /**
+   * Process appointment payment (debit wallet)
+   * Called during Step 4 of appointment creation wizard
+   */
+  @Post('specialist/process-payment')
+  async processAppointmentPayment(
+    @Body() processPaymentDto: ProcessAppointmentPaymentDto,
+    @Request() req,
+  ) {
+    const specialistId = req.headers['x-specialist-id'] || req.user?.sub;
+
+    if (!specialistId) {
+      throw new BadRequestException('Specialist ID is required');
+    }
+
+    const result = await this.appointmentsService.processAppointmentPayment({
+      patient_id: new Types.ObjectId(processPaymentDto.patient_id),
+      specialist_id: new Types.ObjectId(specialistId),
+      consultation_fee: processPaymentDto.consultation_fee,
+      platform_fee: processPaymentDto.platform_fee,
+      total_amount: processPaymentDto.total_amount,
+      payment_source: processPaymentDto.payment_source,
+      appointment_type: processPaymentDto.appointment_type,
+      appointment_type_name: processPaymentDto.appointment_type_name,
+    });
+
+    return sendSuccessResponse('Payment processed successfully', result);
+  }
+
   @HttpCode(HttpStatus.OK)
   @Post('transactions/verify')
   async verifyTransaction(
@@ -88,6 +126,25 @@ export class AppointmentsController {
       req.user.sub,
       queryStatus,
     );
+
+    // Resolve specialist profile images (field is profile_photo, not profile_image)
+    if (Array.isArray(result)) {
+      await Promise.all(
+        result.map(async (appointment: any) => {
+          if (appointment?.specialist?.profile?.profile_photo) {
+            try {
+              appointment.specialist.profile.profile_photo =
+                await this.fileUploadHelper.resolveProfileImage(
+                  appointment.specialist.profile.profile_photo,
+                );
+            } catch (e) {
+              // Silently ignore resolution errors
+            }
+          }
+        }),
+      );
+    }
+
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
@@ -131,6 +188,12 @@ export class AppointmentsController {
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
+  @Get('filter-options')
+  async getFilterOptions() {
+    const result = await this.appointmentsService.getFilterOptions();
+    return sendSuccessResponse(Messages.RETRIEVED, result);
+  }
+
   @Get()
   async getAppointments(@Request() req, @Query() queryDto: QueryDto) {
     const result = await this.appointmentsService.getAllAppointments(queryDto);
@@ -148,6 +211,18 @@ export class AppointmentsController {
     const result = await this.appointmentsService.cancelAppointment(
       cancelAppointmentDto,
     );
+    return sendSuccessResponse(Messages.APPOINTMENT_CANCELLED, result);
+  }
+
+  @Patch(':id/cancel')
+  async cancelAppointmentById(
+    @Param('id') id: string,
+    @Body() body: any,
+  ) {
+    const cancelDto: CancelAppointmentDto = {
+      appointmentId: new Types.ObjectId(id),
+    };
+    const result = await this.appointmentsService.cancelAppointment(cancelDto);
     return sendSuccessResponse(Messages.APPOINTMENT_CANCELLED, result);
   }
 
@@ -187,6 +262,63 @@ export class AppointmentsController {
       meetingNotesDto,
     );
     return sendSuccessResponse(Messages.UPDATED, result);
+  }
+
+  @Patch(':id/private-notes')
+  async updatePrivateNotes(
+    @Param('id') id: string,
+    @Body() body: { private_notes: string },
+    @Request() req,
+  ) {
+    const result = await this.appointmentsService.updatePrivateNotes(
+      id,
+      req.user.sub,
+      body.private_notes,
+    );
+    return sendSuccessResponse(Messages.UPDATED, result);
+  }
+
+  @Post(':id/rate')
+  async rateAppointment(
+    @Param('id') id: string,
+    @Body('score') score: number,
+    @Body('review') review: string,
+    @Request() req,
+  ) {
+    if (!score || score < 1 || score > 5) {
+      throw new BadRequestException('Rating score must be between 1 and 5');
+    }
+    const result = await this.appointmentsService.rateAppointment(
+      id,
+      req.user.sub,
+      score,
+      review,
+    );
+    return sendSuccessResponse(Messages.UPDATED, result);
+  }
+
+  @Post(':id/documents')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadDocument(
+    @Param('id') id: string,
+    @UploadedFile() file: any,
+    @Request() req,
+  ) {
+    if (!file) {
+      throw new BadRequestException('File is required');
+    }
+    const result = await this.appointmentsService.uploadDocument(
+      id,
+      req.user.sub,
+      file,
+    );
+    return sendSuccessResponse(Messages.CREATED, result);
+  }
+
+  @Get(':id/documents')
+  async getDocuments(@Param('id') id: string) {
+    const result = await this.appointmentsService.getDocuments(id);
+    return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
   @Get('stats')

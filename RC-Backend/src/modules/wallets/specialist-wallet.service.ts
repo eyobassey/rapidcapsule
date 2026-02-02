@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
   InternalServerErrorException,
 } from '@nestjs/common';
@@ -26,9 +27,13 @@ import {
 } from './dto/specialist-wallet.dto';
 import { GeneralHelpers } from '../../common/helpers/general.helpers';
 import { PaymentHandler } from '../../common/external/payment/payment.handler';
+import { UnifiedWalletService } from '../accounting/services/unified-wallet.service';
+import { WalletOwnerType, TransactionCategory } from '../accounting/enums/account-codes.enum';
 
 @Injectable()
 export class SpecialistWalletService {
+  private readonly logger = new Logger(SpecialistWalletService.name);
+
   constructor(
     @InjectModel(SpecialistWallet.name)
     private walletModel: Model<SpecialistWalletDocument>,
@@ -36,6 +41,7 @@ export class SpecialistWalletService {
     private transactionModel: Model<SpecialistWalletTransactionDocument>,
     private readonly generalHelpers: GeneralHelpers,
     private readonly paymentHandler: PaymentHandler,
+    private readonly unifiedWalletService: UnifiedWalletService,
   ) {}
 
   /**
@@ -93,10 +99,31 @@ export class SpecialistWalletService {
 
   /**
    * Get wallet balance summary
+   * Checks unified wallet first (primary source of truth), falls back to legacy
    */
   async getWalletBalance(specialistId: Types.ObjectId) {
-    const wallet = await this.getWallet(specialistId);
+    // Try unified wallet first (source of truth after migration)
+    try {
+      const unifiedWallet = await this.unifiedWalletService.getWalletByOwner(
+        specialistId,
+        WalletOwnerType.SPECIALIST,
+      );
+      if (unifiedWallet && (unifiedWallet.available_balance > 0 || unifiedWallet.total_credited > 0)) {
+        return {
+          available_balance: unifiedWallet.available_balance,
+          held_balance: unifiedWallet.held_balance,
+          total_balance: currency(unifiedWallet.available_balance).add(unifiedWallet.held_balance).value,
+          currency: unifiedWallet.currency,
+          is_active: unifiedWallet.status === 'ACTIVE',
+          last_transaction_at: unifiedWallet.last_transaction_at,
+        };
+      }
+    } catch (error) {
+      // Fall through to legacy wallet
+    }
 
+    // Fallback to legacy specialist wallet
+    const wallet = await this.getWallet(specialistId);
     return {
       available_balance: wallet.available_balance,
       held_balance: wallet.held_balance,
@@ -281,6 +308,25 @@ export class SpecialistWalletService {
       performed_by: performedBy || specialistId,
     });
 
+    // Dual-write to unified accounting
+    try {
+      const unifiedWallet = await this.unifiedWalletService.getOrCreateWallet(
+        specialistId,
+        WalletOwnerType.SPECIALIST,
+      );
+      await this.unifiedWalletService.credit({
+        wallet_id: unifiedWallet.wallet_id,
+        amount,
+        description,
+        category: TransactionCategory.SPECIALIST_SETTLE,
+        reference_type: referenceType,
+        reference_id: referenceId || specialistId,
+        external_reference: externalReference,
+      });
+    } catch (error) {
+      this.logger.error(`Failed to record specialist credit in unified accounting: ${error.message}`);
+    }
+
     return transaction;
   }
 
@@ -297,7 +343,48 @@ export class SpecialistWalletService {
   ): Promise<SpecialistWalletTransactionDocument> {
     const wallet = await this.getWallet(specialistId);
 
+    // Check unified wallet first if legacy has insufficient balance
     if (wallet.available_balance < amount) {
+      try {
+        const unifiedWallet = await this.unifiedWalletService.getWalletByOwner(
+          specialistId,
+          WalletOwnerType.SPECIALIST,
+        );
+        if (unifiedWallet && unifiedWallet.available_balance >= amount) {
+          // Debit from unified wallet (primary source of funds)
+          await this.unifiedWalletService.debit({
+            wallet_id: unifiedWallet.wallet_id,
+            amount,
+            description,
+            category: TransactionCategory.WALLET_WITHDRAWAL,
+            reference_type: referenceType,
+            reference_id: referenceId || specialistId,
+          });
+
+          // Create legacy transaction record for compatibility
+          const transactionId = await this.generateTransactionId();
+          const transaction = await this.transactionModel.create({
+            transaction_id: transactionId,
+            wallet_id: wallet._id,
+            specialist_id: specialistId,
+            type: SpecialistTransactionType.DEBIT,
+            amount,
+            balance_before: unifiedWallet.available_balance,
+            balance_after: currency(unifiedWallet.available_balance).subtract(amount).value,
+            held_balance_before: unifiedWallet.held_balance,
+            held_balance_after: unifiedWallet.held_balance,
+            reference_type: referenceType,
+            reference_id: referenceId,
+            description,
+            status: SpecialistTransactionStatus.COMPLETED,
+            performed_by: performedBy || specialistId,
+          });
+
+          return transaction;
+        }
+      } catch (error) {
+        // Fall through to legacy error
+      }
       throw new BadRequestException('Insufficient wallet balance');
     }
 
@@ -305,7 +392,7 @@ export class SpecialistWalletService {
     const balanceBefore = wallet.available_balance;
     const balanceAfter = currency(balanceBefore).subtract(amount).value;
 
-    // Update wallet
+    // Update legacy wallet
     await this.walletModel.updateOne(
       { _id: wallet._id },
       {
@@ -332,6 +419,24 @@ export class SpecialistWalletService {
       status: SpecialistTransactionStatus.COMPLETED,
       performed_by: performedBy || specialistId,
     });
+
+    // Dual-write to unified accounting
+    try {
+      const unifiedWallet = await this.unifiedWalletService.getOrCreateWallet(
+        specialistId,
+        WalletOwnerType.SPECIALIST,
+      );
+      await this.unifiedWalletService.debit({
+        wallet_id: unifiedWallet.wallet_id,
+        amount,
+        description,
+        category: TransactionCategory.WALLET_WITHDRAWAL,
+        reference_type: referenceType,
+        reference_id: referenceId || specialistId,
+      });
+    } catch (error) {
+      this.logger.error(`Failed to record specialist debit in unified accounting: ${error.message}`);
+    }
 
     return transaction;
   }
@@ -384,6 +489,23 @@ export class SpecialistWalletService {
       status: SpecialistTransactionStatus.PENDING,
       performed_by: specialistId,
     });
+
+    // Dual-write to unified accounting
+    try {
+      const unifiedWallet = await this.unifiedWalletService.getOrCreateWallet(
+        specialistId,
+        WalletOwnerType.SPECIALIST,
+      );
+      await this.unifiedWalletService.hold({
+        wallet_id: unifiedWallet.wallet_id,
+        amount,
+        description: description || `Funds held for prescription payment`,
+        reference_type: 'specialist_wallet_transaction',
+        reference_id: transaction._id,
+      });
+    } catch (error) {
+      this.logger.error(`Failed to record specialist hold in unified accounting: ${error.message}`);
+    }
 
     return transaction;
   }
@@ -451,6 +573,24 @@ export class SpecialistWalletService {
       performed_by: specialistId,
     });
 
+    // Dual-write to unified accounting
+    try {
+      const unifiedWallet = await this.unifiedWalletService.getWalletByOwner(
+        specialistId,
+        WalletOwnerType.SPECIALIST,
+      );
+      if (unifiedWallet) {
+        await this.unifiedWalletService.release({
+          wallet_id: unifiedWallet.wallet_id,
+          hold_reference_type: 'specialist_wallet_transaction',
+          hold_reference_id: holdTransaction._id,
+          reason: reason || `Funds released - prescription cancelled/expired`,
+        });
+      }
+    } catch (error) {
+      this.logger.error(`Failed to record specialist release in unified accounting: ${error.message}`);
+    }
+
     return transaction;
   }
 
@@ -494,6 +634,24 @@ export class SpecialistWalletService {
       { _id: holdTransaction._id },
       { status: SpecialistTransactionStatus.COMPLETED },
     );
+
+    // Dual-write to unified accounting (confirm the hold)
+    try {
+      const unifiedWallet = await this.unifiedWalletService.getWalletByOwner(
+        specialistId,
+        WalletOwnerType.SPECIALIST,
+      );
+      if (unifiedWallet) {
+        await this.unifiedWalletService.confirmHold(
+          unifiedWallet.wallet_id,
+          'specialist_wallet_transaction',
+          holdTransaction._id,
+          { description: `Hold confirmed for prescription payment` },
+        );
+      }
+    } catch (error) {
+      this.logger.error(`Failed to record specialist confirmHold in unified accounting: ${error.message}`);
+    }
 
     return holdTransaction;
   }
@@ -540,16 +698,48 @@ export class SpecialistWalletService {
       performed_by: specialistId,
     });
 
+    // Dual-write to unified accounting
+    try {
+      const unifiedWallet = await this.unifiedWalletService.getOrCreateWallet(
+        specialistId,
+        WalletOwnerType.SPECIALIST,
+      );
+      await this.unifiedWalletService.credit({
+        wallet_id: unifiedWallet.wallet_id,
+        amount,
+        description,
+        category: TransactionCategory.REFUND,
+        reference_type: 'specialist_wallet_transaction',
+        reference_id: transaction._id,
+      });
+    } catch (error) {
+      this.logger.error(`Failed to record specialist refund in unified accounting: ${error.message}`);
+    }
+
     return transaction;
   }
 
   /**
    * Check if specialist has sufficient balance
+   * Checks unified wallet first, falls back to legacy
    */
   async hasSufficientBalance(
     specialistId: Types.ObjectId,
     amount: number,
   ): Promise<boolean> {
+    // Check unified wallet first
+    try {
+      const unifiedWallet = await this.unifiedWalletService.getWalletByOwner(
+        specialistId,
+        WalletOwnerType.SPECIALIST,
+      );
+      if (unifiedWallet && (unifiedWallet.available_balance > 0 || unifiedWallet.total_credited > 0)) {
+        return unifiedWallet.available_balance >= amount;
+      }
+    } catch (error) {
+      // Fall through to legacy
+    }
+
     const wallet = await this.getWallet(specialistId);
     return wallet.available_balance >= amount;
   }
@@ -621,10 +811,51 @@ export class SpecialistWalletService {
 
   /**
    * Get wallet statistics
+   * Checks unified wallet first (primary source of truth), falls back to legacy
    */
   async getWalletStats(specialistId: Types.ObjectId) {
-    const wallet = await this.getWallet(specialistId);
+    // Try unified wallet first
+    let balanceData: any = null;
+    let lifetimeData: any = null;
+    let lastTransactionAt: any = null;
 
+    try {
+      const unifiedWallet = await this.unifiedWalletService.getWalletByOwner(
+        specialistId,
+        WalletOwnerType.SPECIALIST,
+      );
+      if (unifiedWallet && (unifiedWallet.available_balance > 0 || unifiedWallet.total_credited > 0)) {
+        balanceData = {
+          available: unifiedWallet.available_balance,
+          held: unifiedWallet.held_balance,
+          total: currency(unifiedWallet.available_balance).add(unifiedWallet.held_balance).value,
+        };
+        lifetimeData = {
+          total_credited: unifiedWallet.total_credited,
+          total_debited: unifiedWallet.total_debited,
+        };
+        lastTransactionAt = unifiedWallet.last_transaction_at;
+      }
+    } catch (error) {
+      // Fall through to legacy
+    }
+
+    // Fallback to legacy if unified wallet had no data
+    if (!balanceData) {
+      const wallet = await this.getWallet(specialistId);
+      balanceData = {
+        available: wallet.available_balance,
+        held: wallet.held_balance,
+        total: currency(wallet.available_balance).add(wallet.held_balance).value,
+      };
+      lifetimeData = {
+        total_credited: wallet.total_credited,
+        total_debited: wallet.total_debited,
+      };
+      lastTransactionAt = wallet.last_transaction_at;
+    }
+
+    // Get monthly transaction stats from legacy (still useful if transactions exist there)
     const [
       totalTransactions,
       transactionsThisMonth,
@@ -660,22 +891,15 @@ export class SpecialistWalletService {
     ]);
 
     return {
-      balance: {
-        available: wallet.available_balance,
-        held: wallet.held_balance,
-        total: currency(wallet.available_balance).add(wallet.held_balance).value,
-      },
-      lifetime: {
-        total_credited: wallet.total_credited,
-        total_debited: wallet.total_debited,
-      },
+      balance: balanceData,
+      lifetime: lifetimeData,
       this_month: {
         credited: creditsThisMonth[0]?.total || 0,
         debited: debitsThisMonth[0]?.total || 0,
         transactions: transactionsThisMonth,
       },
       total_transactions: totalTransactions,
-      last_transaction_at: wallet.last_transaction_at,
+      last_transaction_at: lastTransactionAt,
     };
   }
 }

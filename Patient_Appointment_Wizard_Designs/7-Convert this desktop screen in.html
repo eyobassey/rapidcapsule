@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agreement & Consent</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        rapid: {
+                            sky: '#4FC3F7',
+                            skyLight: '#E1F5FE',
+                            skyDark: '#0288D1',
+                            orange: '#FF9800',
+                            orangeLight: '#FFF3E0',
+                            orangeDark: '#F57C00',
+                            navy: '#1A365D',
+                            gray: '#F5F9FF',
+                            text: '#334155',
+                            success: '#4CAF50',
+                            error: '#EF4444'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        display: ['Poppins', 'system-ui', 'sans-serif']
+                    },
+                    boxShadow: {
+                        'soft': '0 4px 20px -2px rgba(79, 195, 247, 0.15)',
+                        'card': '0 10px 30px -5px rgba(0, 0, 0, 0.05)',
+                        'glow': '0 0 15px rgba(79, 195, 247, 0.3)'
+                    }
+                }
+            }
+        }
+        window.FontAwesomeConfig = { autoReplaceSvg: 'nest' };
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar { display: none; }
+        
+        .consent-checkbox {
+            appearance: none;
+            background-color: #fff;
+            margin: 0;
+            font: inherit;
+            width: 1.5em;
+            height: 1.5em;
+            border: 2px solid #cbd5e1;
+            border-radius: 0.35em;
+            display: grid;
+            place-content: center;
+            transition: all 0.2s ease-in-out;
+        }
+
+        .consent-checkbox::before {
+            content: "";
+            width: 0.7em;
+            height: 0.7em;
+            transform: scale(0);
+            transition: 120ms transform ease-in-out;
+            box-shadow: inset 1em 1em white;
+            transform-origin: center;
+            clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+        }
+
+        .consent-checkbox:checked {
+            background-color: #4FC3F7;
+            border-color: #4FC3F7;
+        }
+
+        .consent-checkbox:checked::before {
+            transform: scale(1);
+        }
+
+        .consent-checkbox:focus {
+            outline: max(2px, 0.15em) solid #FF9800;
+            outline-offset: max(2px, 0.15em);
+        }
+
+        .step-item.active .step-circle {
+            background-color: #4FC3F7;
+            color: white;
+            box-shadow: 0 0 0 3px #E1F5FE;
+        }
+
+        .step-item.completed .step-circle {
+            background-color: #4CAF50;
+            color: white;
+        }
+    </style>
+</head>
+<body class="bg-rapid-gray font-sans text-rapid-text antialiased w-[375px] h-[840px] overflow-hidden flex flex-col mx-auto">
+
+    <header id="header" class="bg-white border-b border-slate-100 h-14 flex-none z-40 sticky top-0">
+        <div class="px-4 h-full flex items-center justify-between">
+            <button onclick="history.back()" class="w-9 h-9 rounded-full flex items-center justify-center text-slate-600 active:bg-slate-100">
+                <i class="fa-solid fa-arrow-left"></i>
+            </button>
+            
+            <div class="flex items-center gap-2">
+                <div class="w-7 h-7 bg-gradient-to-br from-rapid-sky to-rapid-skyDark rounded-lg flex items-center justify-center text-white shadow-glow">
+                    <i class="fa-solid fa-heart-pulse text-xs"></i>
+                </div>
+                <span class="text-base font-bold text-rapid-navy font-display">Rapid Capsule</span>
+            </div>
+
+            <button class="w-9 h-9 rounded-full flex items-center justify-center text-slate-400 active:bg-slate-100 relative">
+                <i class="fa-regular fa-bell text-lg"></i>
+                <span class="absolute top-2 right-2 w-1.5 h-1.5 bg-rapid-orange rounded-full border border-white"></span>
+            </button>
+        </div>
+    </header>
+
+    <div class="flex-1 flex flex-col overflow-hidden">
+        
+        <div class="px-4 pt-4 pb-3 flex-none bg-white border-b border-slate-100">
+            <div class="mb-3">
+                <h1 class="text-lg font-display font-bold text-rapid-navy leading-tight">Agreement & Consent</h1>
+                <p class="text-xs text-slate-500 mt-0.5">Step 2 of 6 • Review and accept terms</p>
+            </div>
+
+            <div class="relative">
+                <div class="absolute top-1/2 left-0 w-full h-1 bg-slate-200 -translate-y-1/2 rounded-full"></div>
+                <div class="absolute top-1/2 left-0 w-[32%] h-1 bg-rapid-sky -translate-y-1/2 rounded-full transition-all duration-500"></div>
+                
+                <div class="relative z-10 flex justify-between">
+                    <div class="step-item completed flex flex-col items-center gap-1">
+                        <div class="step-circle w-6 h-6 rounded-full bg-white border-2 border-slate-200 flex items-center justify-center text-[10px] font-bold">
+                            <i class="fa-solid fa-check"></i>
+                        </div>
+                    </div>
+                    <div class="step-item active flex flex-col items-center gap-1">
+                        <div class="step-circle w-6 h-6 rounded-full bg-white border-2 border-slate-200 flex items-center justify-center text-[10px] font-bold">2</div>
+                    </div>
+                    <div class="step-item flex flex-col items-center gap-1">
+                        <div class="step-circle w-6 h-6 rounded-full bg-white border-2 border-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-400">3</div>
+                    </div>
+                    <div class="step-item flex flex-col items-center gap-1">
+                        <div class="step-circle w-6 h-6 rounded-full bg-white border-2 border-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-400">4</div>
+                    </div>
+                    <div class="step-item flex flex-col items-center gap-1">
+                        <div class="step-circle w-6 h-6 rounded-full bg-white border-2 border-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-400">5</div>
+                    </div>
+                    <div class="step-item flex flex-col items-center gap-1">
+                        <div class="step-circle w-6 h-6 rounded-full bg-white border-2 border-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-400">6</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex-1 overflow-y-auto px-4 py-4 pb-24">
+            
+            <div class="bg-orange-50 border-l-4 border-rapid-orange p-3 rounded-r-lg mb-4">
+                <div class="flex gap-2">
+                    <i class="fa-solid fa-circle-exclamation text-rapid-orange text-sm mt-0.5"></i>
+                    <p class="text-xs text-orange-800 leading-relaxed">
+                        <span class="font-bold">Important:</span> All consents are mandatory for telemedicine services.
+                    </p>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-card border border-slate-100 overflow-hidden">
+                <div class="p-4 space-y-6">
+                    
+                    <div id="consent-telemed">
+                        <div class="flex items-start gap-3">
+                            <div class="flex-shrink-0 pt-0.5">
+                                <input type="checkbox" id="check-telemed" class="consent-checkbox cursor-pointer" onchange="validateForm()">
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <label for="check-telemed" class="block text-sm font-bold text-rapid-navy cursor-pointer mb-1">
+                                    Informed Consent for Telemedicine
+                                </label>
+                                <p class="text-xs text-slate-500 leading-relaxed mb-2">
+                                    I understand telemedicine uses electronic communications to share patient medical information for improved care.
+                                </p>
+                                <button onclick="openDrawer('telemed-details')" class="text-xs font-bold text-rapid-sky active:text-rapid-skyDark flex items-center gap-1">
+                                    View details <i class="fa-solid fa-chevron-right text-[9px]"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="border-slate-100">
+
+                    <div id="consent-privacy">
+                        <div class="flex items-start gap-3">
+                            <div class="flex-shrink-0 pt-0.5">
+                                <input type="checkbox" id="check-privacy" class="consent-checkbox cursor-pointer" onchange="validateForm()">
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <label for="check-privacy" class="block text-sm font-bold text-rapid-navy cursor-pointer mb-1">
+                                    Privacy Policy & Data Processing
+                                </label>
+                                <p class="text-xs text-slate-500 leading-relaxed mb-2">
+                                    I agree to processing of my personal health data per Rapid Capsule Privacy Policy. Data is encrypted and secure.
+                                </p>
+                                <button onclick="openDrawer('privacy-details')" class="text-xs font-bold text-rapid-sky active:text-rapid-skyDark flex items-center gap-1">
+                                    Read policy <i class="fa-solid fa-chevron-right text-[9px]"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="border-slate-100">
+
+                    <div id="consent-matching">
+                        <div class="flex items-start gap-3">
+                            <div class="flex-shrink-0 pt-0.5">
+                                <input type="checkbox" id="check-matching" class="consent-checkbox cursor-pointer" onchange="validateForm()">
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <label for="check-matching" class="block text-sm font-bold text-rapid-navy cursor-pointer mb-1">
+                                    Data Sharing for Doctor Matching
+                                </label>
+                                <p class="text-xs text-slate-500 leading-relaxed mb-2">
+                                    I consent to sharing my symptom profile with AI matching system to find the most suitable specialist.
+                                </p>
+                                <button onclick="openDrawer('matching-details')" class="text-xs font-bold text-rapid-sky active:text-rapid-skyDark flex items-center gap-1">
+                                    How it works <i class="fa-solid fa-chevron-right text-[9px]"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="border-slate-100">
+
+                    <div id="consent-rx">
+                        <div class="flex items-start gap-3">
+                            <div class="flex-shrink-0 pt-0.5">
+                                <input type="checkbox" id="check-rx" class="consent-checkbox cursor-pointer" onchange="validateForm()">
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex flex-wrap items-center gap-1.5 mb-1">
+                                    <label for="check-rx" class="text-sm font-bold text-rapid-navy cursor-pointer">
+                                        Prescription Verification
+                                    </label>
+                                    <span class="bg-rapid-orange/10 text-rapid-orangeDark text-[9px] font-bold px-1.5 py-0.5 rounded-full border border-rapid-orange/20">Required</span>
+                                </div>
+                                <p class="text-xs text-slate-500 leading-relaxed mb-2">
+                                    I authorize Rapid Capsule to verify prescriptions and share new ones with partner pharmacies.
+                                </p>
+                                <button onclick="openDrawer('rx-details')" class="text-xs font-bold text-rapid-sky active:text-rapid-skyDark flex items-center gap-1">
+                                    Learn more <i class="fa-solid fa-chevron-right text-[9px]"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+                
+                <div class="bg-slate-50 p-4 border-t border-slate-100 flex items-center justify-between">
+                    <p class="text-[10px] text-slate-500 leading-tight pr-2">
+                        By clicking "Next", you agree to these terms.
+                    </p>
+                    <button onclick="selectAll()" class="text-xs font-bold text-rapid-sky active:text-rapid-navy whitespace-nowrap">
+                        Select All
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white border-t border-slate-200 p-4 absolute bottom-0 w-full z-20">
+            <div class="flex gap-3">
+                <button class="flex-1 h-12 text-slate-500 active:text-slate-800 font-semibold text-sm rounded-xl border border-slate-200 active:bg-slate-50 transition-colors">
+                    Cancel
+                </button>
+                <button id="next-btn" disabled class="flex-1 h-12 bg-slate-300 cursor-not-allowed text-white font-bold text-sm rounded-xl flex items-center justify-center gap-2 transition-all">
+                    Next <i class="fa-solid fa-arrow-right text-xs"></i>
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="details-drawer" class="fixed inset-0 bg-white z-50 transform translate-y-full transition-transform duration-300 flex flex-col">
+        <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+            <h3 id="drawer-title" class="font-bold text-rapid-navy text-base">Details</h3>
+            <button onclick="closeDrawer()" class="w-9 h-9 rounded-full active:bg-slate-200 flex items-center justify-center text-slate-500">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="p-4 overflow-y-auto flex-1">
+            <div id="drawer-content" class="text-xs text-slate-600 leading-relaxed space-y-3">
+            </div>
+        </div>
+        <div class="p-4 border-t border-slate-100 bg-white">
+            <button onclick="closeDrawer()" class="w-full h-12 bg-rapid-sky text-white font-bold rounded-xl active:bg-rapid-skyDark transition-colors">
+                Close
+            </button>
+        </div>
+    </div>
+
+    <div id="drawer-overlay" onclick="closeDrawer()" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 hidden transition-opacity opacity-0"></div>
+
+    <script>
+        const drawerData = {
+            'telemed-details': {
+                title: 'Informed Consent for Telemedicine',
+                content: `
+                    <p class="mb-3"><strong>Nature of Telemedicine Consultation:</strong> During your consultation, details of your medical history, examinations, x-rays, and tests will be discussed with health professionals through interactive video, audio, and telecommunication technology.</p>
+                    <p class="mb-2"><strong>Benefits:</strong></p>
+                    <ul class="list-disc pl-5 mb-3 space-y-1.5">
+                        <li>Improved access to medical care from home</li>
+                        <li>More efficient medical evaluation</li>
+                        <li>Access to distant specialist expertise</li>
+                    </ul>
+                    <p class="mb-2"><strong>Risks:</strong></p>
+                    <ul class="list-disc pl-5 space-y-1.5">
+                        <li>Information may not be sufficient for proper diagnosis</li>
+                        <li>Possible delays due to equipment failures</li>
+                        <li>Rare security protocol failures</li>
+                    </ul>
+                `
+            },
+            'privacy-details': {
+                title: 'Privacy Policy & Data Processing',
+                content: `
+                    <p class="mb-3">Rapid Capsule protects your personal health information per NDPR and HIPAA standards.</p>
+                    <p class="mb-2"><strong>Data Collection:</strong> Personal identification, health history, and payment details.</p>
+                    <p class="mb-2"><strong>Data Usage:</strong></p>
+                    <ul class="list-disc pl-5 mb-3 space-y-1.5">
+                        <li>Providing medical consultations</li>
+                        <li>Processing payments</li>
+                        <li>Improving platform accuracy</li>
+                    </ul>
+                    <p><strong>Data Security:</strong> All data encrypted with AES-256 standards.</p>
+                `
+            },
+            'matching-details': {
+                title: 'Doctor Matching Process',
+                content: `
+                    <p class="mb-3">Our AI analyzes your symptoms to find the best specialist for your condition.</p>
+                    <p class="mb-2"><strong>How it works:</strong></p>
+                    <ol class="list-decimal pl-5 mb-3 space-y-1.5">
+                        <li>System processes symptom keywords</li>
+                        <li>Filters by specialty, availability, language</li>
+                        <li>Ranks doctors by ratings and outcomes</li>
+                    </ol>
+                    <p>This ensures relevant care quickly, reducing wait times.</p>
+                `
+            },
+            'rx-details': {
+                title: 'Prescription Verification',
+                content: `
+                    <p class="mb-3">All prescriptions undergo verification to ensure safety and prevent errors.</p>
+                    <p class="mb-2"><strong>Verification Steps:</strong></p>
+                    <ul class="list-disc pl-5 space-y-1.5">
+                        <li><strong>Digital Signature:</strong> E-prescriptions digitally signed by doctor</li>
+                        <li><strong>Pharmacy Check:</strong> Partners verify prescription code</li>
+                        <li><strong>Interaction Check:</strong> System checks drug interactions</li>
+                    </ul>
+                `
+            }
+        };
+
+        function openDrawer(key) {
+            const drawer = document.getElementById('details-drawer');
+            const overlay = document.getElementById('drawer-overlay');
+            const title = document.getElementById('drawer-title');
+            const content = document.getElementById('drawer-content');
+
+            title.textContent = drawerData[key].title;
+            content.innerHTML = drawerData[key].content;
+
+            overlay.classList.remove('hidden');
+            setTimeout(() => {
+                overlay.classList.remove('opacity-0');
+                drawer.classList.remove('translate-y-full');
+            }, 10);
+        }
+
+        function closeDrawer() {
+            const drawer = document.getElementById('details-drawer');
+            const overlay = document.getElementById('drawer-overlay');
+
+            drawer.classList.add('translate-y-full');
+            overlay.classList.add('opacity-0');
+            
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+            }, 300);
+        }
+
+        function validateForm() {
+            const checkboxes = document.querySelectorAll('.consent-checkbox');
+            const nextBtn = document.getElementById('next-btn');
+            const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+
+            if (allChecked) {
+                nextBtn.removeAttribute('disabled');
+                nextBtn.classList.remove('bg-slate-300', 'cursor-not-allowed');
+                nextBtn.classList.add('bg-rapid-orange', 'active:bg-rapid-orangeDark', 'shadow-lg');
+                nextBtn.onclick = function() { console.log('Proceed to step 3'); };
+            } else {
+                nextBtn.setAttribute('disabled', 'true');
+                nextBtn.classList.add('bg-slate-300', 'cursor-not-allowed');
+                nextBtn.classList.remove('bg-rapid-orange', 'active:bg-rapid-orangeDark', 'shadow-lg');
+                nextBtn.onclick = null;
+            }
+        }
+
+        function selectAll() {
+            const checkboxes = document.querySelectorAll('.consent-checkbox');
+            checkboxes.forEach(cb => cb.checked = true);
+            validateForm();
+        }
+    </script>
+</body>
+</html>

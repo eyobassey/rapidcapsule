@@ -2,8 +2,10 @@ import { Prop, raw, Schema, SchemaFactory } from '@nestjs/mongoose';
 import mongoose, { HydratedDocument } from 'mongoose';
 import {
   Award,
+  BloodType,
   Documents,
   Gender,
+  Genotype,
   MaritalStatus,
   PaymentStructure,
   ProfessionalPractice,
@@ -116,9 +118,12 @@ export class User {
         },
         address1: { type: String },
         address2: { type: String },
+        city: { type: String },
         state: { type: String },
         country: { type: String },
         zip_code: { type: String },
+        is_diaspora: { type: Boolean, default: false },
+        practice_type: { type: String }, // 'clinic', 'home_office', 'virtual_only'
       },
       basic_health_info: {
         height: {
@@ -134,7 +139,23 @@ export class User {
         is_smoker: { type: String },
         weight_status: { type: String },
         has_recent_injuries: { type: String },
+        alcohol_consumption: { type: String, enum: ['never', 'occasional', 'moderate', 'heavy'] },
+        exercise_frequency: { type: String, enum: ['sedentary', 'light', 'moderate', 'active', 'very_active'] },
+        diet_type: { type: String },
+        sleep_hours: { type: Number },
+        stress_level: { type: String, enum: ['low', 'moderate', 'high', 'very_high'] },
       },
+      blood_type: {
+        type: String,
+        enum: Object.values(BloodType),
+      },
+      genotype: {
+        type: String,
+        enum: Object.values(Genotype),
+      },
+      occupation: { type: String },
+      primary_physician: { type: String },
+      preferred_pharmacy: { type: String },
       twoFA_secret: { type: String, required: false },
       profile_photo: { type: String, required: false },
     }),
@@ -248,6 +269,169 @@ export class User {
   pre_existing_conditions?: Condition[];
 
   @Prop(
+    raw({
+      chronic_conditions: [{ type: String }],
+      current_medications: [
+        {
+          name: { type: String },
+          strength: { type: String },
+          form: { type: String },
+          dosage: { type: String },
+          frequency: { type: String },
+          route: { type: String },
+          reason: { type: String },
+          start_date: { type: String },
+        },
+      ],
+      past_surgeries: [
+        {
+          procedure: { type: String },
+          year: { type: String },
+          notes: { type: String },
+        },
+      ],
+      family_history: [
+        {
+          condition: { type: String },
+          relation: { type: String },
+        },
+      ],
+      lifestyle: {
+        smoking: { type: String },
+        alcohol: { type: String },
+        exercise: { type: String },
+        diet: { type: String },
+      },
+      immunizations: [
+        {
+          vaccine: { type: String },
+          date: { type: String },
+        },
+      ],
+    }),
+  )
+  medical_history?: {
+    chronic_conditions?: string[];
+    current_medications?: Array<{
+      name: string;
+      strength?: string;
+      form?: string;
+      dosage?: string;
+      frequency?: string;
+      route?: string;
+      reason?: string;
+      start_date?: string;
+    }>;
+    past_surgeries?: Array<{
+      procedure: string;
+      year?: string;
+      notes?: string;
+    }>;
+    family_history?: Array<{
+      condition: string;
+      relation?: string;
+    }>;
+    lifestyle?: {
+      smoking?: string;
+      alcohol?: string;
+      exercise?: string;
+      diet?: string;
+    };
+    immunizations?: Array<{
+      vaccine: string;
+      date?: string;
+    }>;
+  };
+
+  @Prop(
+    raw({
+      has_allergies: { type: Boolean },
+      drug_allergies: [
+        {
+          drug_name: { type: String },
+          reaction: { type: String },
+          severity: { type: String },
+        },
+      ],
+      food_allergies: [
+        {
+          food_name: { type: String },
+          reaction: { type: String },
+          severity: { type: String },
+        },
+      ],
+      environmental_allergies: [
+        {
+          allergen: { type: String },
+          reaction: { type: String },
+          severity: { type: String },
+        },
+      ],
+      other_allergies: [
+        {
+          allergen: { type: String },
+          reaction: { type: String },
+          severity: { type: String },
+        },
+      ],
+    }),
+  )
+  allergies?: {
+    has_allergies?: boolean;
+    drug_allergies?: Array<{
+      drug_name: string;
+      reaction?: string;
+      severity?: string;
+    }>;
+    food_allergies?: Array<{
+      food_name: string;
+      reaction?: string;
+      severity?: string;
+    }>;
+    environmental_allergies?: Array<{
+      allergen: string;
+      reaction?: string;
+      severity?: string;
+    }>;
+    other_allergies?: Array<{
+      allergen: string;
+      reaction?: string;
+      severity?: string;
+    }>;
+  };
+
+  @Prop(
+    raw({
+      health_apps_connected: [{ type: String }],
+      devices_connected: [{ type: String }],
+      data_sharing_consents: {
+        vitals_auto_sync: { type: Boolean, default: false },
+        activity_tracking: { type: Boolean, default: false },
+        sleep_tracking: { type: Boolean, default: false },
+      },
+      notification_preferences: {
+        health_reminders: { type: Boolean, default: true },
+        medication_reminders: { type: Boolean, default: true },
+        wellness_tips: { type: Boolean, default: true },
+      },
+    }),
+  )
+  device_integration?: {
+    health_apps_connected?: string[];
+    devices_connected?: string[];
+    data_sharing_consents?: {
+      vitals_auto_sync?: boolean;
+      activity_tracking?: boolean;
+      sleep_tracking?: boolean;
+    };
+    notification_preferences?: {
+      health_reminders?: boolean;
+      medication_reminders?: boolean;
+      wellness_tips?: boolean;
+    };
+  };
+
+  @Prop(
     raw([
       {
         first_name: { type: String, required: true },
@@ -279,6 +463,20 @@ export class User {
             unit: { type: String },
           },
         },
+        blood_type: {
+          type: String,
+          enum: {
+            values: Object.values(BloodType),
+            message: '{VALUE} is not supported',
+          },
+        },
+        genotype: {
+          type: String,
+          enum: {
+            values: Object.values(Genotype),
+            message: '{VALUE} is not supported',
+          },
+        },
         date_of_birth: {
           type: Date,
           get: (v) => moment(v).format('YYYY-MM-DD'),
@@ -304,7 +502,9 @@ export class User {
               Relationship.UNCLE,
               Relationship.SON,
               Relationship.DAUGHTER,
+              Relationship.CHILD,
               Relationship.FRIEND,
+              Relationship.OTHER,
             ],
             message: '{VALUE} is not supported',
           },
@@ -355,6 +555,20 @@ export class User {
     }),
   )
   professional_practice?: ProfessionalPractice;
+
+  // Array of specialist category IDs for multi-select specializations
+  @Prop({
+    type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'SpecialistCategory' }],
+    default: [],
+  })
+  specialist_categories: mongoose.Types.ObjectId[];
+
+  // Array of language IDs for communication languages
+  @Prop({
+    type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Language' }],
+    default: [],
+  })
+  languages: mongoose.Types.ObjectId[];
 
   @Prop({ type: String })
   payment_structure: PaymentStructure;
@@ -477,6 +691,72 @@ export class User {
     breakdown: any;
     updated_at: Date;
   };
+
+  // Identity verification for specialists
+  @Prop(
+    raw({
+      government_id: {
+        type: { type: String }, // 'passport', 'national_id', 'drivers_license'
+        number: { type: String },
+        expiry: { type: String },
+        document_url: { type: String },
+        status: { type: String, default: 'pending' }, // 'pending', 'verified', 'rejected'
+        verified_at: { type: Date },
+        rejection_reason: { type: String },
+      },
+      medical_license: {
+        license_number: { type: String },
+        issuing_body: { type: String }, // 'mdcn', 'nmcn', 'pcn', 'other'
+        document_url: { type: String },
+        status: { type: String, default: 'pending' },
+        verified_at: { type: Date },
+        rejection_reason: { type: String },
+      },
+      registry_check: {
+        status: { type: String, default: 'pending' }, // 'pending', 'verified', 'failed'
+        verified_at: { type: Date },
+        registry_name: { type: String },
+        registry_response: { type: Object },
+      },
+      credential_hash: { type: String }, // SHA-256 hash for blockchain-style verification display
+      overall_status: { type: String, default: 'pending' }, // 'pending', 'verified', 'rejected'
+      submitted_at: { type: Date },
+      reviewed_at: { type: Date },
+      reviewed_by: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    }),
+  )
+  identity_verification?: IdentityVerification;
+}
+
+export interface IdentityVerification {
+  government_id?: {
+    type?: string;
+    number?: string;
+    expiry?: string;
+    document_url?: string;
+    status?: string;
+    verified_at?: Date;
+    rejection_reason?: string;
+  };
+  medical_license?: {
+    license_number?: string;
+    issuing_body?: string;
+    document_url?: string;
+    status?: string;
+    verified_at?: Date;
+    rejection_reason?: string;
+  };
+  registry_check?: {
+    status?: string;
+    verified_at?: Date;
+    registry_name?: string;
+    registry_response?: any;
+  };
+  credential_hash?: string;
+  overall_status?: string;
+  submitted_at?: Date;
+  reviewed_at?: Date;
+  reviewed_by?: mongoose.Types.ObjectId;
 }
 
 export interface DeliveryAddressEntry {

@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AppointmentsService } from './appointments.service';
 import { AppointmentsController } from './appointments.controller';
+import { AppointmentScheduledTasksService } from './appointment-scheduled-tasks.service';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Appointment, AppointmentSchema } from './entities/appointment.entity';
 import { Zoom } from '../../common/external/zoom/zoom';
@@ -25,6 +26,9 @@ import { AdminOrJwtGuard } from './guards/admin-or-jwt.guard';
 import { HealthCheckupModule } from '../health-checkup/health-checkup.module';
 import { AdvancedHealthScoreModule } from '../advanced-health-score/advanced-health-score.module';
 import { VitalsModule } from '../vitals/vitals.module';
+import { AccountingModule } from '../accounting/accounting.module';
+import { ConsultationServicesModule } from '../consultation-services/consultation-services.module';
+import { WalletsModule } from '../wallets/wallets.module';
 import {
   SpecialistPrescription,
   SpecialistPrescriptionSchema,
@@ -49,6 +53,9 @@ import {
     HealthCheckupModule,
     AdvancedHealthScoreModule,
     VitalsModule,
+    AccountingModule,
+    ConsultationServicesModule,
+    WalletsModule,
     JwtModule.register({
       secret: process.env.JWTKEY || 'theBestKepSecret',
       signOptions: { expiresIn: '24h' },
@@ -64,6 +71,7 @@ import {
   controllers: [AppointmentsController],
   providers: [
     AppointmentsService,
+    AppointmentScheduledTasksService,
     Zoom,
     FileUploadHelper,
     GeneralHelpers,

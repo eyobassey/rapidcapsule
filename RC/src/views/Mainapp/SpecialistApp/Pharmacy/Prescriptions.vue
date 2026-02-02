@@ -1,57 +1,57 @@
 <template>
   <div class="page-content">
-    <TopBar showButtons type="avatar" @open-side-nav="$emit('openSideNav')" />
+    <TopBar showButtons type="title-only" title="Pharmacy / Prescriptions" @open-side-nav="$emit('openSideNav')" />
     <div class="page-content__body">
       <div class="prescriptions-container">
-        <!-- Header -->
-        <div class="page-header">
-          <div class="page-header__back">
-            <button class="back-btn" @click="$router.push('/app/specialist/pharmacy')">
-              <rc-icon icon-name="arrow-left" size="sm" />
+        <!-- Hero Section -->
+        <div class="hero-section">
+          <div class="hero-content">
+            <button class="hero-back" @click="router.push('/app/specialist/pharmacy')">
+              <v-icon name="hi-arrow-left" scale="0.75" />
+              Pharmacy
             </button>
-            <div>
-              <h1>Prescriptions</h1>
-              <p>Manage all your prescriptions</p>
+            <h1 class="hero-title">
+              <v-icon name="hi-clipboard-list" scale="1" />
+              Prescriptions
+            </h1>
+            <p class="hero-subtitle">View and manage all prescriptions</p>
+          </div>
+          <div class="hero-right">
+            <div class="hero-stats">
+              <div class="hero-stat">
+                <span class="hero-stat__value">{{ stats.total || 0 }}</span>
+                <span class="hero-stat__label">Total</span>
+              </div>
+              <div class="hero-stat">
+                <span class="hero-stat__value">{{ stats.pending_payment || 0 }}</span>
+                <span class="hero-stat__label">Pending</span>
+              </div>
+              <div class="hero-stat">
+                <span class="hero-stat__value">{{ stats.delivered || 0 }}</span>
+                <span class="hero-stat__label">Delivered</span>
+              </div>
             </div>
-          </div>
-          <button class="btn btn-primary" @click="createPrescription">
-            <rc-icon icon-name="plus" size="sm" />
-            New Prescription
-          </button>
-        </div>
-
-        <!-- Stats Cards -->
-        <div class="stats-row">
-          <div class="stat-card">
-            <span class="stat-value">{{ stats.total || 0 }}</span>
-            <span class="stat-label">Total</span>
-          </div>
-          <div class="stat-card">
-            <span class="stat-value stat-value--warning">{{ stats.pending_payment || 0 }}</span>
-            <span class="stat-label">Pending Payment</span>
-          </div>
-          <div class="stat-card">
-            <span class="stat-value stat-value--info">{{ stats.processing || 0 }}</span>
-            <span class="stat-label">Processing</span>
-          </div>
-          <div class="stat-card">
-            <span class="stat-value stat-value--success">{{ stats.delivered || 0 }}</span>
-            <span class="stat-label">Delivered</span>
+            <button class="hero-action-btn" @click="createPrescription">
+              <v-icon name="hi-plus" scale="0.85" />
+              New Prescription
+            </button>
           </div>
         </div>
 
-        <!-- Filters -->
-        <div class="filters-section">
-          <div class="search-bar">
-            <rc-icon icon-name="search" size="sm" />
+        <!-- Search & Filters -->
+        <div class="filters-card">
+          <div class="search-input-wrapper">
+            <div class="search-icon">
+              <v-icon name="hi-search" scale="0.9" />
+            </div>
             <input
               v-model="searchQuery"
               type="text"
               placeholder="Search by prescription number or patient..."
-              @input="debouncedSearch"
+              @input="handleSearch"
             />
             <button v-if="searchQuery" class="clear-btn" @click="clearSearch">
-              <rc-icon icon-name="close" size="xs" />
+              <v-icon name="hi-x" scale="0.8" />
             </button>
           </div>
           <div class="filter-tabs">
@@ -66,11 +66,26 @@
           </div>
         </div>
 
-        <!-- Loading State -->
-        <loader v-if="isLoading" :useOverlay="false" />
+        <!-- Shimmer Loading -->
+        <div v-if="isLoading" class="prescriptions-skeleton">
+          <div v-for="i in 4" :key="i" class="skeleton-card">
+            <div class="skeleton-line skeleton-line--medium" />
+            <div class="skeleton-line skeleton-line--long" style="margin-top: 12px;" />
+            <div class="skeleton-line skeleton-line--short" style="margin-top: 8px;" />
+            <div class="skeleton-footer">
+              <div class="skeleton-line skeleton-line--short" />
+              <div class="skeleton-line skeleton-line--short" />
+            </div>
+          </div>
+        </div>
 
         <!-- Results -->
-        <div v-else class="results-section">
+        <template v-else>
+          <p v-if="prescriptions.length" class="results-count">
+            <v-icon name="ri-capsule-line" scale="0.75" />
+            Showing {{ prescriptions.length }} of {{ pagination.total }} prescriptions
+          </p>
+
           <div v-if="prescriptions.length" class="prescriptions-list">
             <div
               v-for="prescription in prescriptions"
@@ -78,401 +93,448 @@
               class="prescription-card"
               @click="viewPrescription(prescription._id)"
             >
-              <div class="prescription-card__header">
-                <div class="prescription-info">
-                  <span class="prescription-number">{{ prescription.prescription_number }}</span>
-                  <span :class="['status', `status--${prescription.status?.toLowerCase()}`]">
-                    {{ formatStatus(prescription.status) }}
-                  </span>
+              <div class="prescription-card__accent" />
+              <div class="prescription-card__body">
+                <div class="prescription-card__header">
+                  <div class="prescription-info">
+                    <span class="prescription-number">{{ prescription.prescription_number }}</span>
+                    <PharmacyStatusBadge :status="prescription.status" />
+                    <span
+                      v-if="prescription.linked_appointments?.length || prescription.linked_clinical_notes?.length"
+                      class="linked-badge"
+                      :title="`Linked to ${getLinkedCount(prescription)} record(s)`"
+                    >
+                      <v-icon name="hi-link" scale="0.6" />
+                      {{ getLinkedCount(prescription) }}
+                    </span>
+                  </div>
+                  <span class="prescription-date">{{ formatDateTime(prescription.created_at) }}</span>
                 </div>
-                <span class="prescription-date">{{ formatDate(prescription.created_at) }}</span>
-              </div>
 
-              <div class="prescription-card__patient">
-                <div class="patient-avatar">
-                  <img
-                    v-if="prescription.patient?.profile_image"
-                    :src="prescription.patient.profile_image"
-                    :alt="prescription.patient?.full_name"
+                <div class="prescription-card__patient">
+                  <RcAvatar
+                    :model-value="prescription.patient?.profile_image"
+                    :first-name="getFirstName(prescription.patient?.full_name)"
+                    :last-name="getLastName(prescription.patient?.full_name)"
+                    size="sm"
                   />
-                  <span v-else>{{ getInitials(prescription.patient?.full_name) }}</span>
+                  <div class="patient-info">
+                    <p class="patient-name">{{ prescription.patient?.full_name || 'Unknown' }}</p>
+                    <p class="patient-email">{{ prescription.patient?.email }}</p>
+                  </div>
+                  <div class="card-arrow">
+                    <v-icon name="hi-chevron-right" scale="0.85" />
+                  </div>
                 </div>
-                <div class="patient-info">
-                  <p class="patient-name">{{ prescription.patient?.full_name || 'Unknown' }}</p>
-                  <p class="patient-email">{{ prescription.patient?.email }}</p>
-                </div>
-              </div>
 
-              <div class="prescription-card__items">
-                <div class="items-preview">
+                <div v-if="prescription.items?.length" class="prescription-card__items">
                   <span
-                    v-for="(item, index) in prescription.items?.slice(0, 3)"
+                    v-for="(item, index) in prescription.items.slice(0, 3)"
                     :key="index"
                     class="item-tag"
                   >
+                    <v-icon name="ri-capsule-line" scale="0.6" />
                     {{ item.drug_name }}
                   </span>
-                  <span v-if="prescription.items?.length > 3" class="more-items">
+                  <span v-if="prescription.items.length > 3" class="more-items">
                     +{{ prescription.items.length - 3 }} more
                   </span>
                 </div>
-              </div>
 
-              <div class="prescription-card__footer">
-                <div class="payment-info">
-                  <span class="payment-method">{{ formatPaymentMethod(prescription.payment_method) }}</span>
-                  <span :class="['payment-status', `payment-status--${prescription.payment_status?.toLowerCase()}`]">
-                    {{ formatPaymentStatus(prescription.payment_status) }}
-                  </span>
-                </div>
-                <div class="amount">
-                  NGN {{ formatCurrency(prescription.total_amount) }}
+                <div class="prescription-card__footer">
+                  <div class="payment-info">
+                    <span class="payment-method">{{ formatPaymentMethod(prescription.payment_method) }}</span>
+                    <PharmacyStatusBadge
+                      :status="getPaymentStatusClass(prescription.payment_status)"
+                      :label="formatPaymentStatus(prescription.payment_status)"
+                      size="sm"
+                    />
+                  </div>
+                  <div class="amount">
+                    NGN {{ formatCurrency(prescription.total_amount) }}
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Empty State -->
-          <div v-else class="empty-state">
-            <rc-icon icon-name="prescription" size="xl" />
-            <h3>No prescriptions found</h3>
-            <p v-if="searchQuery || statusFilter !== 'all'">Try adjusting your filters</p>
-            <p v-else>Create your first prescription to get started</p>
-            <button class="btn btn-primary" @click="createPrescription">
+          <div v-else class="empty-state-card">
+            <div class="empty-state-icon">
+              <v-icon name="ri-capsule-line" scale="2.5" />
+            </div>
+            <h3>{{ searchQuery || statusFilter !== 'all' ? 'No prescriptions found' : 'No prescriptions yet' }}</h3>
+            <p>{{ searchQuery || statusFilter !== 'all' ? 'Try adjusting your search or filter criteria' : 'Create your first prescription to get started' }}</p>
+            <button class="empty-state-action" @click="createPrescription">
+              <v-icon name="hi-plus" scale="0.8" />
               Create Prescription
             </button>
           </div>
+        </template>
 
-          <!-- Pagination -->
-          <div v-if="pagination.totalPages > 1" class="pagination">
-            <button
-              class="pagination-btn"
-              :disabled="pagination.page === 1"
-              @click="goToPage(pagination.page - 1)"
-            >
-              <rc-icon icon-name="chevron-left" size="sm" />
-            </button>
-            <span class="pagination-info">
-              Page {{ pagination.page }} of {{ pagination.totalPages }}
-            </span>
-            <button
-              class="pagination-btn"
-              :disabled="pagination.page === pagination.totalPages"
-              @click="goToPage(pagination.page + 1)"
-            >
-              <rc-icon icon-name="chevron-right" size="sm" />
-            </button>
-          </div>
-        </div>
+        <PharmacyPagination
+          :current-page="pagination.page"
+          :total-pages="pagination.totalPages"
+          @page-change="handlePageChange"
+        />
       </div>
     </div>
   </div>
 </template>
 
-<script>
-import TopBar from "@/components/Navigation/top-bar";
-import Loader from "@/components/Loader/main-loader";
-import RcIcon from "@/components/RCIcon";
-import apiFactory from "@/services/apiFactory";
-import moment from "moment";
-import { debounce } from "lodash";
+<script setup>
+import { ref, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
+import { useToast } from 'vue-toast-notification';
+import TopBar from '@/components/Navigation/top-bar';
+import RcAvatar from '@/components/RCAvatar';
+import apiFactory from '@/services/apiFactory';
+import PharmacyStatusBadge from './components/PharmacyStatusBadge.vue';
+import PharmacyPagination from './components/PharmacyPagination.vue';
+import { usePharmacy } from './composables/usePharmacy';
 
-export default {
-  name: "PharmacyPrescriptions",
-  components: {
-    TopBar,
-    Loader,
-    RcIcon,
-  },
-  data() {
-    return {
-      isLoading: false,
-      searchQuery: "",
-      statusFilter: "all",
-      prescriptions: [],
-      stats: {},
-      pagination: {
-        page: 1,
-        limit: 20,
-        total: 0,
-        totalPages: 0,
-      },
-      statusTabs: [
-        { label: "All", value: "all" },
-        { label: "Draft", value: "draft" },
-        { label: "Pending Payment", value: "pending_payment" },
-        { label: "Paid", value: "paid" },
-        { label: "Processing", value: "processing" },
-        { label: "Dispensed", value: "dispensed" },
-        { label: "Shipped", value: "shipped" },
-        { label: "Delivered", value: "delivered" },
-      ],
+const router = useRouter();
+const $toast = useToast();
+const { formatCurrency, formatDateTime, formatPaymentMethod, formatPaymentStatus } = usePharmacy();
+
+const isLoading = ref(false);
+const searchQuery = ref('');
+const statusFilter = ref('all');
+const prescriptions = ref([]);
+const stats = ref({});
+const pagination = ref({ page: 1, limit: 20, total: 0, totalPages: 0 });
+let debounceTimer = null;
+
+const statusTabs = [
+  { label: 'All', value: 'all' },
+  { label: 'Draft', value: 'draft' },
+  { label: 'Pending Payment', value: 'pending_payment' },
+  { label: 'Paid', value: 'paid' },
+  { label: 'Processing', value: 'processing' },
+  { label: 'Dispensed', value: 'dispensed' },
+  { label: 'Shipped', value: 'shipped' },
+  { label: 'Delivered', value: 'delivered' },
+];
+
+function getFirstName(name) {
+  if (!name) return '';
+  return name.split(' ')[0] || '';
+}
+
+function getLastName(name) {
+  if (!name) return '';
+  const parts = name.split(' ');
+  return parts.length > 1 ? parts[parts.length - 1] : '';
+}
+
+function getLinkedCount(prescription) {
+  return (prescription.linked_appointments?.length || 0) + (prescription.linked_clinical_notes?.length || 0);
+}
+
+function handleSearch() {
+  if (debounceTimer) clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(() => {
+    pagination.value.page = 1;
+    fetchPrescriptions();
+  }, 300);
+}
+
+function clearSearch() {
+  searchQuery.value = '';
+  pagination.value.page = 1;
+  fetchPrescriptions();
+}
+
+function setStatusFilter(status) {
+  statusFilter.value = status;
+  pagination.value.page = 1;
+  fetchPrescriptions();
+}
+
+function handlePageChange(page) {
+  pagination.value.page = page;
+  fetchPrescriptions();
+}
+
+function createPrescription() {
+  router.push('/app/specialist/pharmacy/prescriptions/create');
+}
+
+function viewPrescription(id) {
+  router.push(`/app/specialist/pharmacy/prescriptions/${id}`);
+}
+
+function getPaymentStatusClass(status) {
+  if (!status) return 'draft';
+  const normalized = status.toUpperCase();
+  if (normalized === 'COMPLETED' || normalized === 'PAID') return 'delivered';
+  if (normalized === 'PENDING') return 'pending_payment';
+  if (normalized === 'FAILED') return 'cancelled';
+  if (normalized === 'PROCESSING') return 'processing';
+  return 'draft';
+}
+
+async function fetchPrescriptions() {
+  try {
+    isLoading.value = true;
+    const params = {
+      search: searchQuery.value || undefined,
+      status: statusFilter.value !== 'all' ? statusFilter.value : undefined,
+      page: pagination.value.page,
+      limit: pagination.value.limit,
     };
-  },
-  created() {
-    this.debouncedSearch = debounce(this.fetchPrescriptions, 300);
-  },
-  async mounted() {
-    await Promise.all([
-      this.fetchPrescriptions(),
-      this.fetchStats(),
-    ]);
-  },
-  methods: {
-    async fetchPrescriptions() {
-      try {
-        this.isLoading = true;
-        const params = {
-          search: this.searchQuery || undefined,
-          status: this.statusFilter !== "all" ? this.statusFilter : undefined,
-          page: this.pagination.page,
-          limit: this.pagination.limit,
-        };
-        const response = await apiFactory.$_getSpecialistPrescriptions(params);
-        // Backend returns: { statusCode, message, data: { total, docs, pages, perPage, currentPage } }
-        const result = response.data?.data || response.data?.result;
-        if (result) {
-          this.prescriptions = result.docs || [];
-          this.pagination = {
-            ...this.pagination,
-            total: result.total || 0,
-            totalPages: result.pages || 0,
-          };
-        }
-      } catch (error) {
-        console.error("Error fetching prescriptions:", error);
-        this.$toast.error("Failed to load prescriptions");
-      } finally {
-        this.isLoading = false;
-      }
-    },
-    async fetchStats() {
-      try {
-        const response = await apiFactory.$_getSpecialistPrescriptionStats();
-        const result = response.data?.data || response.data?.result;
-        if (result) {
-          this.stats = result;
-        }
-      } catch (error) {
-        console.error("Error fetching stats:", error);
-      }
-    },
-    setStatusFilter(status) {
-      this.statusFilter = status;
-      this.pagination.page = 1;
-      this.fetchPrescriptions();
-    },
-    clearSearch() {
-      this.searchQuery = "";
-      this.pagination.page = 1;
-      this.fetchPrescriptions();
-    },
-    goToPage(page) {
-      this.pagination.page = page;
-      this.fetchPrescriptions();
-    },
-    createPrescription() {
-      this.$router.push("/app/specialist/pharmacy/prescriptions/create");
-    },
-    viewPrescription(id) {
-      this.$router.push(`/app/specialist/pharmacy/prescriptions/${id}`);
-    },
-    getInitials(name) {
-      if (!name) return "?";
-      return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
-    },
-    formatDate(date) {
-      if (!date) return "";
-      return moment(date).format("MMM D, YYYY h:mm A");
-    },
-    formatCurrency(amount) {
-      if (!amount) return "0.00";
-      return Number(amount).toLocaleString("en-NG", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      });
-    },
-    formatStatus(status) {
-      if (!status) return "";
-      return status.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
-    },
-    formatPaymentMethod(method) {
-      if (!method) return "Not set";
-      const normalizedMethod = method.toUpperCase();
-      const methods = {
-        SPECIALIST_WALLET: "Wallet",
-        PATIENT_ONLINE: "Online",
-        PATIENT_CASH: "Cash",
-      };
-      return methods[normalizedMethod] || method;
-    },
-    formatPaymentStatus(status) {
-      if (!status) return "N/A";
-      const normalizedStatus = status.toUpperCase();
-      const statuses = {
-        PENDING: "Pending",
-        PROCESSING: "Processing",
-        COMPLETED: "Paid",
-        PAID: "Paid",
-        FAILED: "Failed",
-        REFUNDED: "Refunded",
-      };
-      return statuses[normalizedStatus] || status;
-    },
-  },
-};
+    const response = await apiFactory.$_getSpecialistPrescriptions(params);
+    const result = response.data?.data || response.data?.result;
+    if (result) {
+      prescriptions.value = result.docs || [];
+      pagination.value.total = result.total || 0;
+      pagination.value.totalPages = result.pages || 0;
+    }
+  } catch (error) {
+    console.error('Error fetching prescriptions:', error);
+    $toast.error('Failed to load prescriptions');
+  } finally {
+    isLoading.value = false;
+  }
+}
+
+async function fetchStats() {
+  try {
+    const response = await apiFactory.$_getSpecialistPrescriptionStats();
+    const result = response.data?.data || response.data?.result;
+    if (result) {
+      stats.value = result;
+    }
+  } catch (error) {
+    console.error('Error fetching stats:', error);
+  }
+}
+
+onMounted(() => {
+  Promise.all([fetchPrescriptions(), fetchStats()]);
+});
 </script>
 
 <style scoped lang="scss">
 .page-content {
-  @include flexItem(vertical) {
-    width: 100%;
-    height: 100%;
-    background-color: $color-g-97;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100vh;
+  padding: 0 128px;
+
+  @include responsive(tab-portrait) {
+    padding: 0;
+  }
+
+  @include responsive(phone) {
+    padding: 0;
   }
 
   &__body {
-    flex-grow: 1;
+    width: 100%;
+    padding: $size-24 $size-32;
     overflow-y: auto;
-    padding: $size-24;
 
-    @include responsive(tab-portrait) {
+    @include responsive(phone) {
       padding: $size-16;
+    }
+
+    &::-webkit-scrollbar {
+      display: none;
     }
   }
 }
 
 .prescriptions-container {
-  max-width: 1000px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: 700px;
+  display: flex;
+  flex-direction: column;
+  gap: $size-24;
+  padding-bottom: $size-32;
 }
 
-.page-header {
+// Hero Section
+.hero-section {
+  background: linear-gradient(135deg, #0EAEC4 0%, #0891b2 50%, #0e7490 100%);
+  border-radius: $size-20;
+  padding: $size-24 $size-28;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: $size-24;
-  gap: $size-16;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(14, 174, 196, 0.25);
+  color: white;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -10%;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
 
   @include responsive(tab-portrait) {
     flex-direction: column;
+    gap: $size-20;
+    padding: $size-20;
+    border-radius: $size-16;
   }
 
-  &__back {
-    display: flex;
-    align-items: center;
-    gap: $size-16;
+  @include responsive(phone) {
+    padding: $size-16;
+    border-radius: $size-12;
+  }
 
-    .back-btn {
-      width: $size-40;
-      height: $size-40;
-      border-radius: 50%;
-      border: none;
-      background: $color-white;
-      cursor: pointer;
-      display: flex;
+  .hero-content {
+    z-index: 1;
+
+    .hero-back {
+      display: inline-flex;
       align-items: center;
-      justify-content: center;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      gap: $size-4;
+      background: rgba(255, 255, 255, 0.15);
+      border: none;
+      color: white;
+      font-size: $size-12;
+      font-weight: $fw-medium;
+      padding: $size-4 $size-10;
+      border-radius: $size-8;
+      cursor: pointer;
+      margin-bottom: $size-12;
+      transition: background 0.2s;
 
       &:hover {
-        background: $color-g-95;
+        background: rgba(255, 255, 255, 0.25);
       }
     }
 
-    h1 {
-      font-size: $size-24;
-      font-weight: $fw-semi-bold;
-      color: $color-g-21;
+    .hero-title {
+      display: flex;
+      align-items: center;
+      gap: $size-8;
+      font-size: $size-20;
+      font-weight: $fw-bold;
       margin-bottom: $size-4;
     }
 
-    p {
-      font-size: $size-15;
-      color: $color-g-54;
+    .hero-subtitle {
+      font-size: $size-13;
+      opacity: 0.85;
+    }
+  }
+
+  .hero-right {
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: $size-14;
+
+    @include responsive(tab-portrait) {
+      align-items: flex-start;
+      width: 100%;
+    }
+  }
+
+  .hero-stats {
+    display: flex;
+    gap: $size-12;
+
+    .hero-stat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.15);
+      padding: $size-10 $size-14;
+      border-radius: $size-10;
+      min-width: 64px;
+
+      &__value {
+        font-size: $size-20;
+        font-weight: $fw-bold;
+        line-height: 1.2;
+      }
+
+      &__label {
+        font-size: $size-10;
+        opacity: 0.85;
+        font-weight: $fw-medium;
+        margin-top: $size-2;
+      }
+    }
+  }
+
+  .hero-action-btn {
+    display: flex;
+    align-items: center;
+    gap: $size-8;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: $size-10;
+    padding: $size-10 $size-20;
+    font-size: $size-14;
+    font-weight: $fw-semi-bold;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.3);
     }
   }
 }
 
-.stats-row {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: $size-12;
-  margin-bottom: $size-24;
-
-  @include responsive(tab-portrait) {
-    grid-template-columns: repeat(2, 1fr);
-  }
+// Filters
+.filters-card {
+  background: white;
+  border-radius: $size-16;
+  padding: $size-20;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
 
-.stat-card {
-  background: $color-white;
-  padding: $size-16;
-  border-radius: $size-12;
-  text-align: center;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-
-  .stat-value {
-    display: block;
-    font-size: $size-28;
-    font-weight: $fw-bold;
-    color: $color-g-21;
-
-    &--warning {
-      color: #d97706;
-    }
-
-    &--info {
-      color: #2563eb;
-    }
-
-    &--success {
-      color: #059669;
-    }
-  }
-
-  .stat-label {
-    font-size: $size-12;
-    color: $color-g-54;
-  }
-}
-
-.filters-section {
-  margin-bottom: $size-24;
-}
-
-.search-bar {
+.search-input-wrapper {
   display: flex;
   align-items: center;
   gap: $size-12;
-  background: $color-white;
   padding: $size-12 $size-16;
-  border-radius: $size-12;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-  margin-bottom: $size-16;
+  background: $color-g-97;
+  border-radius: $size-10;
+  margin-bottom: $size-14;
+  transition: background 0.2s ease;
+
+  &:focus-within {
+    background: rgba(14, 174, 196, 0.04);
+  }
+
+  .search-icon { color: $color-g-54; }
 
   input {
     flex: 1;
     border: none;
     outline: none;
-    font-size: $size-15;
+    font-size: $size-14;
     color: $color-g-21;
+    background: transparent;
 
-    &::placeholder {
-      color: $color-g-67;
-    }
+    &::placeholder { color: $color-g-67; }
   }
 
   .clear-btn {
-    background: none;
+    background: $color-g-92;
     border: none;
     cursor: pointer;
-    padding: $size-4;
+    padding: $size-4 $size-6;
     color: $color-g-54;
+    border-radius: $size-4;
 
-    &:hover {
-      color: $color-g-36;
-    }
+    &:hover { background: $color-g-85; color: $color-g-36; }
   }
 }
 
@@ -482,21 +544,14 @@ export default {
   overflow-x: auto;
   padding-bottom: $size-4;
 
-  &::-webkit-scrollbar {
-    height: 4px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: $color-g-85;
-    border-radius: 2px;
-  }
+  &::-webkit-scrollbar { display: none; }
 }
 
 .filter-tab {
-  padding: $size-8 $size-16;
-  border-radius: $size-20;
-  border: 1px solid $color-g-85;
-  background: $color-white;
+  padding: $size-8 $size-14;
+  border-radius: $size-8;
+  border: none;
+  background: $color-g-97;
   font-size: $size-12;
   font-weight: $fw-medium;
   color: $color-g-44;
@@ -505,17 +560,43 @@ export default {
   transition: all 0.2s ease;
 
   &:hover {
-    border-color: $color-pri;
-    color: $color-pri;
+    color: #0EAEC4;
   }
 
   &.active {
-    background: $color-pri;
-    border-color: $color-pri;
-    color: $color-white;
+    background: rgba(14, 174, 196, 0.1);
+    color: #0EAEC4;
   }
 }
 
+// Results Count
+.results-count {
+  display: flex;
+  align-items: center;
+  gap: $size-6;
+  font-size: $size-13;
+  color: $color-g-54;
+  font-weight: $fw-medium;
+
+  svg { color: #0EAEC4; }
+}
+
+// Skeleton
+.prescriptions-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: $size-12;
+}
+
+.skeleton-card {
+  height: 120px;
+  border-radius: $size-16;
+  background: linear-gradient(90deg, $color-g-92 25%, $color-g-97 50%, $color-g-92 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+// Prescriptions List
 .prescriptions-list {
   display: flex;
   flex-direction: column;
@@ -523,33 +604,59 @@ export default {
 }
 
 .prescription-card {
-  background: $color-white;
-  padding: $size-20;
-  border-radius: $size-12;
+  display: flex;
+  background: white;
+  border-radius: $size-16;
+  overflow: hidden;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 
   &:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
+
+    .card-arrow { color: #0EAEC4; transform: translateX(2px); }
+  }
+
+  &__accent {
+    width: 4px;
+    background: #0EAEC4;
+    flex-shrink: 0;
+  }
+
+  &__body {
+    flex: 1;
+    padding: $size-20;
   }
 
   &__header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: $size-16;
+    margin-bottom: $size-14;
 
     .prescription-info {
       display: flex;
       align-items: center;
-      gap: $size-12;
+      gap: $size-10;
+    }
 
-      .prescription-number {
-        font-size: $size-16;
-        font-weight: $fw-semi-bold;
-        color: $color-g-21;
-      }
+    .prescription-number {
+      font-size: $size-15;
+      font-weight: $fw-semi-bold;
+      color: $color-g-21;
+    }
+
+    .linked-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      font-size: $size-11;
+      font-weight: $fw-medium;
+      color: #0891b2;
+      background: rgba(14, 174, 196, 0.08);
+      padding: 2px $size-6;
+      border-radius: $size-4;
     }
 
     .prescription-date {
@@ -562,33 +669,10 @@ export default {
     display: flex;
     align-items: center;
     gap: $size-12;
-    margin-bottom: $size-16;
-
-    .patient-avatar {
-      width: $size-44;
-      height: $size-44;
-      border-radius: 50%;
-      background: $color-pri;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
-
-      img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-      }
-
-      span {
-        font-size: $size-15;
-        font-weight: $fw-semi-bold;
-        color: $color-white;
-      }
-    }
+    margin-bottom: $size-14;
 
     .patient-name {
-      font-size: $size-15;
+      font-size: $size-14;
       font-weight: $fw-medium;
       color: $color-g-21;
     }
@@ -596,31 +680,40 @@ export default {
     .patient-email {
       font-size: $size-12;
       color: $color-g-54;
+      margin-top: $size-2;
+    }
+
+    .patient-info { flex: 1; min-width: 0; }
+
+    .card-arrow {
+      color: $color-g-67;
+      transition: all 0.2s ease;
     }
   }
 
   &__items {
-    margin-bottom: $size-16;
-
-    .items-preview {
-      display: flex;
-      flex-wrap: wrap;
-      gap: $size-6;
-    }
+    display: flex;
+    flex-wrap: wrap;
+    gap: $size-6;
+    margin-bottom: $size-14;
 
     .item-tag {
+      display: flex;
+      align-items: center;
+      gap: $size-4;
       font-size: $size-12;
       padding: $size-4 $size-10;
-      background: $color-g-95;
-      border-radius: $size-12;
-      color: $color-g-44;
+      background: rgba(14, 174, 196, 0.06);
+      border-radius: $size-6;
+      color: #0891b2;
+      font-weight: $fw-medium;
     }
 
     .more-items {
       font-size: $size-12;
       padding: $size-4 $size-10;
-      background: $color-g-90;
-      border-radius: $size-12;
+      background: $color-g-97;
+      border-radius: $size-6;
       color: $color-g-54;
     }
   }
@@ -629,13 +722,13 @@ export default {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding-top: $size-12;
+    padding-top: $size-14;
     border-top: 1px solid $color-g-92;
 
     .payment-info {
       display: flex;
       align-items: center;
-      gap: $size-8;
+      gap: $size-10;
 
       .payment-method {
         font-size: $size-12;
@@ -651,139 +744,60 @@ export default {
   }
 }
 
-.status {
-  font-size: $size-11;
-  padding: $size-4 $size-10;
-  border-radius: $size-12;
-  font-weight: $fw-medium;
-  text-transform: uppercase;
-
-  &--draft {
-    background: $color-g-90;
-    color: $color-g-44;
-  }
-
-  &--pending_payment {
-    background: rgba(#f59e0b, 0.1);
-    color: #d97706;
-  }
-
-  &--paid,
-  &--processing {
-    background: rgba(#3b82f6, 0.1);
-    color: #2563eb;
-  }
-
-  &--dispensed,
-  &--shipped {
-    background: rgba(#8b5cf6, 0.1);
-    color: #7c3aed;
-  }
-
-  &--delivered {
-    background: rgba(#10b981, 0.1);
-    color: #059669;
-  }
-
-  &--cancelled {
-    background: rgba(#ef4444, 0.1);
-    color: #dc2626;
-  }
-}
-
-.payment-status {
-  font-size: $size-11;
-  padding: $size-3 $size-8;
-  border-radius: $size-8;
-
-  &--pending {
-    background: rgba(#f59e0b, 0.1);
-    color: #d97706;
-  }
-
-  &--completed {
-    background: rgba(#10b981, 0.1);
-    color: #059669;
-  }
-
-  &--failed {
-    background: rgba(#ef4444, 0.1);
-    color: #dc2626;
-  }
-}
-
-.empty-state {
+// Empty State
+.empty-state-card {
   text-align: center;
-  padding: $size-64 $size-24;
-  color: $color-g-54;
+  padding: $size-32 $size-20;
+  background: $color-g-97;
+  border-radius: $size-12;
 
-  h3 {
-    font-size: $size-18;
-    font-weight: $fw-semi-bold;
-    color: $color-g-44;
-    margin: $size-16 0 $size-8;
-  }
-
-  p {
-    font-size: $size-15;
-    margin-bottom: $size-20;
-  }
-}
-
-.pagination {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: $size-16;
-  margin-top: $size-24;
-
-  &-btn {
-    width: $size-40;
-    height: $size-40;
-    border-radius: $size-8;
-    border: 1px solid $color-g-85;
-    background: $color-white;
-    cursor: pointer;
+  .empty-state-icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto $size-14;
+    border-radius: 50%;
+    background: rgba(14, 174, 196, 0.08);
     display: flex;
     align-items: center;
     justify-content: center;
-
-    &:hover:not(:disabled) {
-      border-color: $color-pri;
-      color: $color-pri;
-    }
-
-    &:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
+    color: #0EAEC4;
   }
 
-  &-info {
+  h3 {
     font-size: $size-15;
+    font-weight: $fw-semi-bold;
+    color: $color-g-21;
+    margin-bottom: $size-6;
+  }
+
+  p {
+    font-size: $size-13;
     color: $color-g-54;
+    margin-bottom: $size-16;
   }
 }
 
-.btn {
-  padding: $size-12 $size-20;
-  border-radius: $size-8;
-  font-size: $size-15;
-  font-weight: $fw-medium;
-  cursor: pointer;
-  border: none;
-  transition: all 0.2s ease;
-  display: flex;
+.empty-state-action {
+  display: inline-flex;
   align-items: center;
-  gap: $size-8;
+  gap: $size-6;
+  background: rgba(14, 174, 196, 0.1);
+  color: #0EAEC4;
+  border: none;
+  border-radius: $size-8;
+  padding: $size-10 $size-18;
+  font-size: $size-13;
+  font-weight: $fw-semi-bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
 
-  &-primary {
-    background: $color-pri;
-    color: $color-white;
-
-    &:hover {
-      background: darken($color-pri, 10%);
-    }
+  &:hover {
+    background: rgba(14, 174, 196, 0.18);
   }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
 </style>

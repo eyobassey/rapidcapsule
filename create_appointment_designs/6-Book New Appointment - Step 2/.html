@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book New Appointment - Type</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>::-webkit-scrollbar { display: none;}</style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Inter', 'sans-serif']
+                    },
+                    colors: {
+                        'primary': '#3B82F6',
+                        'primary-dark': '#2563EB',
+                        'success': '#10B981',
+                        'danger': '#EF4444',
+                        'warning': '#F59E0B',
+                        'gray-50': '#F9FAFB',
+                        'gray-100': '#F3F4F6',
+                        'gray-200': '#E5E7EB',
+                        'gray-300': '#D1D5DB',
+                        'gray-400': '#9CA3AF',
+                        'gray-500': '#6B7280',
+                        'gray-600': '#4B5563',
+                        'gray-700': '#374151',
+                        'gray-800': '#1F2937',
+                        'gray-900': '#111827'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 font-sans">
+
+<div id="sidebar" class="fixed left-0 top-0 h-full w-64 bg-white border-r border-gray-200 z-50">
+    <div class="p-6 border-b border-gray-200">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+                <i class="fa-solid fa-video text-white text-lg"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold text-gray-900">TeleHealth</h1>
+                <p class="text-xs text-gray-500">Medical Platform</p>
+            </div>
+        </div>
+    </div>
+    
+    <nav id="main-navigation" class="p-4">
+        <div class="space-y-1">
+            <a href="#" class="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+                <i class="fa-solid fa-calendar-days w-5 text-gray-400"></i>
+                <span class="font-medium">Dashboard</span>
+            </a>
+            <a href="#" class="flex items-center space-x-3 px-4 py-3 text-white bg-primary rounded-lg">
+                <i class="fa-solid fa-clock w-5"></i>
+                <span class="font-medium">Appointments</span>
+            </a>
+            <a href="#" class="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+                <i class="fa-solid fa-users w-5 text-gray-400"></i>
+                <span class="font-medium">Patients</span>
+            </a>
+            <a href="#" class="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+                <i class="fa-solid fa-file-medical w-5 text-gray-400"></i>
+                <span class="font-medium">Clinical Notes</span>
+            </a>
+            <a href="#" class="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+                <i class="fa-solid fa-prescription-bottle-medical w-5 text-gray-400"></i>
+                <span class="font-medium">Pharmacy</span>
+            </a>
+            <a href="#" class="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+                <i class="fa-solid fa-chart-line w-5 text-gray-400"></i>
+                <span class="font-medium">Analytics</span>
+            </a>
+        </div>
+        
+        <div class="mt-8 pt-8 border-t border-gray-200">
+            <p class="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Settings</p>
+            <div class="space-y-1">
+                <a href="#" class="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+                    <i class="fa-solid fa-gear w-5 text-gray-400"></i>
+                    <span class="font-medium">Practice Settings</span>
+                </a>
+                <a href="#" class="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+                    <i class="fa-solid fa-user-circle w-5 text-gray-400"></i>
+                    <span class="font-medium">Account</span>
+                </a>
+            </div>
+        </div>
+    </nav>
+    
+    <div id="sidebar-footer" class="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 bg-white">
+        <div class="flex items-center space-x-3 px-2">
+            <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt="Doctor" class="w-10 h-10 rounded-full object-cover">
+            <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold text-gray-900 truncate">Dr. John Smith</p>
+                <p class="text-xs text-gray-500 truncate">Cardiologist</p>
+            </div>
+            <button class="text-gray-400 hover:text-gray-600">
+                <i class="fa-solid fa-ellipsis-vertical"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<div id="header" class="fixed top-0 left-64 right-0 bg-white border-b border-gray-200 z-40">
+    <div class="px-8 py-4">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <button onclick="window.history.back()" class="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors">
+                    <i class="fa-solid fa-chevron-left"></i>
+                    <span class="font-medium">Back</span>
+                </button>
+            </div>
+            <div class="flex items-center space-x-3">
+                <button onclick="window.history.back()" class="px-5 py-2.5 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors">
+                    <i class="fa-solid fa-xmark mr-2"></i>Cancel
+                </button>
+                <button class="relative p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">
+                    <i class="fa-solid fa-bell text-lg"></i>
+                    <span class="absolute top-1 right-1 w-2 h-2 bg-danger rounded-full"></span>
+                </button>
+                <div class="flex items-center space-x-3 pl-4 border-l border-gray-200">
+                    <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt="Profile" class="w-9 h-9 rounded-full object-cover">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<main id="main-content" class="ml-64 pt-20 pb-24">
+    <div class="px-8 max-w-7xl mx-auto">
+        
+        <section id="appointment-booking-header" class="mb-8">
+            <div class="mb-6">
+                <h1 class="text-3xl font-bold text-gray-900 mb-2">Book New Appointment</h1>
+                <p class="text-gray-500 text-lg">Step 2 of 6: Appointment Type & Details</p>
+            </div>
+
+            <div id="progress-indicator" class="flex items-center justify-between mb-8">
+                <div class="flex items-center space-x-3 flex-1">
+                    <div class="flex items-center justify-center w-10 h-10 bg-success text-white font-bold rounded-full">
+                        <i class="fa-solid fa-check text-sm"></i>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-900">Patient</p>
+                        <p class="text-xs text-gray-500">Selected</p>
+                    </div>
+                </div>
+                <div class="flex-1 h-0.5 bg-success mx-4"></div>
+                <div class="flex items-center space-x-3 flex-1">
+                    <div class="flex items-center justify-center w-10 h-10 bg-primary text-white font-bold rounded-full">2</div>
+                    <div>
+                        <p class="font-semibold text-gray-900">Type</p>
+                        <p class="text-xs text-primary font-medium">Current step</p>
+                    </div>
+                </div>
+                <div class="flex-1 h-0.5 bg-gray-200 mx-4"></div>
+                <div class="flex items-center space-x-3 flex-1">
+                    <div class="flex items-center justify-center w-10 h-10 bg-gray-200 text-gray-500 font-bold rounded-full">3</div>
+                    <div>
+                        <p class="font-semibold text-gray-500">Schedule</p>
+                        <p class="text-xs text-gray-400">Pending</p>
+                    </div>
+                </div>
+                <div class="flex-1 h-0.5 bg-gray-200 mx-4"></div>
+                <div class="flex items-center space-x-3 flex-1">
+                    <div class="flex items-center justify-center w-10 h-10 bg-gray-200 text-gray-500 font-bold rounded-full">4</div>
+                    <div>
+                        <p class="font-semibold text-gray-500">Fee & Channel</p>
+                        <p class="text-xs text-gray-400">Pending</p>
+                    </div>
+                </div>
+                <div class="flex-1 h-0.5 bg-gray-200 mx-4"></div>
+                <div class="flex items-center space-x-3 flex-1">
+                    <div class="flex items-center justify-center w-10 h-10 bg-gray-200 text-gray-500 font-bold rounded-full">5</div>
+                    <div>
+                        <p class="font-semibold text-gray-500">Notes</p>
+                        <p class="text-xs text-gray-400">Pending</p>
+                    </div>
+                </div>
+                <div class="flex-1 h-0.5 bg-gray-200 mx-4"></div>
+                <div class="flex items-center space-x-3 flex-1">
+                    <div class="flex items-center justify-center w-10 h-10 bg-gray-200 text-gray-500 font-bold rounded-full">6</div>
+                    <div>
+                        <p class="font-semibold text-gray-500">Review</p>
+                        <p class="text-xs text-gray-400">Pending</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="grid grid-cols-12 gap-6">
+            
+            <div class="col-span-8">
+                
+                <section id="appointment-channel-section" class="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+                    <h2 class="text-xl font-bold text-gray-900 mb-2">Appointment Channel</h2>
+                    <p class="text-sm text-gray-600 mb-6">Select how the consultation will be conducted</p>
+                    
+                    <div class="grid grid-cols-3 gap-4">
+                        <div onclick="selectChannel(this, 'video')" class="channel-option p-6 border-2 border-gray-200 rounded-xl hover:border-primary hover:bg-blue-50 cursor-pointer transition-all group">
+                            <div class="flex flex-col items-center text-center">
+                                <div class="w-16 h-16 bg-blue-100 group-hover:bg-primary rounded-full flex items-center justify-center mb-4 transition-colors">
+                                    <i class="fa-solid fa-video text-primary group-hover:text-white text-2xl transition-colors"></i>
+                                </div>
+                                <p class="font-bold text-gray-900 text-lg mb-2">Video Call</p>
+                                <p class="text-sm text-gray-600">Face-to-face consultation via video</p>
+                            </div>
+                        </div>
+
+                        <div onclick="selectChannel(this, 'in-person')" class="channel-option p-6 border-2 border-gray-200 rounded-xl hover:border-primary hover:bg-blue-50 cursor-pointer transition-all group">
+                            <div class="flex flex-col items-center text-center">
+                                <div class="w-16 h-16 bg-green-100 group-hover:bg-success rounded-full flex items-center justify-center mb-4 transition-colors">
+                                    <i class="fa-solid fa-hospital text-success group-hover:text-white text-2xl transition-colors"></i>
+                                </div>
+                                <p class="font-bold text-gray-900 text-lg mb-2">In-Person</p>
+                                <p class="text-sm text-gray-600">Physical visit at clinic or hospital</p>
+                            </div>
+                        </div>
+
+                        <div onclick="selectChannel(this, 'phone')" class="channel-option p-6 border-2 border-gray-200 rounded-xl hover:border-primary hover:bg-blue-50 cursor-pointer transition-all group">
+                            <div class="flex flex-col items-center text-center">
+                                <div class="w-16 h-16 bg-purple-100 group-hover:bg-purple-600 rounded-full flex items-center justify-center mb-4 transition-colors">
+                                    <i class="fa-solid fa-phone text-purple-600 group-hover:text-white text-2xl transition-colors"></i>
+                                </div>
+                                <p class="font-bold text-gray-900 text-lg mb-2">Phone Call</p>
+                                <p class="text-sm text-gray-600">Audio consultation via telephone</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="channel-availability-info" class="mt-6 hidden">
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <div class="flex items-start space-x-3">
+                                <i class="fa-solid fa-circle-info text-primary text-lg mt-0.5"></i>
+                                <div>
+                                    <p class="font-semibold text-gray-900 mb-1">Availability Note</p>
+                                    <p id="availability-text" class="text-sm text-gray-700"></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="visit-reason-section" class="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+                    <h2 class="text-xl font-bold text-gray-900 mb-2">Visit Reason</h2>
+                    <p class="text-sm text-gray-600 mb-6">What is the primary purpose of this appointment?</p>
+                    
+                    <div class="space-y-3">
+                        <div onclick="selectReason(this, 'initial')" class="reason-option flex items-center justify-between p-5 border-2 border-gray-200 rounded-xl hover:border-primary hover:bg-blue-50 cursor-pointer transition-all">
+                            <div class="flex items-center space-x-4">
+                                <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                                    <i class="fa-solid fa-user-plus text-primary text-xl"></i>
+                                </div>
+                                <div>
+                                    <p class="font-bold text-gray-900 text-lg">Initial Consultation</p>
+                                    <p class="text-sm text-gray-600">First time visit or new patient assessment</p>
+                                </div>
+                            </div>
+                            <i class="fa-solid fa-circle text-gray-300 text-lg"></i>
+                        </div>
+
+                        <div onclick="selectReason(this, 'followup')" class="reason-option flex items-center justify-between p-5 border-2 border-gray-200 rounded-xl hover:border-primary hover:bg-blue-50 cursor-pointer transition-all">
+                            <div class="flex items-center space-x-4">
+                                <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                                    <i class="fa-solid fa-rotate text-success text-xl"></i>
+                                </div>
+                                <div>
+                                    <p class="font-bold text-gray-900 text-lg">Follow-up Visit</p>
+                                    <p class="text-sm text-gray-600">Continuing care or progress check</p>
+                                </div>
+                            </div>
+                            <i class="fa-solid fa-circle text-gray-300 text-lg"></i>
+                        </div>
+
+                        <div onclick="selectReason(this, 'routine')" class="reason-option flex items-center justify-between p-5 border-2 border-gray-200 rounded-xl hover:border-primary hover:bg-blue-50 cursor-pointer transition-all">
+                            <div class="flex items-center space-x-4">
+                                <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                                    <i class="fa-solid fa-calendar-check text-purple-600 text-xl"></i>
+                                </div>
+                                <div>
+                                    <p class="font-bold text-gray-900 text-lg">Routine Check-up</p>
+                                    <p class="text-sm text-gray-600">Regular health screening or wellness visit</p>
+                                </div>
+                            </div>
+                            <i class="fa-solid fa-circle text-gray-300 text-lg"></i>
+                        </div>
+
+                        <div onclick="selectReason(this, 'emergency')" class="reason-option flex items-center justify-between p-5 border-2 border-gray-200 rounded-xl hover:border-danger hover:bg-red-50 cursor-pointer transition-all">
+                            <div class="flex items-center space-x-4">
+                                <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                                    <i class="fa-solid fa-triangle-exclamation text-danger text-xl"></i>
+                                </div>
+                                <div>
+                                    <p class="font-bold text-gray-900 text-lg">Urgent Care</p>
+                                    <p class="text-sm text-gray-600">Time-sensitive medical concern</p>
+                                </div>
+                            </div>
+                            <i class="fa-solid fa-circle text-gray-300 text-lg"></i>
+                        </div>
+
+                        <div onclick="selectReason(this, 'prescription')" class="reason-option flex items-center justify-between p-5 border-2 border-gray-200 rounded-xl hover:border-primary hover:bg-blue-50 cursor-pointer transition-all">
+                            <div class="flex items-center space-x-4">
+                                <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                                    <i class="fa-solid fa-prescription text-warning text-xl"></i>
+                                </div>
+                                <div>
+                                    <p class="font-bold text-gray-900 text-lg">Prescription Renewal</p>
+                                    <p class="text-sm text-gray-600">Medication refill or prescription review</p>
+                                </div>
+                            </div>
+                            <i class="fa-solid fa-circle text-gray-300 text-lg"></i>
+                        </div>
+
+                        <div onclick="selectReason(this, 'other')" class="reason-option flex items-center justify-between p-5 border-2 border-gray-200 rounded-xl hover:border-primary hover:bg-blue-50 cursor-pointer transition-all">
+                            <div class="flex items-center space-x-4">
+                                <div class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                                    <i class="fa-solid fa-ellipsis text-gray-500 text-xl"></i>
+                                </div>
+                                <div>
+                                    <p class="font-bold text-gray-900 text-lg">Other Reason</p>
+                                    <p class="text-sm text-gray-600">Specify custom visit purpose</p>
+                                </div>
+                            </div>
+                            <i class="fa-solid fa-circle text-gray-300 text-lg"></i>
+                        </div>
+                    </div>
+
+                    <div id="other-reason-input" class="mt-4 hidden">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Specify Reason</label>
+                        <textarea rows="3" placeholder="Describe the visit purpose..." class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent resize-none"></textarea>
+                    </div>
+                </section>
+
+                <section id="specialty-template-section" class="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+                    <h2 class="text-xl font-bold text-gray-900 mb-2">Specialty & Template</h2>
+                    <p class="text-sm text-gray-600 mb-6">Select the medical specialty and consultation template</p>
+                    
+                    <div class="grid grid-cols-2 gap-4 mb-6">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Medical Specialty</label>
+                            <select id="specialty-select" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                                <option value="">Select specialty...</option>
+                                <option value="cardiology">Cardiology</option>
+                                <option value="dermatology">Dermatology</option>
+                                <option value="endocrinology">Endocrinology</option>
+                                <option value="gastroenterology">Gastroenterology</option>
+                                <option value="general">General Practice</option>
+                                <option value="neurology">Neurology</option>
+                                <option value="oncology">Oncology</option>
+                                <option value="orthopedics">Orthopedics</option>
+                                <option value="pediatrics">Pediatrics</option>
+                                <option value="psychiatry">Psychiatry</option>
+                                <option value="pulmonology">Pulmonology</option>
+                                <option value="urology">Urology</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Consultation Template</label>
+                            <select id="template-select" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                                <option value="">Select template...</option>
+                                <option value="standard">Standard Consultation</option>
+                                <option value="comprehensive">Comprehensive Assessment</option>
+                                <option value="brief">Brief Consultation</option>
+                                <option value="diagnostic">Diagnostic Evaluation</option>
+                                <option value="treatment">Treatment Planning</option>
+                                <option value="medication">Medication Review</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                        <div class="flex items-start space-x-3">
+                            <i class="fa-solid fa-lightbulb text-purple-600 text-lg mt-0.5"></i>
+                            <div>
+                                <p class="font-semibold text-gray-900 mb-1">Template Benefits</p>
+                                <p class="text-sm text-gray-700">Templates provide structured workflows, pre-filled forms, and specialty-specific documentation to streamline your consultation process.</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="duration-section" class="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+                    <h2 class="text-xl font-bold text-gray-900 mb-2">Appointment Duration</h2>
+                    <p class="text-sm text-gray-600 mb-6">How long do you expect this appointment to take?</p>
+                    
+                    <div class="grid grid-cols-4 gap-4">
+                        <div onclick="selectDuration(this, '15')" class="duration-option p-5 border-2 border-gray-200 rounded-xl hover:border-primary hover:bg-blue-50 cursor-pointer transition-all text-center">
+                            <p class="text-3xl font-bold text-gray-900 mb-1">15</p>
+                            <p class="text-sm text-gray-600">minutes</p>
+                        </div>
+
+                        <div onclick="selectDuration(this, '30')" class="duration-option p-5 border-2 border-gray-200 rounded-xl hover:border-primary hover:bg-blue-50 cursor-pointer transition-all text-center">
+                            <p class="text-3xl font-bold text-gray-900 mb-1">30</p>
+                            <p class="text-sm text-gray-600">minutes</p>
+                        </div>
+
+                        <div onclick="selectDuration(this, '45')" class="duration-option p-5 border-2 border-gray-200 rounded-xl hover:border-primary hover:bg-blue-50 cursor-pointer transition-all text-center">
+                            <p class="text-3xl font-bold text-gray-900 mb-1">45</p>
+                            <p class="text-sm text-gray-600">minutes</p>
+                        </div>
+
+                        <div onclick="selectDuration(this, '60')" class="duration-option p-5 border-2 border-gray-200 rounded-xl hover:border-primary hover:bg-blue-50 cursor-pointer transition-all text-center">
+                            <p class="text-3xl font-bold text-gray-900 mb-1">60</p>
+                            <p class="text-sm text-gray-600">minutes</p>
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Custom Duration</label>
+                        <div class="flex items-center space-x-3">
+                            <input type="number" id="custom-duration" min="5" max="240" step="5" placeholder="Enter minutes" class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                            <button onclick="setCustomDuration()" class="px-6 py-3 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-colors whitespace-nowrap">
+                                Set Duration
+                            </button>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1.5">Enter a custom duration between 5 and 240 minutes</p>
+                    </div>
+                </section>
+
+                <section id="clinical-flags-section" class="bg-white rounded-xl border border-gray-200 p-6">
+                    <h2 class="text-xl font-bold text-gray-900 mb-2">Clinical Intake Flags</h2>
+                    <p class="text-sm text-gray-600 mb-6">Optional: Mark any special requirements or considerations</p>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <label class="flex items-center space-x-3 p-4 border-2 border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                            <input type="checkbox" class="w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary">
+                            <div class="flex-1">
+                                <p class="font-semibold text-gray-900">Interpreter Required</p>
+                                <p class="text-xs text-gray-600">Language assistance needed</p>
+                            </div>
+                        </label>
+
+                        <label class="flex items-center space-x-3 p-4 border-2 border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                            <input type="checkbox" class="w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary">
+                            <div class="flex-1">
+                                <p class="font-semibold text-gray-900">Mobility Assistance</p>
+                                <p class="text-xs text-gray-600">Wheelchair or special access</p>
+                            </div>
+                        </label>
+
+                        <label class="flex items-center space-x-3 p-4 border-2 border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                            <input type="checkbox" class="w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary">
+                            <div class="flex-1">
+                                <p class="font-semibold text-gray-900">Imaging Required</p>
+                                <p class="text-xs text-gray-600">X-ray, MRI, or other scans</p>
+                            </div>
+                        </label>
+
+                        <label class="flex items-center space-x-3 p-4 border-2 border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                            <input type="checkbox" class="w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary">
+                            <div class="flex-1">
+                                <p class="font-semibold text-gray-900">Lab Work Needed</p>
+                                <p class="text-xs text-gray-600">Blood tests or specimens</p>
+                            </div>
+                        </label>
+
+                        <label class="flex items-center space-x-3 p-4 border-2 border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                            <input type="checkbox" class="w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary">
+                            <div class="flex-1">
+                                <p class="font-semibold text-gray-900">Fasting Required</p>
+                                <p class="text-xs text-gray-600">Patient must fast before visit</p>
+                            </div>
+                        </label>
+
+                        <label class="flex items-center space-x-3 p-4 border-2 border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                            <input type="checkbox" class="w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary">
+                            <div class="flex-1">
+                                <p class="font-semibold text-gray-900">Extended Time</p>
+                                <p class="text-xs text-gray-600">Extra time may be needed</p>
+                            </div>
+                        </label>
+
+                        <label class="flex items-center space-x-3 p-4 border-2 border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                            <input type="checkbox" class="w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary">
+                            <div class="flex-1">
+                                <p class="font-semibold text-gray-900">Guardian Present</p>
+                                <p class="text-xs text-gray-600">Legal guardian attendance</p>
+                            </div>
+                        </label>
+
+                        <label class="flex items-center space-x-3 p-4 border-2 border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                            <input type="checkbox" class="w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary">
+                            <div class="flex-1">
+                                <p class="font-semibold text-gray-900">Behavioral Support</p>
+                                <p class="text-xs text-gray-600">Special behavioral needs</p>
+                            </div>
+                        </label>
+                    </div>
+                </section>
+
+            </div>
+
+            <div class="col-span-4">
+                
+                <section id="selected-patient-card" class="bg-white rounded-xl border border-gray-200 p-6 mb-6 sticky top-24">
+                    <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                        <i class="fa-solid fa-user-check text-success mr-2"></i>Selected Patient
+                    </h3>
+                    
+                    <div class="flex items-center space-x-4 mb-6 pb-6 border-b border-gray-200">
+                        <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-1.jpg" alt="Patient" class="w-16 h-16 rounded-full object-cover border-2 border-success">
+                        <div class="flex-1">
+                            <p class="font-bold text-gray-900 text-lg mb-0.5">Sarah Johnson</p>
+                            <p class="text-sm text-gray-600">sarah.johnson@email.com</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4 mb-6">
+                        <div class="flex items-center justify-between py-2">
+                            <span class="text-sm text-gray-600 flex items-center">
+                                <i class="fa-solid fa-id-card text-gray-400 mr-2 w-4"></i>Patient ID
+                            </span>
+                            <span class="font-semibold text-gray-900">PT-2847</span>
+                        </div>
+                        <div class="flex items-center justify-between py-2">
+                            <span class="text-sm text-gray-600 flex items-center">
+                                <i class="fa-solid fa-phone text-gray-400 mr-2 w-4"></i>Phone
+                            </span>
+                            <span class="font-semibold text-gray-900">+1 555-0123</span>
+                        </div>
+                        <div class="flex items-center justify-between py-2">
+                            <span class="text-sm text-gray-600 flex items-center">
+                                <i class="fa-solid fa-calendar text-gray-400 mr-2 w-4"></i>DOB
+                            </span>
+                            <span class="font-semibold text-gray-900">05/12/1985</span>
+                        </div>
+                        <div class="flex items-center justify-between py-2">
+                            <span class="text-sm text-gray-600 flex items-center">
+                                <i class="fa-solid fa-circle-check text-gray-400 mr-2 w-4"></i>Status
+                            </span>
+                            <span class="px-3 py-1 bg-green-100 text-success text-xs font-bold rounded-full">Active</span>
+                        </div>
+                    </div>
+
+                    <button class="w-full px-4 py-3 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors">
+                        <i class="fa-solid fa-user mr-2"></i>View Full Profile
+                    </button>
+                </section>
+
+                <section id="appointment-summary-card" class="bg-gradient-to-br from-blue-50 to-white rounded-xl border border-blue-200 p-6 mb-6">
+                    <h3 class="text-lg font-bold text-gray-900 mb-5 flex items-center">
+                        <i class="fa-solid fa-list-check text-primary mr-2"></i>Appointment Summary
+                    </h3>
+                    
+                    <div class="space-y-4">
+                        <div class="bg-white rounded-lg p-4 border border-gray-200">
+                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Channel</p>
+                            <p id="summary-channel" class="text-gray-400 font-medium">Not selected</p>
+                        </div>
+
+                        <div class="bg-white rounded-lg p-4 border border-gray-200">
+                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Visit Reason</p>
+                            <p id="summary-reason" class="text-gray-400 font-medium">Not selected</p>
+                        </div>
+
+                        <div class="bg-white rounded-lg p-4 border border-gray-200">
+                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Specialty</p>
+                            <p id="summary-specialty" class="text-gray-400 font-medium">Not selected</p>
+                        </div>
+
+                        <div class="bg-white rounded-lg p-4 border border-gray-200">
+                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Duration</p>
+                            <p id="summary-duration" class="text-gray-400 font-medium">Not selected</p>
+                        </div>
+
+                        <div class="bg-white rounded-lg p-4 border border-gray-200">
+                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Clinical Flags</p>
+                            <p id="summary-flags" class="text-gray-400 font-medium">None selected</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="help-card" class="bg-white rounded-xl border border-gray-200 p-6">
+                    <div class="flex items-start space-x-3 mb-5">
+                        <div class="w-11 h-11 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-circle-question text-primary text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-gray-900 mb-1">Need Help?</h3>
+                            <p class="text-sm text-gray-600">Learn about appointment types</p>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-2">
+                        <button class="w-full text-left px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-lg text-sm font-medium text-gray-700 transition-colors flex items-center justify-between">
+                            <span><i class="fa-solid fa-book mr-2 text-primary"></i>View Documentation</span>
+                            <i class="fa-solid fa-arrow-right text-gray-400"></i>
+                        </button>
+                        <button class="w-full text-left px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-lg text-sm font-medium text-gray-700 transition-colors flex items-center justify-between">
+                            <span><i class="fa-solid fa-video mr-2 text-primary"></i>Watch Tutorial</span>
+                            <i class="fa-solid fa-arrow-right text-gray-400"></i>
+                        </button>
+                        <button class="w-full text-left px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-lg text-sm font-medium text-gray-700 transition-colors flex items-center justify-between">
+                            <span><i class="fa-solid fa-headset mr-2 text-primary"></i>Contact Support</span>
+                            <i class="fa-solid fa-arrow-right text-gray-400"></i>
+                        </button>
+                    </div>
+                </section>
+
+            </div>
+
+        </div>
+
+    </div>
+</main>
+
+<section id="navigation-buttons" class="fixed bottom-0 left-64 right-0 bg-white border-t border-gray-200 px-8 py-4 z-30 shadow-lg">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+        <button onclick="window.history.back()" class="px-6 py-3 bg-white border-2 border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors">
+            <i class="fa-solid fa-chevron-left mr-2"></i>Back
+        </button>
+        <div class="flex items-center space-x-3">
+            <button onclick="saveDraft()" class="px-6 py-3 bg-white border-2 border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors">
+                <i class="fa-solid fa-floppy-disk mr-2"></i>Save Draft
+            </button>
+            <button id="continue-btn" disabled class="px-8 py-3 bg-gray-300 text-gray-500 font-semibold rounded-lg cursor-not-allowed shadow-sm">
+                Next: Schedule<i class="fa-solid fa-chevron-right ml-2"></i>
+            </button>
+        </div>
+    </div>
+</section>
+
+<script>
+let selectedChannel = null;
+let selectedReason = null;
+let selectedDuration = null;
+let selectedFlags = [];
+
+function selectChannel(element, channel) {
+    selectedChannel = channel;
+    
+    document.querySelectorAll('.channel-option').forEach(el => {
+        el.classList.remove('border-primary', 'bg-blue-50');
+        el.classList.add('border-gray-200');
+    });
+    
+    element.classList.add('border-primary', 'bg-blue-50');
+    element.classList.remove('border-gray-200');
+    
+    const channelNames = {
+        'video': 'Video Call',
+        'in-person': 'In-Person Visit',
+        'phone': 'Phone Call'
+    };
+    
+    const availabilityInfo = {
+        'video': 'Video appointments are available 24/7. Patient will receive meeting link via email.',
+        'in-person': 'In-person visits are subject to clinic hours and location availability.',
+        'phone': 'Phone consultations are available during regular office hours.'
+    };
+    
+    document.getElementById('summary-channel').textContent = channelNames[channel];
+    document.getElementById('summary-channel').classList.remove('text-gray-400');
+    document.getElementById('summary-channel').classList.add('text-gray-900', 'font-semibold');
+    
+    document.getElementById('channel-availability-info').classList.remove('hidden');
+    document.getElementById('availability-text').textContent = availabilityInfo[channel];
+    
+    validateForm();
+}
+
+function selectReason(element, reason) {
+    selectedReason = reason;
+    
+    document.querySelectorAll('.reason-option').forEach(el => {
+        const circle = el.querySelector('.fa-circle');
+        circle.classList.remove('text-primary', 'fa-circle-dot');
+        circle.classList.add('text-gray-300', 'fa-circle');
+        el.classList.remove('border-primary', 'bg-blue-50', 'border-danger', 'bg-red-50');
+        el.classList.add('border-gray-200');
+    });
+    
+    const circle = element.querySelector('.fa-circle');
+    circle.classList.remove('text-gray-300', 'fa-circle');
+    circle.classList.add('text-primary', 'fa-circle-dot');
+    
+    if (reason === 'emergency') {
+        element.classList.add('border-danger', 'bg-red-50');
+    } else {
+        element.classList.add('border-primary', 'bg-blue-50');
+    }
+    element.classList.remove('border-gray-200');
+    
+    const reasonNames = {
+        'initial': 'Initial Consultation',
+        'followup': 'Follow-up Visit',
+        'routine': 'Routine Check-up',
+        'emergency': 'Urgent Care',
+        'prescription': 'Prescription Renewal',
+        'other': 'Other Reason'
+    };
+    
+    document.getElementById('summary-reason').textContent = reasonNames[reason];
+    document.getElementById('summary-reason').classList.remove('text-gray-400');
+    document.getElementById('summary-reason').classList.add('text-gray-900', 'font-semibold');
+    
+    if (reason === 'other') {
+        document.getElementById('other-reason-input').classList.remove('hidden');
+    } else {
+        document.getElementById('other-reason-input').classList.add('hidden');
+    }
+    
+    validateForm();
+}
+
+function selectDuration(element, duration) {
+    selectedDuration = duration;
+    
+    document.querySelectorAll('.duration-option').forEach(el => {
+        el.classList.remove('border-primary', 'bg-blue-50');
+        el.classList.add('border-gray-200');
+    });
+    
+    element.classList.add('border-primary', 'bg-blue-50');
+    element.classList.remove('border-gray-200');
+    
+    document.getElementById('custom-duration').value = '';
+    
+    document.getElementById('summary-duration').textContent = duration + ' minutes';
+    document.getElementById('summary-duration').classList.remove('text-gray-400');
+    document.getElementById('summary-duration').classList.add('text-gray-900', 'font-semibold');
+    
+    validateForm();
+}
+
+function setCustomDuration() {
+    const customValue = document.getElementById('custom-duration').value;
+    if (customValue && customValue >= 5 && customValue <= 240) {
+        selectedDuration = customValue;
+        
+        document.querySelectorAll('.duration-option').forEach(el => {
+            el.classList.remove('border-primary', 'bg-blue-50');
+            el.classList.add('border-gray-200');
+        });
+        
+        document.getElementById('summary-duration').textContent = customValue + ' minutes';
+        document.getElementById('summary-duration').classList.remove('text-gray-400');
+        document.getElementById('summary-duration').classList.add('text-gray-900', 'font-semibold');
+        
+        validateForm();
+    } else {
+        alert('Please enter a duration between 5 and 240 minutes.');
+    }
+}
+
+document.getElementById('specialty-select').addEventListener('change', function(e) {
+    if (e.target.value) {
+        const specialtyName = e.target.options[e.target.selectedIndex].text;
+        document.getElementById('summary-specialty').textContent = specialtyName;
+        document.getElementById('summary-specialty').classList.remove('text-gray-400');
+        document.getElementById('summary-specialty').classList.add('text-gray-900', 'font-semibold');
+    } else {
+        document.getElementById('summary-specialty').textContent = 'Not selected';
+        document.getElementById('summary-specialty').classList.add('text-gray-400');
+        document.getElementById('summary-specialty').classList.remove('text-gray-900', 'font-semibold');
+    }
+    validateForm();
+});
+
+document.querySelectorAll('#clinical-flags-section input[type="checkbox"]').forEach(checkbox => {
+    checkbox.addEventListener('change', function() {
+        selectedFlags = [];
+        document.querySelectorAll('#clinical-flags-section input[type="checkbox"]:checked').forEach(cb => {
+            const label = cb.parentElement.querySelector('.font-semibold').textContent;
+            selectedFlags.push(label);
+        });
+        
+        if (selectedFlags.length > 0) {
+            document.getElementById('summary-flags').textContent = selectedFlags.join(', ');
+            document.getElementById('summary-flags').classList.remove('text-gray-400');
+            document.getElementById('summary-flags').classList.add('text-gray-900', 'font-semibold');
+        } else {
+            document.getElementById('summary-flags').textContent = 'None selected';
+            document.getElementById('summary-flags').classList.add('text-gray-400');
+            document.getElementById('summary-flags').classList.remove('text-gray-900', 'font-semibold');
+        }
+    });
+});
+
+function validateForm() {
+    const specialty = document.getElementById('specialty-select').value;
+    
+    if (selectedChannel && selectedReason && selectedDuration && specialty) {
+        document.getElementById('continue-btn').disabled = false;
+        document.getElementById('continue-btn').classList.remove('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+        document.getElementById('continue-btn').classList.add('bg-primary', 'text-white', 'hover:bg-primary-dark', 'cursor-pointer');
+    } else {
+        document.getElementById('continue-btn').disabled = true;
+        document.getElementById('continue-btn').classList.add('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+        document.getElementById('continue-btn').classList.remove('bg-primary', 'text-white', 'hover:bg-primary-dark', 'cursor-pointer');
+    }
+}
+
+function saveDraft() {
+    alert('Draft saved successfully!\n\nYou can continue this booking later from your drafts.');
+}
+</script>
+
+</body>
+</html>

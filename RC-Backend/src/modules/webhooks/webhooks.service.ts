@@ -5,14 +5,15 @@ import {
   LoggerService,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Webhook, WebhookDocument } from './entities/webhook.entity';
 import { create, deleteOne } from 'src/common/crud/crud';
 import { TaskScheduler } from '../../core/worker/task.scheduler';
 import { PaystackWebhookData, WebhookEventTypes } from './types/webhook.types';
-import { Status } from '../payments/entities/payment.entity';
+import { PaymentFor, Status } from '../payments/entities/payment.entity';
 import { PaymentsService } from '../payments/payments.service';
 import { CardsService } from '../cards/cards.service';
+import { WalletsService } from '../wallets/wallets.service';
 import { WebhookEvents } from './events/webhook.events';
 import { Subject } from 'rxjs';
 import { WebsocketGateway } from '../../core/websocket/websocket.gateway';
@@ -26,6 +27,7 @@ export class WebhooksService {
     private readonly taskCron: TaskScheduler,
     private readonly paymentService: PaymentsService,
     private readonly cardService: CardsService,
+    private readonly walletsService: WalletsService,
     private readonly websocketGateway: WebsocketGateway,
   ) {}
   async createWebhook(body: PaystackWebhookData) {
@@ -66,22 +68,36 @@ export class WebhooksService {
       webhook.data.reference,
     );
     try {
-      await Promise.all([
-        this.paymentService.updatePayment(webhook.data.reference, {
-          status: Status.SUCCESSFUL,
-          metadata: {
-            ...webhook.data.metadata,
-          },
-          currency: webhook.data.currency,
-        }),
-        webhook.data?.authorization?.reusable
-          ? this.cardService.saveCardDetails(
-              webhook.data.authorization,
-              payment.userId,
-            )
-          : [],
-        this.deleteWebhook(webhook._id),
-      ]);
+      // Update payment status
+      await this.paymentService.updatePayment(webhook.data.reference, {
+        status: Status.SUCCESSFUL,
+        metadata: {
+          ...webhook.data.metadata,
+        },
+        currency: webhook.data.currency,
+      });
+
+      // Save card if reusable
+      if (webhook.data?.authorization?.reusable) {
+        await this.cardService.saveCardDetails(
+          webhook.data.authorization,
+          payment.userId,
+        );
+      }
+
+      // Credit wallet if this is a wallet top-up
+      if (payment.payment_for === PaymentFor.WALLET_TOPUP) {
+        const amount = Number(webhook.data.amount) / 100; // Paystack returns amount in kobo
+        await this.walletsService.creditWallet(
+          new Types.ObjectId(payment.userId),
+          amount,
+          webhook.data.reference,
+          `Wallet top-up via Paystack`,
+        );
+        this.logger.log(`Credited wallet for user ${payment.userId} with ₦${amount}`);
+      }
+
+      await this.deleteWebhook(webhook._id);
       this.logger.log('Updated payment and transaction successfully');
     } catch (e) {
       this.logger.error(e?.message, e);

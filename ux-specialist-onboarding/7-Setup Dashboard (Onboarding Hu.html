@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setup Dashboard - Rapid Capsule Specialist</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        rapid: {
+                            sky: '#4FC3F7',
+                            skyLight: '#E1F5FE',
+                            skyDark: '#0288D1',
+                            orange: '#FF9800',
+                            orangeLight: '#FFF3E0',
+                            orangeDark: '#F57C00',
+                            navy: '#1A365D',
+                            gray: '#F5F9FF',
+                            text: '#334155',
+                            success: '#4CAF50',
+                            error: '#EF4444',
+                            border: '#E2E8F0'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        display: ['Poppins', 'system-ui', 'sans-serif']
+                    },
+                    boxShadow: {
+                        'soft': '0 4px 20px -2px rgba(79, 195, 247, 0.15)',
+                        'card': '0 10px 30px -5px rgba(0, 0, 0, 0.05)',
+                        'glow': '0 0 15px rgba(79, 195, 247, 0.3)',
+                        'inner-light': 'inset 0 2px 4px 0 rgba(255, 255, 255, 0.3)',
+                        'input-focus': '0 0 0 4px rgba(79, 195, 247, 0.2)'
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    }
+                }
+            }
+        }
+        window.FontAwesomeConfig = { autoReplaceSvg: 'nest' };
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdn.plot.ly/plotly-3.1.1.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        .setup-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .setup-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 15px 30px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        .bg-grid-pattern {
+            background-image: radial-gradient(#4FC3F7 1px, transparent 1px);
+            background-size: 30px 30px;
+            opacity: 0.07;
+        }
+
+        .step-connector {
+            position: absolute;
+            top: 24px;
+            left: 15px;
+            bottom: -24px;
+            width: 2px;
+            background-color: #E2E8F0;
+            z-index: 0;
+        }
+        
+        .step-item:last-child .step-connector {
+            display: none;
+        }
+
+        .progress-ring__circle {
+            transition: stroke-dashoffset 0.35s;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 font-sans text-rapid-text antialiased h-[1024px] overflow-hidden flex flex-col relative w-[1440px] mx-auto">
+
+    <!-- Background Decoration -->
+    <div class="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+        <div class="absolute top-0 right-0 w-[600px] h-[600px] bg-rapid-skyLight/30 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
+        <div class="absolute bottom-0 left-0 w-[400px] h-[400px] bg-orange-50/40 rounded-full blur-3xl translate-y-1/2 -translate-x-1/4"></div>
+        <div class="absolute inset-0 bg-grid-pattern"></div>
+    </div>
+
+    <!-- Header -->
+    <header id="header" class="bg-white/90 backdrop-blur-md border-b border-slate-100 h-20 z-40 sticky top-0 flex-none px-8">
+        <div class="h-full flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-gradient-to-br from-rapid-sky to-rapid-skyDark rounded-xl flex items-center justify-center text-white shadow-glow">
+                    <i class="fa-solid fa-heart-pulse text-lg"></i>
+                </div>
+                <div>
+                    <span class="text-2xl font-bold text-rapid-navy font-display tracking-tight block leading-none">Rapid Capsule</span>
+                    <span class="text-[10px] font-medium text-slate-500 uppercase tracking-widest">Specialist Portal</span>
+                </div>
+            </div>
+
+            <!-- Setup Progress Tracker (Global) -->
+            <div class="hidden md:flex items-center gap-4 bg-slate-50 px-4 py-2 rounded-xl border border-slate-100">
+                <div class="flex flex-col items-end">
+                    <span class="text-xs font-bold text-rapid-navy">Setup Progress</span>
+                    <span class="text-[10px] text-slate-500">2 of 7 steps complete</span>
+                </div>
+                <div class="relative w-12 h-12">
+                    <svg class="w-12 h-12" viewBox="0 0 100 100">
+                        <circle class="text-slate-200 stroke-current" stroke-width="8" cx="50" cy="50" r="40" fill="transparent"></circle>
+                        <circle class="text-rapid-sky stroke-current progress-ring__circle" stroke-width="8" stroke-linecap="round" cx="50" cy="50" r="40" fill="transparent" stroke-dasharray="251.2" stroke-dashoffset="179.4"></circle> <!-- ~28% -->
+                    </svg>
+                    <div class="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-rapid-navy">28%</div>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-6">
+                <!-- Help Dropdown -->
+                <div class="relative group">
+                    <button class="flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-rapid-navy transition-colors">
+                        <i class="fa-regular fa-circle-question"></i>
+                        <span>Help Center</span>
+                        <i class="fa-solid fa-chevron-down text-xs"></i>
+                    </button>
+                    <!-- Dropdown Content -->
+                    <div class="absolute right-0 top-full mt-2 w-64 bg-white rounded-xl shadow-xl border border-slate-100 p-2 hidden group-hover:block z-50">
+                        <a href="#" class="flex items-center gap-3 px-3 py-2 hover:bg-slate-50 rounded-lg text-sm text-slate-600">
+                            <i class="fa-solid fa-message text-rapid-sky"></i> Chat with Support
+                        </a>
+                        <a href="#" class="flex items-center gap-3 px-3 py-2 hover:bg-slate-50 rounded-lg text-sm text-slate-600">
+                            <i class="fa-solid fa-book-medical text-rapid-sky"></i> Setup Guide
+                        </a>
+                    </div>
+                </div>
+
+                <div class="h-8 w-px bg-slate-200"></div>
+
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-full bg-slate-200 overflow-hidden border-2 border-white shadow-sm relative">
+                        <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" class="w-full h-full object-cover opacity-50 grayscale" alt="Placeholder">
+                        <div class="absolute inset-0 flex items-center justify-center bg-black/10">
+                            <i class="fa-solid fa-camera text-white text-xs drop-shadow-md"></i>
+                        </div>
+                    </div>
+                    <div class="hidden lg:block">
+                        <div class="text-sm font-bold text-rapid-navy leading-tight">Dr. Unverified</div>
+                        <div class="text-[10px] text-rapid-orange font-medium bg-rapid-orangeLight px-1.5 py-0.5 rounded inline-block mt-0.5">Setup In Progress</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Layout -->
+    <div class="flex-1 flex overflow-hidden relative z-10">
+        
+        <!-- Left Sidebar Navigation -->
+        <aside id="sidebar-nav" class="w-72 bg-white border-r border-slate-200 flex flex-col h-full flex-shrink-0">
+            <div class="p-6">
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 px-2">Main Menu</h3>
+                <nav class="space-y-1">
+                    <a href="#" class="flex items-center gap-3 px-3 py-2.5 bg-rapid-skyLight/50 text-rapid-skyDark font-bold rounded-xl border border-rapid-sky/20 transition-all">
+                        <i class="fa-solid fa-rocket w-5 text-center"></i>
+                        Setup Dashboard
+                    </a>
+                    <a href="#" class="flex items-center gap-3 px-3 py-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-all cursor-not-allowed opacity-60" title="Complete setup to access">
+                        <i class="fa-regular fa-calendar-check w-5 text-center"></i>
+                        Appointments
+                    </a>
+                    <a href="#" class="flex items-center gap-3 px-3 py-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-all cursor-not-allowed opacity-60" title="Complete setup to access">
+                        <i class="fa-solid fa-user-group w-5 text-center"></i>
+                        Patient Queue
+                    </a>
+                    <a href="#" class="flex items-center gap-3 px-3 py-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-all cursor-not-allowed opacity-60" title="Complete setup to access">
+                        <i class="fa-solid fa-wallet w-5 text-center"></i>
+                        Earnings
+                    </a>
+                </nav>
+
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mt-8 mb-4 px-2">Setup Steps</h3>
+                <div class="relative pl-2 space-y-0">
+                    <!-- Step 1 -->
+                    <div class="step-item relative pb-6 pl-8">
+                        <div class="step-connector"></div>
+                        <div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-rapid-success text-white flex items-center justify-center text-[10px] z-10 border-2 border-white shadow-sm">
+                            <i class="fa-solid fa-check"></i>
+                        </div>
+                        <div class="text-sm font-bold text-slate-400 line-through">Account Creation</div>
+                    </div>
+                    <!-- Step 2 -->
+                    <div class="step-item relative pb-6 pl-8">
+                        <div class="step-connector"></div>
+                        <div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-rapid-success text-white flex items-center justify-center text-[10px] z-10 border-2 border-white shadow-sm">
+                            <i class="fa-solid fa-check"></i>
+                        </div>
+                        <div class="text-sm font-bold text-slate-400 line-through">Quick Bio</div>
+                    </div>
+                    <!-- Step 3 (Current) -->
+                    <div class="step-item relative pb-6 pl-8">
+                        <div class="step-connector bg-slate-200"></div>
+                        <div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-white border-2 border-rapid-sky text-rapid-sky flex items-center justify-center text-[10px] z-10 shadow-glow">
+                            <div class="w-2 h-2 bg-rapid-sky rounded-full"></div>
+                        </div>
+                        <div class="text-sm font-bold text-rapid-navy">Setup Dashboard</div>
+                    </div>
+                    <!-- Step 4 -->
+                    <div class="step-item relative pb-6 pl-8">
+                        <div class="step-connector"></div>
+                        <div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-slate-100 border-2 border-slate-200 text-slate-400 flex items-center justify-center text-[10px] z-10">
+                            4
+                        </div>
+                        <div class="text-sm font-medium text-slate-400">Profile Config</div>
+                    </div>
+                    <!-- Step 5 -->
+                    <div class="step-item relative pb-6 pl-8">
+                        <div class="step-connector"></div>
+                        <div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-slate-100 border-2 border-slate-200 text-slate-400 flex items-center justify-center text-[10px] z-10">
+                            5
+                        </div>
+                        <div class="text-sm font-medium text-slate-400">Availability</div>
+                    </div>
+                    <!-- Step 6 -->
+                    <div class="step-item relative pb-6 pl-8">
+                        <div class="step-connector"></div>
+                        <div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-slate-100 border-2 border-slate-200 text-slate-400 flex items-center justify-center text-[10px] z-10">
+                            6
+                        </div>
+                        <div class="text-sm font-medium text-slate-400">Identity & Compliance</div>
+                    </div>
+                    <!-- Step 7 -->
+                    <div class="step-item relative pl-8">
+                        <div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-slate-100 border-2 border-slate-200 text-slate-400 flex items-center justify-center text-[10px] z-10">
+                            7
+                        </div>
+                        <div class="text-sm font-medium text-slate-400">Review & Activation</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Actions -->
+            <div class="mt-auto p-6 border-t border-slate-100">
+                <button class="w-full flex items-center justify-center gap-2 text-slate-500 hover:text-rapid-navy text-sm font-medium py-2 rounded-lg hover:bg-slate-50 transition-colors">
+                    <i class="fa-solid fa-gear"></i> Settings
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 overflow-y-auto bg-slate-50/50 p-10">
+            
+            <div class="max-w-5xl mx-auto pb-20">
+                <!-- Welcome Banner -->
+                <div class="mb-10 flex items-center justify-between">
+                    <div>
+                        <h1 class="text-3xl font-display font-bold text-rapid-navy mb-2">Welcome, Doctor.</h1>
+                        <p class="text-slate-500">Complete these steps to activate your practice and start seeing patients.</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <button class="px-4 py-2 bg-white border border-slate-200 text-slate-600 font-bold text-sm rounded-xl hover:bg-slate-50 shadow-sm transition-all">
+                            Save Draft
+                        </button>
+                        <button class="px-6 py-2 bg-rapid-orange text-white font-bold text-sm rounded-xl shadow-lg shadow-orange-200 hover:shadow-orange-300 hover:bg-rapid-orangeDark transition-all flex items-center gap-2">
+                            Resume Setup <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Alert Section -->
+                <div class="bg-rapid-orangeLight border border-rapid-orange/20 rounded-2xl p-4 flex items-start gap-4 mb-10 shadow-sm">
+                    <div class="w-10 h-10 rounded-full bg-white text-rapid-orangeDark flex items-center justify-center text-lg shadow-sm shrink-0">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="text-sm font-bold text-rapid-orangeDark">Outstanding Requirements</h3>
+                        <p class="text-sm text-slate-600 mt-1">You have <span class="font-bold">3 mandatory steps</span> remaining before you can go live. Your profile is currently hidden from search.</p>
+                    </div>
+                    <button class="text-xs font-bold text-rapid-orangeDark hover:underline mt-2">View Details</button>
+                </div>
+
+                <!-- Cards Grid -->
+                <div class="grid grid-cols-3 gap-6">
+                    
+                    <!-- 1. Profile Configuration (Next Step) -->
+                    <div class="setup-card bg-white rounded-2xl p-6 border border-rapid-sky shadow-lg shadow-sky-100 relative overflow-hidden group">
+                        <div class="absolute top-0 right-0 p-4">
+                            <span class="bg-rapid-sky text-white text-[10px] font-bold px-2 py-1 rounded shadow-sm">Next Step</span>
+                        </div>
+                        <div class="w-12 h-12 rounded-xl bg-rapid-skyLight text-rapid-skyDark flex items-center justify-center text-xl mb-4">
+                            <i class="fa-solid fa-user-doctor"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-rapid-navy mb-2">Profile Configuration</h3>
+                        <p class="text-xs text-slate-500 mb-4 leading-relaxed">Detailed bio, languages, and medical specializations for AI matching.</p>
+                        
+                        <div class="space-y-2 mb-6">
+                            <div class="flex items-center justify-between text-xs">
+                                <span class="text-slate-500">Completion</span>
+                                <span class="text-rapid-sky font-bold">10%</span>
+                            </div>
+                            <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                <div class="h-full bg-rapid-sky w-[10%] rounded-full"></div>
+                            </div>
+                        </div>
+
+                        <button class="w-full py-3 bg-rapid-sky text-white font-bold text-sm rounded-xl hover:bg-rapid-skyDark transition-colors shadow-md shadow-sky-100 flex items-center justify-center gap-2 group-hover:scale-[1.02] transform transition-transform">
+                            Start Configuration <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+
+                    <!-- 2. Availability Setup -->
+                    <div class="setup-card bg-white rounded-2xl p-6 border border-slate-200 opacity-90 hover:opacity-100 relative">
+                        <div class="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-xl mb-4">
+                            <i class="fa-regular fa-calendar-days"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-slate-700 mb-2">Availability</h3>
+                        <p class="text-xs text-slate-500 mb-4 leading-relaxed">Set your working hours, recurring slots, and vacation blocks.</p>
+                        
+                        <div class="space-y-2 mb-6 opacity-50">
+                            <div class="flex items-center justify-between text-xs">
+                                <span class="text-slate-400">Not Started</span>
+                                <span class="text-slate-400 font-bold">0%</span>
+                            </div>
+                            <div class="w-full h-1.5 bg-slate-100 rounded-full"></div>
+                        </div>
+
+                        <button class="w-full py-3 bg-white border border-slate-200 text-slate-500 font-bold text-sm rounded-xl hover:border-purple-200 hover:text-purple-600 hover:bg-purple-50 transition-all flex items-center justify-center gap-2">
+                            Configure Later
+                        </button>
+                    </div>
+
+                    <!-- 3. Rate Cards -->
+                    <div class="setup-card bg-white rounded-2xl p-6 border border-slate-200 opacity-90 hover:opacity-100 relative">
+                        <div class="w-12 h-12 rounded-xl bg-green-50 text-green-600 flex items-center justify-center text-xl mb-4">
+                            <i class="fa-solid fa-tags"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-slate-700 mb-2">Rate Cards</h3>
+                        <p class="text-xs text-slate-500 mb-4 leading-relaxed">Set fees for video consults, chat, and urgent care services.</p>
+                        
+                        <div class="space-y-2 mb-6 opacity-50">
+                            <div class="flex items-center justify-between text-xs">
+                                <span class="text-slate-400">Not Started</span>
+                                <span class="text-slate-400 font-bold">0%</span>
+                            </div>
+                            <div class="w-full h-1.5 bg-slate-100 rounded-full"></div>
+                        </div>
+
+                        <button class="w-full py-3 bg-white border border-slate-200 text-slate-500 font-bold text-sm rounded-xl hover:border-green-200 hover:text-green-600 hover:bg-green-50 transition-all flex items-center justify-center gap-2">
+                            Configure Later
+                        </button>
+                    </div>
+
+                    <!-- 4. Identity & Compliance -->
+                    <div class="setup-card bg-white rounded-2xl p-6 border border-slate-200 opacity-90 hover:opacity-100 relative">
+                        <div class="absolute top-0 right-0 p-4">
+                            <span class="bg-rapid-orangeLight text-rapid-orangeDark text-[10px] font-bold px-2 py-1 rounded shadow-sm flex items-center gap-1">
+                                <i class="fa-solid fa-lock text-[8px]"></i> Mandatory
+                            </span>
+                        </div>
+                        <div class="w-12 h-12 rounded-xl bg-orange-50 text-rapid-orange flex items-center justify-center text-xl mb-4">
+                            <i class="fa-solid fa-id-card-clip"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-slate-700 mb-2">Identity & Compliance</h3>
+                        <p class="text-xs text-slate-500 mb-4 leading-relaxed">Upload ID, medical credentials, and licenses for verification.</p>
+                        
+                        <div class="space-y-2 mb-6 opacity-50">
+                            <div class="flex items-center justify-between text-xs">
+                                <span class="text-slate-400">Not Started</span>
+                                <span class="text-slate-400 font-bold">0%</span>
+                            </div>
+                            <div class="w-full h-1.5 bg-slate-100 rounded-full"></div>
+                        </div>
+
+                        <button class="w-full py-3 bg-white border border-slate-200 text-slate-500 font-bold text-sm rounded-xl hover:border-rapid-orange hover:text-rapid-orange hover:bg-orange-50 transition-all flex items-center justify-center gap-2">
+                            Configure Later
+                        </button>
+                    </div>
+
+                    <!-- 5. Security & Comms -->
+                    <div class="setup-card bg-white rounded-2xl p-6 border border-slate-200 opacity-90 hover:opacity-100 relative">
+                        <div class="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl mb-4">
+                            <i class="fa-solid fa-shield-halved"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-slate-700 mb-2">Security & Comms</h3>
+                        <p class="text-xs text-slate-500 mb-4 leading-relaxed">2FA setup, notification preferences, and patient communication settings.</p>
+                        
+                        <div class="space-y-2 mb-6 opacity-50">
+                            <div class="flex items-center justify-between text-xs">
+                                <span class="text-slate-400">Not Started</span>
+                                <span class="text-slate-400 font-bold">0%</span>
+                            </div>
+                            <div class="w-full h-1.5 bg-slate-100 rounded-full"></div>
+                        </div>
+
+                        <button class="w-full py-3 bg-white border border-slate-200 text-slate-500 font-bold text-sm rounded-xl hover:border-blue-200 hover:text-blue-600 hover:bg-blue-50 transition-all flex items-center justify-center gap-2">
+                            Configure Later
+                        </button>
+                    </div>
+
+                    <!-- 6. Review & Activation -->
+                    <div class="setup-card bg-slate-50 rounded-2xl p-6 border border-slate-200 relative opacity-60 pointer-events-none">
+                        <div class="w-12 h-12 rounded-xl bg-slate-200 text-slate-400 flex items-center justify-center text-xl mb-4">
+                            <i class="fa-solid fa-power-off"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-slate-400 mb-2">Review & Activation</h3>
+                        <p class="text-xs text-slate-400 mb-4 leading-relaxed">Final review of all configurations and "Go Live" activation.</p>
+                        
+                        <div class="space-y-2 mb-6">
+                            <div class="flex items-center justify-between text-xs">
+                                <span class="text-slate-400">Locked</span>
+                            </div>
+                            <div class="w-full h-1.5 bg-slate-200 rounded-full"></div>
+                        </div>
+
+                        <button class="w-full py-3 bg-slate-100 border border-slate-200 text-slate-400 font-bold text-sm rounded-xl flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-lock text-xs"></i> Complete Steps First
+                        </button>
+                    </div>
+
+                </div>
+
+                <!-- Value Props / Info -->
+                <div class="mt-10 grid grid-cols-2 gap-6">
+                    <div class="bg-gradient-to-br from-rapid-navy to-slate-800 rounded-2xl p-6 text-white relative overflow-hidden">
+                        <div class="absolute right-0 top-0 text-[10rem] text-white opacity-5 -mr-10 -mt-10 pointer-events-none">
+                            <i class="fa-solid fa-earth-africa"></i>
+                        </div>
+                        <div class="relative z-10">
+                            <h3 class="text-lg font-bold mb-2">Why Complete Your Profile?</h3>
+                            <ul class="space-y-3 mt-4 text-sm text-slate-200">
+                                <li class="flex items-start gap-3">
+                                    <i class="fa-solid fa-check text-rapid-success mt-1"></i>
+                                    <span><strong>Higher Visibility:</strong> Complete profiles appear 3x more often in patient searches.</span>
+                                </li>
+                                <li class="flex items-start gap-3">
+                                    <i class="fa-solid fa-check text-rapid-success mt-1"></i>
+                                    <span><strong>AI Triage Matching:</strong> Accurate specializations help us send you relevant urgent cases.</span>
+                                </li>
+                                <li class="flex items-start gap-3">
+                                    <i class="fa-solid fa-check text-rapid-success mt-1"></i>
+                                    <span><strong>Verified Badge:</strong> Build instant trust with patients across Africa and the Diaspora.</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="bg-white border border-slate-200 rounded-2xl p-6 flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center gap-2 mb-2">
+                                <i class="fa-brands fa-whatsapp text-green-500 text-xl"></i>
+                                <h3 class="text-lg font-bold text-rapid-navy">Need Fast Verification?</h3>
+                            </div>
+                            <p class="text-sm text-slate-500 mb-4">You can submit your documents directly via WhatsApp for expedited review by our compliance team.</p>
+                        </div>
+                        <button class="w-full py-3 bg-slate-50 text-slate-700 font-bold text-sm rounded-xl hover:bg-green-50 hover:text-green-600 transition-colors border border-slate-200 hover:border-green-200 flex items-center justify-center gap-2">
+                            Start WhatsApp Verification
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+</body>
+</html>

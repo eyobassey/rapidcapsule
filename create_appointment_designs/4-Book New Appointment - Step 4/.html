@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book New Appointment - Fee & Channel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>::-webkit-scrollbar { display: none;}</style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Inter', 'sans-serif']
+                    },
+                    colors: {
+                        'primary': '#3B82F6',
+                        'primary-dark': '#2563EB',
+                        'success': '#10B981',
+                        'danger': '#EF4444',
+                        'warning': '#F59E0B',
+                        'gray-50': '#F9FAFB',
+                        'gray-100': '#F3F4F6',
+                        'gray-200': '#E5E7EB',
+                        'gray-300': '#D1D5DB',
+                        'gray-400': '#9CA3AF',
+                        'gray-500': '#6B7280',
+                        'gray-600': '#4B5563',
+                        'gray-700': '#374151',
+                        'gray-800': '#1F2937',
+                        'gray-900': '#111827'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 font-sans">
+
+<div id="sidebar" class="fixed left-0 top-0 h-full w-64 bg-white border-r border-gray-200 z-50">
+    <div class="p-6 border-b border-gray-200">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+                <i class="fa-solid fa-video text-white text-lg"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold text-gray-900">TeleHealth</h1>
+                <p class="text-xs text-gray-500">Medical Platform</p>
+            </div>
+        </div>
+    </div>
+    
+    <nav id="main-navigation" class="p-4">
+        <div class="space-y-1">
+            <a href="#" class="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+                <i class="fa-solid fa-calendar-days w-5 text-gray-400"></i>
+                <span class="font-medium">Dashboard</span>
+            </a>
+            <a href="#" class="flex items-center space-x-3 px-4 py-3 text-white bg-primary rounded-lg">
+                <i class="fa-solid fa-clock w-5"></i>
+                <span class="font-medium">Appointments</span>
+            </a>
+            <a href="#" class="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+                <i class="fa-solid fa-users w-5 text-gray-400"></i>
+                <span class="font-medium">Patients</span>
+            </a>
+            <a href="#" class="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+                <i class="fa-solid fa-file-medical w-5 text-gray-400"></i>
+                <span class="font-medium">Clinical Notes</span>
+            </a>
+            <a href="#" class="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+                <i class="fa-solid fa-prescription-bottle-medical w-5 text-gray-400"></i>
+                <span class="font-medium">Pharmacy</span>
+            </a>
+            <a href="#" class="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+                <i class="fa-solid fa-chart-line w-5 text-gray-400"></i>
+                <span class="font-medium">Analytics</span>
+            </a>
+        </div>
+        
+        <div class="mt-8 pt-8 border-t border-gray-200">
+            <p class="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Settings</p>
+            <div class="space-y-1">
+                <a href="#" class="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+                    <i class="fa-solid fa-gear w-5 text-gray-400"></i>
+                    <span class="font-medium">Practice Settings</span>
+                </a>
+                <a href="#" class="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+                    <i class="fa-solid fa-user-circle w-5 text-gray-400"></i>
+                    <span class="font-medium">Account</span>
+                </a>
+            </div>
+        </div>
+    </nav>
+    
+    <div id="sidebar-footer" class="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 bg-white">
+        <div class="flex items-center space-x-3 px-2">
+            <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt="Doctor" class="w-10 h-10 rounded-full object-cover">
+            <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold text-gray-900 truncate">Dr. John Smith</p>
+                <p class="text-xs text-gray-500 truncate">Cardiologist</p>
+            </div>
+            <button class="text-gray-400 hover:text-gray-600">
+                <i class="fa-solid fa-ellipsis-vertical"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<div id="header" class="fixed top-0 left-64 right-0 bg-white border-b border-gray-200 z-40">
+    <div class="px-8 py-4">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <button onclick="window.history.back()" class="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors">
+                    <i class="fa-solid fa-chevron-left"></i>
+                    <span class="font-medium">Back</span>
+                </button>
+            </div>
+            <div class="flex items-center space-x-3">
+                <button onclick="window.history.back()" class="px-5 py-2.5 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors">
+                    <i class="fa-solid fa-xmark mr-2"></i>Cancel
+                </button>
+                <button class="relative p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">
+                    <i class="fa-solid fa-bell text-lg"></i>
+                    <span class="absolute top-1 right-1 w-2 h-2 bg-danger rounded-full"></span>
+                </button>
+                <div class="flex items-center space-x-3 pl-4 border-l border-gray-200">
+                    <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt="Profile" class="w-9 h-9 rounded-full object-cover">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<main id="main-content" class="ml-64 pt-20 pb-24">
+    <div class="px-8 max-w-7xl mx-auto">
+        
+        <section id="appointment-booking-header" class="mb-8">
+            <div class="mb-6">
+                <h1 class="text-3xl font-bold text-gray-900 mb-2">Book New Appointment</h1>
+                <p class="text-gray-500 text-lg">Step 4 of 6: Fee & Channel Details</p>
+            </div>
+
+            <div id="progress-indicator" class="flex items-center justify-between mb-8">
+                <div class="flex items-center space-x-3 flex-1">
+                    <div class="flex items-center justify-center w-10 h-10 bg-success text-white font-bold rounded-full">
+                        <i class="fa-solid fa-check text-sm"></i>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-900">Patient</p>
+                        <p class="text-xs text-gray-500">Selected</p>
+                    </div>
+                </div>
+                <div class="flex-1 h-0.5 bg-success mx-4"></div>
+                <div class="flex items-center space-x-3 flex-1">
+                    <div class="flex items-center justify-center w-10 h-10 bg-success text-white font-bold rounded-full">
+                        <i class="fa-solid fa-check text-sm"></i>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-900">Type</p>
+                        <p class="text-xs text-gray-500">Completed</p>
+                    </div>
+                </div>
+                <div class="flex-1 h-0.5 bg-success mx-4"></div>
+                <div class="flex items-center space-x-3 flex-1">
+                    <div class="flex items-center justify-center w-10 h-10 bg-success text-white font-bold rounded-full">
+                        <i class="fa-solid fa-check text-sm"></i>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-900">Schedule</p>
+                        <p class="text-xs text-gray-500">Completed</p>
+                    </div>
+                </div>
+                <div class="flex-1 h-0.5 bg-success mx-4"></div>
+                <div class="flex items-center space-x-3 flex-1">
+                    <div class="flex items-center justify-center w-10 h-10 bg-primary text-white font-bold rounded-full">4</div>
+                    <div>
+                        <p class="font-semibold text-gray-900">Fee & Channel</p>
+                        <p class="text-xs text-primary font-medium">Current step</p>
+                    </div>
+                </div>
+                <div class="flex-1 h-0.5 bg-gray-200 mx-4"></div>
+                <div class="flex items-center space-x-3 flex-1">
+                    <div class="flex items-center justify-center w-10 h-10 bg-gray-200 text-gray-500 font-bold rounded-full">5</div>
+                    <div>
+                        <p class="font-semibold text-gray-500">Notes</p>
+                        <p class="text-xs text-gray-400">Pending</p>
+                    </div>
+                </div>
+                <div class="flex-1 h-0.5 bg-gray-200 mx-4"></div>
+                <div class="flex items-center space-x-3 flex-1">
+                    <div class="flex items-center justify-center w-10 h-10 bg-gray-200 text-gray-500 font-bold rounded-full">6</div>
+                    <div>
+                        <p class="font-semibold text-gray-500">Review</p>
+                        <p class="text-xs text-gray-400">Pending</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="grid grid-cols-12 gap-6">
+            
+            <div class="col-span-8">
+                
+                <section id="fee-structure-section" class="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+                    <h2 class="text-xl font-bold text-gray-900 mb-6">Fee Structure</h2>
+                    
+                    <div class="mb-6">
+                        <label class="block text-sm font-semibold text-gray-700 mb-3">Payment Type</label>
+                        <div class="grid grid-cols-2 gap-4">
+                            <label class="relative flex items-center p-5 border-2 border-primary bg-blue-50 rounded-xl cursor-pointer">
+                                <input type="radio" name="payment-type" value="insurance" checked class="w-5 h-5 text-primary border-gray-300 focus:ring-primary">
+                                <div class="ml-4 flex-1">
+                                    <div class="flex items-center justify-between mb-1">
+                                        <p class="font-bold text-gray-900">Insurance</p>
+                                        <i class="fa-solid fa-shield-halved text-primary text-xl"></i>
+                                    </div>
+                                    <p class="text-sm text-gray-600">Patient has insurance coverage</p>
+                                </div>
+                            </label>
+                            
+                            <label class="relative flex items-center p-5 border-2 border-gray-200 rounded-xl cursor-pointer hover:border-gray-300 hover:bg-gray-50 transition-all">
+                                <input type="radio" name="payment-type" value="self-pay" class="w-5 h-5 text-primary border-gray-300 focus:ring-primary">
+                                <div class="ml-4 flex-1">
+                                    <div class="flex items-center justify-between mb-1">
+                                        <p class="font-bold text-gray-900">Self-Pay</p>
+                                        <i class="fa-solid fa-wallet text-gray-400 text-xl"></i>
+                                    </div>
+                                    <p class="text-sm text-gray-600">Patient pays out of pocket</p>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="insurance-details" class="mb-6 p-5 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div class="flex items-start justify-between mb-4">
+                            <div>
+                                <h3 class="font-bold text-gray-900 mb-1">Insurance Information</h3>
+                                <p class="text-sm text-gray-600">Patient's insurance coverage details</p>
+                            </div>
+                            <span class="px-3 py-1 bg-success text-white text-xs font-bold rounded-full">
+                                <i class="fa-solid fa-check-circle mr-1"></i>Verified
+                            </span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <p class="text-xs text-gray-600 mb-1">Insurance Provider</p>
+                                <p class="font-semibold text-gray-900">Blue Cross Blue Shield</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-600 mb-1">Policy Number</p>
+                                <p class="font-semibold text-gray-900">BCBS-4582-9371</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-600 mb-1">Group Number</p>
+                                <p class="font-semibold text-gray-900">GRP-8829</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-600 mb-1">Coverage Status</p>
+                                <p class="font-semibold text-success">Active</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-6 mb-6">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Consultation Fee</label>
+                            <div class="relative">
+                                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-semibold">$</span>
+                                <input type="number" value="150.00" class="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent font-semibold text-gray-900">
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1.5">Standard consultation rate</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Patient Copay</label>
+                            <div class="relative">
+                                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-semibold">$</span>
+                                <input type="number" value="25.00" class="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent font-semibold text-gray-900">
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1.5">Amount patient pays</p>
+                        </div>
+                    </div>
+
+                    <div class="border-t border-gray-200 pt-6">
+                        <h3 class="font-bold text-gray-900 mb-4">Fee Breakdown</h3>
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between py-2">
+                                <span class="text-gray-700">Total Consultation Fee</span>
+                                <span class="font-bold text-gray-900">$150.00</span>
+                            </div>
+                            <div class="flex items-center justify-between py-2">
+                                <span class="text-gray-700">Insurance Coverage (80%)</span>
+                                <span class="font-bold text-success">-$120.00</span>
+                            </div>
+                            <div class="flex items-center justify-between py-2">
+                                <span class="text-gray-700">Administrative Fee</span>
+                                <span class="font-bold text-gray-900">$5.00</span>
+                            </div>
+                            <div class="flex items-center justify-between py-3 border-t-2 border-gray-300">
+                                <span class="text-lg font-bold text-gray-900">Patient Responsibility</span>
+                                <span class="text-2xl font-bold text-primary">$35.00</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="payment-collection-section" class="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <div>
+                            <h2 class="text-xl font-bold text-gray-900">Payment Collection</h2>
+                            <p class="text-sm text-gray-600 mt-1">Configure when and how payment is collected</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" checked class="sr-only peer">
+                            <div class="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-primary"></div>
+                            <span class="ml-3 text-sm font-semibold text-gray-900">Collect Payment</span>
+                        </label>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-4 mb-6">
+                        <label class="relative flex flex-col items-center p-5 border-2 border-primary bg-blue-50 rounded-xl cursor-pointer">
+                            <input type="radio" name="payment-timing" value="booking" checked class="sr-only">
+                            <i class="fa-solid fa-calendar-check text-primary text-3xl mb-3"></i>
+                            <p class="font-bold text-gray-900 text-center mb-1">At Booking</p>
+                            <p class="text-xs text-gray-600 text-center">Collect immediately</p>
+                        </label>
+
+                        <label class="relative flex flex-col items-center p-5 border-2 border-gray-200 rounded-xl cursor-pointer hover:border-gray-300 hover:bg-gray-50 transition-all">
+                            <input type="radio" name="payment-timing" value="before" class="sr-only">
+                            <i class="fa-solid fa-clock text-gray-400 text-3xl mb-3"></i>
+                            <p class="font-bold text-gray-900 text-center mb-1">Before Appointment</p>
+                            <p class="text-xs text-gray-600 text-center">24 hours before</p>
+                        </label>
+
+                        <label class="relative flex flex-col items-center p-5 border-2 border-gray-200 rounded-xl cursor-pointer hover:border-gray-300 hover:bg-gray-50 transition-all">
+                            <input type="radio" name="payment-timing" value="after" class="sr-only">
+                            <i class="fa-solid fa-circle-check text-gray-400 text-3xl mb-3"></i>
+                            <p class="font-bold text-gray-900 text-center mb-1">After Appointment</p>
+                            <p class="text-xs text-gray-600 text-center">Upon completion</p>
+                        </label>
+                    </div>
+
+                    <div class="border-t border-gray-200 pt-6">
+                        <h3 class="font-bold text-gray-900 mb-4">Payment Methods Accepted</h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <label class="flex items-center p-4 border-2 border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                                <input type="checkbox" checked class="w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary">
+                                <div class="ml-3 flex items-center space-x-3 flex-1">
+                                    <i class="fa-solid fa-credit-card text-gray-600 text-xl"></i>
+                                    <span class="font-semibold text-gray-900">Credit/Debit Card</span>
+                                </div>
+                            </label>
+
+                            <label class="flex items-center p-4 border-2 border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                                <input type="checkbox" checked class="w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary">
+                                <div class="ml-3 flex items-center space-x-3 flex-1">
+                                    <i class="fa-brands fa-cc-paypal text-gray-600 text-xl"></i>
+                                    <span class="font-semibold text-gray-900">PayPal</span>
+                                </div>
+                            </label>
+
+                            <label class="flex items-center p-4 border-2 border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                                <input type="checkbox" class="w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary">
+                                <div class="ml-3 flex items-center space-x-3 flex-1">
+                                    <i class="fa-brands fa-apple text-gray-600 text-xl"></i>
+                                    <span class="font-semibold text-gray-900">Apple Pay</span>
+                                </div>
+                            </label>
+
+                            <label class="flex items-center p-4 border-2 border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                                <input type="checkbox" class="w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary">
+                                <div class="ml-3 flex items-center space-x-3 flex-1">
+                                    <i class="fa-brands fa-google-pay text-gray-600 text-xl"></i>
+                                    <span class="font-semibold text-gray-900">Google Pay</span>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                        <div class="flex items-start space-x-3">
+                            <i class="fa-solid fa-shield-check text-success text-lg mt-0.5"></i>
+                            <div>
+                                <p class="font-semibold text-gray-900 mb-1">Secure Payment Processing</p>
+                                <p class="text-sm text-gray-700">All transactions are encrypted and PCI DSS compliant. Patient payment information is securely stored.</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="channel-details-section" class="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+                    <h2 class="text-xl font-bold text-gray-900 mb-6">Channel Details</h2>
+                    
+                    <div class="mb-6">
+                        <label class="block text-sm font-semibold text-gray-700 mb-3">Appointment Channel</label>
+                        <div class="grid grid-cols-3 gap-4">
+                            <label class="relative flex flex-col items-center p-5 border-2 border-primary bg-blue-50 rounded-xl cursor-pointer">
+                                <input type="radio" name="channel" value="video" checked class="sr-only">
+                                <i class="fa-solid fa-video text-primary text-3xl mb-3"></i>
+                                <p class="font-bold text-gray-900 text-center mb-1">Video Call</p>
+                                <p class="text-xs text-gray-600 text-center">Virtual consultation</p>
+                            </label>
+
+                            <label class="relative flex flex-col items-center p-5 border-2 border-gray-200 rounded-xl cursor-pointer hover:border-gray-300 hover:bg-gray-50 transition-all">
+                                <input type="radio" name="channel" value="clinic" class="sr-only">
+                                <i class="fa-solid fa-hospital text-gray-400 text-3xl mb-3"></i>
+                                <p class="font-bold text-gray-900 text-center mb-1">In-Clinic</p>
+                                <p class="text-xs text-gray-600 text-center">Physical visit</p>
+                            </label>
+
+                            <label class="relative flex flex-col items-center p-5 border-2 border-gray-200 rounded-xl cursor-pointer hover:border-gray-300 hover:bg-gray-50 transition-all">
+                                <input type="radio" name="channel" value="phone" class="sr-only">
+                                <i class="fa-solid fa-phone text-gray-400 text-3xl mb-3"></i>
+                                <p class="font-bold text-gray-900 text-center mb-1">Phone Call</p>
+                                <p class="text-xs text-gray-600 text-center">Audio only</p>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="video-channel-details" class="border-t border-gray-200 pt-6">
+                        <h3 class="font-bold text-gray-900 mb-4">Video Call Configuration</h3>
+                        
+                        <div class="mb-6">
+                            <label class="block text-sm font-semibold text-gray-700 mb-3">Video Platform</label>
+                            <div class="grid grid-cols-3 gap-3">
+                                <label class="flex items-center p-4 border-2 border-primary bg-blue-50 rounded-lg cursor-pointer">
+                                    <input type="radio" name="video-platform" value="zoom" checked class="w-5 h-5 text-primary border-gray-300 focus:ring-primary">
+                                    <div class="ml-3 flex items-center space-x-2">
+                                        <i class="fa-solid fa-video text-primary text-lg"></i>
+                                        <span class="font-semibold text-gray-900">Zoom</span>
+                                    </div>
+                                </label>
+
+                                <label class="flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-gray-300">
+                                    <input type="radio" name="video-platform" value="teams" class="w-5 h-5 text-primary border-gray-300 focus:ring-primary">
+                                    <div class="ml-3 flex items-center space-x-2">
+                                        <i class="fa-brands fa-microsoft text-gray-600 text-lg"></i>
+                                        <span class="font-semibold text-gray-900">Teams</span>
+                                    </div>
+                                </label>
+
+                                <label class="flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-gray-300">
+                                    <input type="radio" name="video-platform" value="meet" class="w-5 h-5 text-primary border-gray-300 focus:ring-primary">
+                                    <div class="ml-3 flex items-center space-x-2">
+                                        <i class="fa-brands fa-google text-gray-600 text-lg"></i>
+                                        <span class="font-semibold text-gray-900">Meet</span>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="p-5 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-xl mb-6">
+                            <div class="flex items-start justify-between mb-4">
+                                <div>
+                                    <h4 class="font-bold text-gray-900 mb-1">Auto-Generate Meeting Link</h4>
+                                    <p class="text-sm text-gray-600">Meeting link will be created automatically</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" checked class="sr-only peer">
+                                    <div class="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-primary"></div>
+                                </label>
+                            </div>
+                            <div class="flex items-center space-x-2 text-sm text-gray-700">
+                                <i class="fa-solid fa-sparkles text-purple-600"></i>
+                                <span>Link will be generated and sent to both parties automatically</span>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-6">
+                            <div>
+                                <label class="flex items-center mb-3">
+                                    <input type="checkbox" checked class="w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary">
+                                    <span class="ml-3 font-semibold text-gray-900">Enable Waiting Room</span>
+                                </label>
+                                <p class="text-sm text-gray-600 ml-8">Patients wait before doctor admits them</p>
+                            </div>
+
+                            <div>
+                                <label class="flex items-center mb-3">
+                                    <input type="checkbox" checked class="w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary">
+                                    <span class="ml-3 font-semibold text-gray-900">Record Session</span>
+                                </label>
+                                <p class="text-sm text-gray-600 ml-8">Automatically record for medical records</p>
+                            </div>
+
+                            <div>
+                                <label class="flex items-center mb-3">
+                                    <input type="checkbox" class="w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary">
+                                    <span class="ml-3 font-semibold text-gray-900">Require Password</span>
+                                </label>
+                                <p class="text-sm text-gray-600 ml-8">Additional security for meeting access</p>
+                            </div>
+
+                            <div>
+                                <label class="flex items-center mb-3">
+                                    <input type="checkbox" checked class="w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary">
+                                    <span class="ml-3 font-semibold text-gray-900">Screen Sharing</span>
+                                </label>
+                                <p class="text-sm text-gray-600 ml-8">Allow sharing of medical documents</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="clinic-channel-details" class="hidden border-t border-gray-200 pt-6">
+                        <h3 class="font-bold text-gray-900 mb-4">Clinic Location</h3>
+                        
+                        <div class="mb-6">
+                            <label class="block text-sm font-semibold text-gray-700 mb-3">Select Clinic</label>
+                            <select class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                                <option>Main Clinic - 123 Medical Plaza, Suite 400</option>
+                                <option>Downtown Branch - 456 Health Street, 2nd Floor</option>
+                                <option>Westside Office - 789 Wellness Ave, Building B</option>
+                            </select>
+                        </div>
+
+                        <div class="p-5 bg-gray-50 border border-gray-200 rounded-lg">
+                            <h4 class="font-bold text-gray-900 mb-3">Selected Location Details</h4>
+                            <div class="space-y-3">
+                                <div class="flex items-start space-x-3">
+                                    <i class="fa-solid fa-location-dot text-primary mt-1"></i>
+                                    <div>
+                                        <p class="font-semibold text-gray-900">Main Clinic</p>
+                                        <p class="text-sm text-gray-600">123 Medical Plaza, Suite 400, London, UK</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-start space-x-3">
+                                    <i class="fa-solid fa-phone text-primary mt-1"></i>
+                                    <div>
+                                        <p class="text-sm text-gray-600">+44 20 7946 0958</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-start space-x-3">
+                                    <i class="fa-solid fa-clock text-primary mt-1"></i>
+                                    <div>
+                                        <p class="text-sm text-gray-600">Mon-Fri: 8:00 AM - 6:00 PM</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-6">
+                            <label class="flex items-center">
+                                <input type="checkbox" checked class="w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary">
+                                <span class="ml-3 font-semibold text-gray-900">Send directions to patient</span>
+                            </label>
+                            <p class="text-sm text-gray-600 ml-8 mt-1">Include map and parking information</p>
+                        </div>
+                    </div>
+
+                    <div id="phone-channel-details" class="hidden border-t border-gray-200 pt-6">
+                        <h3 class="font-bold text-gray-900 mb-4">Phone Call Configuration</h3>
+                        
+                        <div class="mb-6">
+                            <label class="block text-sm font-semibold text-gray-700 mb-3">Who initiates the call?</label>
+                            <div class="grid grid-cols-2 gap-4">
+                                <label class="flex items-center p-4 border-2 border-primary bg-blue-50 rounded-lg cursor-pointer">
+                                    <input type="radio" name="call-initiator" value="doctor" checked class="w-5 h-5 text-primary border-gray-300 focus:ring-primary">
+                                    <div class="ml-3">
+                                        <p class="font-semibold text-gray-900">Doctor Calls Patient</p>
+                                        <p class="text-xs text-gray-600 mt-1">You will call the patient</p>
+                                    </div>
+                                </label>
+
+                                <label class="flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-gray-300">
+                                    <input type="radio" name="call-initiator" value="patient" class="w-5 h-5 text-primary border-gray-300 focus:ring-primary">
+                                    <div class="ml-3">
+                                        <p class="font-semibold text-gray-900">Patient Calls Doctor</p>
+                                        <p class="text-xs text-gray-600 mt-1">Patient calls your number</p>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Patient Phone Number</label>
+                            <input type="tel" value="+44 7700 900123" readonly class="w-full px-4 py-3 border border-gray-300 bg-gray-50 rounded-lg font-semibold text-gray-900">
+                            <p class="text-xs text-gray-500 mt-1.5">From patient profile</p>
+                        </div>
+
+                        <div class="mt-6">
+                            <label class="flex items-center">
+                                <input type="checkbox" checked class="w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary">
+                                <span class="ml-3 font-semibold text-gray-900">Record phone call</span>
+                            </label>
+                            <p class="text-sm text-gray-600 ml-8 mt-1">For medical documentation purposes</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="additional-settings-section" class="bg-white rounded-xl border border-gray-200 p-6">
+                    <h2 class="text-xl font-bold text-gray-900 mb-6">Additional Settings</h2>
+                    
+                    <div class="space-y-5">
+                        <div class="flex items-start justify-between p-4 bg-gray-50 rounded-lg">
+                            <div class="flex items-start space-x-3 flex-1">
+                                <i class="fa-solid fa-file-invoice-dollar text-primary text-xl mt-1"></i>
+                                <div>
+                                    <p class="font-semibold text-gray-900 mb-1">Generate Invoice</p>
+                                    <p class="text-sm text-gray-600">Automatically create and send invoice after appointment</p>
+                                </div>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" checked class="sr-only peer">
+                                <div class="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-primary"></div>
+                            </label>
+                        </div>
+
+                        <div class="flex items-start justify-between p-4 bg-gray-50 rounded-lg">
+                            <div class="flex items-start space-x-3 flex-1">
+                                <i class="fa-solid fa-receipt text-primary text-xl mt-1"></i>
+                                <div>
+                                    <p class="font-semibold text-gray-900 mb-1">Send Payment Receipt</p>
+                                    <p class="text-sm text-gray-600">Email receipt to patient after successful payment</p>
+                                </div>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" checked class="sr-only peer">
+                                <div class="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-primary"></div>
+                            </label>
+                        </div>
+
+                        <div class="flex items-start justify-between p-4 bg-gray-50 rounded-lg">
+                            <div class="flex items-start space-x-3 flex-1">
+                                <i class="fa-solid fa-money-bill-transfer text-primary text-xl mt-1"></i>
+                                <div>
+                                    <p class="font-semibold text-gray-900 mb-1">Allow Refunds</p>
+                                    <p class="text-sm text-gray-600">Enable refund option if appointment is cancelled</p>
+                                </div>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" checked class="sr-only peer">
+                                <div class="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-primary"></div>
+                            </label>
+                        </div>
+
+                        <div class="flex items-start justify-between p-4 bg-gray-50 rounded-lg">
+                            <div class="flex items-start space-x-3 flex-1">
+                                <i class="fa-solid fa-envelope text-primary text-xl mt-1"></i>
+                                <div>
+                                    <p class="font-semibold text-gray-900 mb-1">Send Payment Link</p>
+                                    <p class="text-sm text-gray-600">Email secure payment link to patient before appointment</p>
+                                </div>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" class="sr-only peer">
+                                <div class="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-primary"></div>
+                            </label>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+
+            <div class="col-span-4">
+                
+                <section id="cost-summary-card" class="bg-gradient-to-br from-green-50 to-white rounded-xl border border-green-200 p-6 mb-6 sticky top-24">
+                    <h3 class="text-lg font-bold text-gray-900 mb-5 flex items-center">
+                        <i class="fa-solid fa-dollar-sign text-success mr-2"></i>Patient Cost Summary
+                    </h3>
+                    
+                    <div class="bg-white rounded-xl p-5 border border-gray-200 mb-5">
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between pb-3 border-b border-gray-100">
+                                <span class="text-sm text-gray-600">Consultation Fee</span>
+                                <span class="font-bold text-gray-900">$150.00</span>
+                            </div>
+                            
+                            <div class="flex items-center justify-between pb-3 border-b border-gray-100">
+                                <span class="text-sm text-gray-600">Insurance Coverage</span>
+                                <span class="font-bold text-success">-$120.00</span>
+                            </div>
+                            
+                            <div class="flex items-center justify-between pb-3 border-b border-gray-100">
+                                <span class="text-sm text-gray-600">Copay Amount</span>
+                                <span class="font-bold text-gray-900">$25.00</span>
+                            </div>
+                            
+                            <div class="flex items-center justify-between pb-3 border-b border-gray-100">
+                                <span class="text-sm text-gray-600">Administrative Fee</span>
+                                <span class="font-bold text-gray-900">$5.00</span>
+                            </div>
+                            
+                            <div class="flex items-center justify-between pb-3 border-b border-gray-100">
+                                <span class="text-sm text-gray-600">Processing Fee</span>
+                                <span class="font-bold text-gray-900">$5.00</span>
+                            </div>
+                            
+                            <div class="flex items-center justify-between pt-3 border-t-2 border-gray-300">
+                                <span class="text-lg font-bold text-gray-900">Patient Pays</span>
+                                <span class="text-2xl font-bold text-primary">$35.00</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3">
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                            <div class="flex items-center space-x-2 text-sm">
+                                <i class="fa-solid fa-calendar-check text-primary"></i>
+                                <span class="text-gray-700 font-medium">Collect at booking</span>
+                            </div>
+                        </div>
+
+                        <div class="bg-green-50 border border-green-200 rounded-lg p-3">
+                            <div class="flex items-center space-x-2 text-sm">
+                                <i class="fa-solid fa-shield-check text-success"></i>
+                                <span class="text-gray-700 font-medium">Insurance verified</span>
+                            </div>
+                        </div>
+
+                        <div class="bg-purple-50 border border-purple-200 rounded-lg p-3">
+                            <div class="flex items-center space-x-2 text-sm">
+                                <i class="fa-solid fa-receipt text-purple-600"></i>
+                                <span class="text-gray-700 font-medium">Auto-generate invoice</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="w-full mt-5 px-4 py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition-colors">
+                        <i class="fa-solid fa-calculator mr-2"></i>Recalculate Costs
+                    </button>
+                </section>
+
+                <section id="channel-info-card" class="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+                    <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                        <i class="fa-solid fa-video text-primary mr-2"></i>Channel Information
+                    </h3>
+                    
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between py-2 border-b border-gray-100">
+                            <span class="text-sm text-gray-600">Type</span>
+                            <span class="font-semibold text-gray-900">Video Call</span>
+                        </div>
+
+                        <div class="flex items-center justify-between py-2 border-b border-gray-100">
+                            <span class="text-sm text-gray-600">Platform</span>
+                            <span class="font-semibold text-gray-900">Zoom</span>
+                        </div>
+
+                        <div class="flex items-center justify-between py-2 border-b border-gray-100">
+                            <span class="text-sm text-gray-600">Link Generation</span>
+                            <span class="px-2 py-1 bg-green-100 text-success text-xs font-bold rounded">Auto</span>
+                        </div>
+
+                        <div class="flex items-center justify-between py-2 border-b border-gray-100">
+                            <span class="text-sm text-gray-600">Waiting Room</span>
+                            <span class="px-2 py-1 bg-blue-100 text-primary text-xs font-bold rounded">Enabled</span>
+                        </div>
+
+                        <div class="flex items-center justify-between py-2 border-b border-gray-100">
+                            <span class="text-sm text-gray-600">Recording</span>
+                            <span class="px-2 py-1 bg-blue-100 text-primary text-xs font-bold rounded">Enabled</span>
+                        </div>
+
+                        <div class="flex items-center justify-between py-2">
+                            <span class="text-sm text-gray-600">Screen Sharing</span>
+                            <span class="px-2 py-1 bg-blue-100 text-primary text-xs font-bold rounded">Enabled</span>
+                        </div>
+                    </div>
+
+                    <div class="mt-5 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div class="flex items-start space-x-3">
+                            <i class="fa-solid fa-info-circle text-primary text-lg mt-0.5"></i>
+                            <div>
+                                <p class="font-semibold text-gray-900 mb-1">Meeting Link</p>
+                                <p class="text-sm text-gray-700">Will be generated automatically and sent to both parties 1 hour before appointment</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="appointment-summary-sidebar" class="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+                    <h3 class="text-lg font-bold text-gray-900 mb-5 flex items-center">
+                        <i class="fa-solid fa-list-check text-gray-600 mr-2"></i>Appointment Summary
+                    </h3>
+                    
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between py-2 border-b border-gray-100">
+                            <span class="text-sm text-gray-600">Patient</span>
+                            <span class="font-semibold text-gray-900">Sarah Johnson</span>
+                        </div>
+
+                        <div class="flex items-center justify-between py-2 border-b border-gray-100">
+                            <span class="text-sm text-gray-600">Type</span>
+                            <span class="font-semibold text-gray-900">Initial Consultation</span>
+                        </div>
+
+                        <div class="flex items-center justify-between py-2 border-b border-gray-100">
+                            <span class="text-sm text-gray-600">Date</span>
+                            <span class="font-semibold text-gray-900">Jan 29, 2026</span>
+                        </div>
+
+                        <div class="flex items-center justify-between py-2 border-b border-gray-100">
+                            <span class="text-sm text-gray-600">Time</span>
+                            <span class="font-semibold text-gray-900">09:30 AM</span>
+                        </div>
+
+                        <div class="flex items-center justify-between py-2 border-b border-gray-100">
+                            <span class="text-sm text-gray-600">Duration</span>
+                            <span class="font-semibold text-gray-900">30 minutes</span>
+                        </div>
+
+                        <div class="flex items-center justify-between py-2 border-b border-gray-100">
+                            <span class="text-sm text-gray-600">Channel</span>
+                            <span class="font-semibold text-gray-900">Video Call</span>
+                        </div>
+
+                        <div class="flex items-center justify-between py-2">
+                            <span class="text-sm text-gray-600">Payment</span>
+                            <span class="font-semibold text-primary">$35.00</span>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="payment-tips-card" class="bg-white rounded-xl border border-gray-200 p-6">
+                    <div class="flex items-start space-x-3 mb-5">
+                        <div class="w-11 h-11 bg-yellow-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-lightbulb text-warning text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-gray-900 mb-1">Payment Tips</h3>
+                            <p class="text-sm text-gray-600">Best practices for billing</p>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-3">
+                        <div class="flex items-start space-x-3 text-sm">
+                            <i class="fa-solid fa-check-circle text-success mt-0.5"></i>
+                            <p class="text-gray-700">Verify insurance before appointment to avoid issues</p>
+                        </div>
+                        <div class="flex items-start space-x-3 text-sm">
+                            <i class="fa-solid fa-check-circle text-success mt-0.5"></i>
+                            <p class="text-gray-700">Collect payment at booking to reduce no-shows</p>
+                        </div>
+                        <div class="flex items-start space-x-3 text-sm">
+                            <i class="fa-solid fa-check-circle text-success mt-0.5"></i>
+                            <p class="text-gray-700">Send clear invoices with itemized breakdown</p>
+                        </div>
+                        <div class="flex items-start space-x-3 text-sm">
+                            <i class="fa-solid fa-check-circle text-success mt-0.5"></i>
+                            <p class="text-gray-700">Offer multiple payment methods for convenience</p>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+
+        </div>
+
+    </div>
+</main>
+
+<section id="navigation-buttons" class="fixed bottom-0 left-64 right-0 bg-white border-t border-gray-200 px-8 py-4 z-30 shadow-lg">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+        <button onclick="window.history.back()" class="px-6 py-3 bg-white border-2 border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors">
+            <i class="fa-solid fa-chevron-left mr-2"></i>Back
+        </button>
+        <div class="flex items-center space-x-3">
+            <button onclick="saveDraft()" class="px-6 py-3 bg-white border-2 border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors">
+                <i class="fa-solid fa-floppy-disk mr-2"></i>Save Draft
+            </button>
+            <button id="continue-btn" class="px-8 py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition-colors shadow-sm">
+                Next: Notes<i class="fa-solid fa-chevron-right ml-2"></i>
+            </button>
+        </div>
+    </div>
+</section>
+
+<script>
+function saveDraft() {
+    alert('Draft saved successfully!\n\nYou can continue this booking later from your drafts.');
+}
+
+document.querySelectorAll('input[name="payment-type"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        const insuranceDetails = document.getElementById('insurance-details');
+        if (this.value === 'insurance') {
+            insuranceDetails.classList.remove('hidden');
+        } else {
+            insuranceDetails.classList.add('hidden');
+        }
+    });
+});
+
+document.querySelectorAll('input[name="channel"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        document.getElementById('video-channel-details').classList.add('hidden');
+        document.getElementById('clinic-channel-details').classList.add('hidden');
+        document.getElementById('phone-channel-details').classList.add('hidden');
+        
+        if (this.value === 'video') {
+            document.getElementById('video-channel-details').classList.remove('hidden');
+        } else if (this.value === 'clinic') {
+            document.getElementById('clinic-channel-details').classList.remove('hidden');
+        } else if (this.value === 'phone') {
+            document.getElementById('phone-channel-details').classList.remove('hidden');
+        }
+    });
+});
+</script>
+
+</body>
+</html>

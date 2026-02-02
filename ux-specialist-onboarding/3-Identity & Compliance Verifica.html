@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Identity & Compliance Verification - Rapid Capsule Specialist</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        rapid: {
+                            sky: '#4FC3F7',
+                            skyLight: '#E1F5FE',
+                            skyDark: '#0288D1',
+                            orange: '#FF9800',
+                            orangeLight: '#FFF3E0',
+                            orangeDark: '#F57C00',
+                            navy: '#1A365D',
+                            gray: '#F5F9FF',
+                            text: '#334155',
+                            success: '#4CAF50',
+                            error: '#EF4444',
+                            border: '#E2E8F0'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        display: ['Poppins', 'system-ui', 'sans-serif']
+                    },
+                    boxShadow: {
+                        'soft': '0 4px 20px -2px rgba(79, 195, 247, 0.15)',
+                        'card': '0 10px 30px -5px rgba(0, 0, 0, 0.05)',
+                        'glow': '0 0 15px rgba(79, 195, 247, 0.3)',
+                        'inner-light': 'inset 0 2px 4px 0 rgba(255, 255, 255, 0.3)',
+                        'input-focus': '0 0 0 4px rgba(79, 195, 247, 0.2)'
+                    }
+                }
+            }
+        }
+        window.FontAwesomeConfig = { autoReplaceSvg: 'nest' };
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        .step-connector {
+            position: absolute;
+            top: 24px;
+            left: 15px;
+            bottom: -24px;
+            width: 2px;
+            background-color: #E2E8F0;
+            z-index: 0;
+        }
+        
+        .step-item:last-child .step-connector {
+            display: none;
+        }
+
+        .progress-ring__circle {
+            transition: stroke-dashoffset 0.35s;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+
+        .drag-drop-zone {
+            background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='16' ry='16' stroke='%23CBD5E1FF' stroke-width='2' stroke-dasharray='12%2c 12' stroke-dashoffset='0' stroke-linecap='square'/%3e%3c/svg%3e");
+            transition: all 0.3s ease;
+        }
+        
+        .drag-drop-zone:hover, .drag-drop-zone.drag-active {
+            background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='16' ry='16' stroke='%234FC3F7FF' stroke-width='2' stroke-dasharray='12%2c 12' stroke-dashoffset='0' stroke-linecap='square'/%3e%3c/svg%3e");
+            background-color: rgba(79, 195, 247, 0.05);
+        }
+
+        @keyframes pulse-scan {
+            0% { transform: translateY(-100%); opacity: 0; }
+            50% { opacity: 1; }
+            100% { transform: translateY(100%); opacity: 0; }
+        }
+        
+        .scan-line {
+            animation: pulse-scan 2s linear infinite;
+        }
+
+        /* Status Badges */
+        .status-badge-pending {
+            @apply bg-yellow-100 text-yellow-700 border border-yellow-200;
+        }
+        .status-badge-verified {
+            @apply bg-green-100 text-green-700 border border-green-200;
+        }
+        .status-badge-rejected {
+            @apply bg-red-100 text-red-700 border border-red-200;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 font-sans text-rapid-text antialiased h-[1024px] overflow-hidden flex flex-col relative w-[1440px] mx-auto">
+
+    <!-- Header -->
+    <header id="header" class="bg-white/90 backdrop-blur-md border-b border-slate-100 h-20 z-40 sticky top-0 flex-none px-8">
+        <div class="h-full flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-gradient-to-br from-rapid-sky to-rapid-skyDark rounded-xl flex items-center justify-center text-white shadow-glow">
+                    <i class="fa-solid fa-heart-pulse text-lg"></i>
+                </div>
+                <div>
+                    <span class="text-2xl font-bold text-rapid-navy font-display tracking-tight block leading-none">Rapid Capsule</span>
+                    <span class="text-[10px] font-medium text-slate-500 uppercase tracking-widest">Specialist Portal</span>
+                </div>
+            </div>
+
+            <!-- Setup Progress Tracker -->
+            <div class="hidden md:flex items-center gap-4 bg-slate-50 px-4 py-2 rounded-xl border border-slate-100">
+                <div class="flex flex-col items-end">
+                    <span class="text-xs font-bold text-rapid-navy">Setup Progress</span>
+                    <span class="text-[10px] text-slate-500">Step 7 of 7 • Verification</span>
+                </div>
+                <div class="relative w-12 h-12">
+                    <svg class="w-12 h-12" viewBox="0 0 100 100">
+                        <circle class="text-slate-200 stroke-current" stroke-width="8" cx="50" cy="50" r="40" fill="transparent"></circle>
+                        <circle class="text-rapid-sky stroke-current progress-ring__circle" stroke-width="8" stroke-linecap="round" cx="50" cy="50" r="40" fill="transparent" stroke-dasharray="251.2" stroke-dashoffset="37.6"></circle> <!-- ~85% -->
+                    </svg>
+                    <div class="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-rapid-navy">85%</div>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-6">
+                <!-- Help Dropdown -->
+                <div class="relative group">
+                    <button class="flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-rapid-navy transition-colors">
+                        <i class="fa-regular fa-circle-question"></i>
+                        <span>Help Center</span>
+                        <i class="fa-solid fa-chevron-down text-xs"></i>
+                    </button>
+                </div>
+
+                <div class="h-8 w-px bg-slate-200"></div>
+
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-full bg-slate-200 overflow-hidden border-2 border-white shadow-sm relative">
+                        <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" class="w-full h-full object-cover opacity-50 grayscale" alt="Placeholder">
+                    </div>
+                    <div class="hidden lg:block">
+                        <div class="text-sm font-bold text-rapid-navy leading-tight">Dr. Emmanuel</div>
+                        <div class="text-[10px] text-rapid-orange font-medium bg-rapid-orangeLight px-1.5 py-0.5 rounded inline-block mt-0.5">Setup In Progress</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Layout -->
+    <div class="flex-1 flex overflow-hidden relative z-10">
+        
+        <!-- Left Sidebar Navigation -->
+        <aside id="sidebar-nav" class="w-72 bg-white border-r border-slate-200 flex flex-col h-full flex-shrink-0">
+            <div class="p-6">
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 px-2">Main Menu</h3>
+                <nav class="space-y-1">
+                    <a href="#" class="flex items-center gap-3 px-3 py-2.5 bg-rapid-skyLight/50 text-rapid-skyDark font-bold rounded-xl border border-rapid-sky/20 transition-all">
+                        <i class="fa-solid fa-rocket w-5 text-center"></i>
+                        Setup Dashboard
+                    </a>
+                    <a href="#" class="flex items-center gap-3 px-3 py-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-all cursor-not-allowed opacity-60">
+                        <i class="fa-regular fa-calendar-check w-5 text-center"></i>
+                        Appointments
+                    </a>
+                    <a href="#" class="flex items-center gap-3 px-3 py-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-all cursor-not-allowed opacity-60">
+                        <i class="fa-solid fa-user-group w-5 text-center"></i>
+                        Patient Queue
+                    </a>
+                    <a href="#" class="flex items-center gap-3 px-3 py-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-all cursor-not-allowed opacity-60">
+                        <i class="fa-solid fa-wallet w-5 text-center"></i>
+                        Earnings
+                    </a>
+                </nav>
+
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mt-8 mb-4 px-2">Setup Steps</h3>
+                <div class="relative pl-2 space-y-0">
+                    <!-- Steps 1-6 (Completed) -->
+                    <div class="step-item relative pb-6 pl-8">
+                        <div class="step-connector bg-rapid-success"></div>
+                        <div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-rapid-success text-white flex items-center justify-center text-[10px] z-10 border-2 border-white shadow-sm"><i class="fa-solid fa-check"></i></div>
+                        <div class="text-sm font-bold text-slate-500 line-through">Account Creation</div>
+                    </div>
+                    <div class="step-item relative pb-6 pl-8">
+                        <div class="step-connector bg-rapid-success"></div>
+                        <div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-rapid-success text-white flex items-center justify-center text-[10px] z-10 border-2 border-white shadow-sm"><i class="fa-solid fa-check"></i></div>
+                        <div class="text-sm font-bold text-slate-500 line-through">Quick Bio</div>
+                    </div>
+                    <div class="step-item relative pb-6 pl-8">
+                        <div class="step-connector bg-rapid-success"></div>
+                        <div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-rapid-success text-white flex items-center justify-center text-[10px] z-10 border-2 border-white shadow-sm"><i class="fa-solid fa-check"></i></div>
+                        <div class="text-sm font-bold text-slate-500 line-through">Profile Config</div>
+                    </div>
+                    <div class="step-item relative pb-6 pl-8">
+                        <div class="step-connector bg-rapid-success"></div>
+                        <div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-rapid-success text-white flex items-center justify-center text-[10px] z-10 border-2 border-white shadow-sm"><i class="fa-solid fa-check"></i></div>
+                        <div class="text-sm font-bold text-slate-500 line-through">Availability</div>
+                    </div>
+                    <div class="step-item relative pb-6 pl-8">
+                        <div class="step-connector bg-rapid-success"></div>
+                        <div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-rapid-success text-white flex items-center justify-center text-[10px] z-10 border-2 border-white shadow-sm"><i class="fa-solid fa-check"></i></div>
+                        <div class="text-sm font-bold text-slate-500 line-through">Rate Cards</div>
+                    </div>
+                    
+                    <!-- Step 7 (Current) -->
+                    <div class="step-item relative pb-6 pl-8">
+                        <div class="step-connector bg-slate-200"></div>
+                        <div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-white border-2 border-rapid-sky text-rapid-sky flex items-center justify-center text-[10px] z-10 shadow-glow">
+                            <div class="w-2 h-2 bg-rapid-sky rounded-full"></div>
+                        </div>
+                        <div class="text-sm font-bold text-rapid-navy">Identity & Compliance</div>
+                    </div>
+
+                    <!-- Future Steps -->
+                    <div class="step-item relative pl-8">
+                        <div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-slate-100 border-2 border-slate-200 text-slate-400 flex items-center justify-center text-[10px] z-10">8</div>
+                        <div class="text-sm font-medium text-slate-400">Security & Prefs</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-auto p-6 border-t border-slate-100">
+                <button class="w-full flex items-center justify-center gap-2 text-slate-500 hover:text-rapid-navy text-sm font-medium py-2 rounded-lg hover:bg-slate-50 transition-colors">
+                    <i class="fa-solid fa-gear"></i> Settings
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 flex flex-col bg-slate-50/50 overflow-hidden">
+            
+            <!-- Content Header -->
+            <div class="px-8 pt-8 pb-4 flex justify-between items-start">
+                <div>
+                    <h1 class="text-2xl font-display font-bold text-rapid-navy mb-1">Identity & Compliance Verification</h1>
+                    <p class="text-sm text-slate-500 max-w-2xl">To ensure patient safety, we must verify your identity and medical credentials. Your data is encrypted and stored securely on our private blockchain ledger.</p>
+                </div>
+                <div class="flex items-center gap-2 px-3 py-1.5 bg-green-50 text-green-700 border border-green-200 rounded-lg text-xs font-medium">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    <span>Bank-grade Encryption</span>
+                </div>
+            </div>
+
+            <!-- Scrollable Form Area -->
+            <div class="flex-1 overflow-y-auto px-8 pb-24">
+                <div class="max-w-5xl mx-auto flex gap-8">
+                    
+                    <!-- Left Column: Verification Forms -->
+                    <div class="flex-1 space-y-8">
+                        
+                        <!-- 1. Government ID Section -->
+                        <section id="gov-id-section" class="bg-white rounded-2xl border border-slate-200 shadow-card overflow-hidden">
+                            <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-lg bg-rapid-skyLight text-rapid-skyDark flex items-center justify-center text-sm">
+                                        <i class="fa-solid fa-passport"></i>
+                                    </div>
+                                    <h3 class="font-bold text-rapid-navy">Government ID</h3>
+                                </div>
+                                <span class="status-badge-verified px-2 py-0.5 text-[10px] font-bold rounded-full uppercase tracking-wide flex items-center gap-1">
+                                    <i class="fa-solid fa-check"></i> Verified
+                                </span>
+                            </div>
+                            
+                            <div class="p-6">
+                                <div class="flex items-start gap-4">
+                                    <div class="w-24 h-16 bg-slate-100 rounded border border-slate-200 flex items-center justify-center text-slate-400">
+                                        <i class="fa-solid fa-id-card text-2xl"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <div class="flex justify-between items-start">
+                                            <div>
+                                                <div class="text-sm font-bold text-slate-800">International Passport</div>
+                                                <div class="text-xs text-slate-500 mt-1">ID Number: A09******82</div>
+                                                <div class="text-xs text-slate-500">Expiry: 12/2028</div>
+                                            </div>
+                                            <button class="text-xs text-rapid-sky hover:underline font-medium">Update</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- 2. Medical License Section (Active) -->
+                        <section id="medical-license-section" class="bg-white rounded-2xl border-2 border-rapid-sky/30 shadow-soft overflow-hidden relative">
+                            <!-- Active Indicator Strip -->
+                            <div class="absolute left-0 top-0 bottom-0 w-1 bg-rapid-sky"></div>
+
+                            <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-rapid-skyLight/10">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-lg bg-rapid-sky text-white flex items-center justify-center text-sm shadow-sm">
+                                        <i class="fa-solid fa-user-doctor"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-bold text-rapid-navy">Medical License</h3>
+                                        <p class="text-xs text-slate-500">Required for practice activation</p>
+                                    </div>
+                                </div>
+                                <span class="status-badge-pending px-2 py-0.5 text-[10px] font-bold rounded-full uppercase tracking-wide flex items-center gap-1">
+                                    <i class="fa-solid fa-clock"></i> Pending Upload
+                                </span>
+                            </div>
+                            
+                            <div class="p-6 space-y-6">
+                                <!-- Form Fields -->
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label for="license-number" class="block text-xs font-bold text-slate-700 mb-1.5">License Number <span class="text-red-500">*</span></label>
+                                        <input type="text" id="license-number" placeholder="e.g. MDCN/2023/8821" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-rapid-navy focus:outline-none focus:border-rapid-sky focus:ring-4 focus:ring-rapid-sky/10 transition-all">
+                                    </div>
+                                    <div>
+                                        <label for="issuing-body" class="block text-xs font-bold text-slate-700 mb-1.5">Issuing Body <span class="text-red-500">*</span></label>
+                                        <select id="issuing-body" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-rapid-navy focus:outline-none focus:border-rapid-sky focus:ring-4 focus:ring-rapid-sky/10 transition-all">
+                                            <option value="">Select Authority</option>
+                                            <option value="mdcn">Medical and Dental Council of Nigeria (MDCN)</option>
+                                            <option value="nmcn">Nursing and Midwifery Council of Nigeria</option>
+                                            <option value="pcng">Pharmacists Council of Nigeria</option>
+                                            <option value="other">Other (International)</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- Upload Area -->
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-2">Upload Certificate or License Card <span class="text-red-500">*</span></label>
+                                    <div class="drag-drop-zone rounded-2xl p-8 flex flex-col items-center justify-center text-center cursor-pointer group relative overflow-hidden">
+                                        
+                                        <!-- Animated OCR Scan Line (Hidden by default, shown on processing) -->
+                                        <!-- <div class="absolute inset-0 bg-white/80 z-10 flex items-center justify-center">
+                                            <div class="w-full h-0.5 bg-rapid-sky shadow-[0_0_15px_rgba(79,195,247,0.8)] scan-line absolute top-0"></div>
+                                            <div class="text-rapid-sky font-bold text-sm animate-pulse">Extracting Data...</div>
+                                        </div> -->
+
+                                        <div class="w-12 h-12 rounded-full bg-slate-50 text-slate-400 group-hover:text-rapid-sky group-hover:bg-rapid-skyLight transition-colors flex items-center justify-center text-xl mb-3">
+                                            <i class="fa-solid fa-cloud-arrow-up"></i>
+                                        </div>
+                                        <h4 class="text-sm font-bold text-slate-700 group-hover:text-rapid-navy transition-colors">Click to upload or drag and drop</h4>
+                                        <p class="text-xs text-slate-400 mt-1 max-w-xs">SVG, PNG, JPG or PDF (max. 5MB). We'll use OCR to verify details automatically.</p>
+                                        
+                                        <button class="mt-4 px-4 py-2 bg-white border border-slate-200 text-slate-600 text-xs font-bold rounded-lg shadow-sm hover:border-rapid-sky hover:text-rapid-sky transition-all">
+                                            Select File
+                                        </button>
+                                    </div>
+                                    <p class="text-[10px] text-slate-400 mt-2 flex items-center gap-1">
+                                        <i class="fa-solid fa-lock text-[8px]"></i> Documents are encrypted before storage.
+                                    </p>
+                                </div>
+
+                                <!-- Uploaded File Preview (Example of success state) -->
+                                <div class="hidden flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-8 h-8 rounded bg-white flex items-center justify-center text-red-500 text-lg border border-slate-100">
+                                            <i class="fa-solid fa-file-pdf"></i>
+                                        </div>
+                                        <div>
+                                            <div class="text-xs font-bold text-slate-800">MDCN_License_2024.pdf</div>
+                                            <div class="text-[10px] text-green-600 font-medium flex items-center gap-1">
+                                                <i class="fa-solid fa-circle-check"></i> OCR Verified
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button class="text-slate-400 hover:text-red-500 transition-colors">
+                                        <i class="fa-solid fa-trash-can"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- 3. Professional Registry Check (API Status) -->
+                        <section id="registry-check-section" class="bg-slate-50 rounded-2xl border border-slate-200 p-5 flex items-center justify-between opacity-60">
+                            <div class="flex items-center gap-4">
+                                <div class="w-10 h-10 rounded-full bg-slate-200 text-slate-400 flex items-center justify-center">
+                                    <i class="fa-solid fa-globe"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-sm font-bold text-slate-700">Professional Registry Check</h3>
+                                    <p class="text-xs text-slate-500">Automatic verification against NMA database.</p>
+                                </div>
+                            </div>
+                            <div class="text-xs font-medium text-slate-400 bg-white px-3 py-1 rounded border border-slate-200">
+                                Waiting for License
+                            </div>
+                        </section>
+
+                    </div>
+
+                    <!-- Right Column: Guidelines & Status -->
+                    <div class="w-80 flex flex-col gap-6">
+                        
+                        <!-- Blockchain Security Note -->
+                        <div class="bg-gradient-to-br from-rapid-navy to-slate-900 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
+                            <div class="absolute top-0 right-0 p-4 opacity-10">
+                                <i class="fa-solid fa-link text-8xl"></i>
+                            </div>
+                            <div class="relative z-10">
+                                <div class="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center mb-4 backdrop-blur-sm">
+                                    <i class="fa-solid fa-fingerprint text-xl text-rapid-sky"></i>
+                                </div>
+                                <h3 class="font-bold text-sm mb-2">Blockchain Secured</h3>
+                                <p class="text-xs text-slate-300 leading-relaxed mb-4">
+                                    Your credentials are hashed and stored on a private ledger. This creates a tamper-proof record of your qualifications that patients can trust.
+                                </p>
+                                <div class="flex items-center gap-2 text-[10px] text-rapid-sky font-mono bg-black/20 p-2 rounded border border-white/10">
+                                    <i class="fa-solid fa-key"></i>
+                                    <span class="truncate">0x71C...92A</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Verification Progress Summary -->
+                        <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-card">
+                            <h3 class="text-sm font-bold text-rapid-navy mb-4">Verification Status</h3>
+                            
+                            <div class="space-y-4 relative">
+                                <!-- Line connecting dots -->
+                                <div class="absolute left-2.5 top-2 bottom-4 w-0.5 bg-slate-100 z-0"></div>
+
+                                <!-- Step 1 -->
+                                <div class="relative z-10 flex gap-3">
+                                    <div class="w-5 h-5 rounded-full bg-green-500 border-2 border-white shadow-sm flex items-center justify-center shrink-0 mt-0.5">
+                                        <i class="fa-solid fa-check text-[10px] text-white"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-xs font-bold text-slate-700">Identity Check</div>
+                                        <div class="text-[10px] text-slate-500">Approved • 2 mins ago</div>
+                                    </div>
+                                </div>
+
+                                <!-- Step 2 -->
+                                <div class="relative z-10 flex gap-3">
+                                    <div class="w-5 h-5 rounded-full bg-rapid-orange border-2 border-white shadow-sm flex items-center justify-center shrink-0 mt-0.5 animate-pulse">
+                                        <div class="w-1.5 h-1.5 bg-white rounded-full"></div>
+                                    </div>
+                                    <div>
+                                        <div class="text-xs font-bold text-slate-700">Medical Credentials</div>
+                                        <div class="text-[10px] text-rapid-orange">Action Required</div>
+                                    </div>
+                                </div>
+
+                                <!-- Step 3 -->
+                                <div class="relative z-10 flex gap-3">
+                                    <div class="w-5 h-5 rounded-full bg-slate-200 border-2 border-white shadow-sm flex items-center justify-center shrink-0 mt-0.5">
+                                        <div class="w-1.5 h-1.5 bg-slate-400 rounded-full"></div>
+                                    </div>
+                                    <div>
+                                        <div class="text-xs font-bold text-slate-400">Registry API Check</div>
+                                        <div class="text-[10px] text-slate-400">Pending</div>
+                                    </div>
+                                </div>
+
+                                 <!-- Step 4 -->
+                                 <div class="relative z-10 flex gap-3">
+                                    <div class="w-5 h-5 rounded-full bg-slate-200 border-2 border-white shadow-sm flex items-center justify-center shrink-0 mt-0.5">
+                                        <div class="w-1.5 h-1.5 bg-slate-400 rounded-full"></div>
+                                    </div>
+                                    <div>
+                                        <div class="text-xs font-bold text-slate-400">Final Approval</div>
+                                        <div class="text-[10px] text-slate-400">Pending</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Support Box -->
+                        <div class="bg-rapid-orangeLight/50 rounded-xl p-4 border border-rapid-orange/10">
+                            <div class="flex items-start gap-3">
+                                <i class="fa-solid fa-circle-exclamation text-rapid-orange mt-0.5"></i>
+                                <div>
+                                    <h4 class="text-xs font-bold text-rapid-orangeDark mb-1">Upload Issue?</h4>
+                                    <p class="text-[10px] text-slate-600 leading-snug mb-2">
+                                        Ensure your document is clear, well-lit, and all 4 corners are visible.
+                                    </p>
+                                    <a href="#" class="text-[10px] font-bold text-rapid-navy underline">View Examples</a>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Sticky Footer Action Bar -->
+    <div class="fixed bottom-0 left-0 w-full bg-white border-t border-slate-200 z-50 pl-72">
+        <div class="max-w-[1440px] mx-auto px-10 py-4 flex items-center justify-between">
+            <button class="text-slate-500 hover:text-slate-800 font-medium text-sm flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-slate-50 transition-colors">
+                Save as Draft
+            </button>
+            <div class="flex items-center gap-4">
+                <span class="text-xs text-slate-400 hidden md:block">Next: Security & Preferences</span>
+                <button class="bg-slate-200 text-slate-400 font-bold text-sm px-8 py-3 rounded-xl cursor-not-allowed flex items-center gap-2" disabled>
+                    Verify & Continue <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

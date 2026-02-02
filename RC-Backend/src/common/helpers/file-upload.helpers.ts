@@ -79,4 +79,44 @@ export class FileUploadHelper {
     const urlParts = baseUrl.split('/');
     return decodeURIComponent(urlParts.slice(3).join('/'));
   }
+
+  /**
+   * Resolve a profile image value to a usable URL.
+   * Handles: null, data URIs, full S3 URLs, bare S3 keys (filenames), and external URLs.
+   * Returns a presigned URL for S3 resources, or null if unresolvable.
+   */
+  async resolveProfileImage(profileImage: string | null | undefined): Promise<string | null> {
+    if (!profileImage || !profileImage.trim()) return null;
+
+    // Data URIs pass through
+    if (profileImage.startsWith('data:')) return profileImage;
+
+    // Already a presigned S3 URL (has signature params)
+    if (profileImage.includes('amazonaws.com') && profileImage.includes('X-Amz-Signature')) {
+      return profileImage;
+    }
+
+    // Full S3 URL (needs presigning)
+    if (profileImage.includes('s3') && profileImage.includes('amazonaws.com')) {
+      try {
+        return await this.getPresignedUrl(profileImage);
+      } catch {
+        return null;
+      }
+    }
+
+    // External URL (non-S3) - pass through
+    if (profileImage.startsWith('http://') || profileImage.startsWith('https://')) {
+      return profileImage;
+    }
+
+    // Bare filename (S3 key) - construct full URL and presign
+    try {
+      const bucketName = process.env.AWS_BUCKET_NAME || 'rapidcapsules';
+      const s3Url = `https://${bucketName}.s3.us-east-2.amazonaws.com/${profileImage}`;
+      return await this.getPresignedUrl(s3Url);
+    } catch {
+      return null;
+    }
+  }
 }

@@ -6,6 +6,7 @@ import { SpecialistAdvancedFilterDto } from './dto/specialist-advanced-filter.dt
 import { Types } from 'mongoose';
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { ChangeSpecialistStatusDto } from './dto/change-specialist-status.dto';
+import { AssignLanguagesDto, AssignCategoriesDto } from './dto/assign-languages.dto';
 import { FileUploadHelper } from '../../common/helpers/file-upload.helpers';
 
 @Controller('specialists')
@@ -62,5 +63,35 @@ export class SpecialistsController {
     }
     const presignedUrl = await this.fileUploadHelper.getPresignedUrl(fileUrl, 3600); // 1 hour expiry
     return sendSuccessResponse('Presigned URL generated', { url: presignedUrl });
+  }
+
+  @Get(':id/languages-categories')
+  async getSpecialistLanguagesAndCategories(@Param('id') id: Types.ObjectId) {
+    const result = await this.specialistsService.getSpecialistLanguagesAndCategories(id);
+    return sendSuccessResponse(Messages.RETRIEVED, result);
+  }
+
+  @Patch(':id/languages')
+  async assignLanguages(
+    @Param('id') id: Types.ObjectId,
+    @Body() assignLanguagesDto: AssignLanguagesDto,
+  ) {
+    const result = await this.specialistsService.assignLanguages(
+      id,
+      assignLanguagesDto.language_ids,
+    );
+    return sendSuccessResponse(Messages.UPDATED, result);
+  }
+
+  @Patch(':id/categories')
+  async assignCategories(
+    @Param('id') id: Types.ObjectId,
+    @Body() assignCategoriesDto: AssignCategoriesDto,
+  ) {
+    const result = await this.specialistsService.assignCategories(
+      id,
+      assignCategoriesDto.category_ids,
+    );
+    return sendSuccessResponse(Messages.UPDATED, result);
   }
 }

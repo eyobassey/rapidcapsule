@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Appointment - Step 6: Summary & Payment</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        rapid: {
+                            sky: '#4FC3F7',
+                            skyLight: '#E1F5FE',
+                            skyDark: '#0288D1',
+                            orange: '#FF9800',
+                            orangeLight: '#FFF3E0',
+                            orangeDark: '#F57C00',
+                            navy: '#1A365D',
+                            gray: '#F5F9FF',
+                            text: '#334155',
+                            success: '#4CAF50',
+                            error: '#EF4444'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        display: ['Poppins', 'system-ui', 'sans-serif']
+                    },
+                    boxShadow: {
+                        'soft': '0 4px 20px -2px rgba(79, 195, 247, 0.15)',
+                        'card': '0 10px 30px -5px rgba(0, 0, 0, 0.05)',
+                        'glow': '0 0 15px rgba(79, 195, 247, 0.3)',
+                        'inner-light': 'inset 0 2px 4px 0 rgba(255, 255, 255, 0.3)'
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'slide-up': 'slideUp 0.3s ease-out forwards'
+                    },
+                    keyframes: {
+                        slideUp: {
+                            '0%': { transform: 'translateY(20px)', opacity: '0' },
+                            '100%': { transform: 'translateY(0)', opacity: '1' }
+                        }
+                    }
+                }
+            }
+        }
+        window.FontAwesomeConfig = { autoReplaceSvg: 'nest' };
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        .step-item.active .step-circle {
+            background-color: #4FC3F7;
+            color: white;
+            box-shadow: 0 0 0 4px #E1F5FE;
+        }
+
+        .step-item.completed .step-circle {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .paystack-card {
+            background: linear-gradient(135deg, #1A365D 0%, #0288D1 100%);
+        }
+        
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+        }
+    </style>
+</head>
+<body class="bg-rapid-gray font-sans text-rapid-text antialiased h-[1024px] overflow-hidden flex flex-col w-[1440px] mx-auto">
+
+    <!-- Header -->
+    <header id="header" class="bg-white/90 backdrop-blur-md border-b border-slate-100 h-16 z-40 sticky top-0 flex-none">
+        <div class="max-w-[1440px] mx-auto px-6 h-full flex items-center justify-between">
+            <div class="flex items-center gap-3 cursor-pointer">
+                <div class="w-8 h-8 bg-gradient-to-br from-rapid-sky to-rapid-skyDark rounded-lg flex items-center justify-center text-white shadow-glow">
+                    <i class="fa-solid fa-heart-pulse text-sm"></i>
+                </div>
+                <span class="text-xl font-bold text-rapid-navy font-display tracking-tight">Rapid Capsule</span>
+            </div>
+            
+            <nav class="hidden md:flex items-center gap-1">
+                <a href="#" class="px-4 py-2 text-sm font-medium text-slate-500 hover:text-rapid-navy hover:bg-slate-50 rounded-lg transition-colors">Dashboard</a>
+                <a href="#" class="px-4 py-2 text-sm font-bold text-rapid-sky bg-rapid-skyLight/50 rounded-lg transition-colors">Book Appointment</a>
+                <a href="#" class="px-4 py-2 text-sm font-medium text-slate-500 hover:text-rapid-navy hover:bg-slate-50 rounded-lg transition-colors">My Appointments</a>
+                <a href="#" class="px-4 py-2 text-sm font-medium text-slate-500 hover:text-rapid-navy hover:bg-slate-50 rounded-lg transition-colors">Messages</a>
+                <a href="#" class="px-4 py-2 text-sm font-medium text-slate-500 hover:text-rapid-navy hover:bg-slate-50 rounded-lg transition-colors">Profile</a>
+            </nav>
+
+            <div class="flex items-center gap-4">
+                <button class="w-9 h-9 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:border-rapid-sky hover:text-rapid-sky transition-all relative">
+                    <i class="fa-regular fa-bell"></i>
+                    <span class="absolute top-2 right-2 w-1.5 h-1.5 bg-rapid-orange rounded-full border border-white"></span>
+                </button>
+                <div class="flex items-center gap-2 pl-4 border-l border-slate-200">
+                    <div class="text-right hidden sm:block">
+                        <div class="text-xs font-bold text-rapid-navy">Sarah Johnson</div>
+                        <div class="text-[10px] text-slate-500">Patient ID: #RC-8821</div>
+                    </div>
+                    <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg" class="w-9 h-9 rounded-full object-cover border-2 border-white shadow-sm">
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Grid -->
+    <div class="flex-1 flex overflow-hidden max-w-[1440px] mx-auto w-full relative">
+        
+        <!-- Sidebar: Health Summary & AI Match -->
+        <aside id="sidebar-health" class="w-80 bg-white border-r border-slate-200 h-full overflow-y-auto hidden lg:flex flex-col flex-none">
+            <div class="p-6">
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Patient Health Summary</h3>
+                
+                <!-- Vitals Snapshot (Mini) -->
+                <div class="bg-slate-50 border border-slate-100 rounded-xl p-4 mb-6">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-activity-ring text-rapid-sky"></i>
+                            <span class="text-xs font-bold text-slate-700">Latest Vitals</span>
+                        </div>
+                        <span class="text-[10px] text-slate-400">Today, 8:00 AM</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="bg-white p-2 rounded border border-slate-100">
+                            <div class="text-[10px] text-slate-400">BP</div>
+                            <div class="text-sm font-bold text-slate-700">118/78</div>
+                        </div>
+                        <div class="bg-white p-2 rounded border border-slate-100">
+                            <div class="text-[10px] text-slate-400">Heart</div>
+                            <div class="text-sm font-bold text-slate-700">72 <span class="text-[10px] font-normal">bpm</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI Recommendation -->
+                <div class="mb-6">
+                    <div class="bg-gradient-to-br from-rapid-skyLight to-white border border-rapid-sky/20 rounded-2xl p-5 relative overflow-hidden shadow-soft">
+                        <div class="absolute -right-4 -top-4 w-20 h-20 bg-rapid-sky/10 rounded-full blur-xl"></div>
+                        <div class="flex items-center gap-2 mb-3">
+                            <div class="w-6 h-6 rounded-full bg-rapid-sky text-white flex items-center justify-center text-xs shadow-glow">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                            </div>
+                            <h4 class="text-sm font-bold text-rapid-navy">Selection Matched</h4>
+                        </div>
+                        <p class="text-xs text-slate-600 leading-relaxed mb-3">
+                            Great choice! Dr. Okafor is highly rated for <span class="font-bold">Hypertension Management</span> which aligns with your health profile.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Help & Support -->
+                <div class="mt-auto">
+                    <div class="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                        <div class="flex items-center gap-3 mb-2">
+                            <div class="w-8 h-8 rounded-full bg-white flex items-center justify-center text-rapid-orange border border-slate-100">
+                                <i class="fa-solid fa-headset"></i>
+                            </div>
+                            <div class="text-xs font-bold text-slate-700">Need help booking?</div>
+                        </div>
+                        <p class="text-[10px] text-slate-500 mb-3">Our support team is available 24/7 to assist you.</p>
+                        <button class="w-full bg-white border border-slate-200 text-slate-600 text-xs font-bold py-2 rounded-lg hover:bg-slate-50 hover:text-rapid-sky transition-colors">Start Chat</button>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Wizard Area -->
+        <main class="flex-1 flex flex-col bg-slate-50/30 overflow-hidden relative">
+            
+            <!-- Progress Bar Section -->
+            <div class="px-8 pt-8 pb-4 flex-none border-b border-slate-100 z-10 bg-white">
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h1 class="text-2xl font-display font-bold text-rapid-navy">Review & Pay</h1>
+                        <p class="text-sm text-slate-500">Step 6 of 6 • Confirm appointment details and complete secure payment</p>
+                    </div>
+                    <button class="text-slate-400 hover:text-slate-600 transition-colors">
+                        <i class="fa-solid fa-xmark text-xl"></i>
+                    </button>
+                </div>
+
+                <!-- Progress Steps -->
+                <div class="relative max-w-3xl">
+                    <div class="absolute top-1/2 left-0 w-full h-1 bg-slate-100 -translate-y-1/2 rounded-full z-0"></div>
+                    <div class="absolute top-1/2 left-0 w-[100%] h-1 bg-rapid-sky -translate-y-1/2 rounded-full z-0 transition-all duration-500"></div>
+                    
+                    <div class="relative z-10 flex justify-between w-full">
+                        <div class="step-item completed flex flex-col items-center gap-2 cursor-pointer group">
+                            <div class="step-circle w-8 h-8 rounded-full bg-white border-2 border-slate-200 flex items-center justify-center text-xs font-bold text-slate-400 transition-all">
+                                <i class="fa-solid fa-check"></i>
+                            </div>
+                            <span class="text-[10px] font-bold text-rapid-success uppercase tracking-wider hidden sm:block">Service</span>
+                        </div>
+                        <div class="step-item completed flex flex-col items-center gap-2 cursor-pointer group">
+                            <div class="step-circle w-8 h-8 rounded-full bg-white border-2 border-slate-200 flex items-center justify-center text-xs font-bold text-slate-400 transition-all">
+                                <i class="fa-solid fa-check"></i>
+                            </div>
+                            <span class="text-[10px] font-bold text-rapid-success uppercase tracking-wider hidden sm:block">Consent</span>
+                        </div>
+                        <div class="step-item completed flex flex-col items-center gap-2 cursor-pointer group">
+                            <div class="step-circle w-8 h-8 rounded-full bg-white border-2 border-slate-200 flex items-center justify-center text-xs font-bold text-slate-400 transition-all">
+                                <i class="fa-solid fa-check"></i>
+                            </div>
+                            <span class="text-[10px] font-bold text-rapid-success uppercase tracking-wider hidden sm:block">Category</span>
+                        </div>
+                        <div class="step-item completed flex flex-col items-center gap-2 cursor-pointer group">
+                            <div class="step-circle w-8 h-8 rounded-full bg-white border-2 border-slate-200 flex items-center justify-center text-xs font-bold text-slate-400 transition-all">
+                                <i class="fa-solid fa-check"></i>
+                            </div>
+                            <span class="text-[10px] font-bold text-rapid-success uppercase tracking-wider hidden sm:block">Time</span>
+                        </div>
+                        <div class="step-item completed flex flex-col items-center gap-2 cursor-pointer group">
+                            <div class="step-circle w-8 h-8 rounded-full bg-white border-2 border-slate-200 flex items-center justify-center text-xs font-bold text-slate-400 transition-all">
+                                <i class="fa-solid fa-check"></i>
+                            </div>
+                            <span class="text-[10px] font-bold text-rapid-success uppercase tracking-wider hidden sm:block">Doctor</span>
+                        </div>
+                        <div class="step-item active flex flex-col items-center gap-2 cursor-pointer group">
+                            <div class="step-circle w-8 h-8 rounded-full bg-white border-2 border-slate-200 flex items-center justify-center text-xs font-bold text-slate-400 transition-all">6</div>
+                            <span class="text-[10px] font-bold text-rapid-sky uppercase tracking-wider hidden sm:block">Confirm</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content Scroll Area -->
+            <div class="flex-1 overflow-y-auto p-8 pb-32">
+                <div class="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    
+                    <!-- Left Column: Review Details -->
+                    <div class="lg:col-span-7 space-y-6">
+                        
+                        <!-- Appointment Summary Card -->
+                        <section id="summary-card" class="bg-white rounded-2xl shadow-card border border-slate-100 overflow-hidden">
+                            <div class="bg-slate-50 px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                                <h2 class="text-sm font-bold text-rapid-navy uppercase tracking-wide">Appointment Summary</h2>
+                                <button class="text-xs font-medium text-rapid-sky hover:underline">Edit Details</button>
+                            </div>
+                            
+                            <div class="p-6">
+                                <!-- Doctor Info -->
+                                <div class="flex items-start gap-4 mb-6 pb-6 border-b border-slate-100">
+                                    <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" class="w-16 h-16 rounded-xl object-cover shadow-sm">
+                                    <div>
+                                        <h3 class="text-lg font-bold text-rapid-navy">Dr. Amara Okafor</h3>
+                                        <p class="text-sm text-slate-500 mb-2">Cardiologist • MBBS, FWACP</p>
+                                        <div class="flex items-center gap-2">
+                                            <span class="bg-rapid-skyLight text-rapid-skyDark text-[10px] font-bold px-2 py-1 rounded-full">Video Consultation</span>
+                                            <span class="bg-slate-100 text-slate-600 text-[10px] font-bold px-2 py-1 rounded-full">30 Mins</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Date & Time Grid -->
+                                <div class="grid grid-cols-2 gap-4 mb-6">
+                                    <div class="bg-slate-50 rounded-xl p-4 border border-slate-100 flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded-full bg-white flex items-center justify-center text-rapid-sky shadow-sm">
+                                            <i class="fa-regular fa-calendar text-lg"></i>
+                                        </div>
+                                        <div>
+                                            <div class="text-xs text-slate-400 uppercase font-bold">Date</div>
+                                            <div class="text-sm font-bold text-rapid-navy">Oct 5, 2023</div>
+                                        </div>
+                                    </div>
+                                    <div class="bg-slate-50 rounded-xl p-4 border border-slate-100 flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded-full bg-white flex items-center justify-center text-rapid-orange shadow-sm">
+                                            <i class="fa-regular fa-clock text-lg"></i>
+                                        </div>
+                                        <div>
+                                            <div class="text-xs text-slate-400 uppercase font-bold">Time</div>
+                                            <div class="text-sm font-bold text-rapid-navy">10:30 AM (WAT)</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Consent Status -->
+                                <div class="flex items-center gap-2 text-xs text-slate-500">
+                                    <i class="fa-solid fa-circle-check text-rapid-success"></i>
+                                    <span>Patient consent and telemedicine agreement signed.</span>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- Pre-Visit Notes -->
+                        <section id="notes-section" class="bg-white rounded-2xl shadow-card border border-slate-100 p-6">
+                            <h2 class="text-sm font-bold text-rapid-navy mb-4 flex items-center gap-2">
+                                <i class="fa-solid fa-notes-medical text-rapid-sky"></i>
+                                Add Symptoms or Notes
+                            </h2>
+                            <div class="relative">
+                                <textarea class="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm focus:outline-none focus:border-rapid-sky focus:ring-1 focus:ring-rapid-sky/20 transition-all min-h-[120px]" placeholder="Briefly describe your symptoms, recent vitals, or any questions for the doctor..."></textarea>
+                                <div class="absolute bottom-3 right-3 flex gap-2">
+                                    <button class="text-xs bg-white border border-slate-200 px-2 py-1 rounded hover:bg-slate-50 text-slate-500" title="Attach Image"><i class="fa-solid fa-paperclip"></i></button>
+                                </div>
+                            </div>
+                            <p class="text-[10px] text-slate-400 mt-2 text-right">Visible only to you and your doctor.</p>
+                        </section>
+
+                        <!-- Policy Reminder -->
+                        <div class="bg-blue-50/50 rounded-xl p-4 border border-blue-100 flex gap-3">
+                            <i class="fa-solid fa-circle-info text-rapid-sky mt-0.5"></i>
+                            <div class="text-xs text-slate-600 leading-relaxed">
+                                <span class="font-bold text-rapid-navy">Cancellation Policy:</span> Free cancellation up to 24 hours before the appointment. Late cancellations may incur a 50% fee.
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Right Column: Payment & Checkout -->
+                    <div class="lg:col-span-5 space-y-6">
+                        
+                        <div class="bg-white rounded-2xl shadow-card border border-slate-100 overflow-hidden sticky top-6">
+                            <div class="p-6 bg-slate-50 border-b border-slate-100">
+                                <h2 class="text-lg font-bold text-rapid-navy">Payment Details</h2>
+                            </div>
+
+                            <div class="p-6 space-y-6">
+                                <!-- Cost Breakdown -->
+                                <div class="space-y-3">
+                                    <div class="flex justify-between text-sm text-slate-600">
+                                        <span>Consultation Fee</span>
+                                        <span class="font-medium">₦15,000.00</span>
+                                    </div>
+                                    <div class="flex justify-between text-sm text-slate-600">
+                                        <span>Platform Service Fee</span>
+                                        <span class="font-medium">₦500.00</span>
+                                    </div>
+                                    <div class="flex justify-between text-sm text-rapid-success">
+                                        <span>Discount (First Booking)</span>
+                                        <span class="font-medium">- ₦1,500.00</span>
+                                    </div>
+                                    <div class="h-px bg-slate-100 my-2"></div>
+                                    <div class="flex justify-between items-end">
+                                        <span class="text-sm font-bold text-rapid-navy">Total Payable</span>
+                                        <span class="text-2xl font-bold text-rapid-navy">₦14,000.00</span>
+                                    </div>
+                                </div>
+
+                                <!-- Funding Transparency -->
+                                <div class="bg-rapid-skyLight/30 rounded-lg p-3 border border-rapid-sky/10">
+                                    <div class="flex items-start gap-2">
+                                        <i class="fa-solid fa-shield-halved text-rapid-sky text-xs mt-0.5"></i>
+                                        <p class="text-[10px] text-slate-600 leading-snug">
+                                            <span class="font-bold text-rapid-navy">Escrow Protection:</span> Your funds are held securely and only released to the doctor after your consultation is successfully completed.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <!-- Payment Method -->
+                                <div>
+                                    <label class="text-xs font-bold text-slate-500 uppercase mb-3 block">Select Payment Method</label>
+                                    
+                                    <div class="space-y-3">
+                                        <!-- Paystack Option (Active) -->
+                                        <label class="relative flex items-center p-4 border-2 border-rapid-sky bg-rapid-skyLight/10 rounded-xl cursor-pointer transition-all">
+                                            <input type="radio" name="payment" checked class="w-4 h-4 text-rapid-sky border-slate-300 focus:ring-rapid-sky">
+                                            <div class="ml-3 flex-1">
+                                                <div class="flex items-center justify-between">
+                                                    <span class="font-bold text-rapid-navy text-sm">Pay with Paystack</span>
+                                                    <div class="flex gap-1">
+                                                        <i class="fa-brands fa-cc-visa text-slate-600 text-lg"></i>
+                                                        <i class="fa-brands fa-cc-mastercard text-slate-600 text-lg"></i>
+                                                    </div>
+                                                </div>
+                                                <p class="text-[10px] text-slate-500 mt-1">Secure checkout using Card, Bank Transfer, or USSD.</p>
+                                            </div>
+                                            <div class="absolute top-0 right-0 bg-rapid-sky text-white text-[9px] font-bold px-2 py-0.5 rounded-bl-lg rounded-tr-lg">SECURE</div>
+                                        </label>
+
+                                        <!-- Wallet Option -->
+                                        <label class="flex items-center p-4 border border-slate-200 rounded-xl cursor-pointer hover:border-rapid-sky transition-all opacity-70 hover:opacity-100">
+                                            <input type="radio" name="payment" class="w-4 h-4 text-rapid-sky border-slate-300 focus:ring-rapid-sky">
+                                            <div class="ml-3 flex-1 flex justify-between items-center">
+                                                <div>
+                                                    <span class="font-bold text-slate-700 text-sm">Rapid Wallet</span>
+                                                    <p class="text-[10px] text-slate-500 mt-1">Balance: ₦2,400.00 (Insufficient)</p>
+                                                </div>
+                                                <i class="fa-solid fa-wallet text-slate-400"></i>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <!-- Security Badges -->
+                                <div class="flex items-center justify-center gap-4 pt-2 grayscale opacity-60">
+                                    <div class="flex items-center gap-1">
+                                        <i class="fa-solid fa-lock text-xs"></i>
+                                        <span class="text-[10px] font-bold">SSL Secure</span>
+                                    </div>
+                                    <div class="h-3 w-px bg-slate-300"></div>
+                                    <div class="flex items-center gap-1">
+                                        <i class="fa-solid fa-check-shield text-xs"></i>
+                                        <span class="text-[10px] font-bold">Verified</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer Actions -->
+            <div id="footer" class="bg-white border-t border-slate-200 p-6 absolute bottom-0 w-full z-30 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+                <div class="max-w-6xl mx-auto flex items-center justify-between">
+                    <button class="text-slate-500 hover:text-slate-800 font-medium text-sm flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-slate-50 transition-colors">
+                        <i class="fa-solid fa-arrow-left"></i> Back
+                    </button>
+                    
+                    <div class="flex items-center gap-6">
+                        <div class="text-right hidden sm:block">
+                            <div class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Total Amount</div>
+                            <div class="text-xl font-bold text-rapid-navy">₦14,000.00</div>
+                        </div>
+                        <button onclick="document.getElementById('success-modal').classList.remove('hidden')" class="bg-rapid-orange hover:bg-rapid-orangeDark text-white font-bold text-sm px-8 py-3 rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-orange-100 hover:shadow-orange-200 transform hover:-translate-y-0.5">
+                            <i class="fa-solid fa-lock"></i> Pay & Confirm
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Success Modal (Hidden by default, shown on click for demo) -->
+    <div id="success-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 relative animate-slide-up">
+            <button onclick="document.getElementById('success-modal').classList.add('hidden')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+            
+            <div class="text-center mb-6">
+                <div class="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center animate-pulse">
+                        <i class="fa-solid fa-check text-3xl text-green-600"></i>
+                    </div>
+                </div>
+                <h2 class="text-2xl font-bold text-rapid-navy mb-2">Payment Successful!</h2>
+                <p class="text-sm text-slate-500">Your appointment has been confirmed.</p>
+            </div>
+
+            <div class="bg-slate-50 rounded-xl p-4 border border-slate-100 mb-6">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-10 h-10 rounded-lg bg-blue-600 text-white flex items-center justify-center text-lg">
+                        <i class="fa-solid fa-video"></i>
+                    </div>
+                    <div>
+                        <div class="text-xs font-bold text-slate-500 uppercase">Join via Zoom</div>
+                        <div class="text-sm font-bold text-rapid-navy">Meeting ID: 882-192-992</div>
+                    </div>
+                </div>
+                <div class="text-xs text-slate-500 border-t border-slate-200 pt-2 mt-2">
+                    Link will be active 10 mins before time.
+                </div>
+            </div>
+
+            <button class="w-full bg-rapid-sky hover:bg-rapid-skyDark text-white font-bold py-3 rounded-xl transition-colors">
+                Go to Dashboard
+            </button>
+        </div>
+    </div>
+
+</body>
+</html>

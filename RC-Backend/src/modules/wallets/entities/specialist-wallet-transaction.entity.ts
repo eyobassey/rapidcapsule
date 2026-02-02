@@ -25,6 +25,7 @@ export enum SpecialistTransactionReference {
   WITHDRAWAL = 'withdrawal',
   REFUND = 'refund',
   ADMIN_ADJUSTMENT = 'admin_adjustment',
+  APPOINTMENT = 'appointment',
 }
 
 @Schema({

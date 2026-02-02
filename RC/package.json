@@ -4,7 +4,7 @@
 	"private": true,
 	"scripts": {
 		"serve": "vue-cli-service serve",
-		"build": "vue-cli-service build",
+		"build": "vue-cli-service build && cp serve.json dist/serve.json",
 		"generate-sprite": "svgstore -o ./src/assets/sprite.svg ./src/assets/icons/*.svg"
 	},
 	"dependencies": {

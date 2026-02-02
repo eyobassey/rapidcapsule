@@ -12,6 +12,10 @@ import {
 import { ClinicalNotesService } from './clinical-notes.service';
 import { CreateNoteDto } from './dto/create-note.dto';
 import { UpdateNoteDto } from './dto/update-note.dto';
+import {
+  CreateStructuredNoteDto,
+  UpdateStructuredNoteDto,
+} from './dto/create-structured-note.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @Controller('clinical-notes')
@@ -21,7 +25,7 @@ export class ClinicalNotesController {
 
   @Get('specialist')
   async getSpecialistNotes(@Request() req: any) {
-    return this.clinicalNotesService.getSpecialistNotes(req.user.userId);
+    return this.clinicalNotesService.getSpecialistNotes(req.user.sub);
   }
 
   @Get('appointment/:appointmentId')
@@ -39,8 +43,41 @@ export class ClinicalNotesController {
     return this.clinicalNotesService.createNote(
       createNoteDto.appointmentId,
       createNoteDto.content,
-      req.user.userId,
+      req.user.sub,
       createNoteDto.completed,
+    );
+  }
+
+  /**
+   * Create a structured clinical note with medical documentation format
+   */
+  @Post('structured')
+  async createStructuredNote(
+    @Body() createNoteDto: CreateStructuredNoteDto,
+    @Request() req: any,
+  ) {
+    return this.clinicalNotesService.createStructuredNote(
+      createNoteDto.appointmentId,
+      createNoteDto,
+      req.user.sub,
+    );
+  }
+
+  /**
+   * Update a structured clinical note
+   */
+  @Patch('structured/:appointmentId/:noteId')
+  async updateStructuredNote(
+    @Param('appointmentId') appointmentId: string,
+    @Param('noteId') noteId: string,
+    @Body() updateNoteDto: UpdateStructuredNoteDto,
+    @Request() req: any,
+  ) {
+    return this.clinicalNotesService.updateStructuredNote(
+      appointmentId,
+      noteId,
+      updateNoteDto,
+      req.user.sub,
     );
   }
 

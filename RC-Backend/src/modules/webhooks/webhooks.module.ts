@@ -13,6 +13,7 @@ import {
 import { PaymentsModule } from '../payments/payments.module';
 import { CardsModule } from '../cards/cards.module';
 import { WalletsModule } from '../wallets/wallets.module';
+import { AccountingModule } from '../accounting/accounting.module';
 import { TaskScheduler } from '../../core/worker/task.scheduler';
 import { SchedulerRegistry } from '@nestjs/schedule';
 import { WebsocketGateway } from '../../core/websocket/websocket.gateway';
@@ -28,6 +29,7 @@ import { Zoom } from '../../common/external/zoom/zoom';
     PaymentsModule,
     CardsModule,
     WalletsModule,
+    AccountingModule,
   ],
   controllers: [WebhooksController, ZoomWebhookController],
   providers: [

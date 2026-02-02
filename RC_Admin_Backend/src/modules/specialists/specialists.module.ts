@@ -4,6 +4,7 @@ import { SpecialistsController } from './specialists.controller';
 import { GeneralHelpers } from '../../common/helpers/general.helpers';
 import { FileUploadHelper } from '../../common/helpers/file-upload.helpers';
 import { PatientsModule } from '../patients/patients.module';
+import { FinanceModule } from '../finance/finance.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { User, UserSchema } from '../patients/entities/patient.entity';
 import {
@@ -15,6 +16,7 @@ import { Appointment, AppointmentSchema } from '../appointments/entities/appoint
 @Module({
   imports: [
     PatientsModule,
+    FinanceModule,
     MongooseModule.forFeature([
       { name: User.name, schema: UserSchema },
       { name: WalletTransaction.name, schema: WalletTransactionSchema },

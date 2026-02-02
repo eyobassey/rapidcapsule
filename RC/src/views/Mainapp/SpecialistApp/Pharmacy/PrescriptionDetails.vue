@@ -1,739 +1,1177 @@
 <template>
   <div class="page-content">
-    <TopBar showButtons type="avatar" @open-side-nav="$emit('openSideNav')" />
-    <loader v-if="isLoading" :useOverlay="false" style="position: absolute" />
-    <div v-else class="page-content__body">
+    <TopBar showButtons type="title-only" title="Pharmacy / Prescription Details" @open-side-nav="$emit('openSideNav')" />
+    <div class="page-content__body">
       <div class="prescription-details-container">
-        <!-- Header -->
-        <div class="page-header">
-          <button class="back-btn" @click="$router.back()">
-            <rc-icon icon-name="arrow-left" size="sm" />
-          </button>
-          <div class="header-content">
-            <h1>{{ prescription.prescription_number }}</h1>
-            <span :class="['status', `status--${prescription.status?.toLowerCase()}`]">
-              {{ formatStatus(prescription.status) }}
-            </span>
-          </div>
-          <div class="header-actions" v-if="canTakeActions">
-            <div class="dropdown" v-if="showActionsDropdown">
-              <button class="btn btn-secondary" @click="toggleActionsMenu">
-                Actions
-                <rc-icon icon-name="chevron-down" size="xs" />
-              </button>
-              <div v-if="actionsMenuOpen" class="dropdown-menu">
-                <button
-                  v-if="prescription.status === 'draft'"
-                  @click="sendPaymentLink"
-                >
-                  Send Payment Link
-                </button>
-                <button
-                  v-if="prescription.status === 'paid'"
-                  @click="showDispenseDialog = true"
-                >
-                  Mark as Dispensed
-                </button>
-                <button
-                  v-if="prescription.status === 'dispensed'"
-                  @click="showShipDialog = true"
-                >
-                  Mark as Shipped
-                </button>
-                <button
-                  v-if="prescription.status === 'shipped'"
-                  @click="showDeliverDialog = true"
-                >
-                  Mark as Delivered
-                </button>
-                <button
-                  v-if="['draft', 'pending_payment', 'paid', 'processing', 'dispensed'].includes(prescription.status)"
-                  class="danger"
-                  @click="showCancelDialog = true"
-                >
-                  Cancel Prescription
-                </button>
+        <!-- Skeleton Loading -->
+        <template v-if="isLoading">
+          <div class="skeleton-hero" />
+          <div class="skeleton-card" />
+          <div class="skeleton-card skeleton-card--lg" />
+          <div class="skeleton-card" />
+        </template>
+
+        <template v-else>
+          <!-- Hero Section -->
+          <div class="hero-section">
+            <div class="hero-content">
+              <router-link to="/app/specialist/pharmacy/prescriptions" class="hero-back">
+                <v-icon name="hi-arrow-left" scale="0.75" />
+                Prescriptions
+              </router-link>
+              <h1 class="hero-title">
+                <v-icon name="ri-capsule-line" scale="1" />
+                {{ prescription.prescription_number || 'Prescription' }}
+              </h1>
+              <div class="hero-meta">
+                <span class="hero-status-badge" :class="prescription.status?.toLowerCase()">
+                  {{ formatStatus(prescription.status) }}
+                </span>
+                <span v-if="prescription.created_at" class="hero-date">
+                  <v-icon name="hi-calendar" scale="0.7" />
+                  {{ formatDateTime(prescription.created_at) }}
+                </span>
+              </div>
+            </div>
+            <div class="hero-right" v-if="prescription.patient">
+              <div class="hero-patient-badge">
+                <RcAvatar
+                  :model-value="prescription.patient?.profile_image"
+                  :first-name="getFirstName(prescription.patient?.full_name)"
+                  :last-name="getLastName(prescription.patient?.full_name)"
+                  size="sm"
+                  class="hero-patient-avatar"
+                />
+                <div class="hero-patient-info">
+                  <span class="hero-patient-name">{{ prescription.patient?.full_name }}</span>
+                  <span class="hero-patient-label">Patient</span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <!-- Patient Info -->
-        <div class="info-card">
-          <h3>Patient Information</h3>
-          <div class="patient-row">
-            <div class="patient-avatar">
-              <img
-                v-if="prescription.patient?.profile_image"
-                :src="prescription.patient.profile_image"
-                :alt="prescription.patient?.full_name"
+          <!-- Status Pipeline -->
+          <div class="status-pipeline-card">
+            <div class="section-title">
+              <v-icon name="hi-clipboard-check" scale="0.9" />
+              <h2>Status Progress</h2>
+            </div>
+            <div class="status-pipeline">
+              <div
+                v-for="(step, index) in statusPipeline"
+                :key="step.status"
+                :class="['pipeline-step', { completed: step.completed, current: step.current, cancelled: isCancelled }]"
+              >
+                <div class="pipeline-step__marker">
+                  <v-icon v-if="step.completed && !step.current" name="hi-check" scale="0.7" />
+                  <span v-else>{{ index + 1 }}</span>
+                </div>
+                <div class="pipeline-step__label">{{ step.label }}</div>
+                <div class="pipeline-step__connector" v-if="index < statusPipeline.length - 1" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div v-if="availableActions.length" class="actions-card">
+            <button
+              v-for="action in availableActions"
+              :key="action.id"
+              :class="['action-btn', `action-btn--${action.variant}`]"
+              :disabled="actionLoading"
+              @click="handleAction(action.id)"
+            >
+              <v-icon :name="action.icon" scale="0.85" />
+              {{ action.label }}
+            </button>
+          </div>
+
+          <!-- Patient Info -->
+          <div class="info-card">
+            <div class="section-title">
+              <v-icon name="hi-user" scale="0.9" />
+              <h2>Patient Information</h2>
+            </div>
+            <div class="patient-row">
+              <RcAvatar
+                :model-value="prescription.patient?.profile_image"
+                :first-name="getFirstName(prescription.patient?.full_name)"
+                :last-name="getLastName(prescription.patient?.full_name)"
+                size="sm"
               />
-              <span v-else>{{ getInitials(prescription.patient?.full_name) }}</span>
+              <div class="patient-details">
+                <p class="name">{{ prescription.patient?.full_name }}</p>
+                <p class="email">
+                  <v-icon name="hi-mail" scale="0.65" />
+                  {{ prescription.patient?.email }}
+                </p>
+                <p class="phone">
+                  <v-icon name="hi-phone" scale="0.65" />
+                  {{ prescription.patient?.phone || 'No phone' }}
+                </p>
+              </div>
+              <router-link
+                :to="`/app/specialist/pharmacy/patients/${getPatientId}`"
+                class="view-patient-btn"
+              >
+                View Profile
+                <v-icon name="hi-chevron-right" scale="0.7" />
+              </router-link>
             </div>
-            <div class="patient-details">
-              <p class="name">{{ prescription.patient?.full_name }}</p>
-              <p class="email">{{ prescription.patient?.email }}</p>
-              <p class="phone">{{ prescription.patient?.phone || 'No phone' }}</p>
+          </div>
+
+          <!-- Linked Records -->
+          <div
+            v-if="prescription.linked_appointments_populated?.length || prescription.linked_clinical_notes_populated?.length"
+            class="info-card"
+          >
+            <div class="section-title">
+              <v-icon name="hi-link" scale="0.9" />
+              <h2>Linked Records</h2>
             </div>
-            <router-link
-              :to="`/app/specialist/pharmacy/patients/${getPatientId}`"
-              class="view-patient-btn"
+
+            <!-- Linked Appointments -->
+            <div v-if="prescription.linked_appointments_populated?.length" class="linked-section">
+              <h4 class="linked-section__label">Appointments</h4>
+              <div class="linked-items">
+                <div
+                  v-for="appt in prescription.linked_appointments_populated"
+                  :key="appt._id"
+                  class="linked-item"
+                >
+                  <div class="linked-item__icon">
+                    <v-icon name="hi-calendar" scale="0.7" />
+                  </div>
+                  <div class="linked-item__content">
+                    <span class="linked-item__date">{{ formatDateTime(appt.start_time) }}</span>
+                    <div class="linked-item__tags">
+                      <span class="linked-tag">{{ appt.meeting_channel || 'Video' }}</span>
+                      <span v-if="appt.category" class="linked-tag">{{ appt.category }}</span>
+                      <span v-if="appt.notes_count" class="linked-tag linked-tag--notes">
+                        {{ appt.notes_count }} note{{ appt.notes_count > 1 ? 's' : '' }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Linked Clinical Notes -->
+            <div v-if="prescription.linked_clinical_notes_populated?.length" class="linked-section">
+              <h4 class="linked-section__label">Clinical Notes</h4>
+              <div class="linked-items">
+                <div
+                  v-for="note in prescription.linked_clinical_notes_populated"
+                  :key="`${note.appointment_id}-${note.note_id}`"
+                  class="linked-item linked-item--note"
+                  @click="toggleNoteExpand(note.note_id)"
+                >
+                  <div class="linked-item__icon">
+                    <v-icon name="hi-document-text" scale="0.7" />
+                  </div>
+                  <div class="linked-item__content">
+                    <span class="linked-item__date">{{ formatDateTime(note.appointment_date) }}</span>
+                    <span
+                      class="linked-item__platform"
+                      :class="note.platform === 'zoom' ? 'platform--zoom' : 'platform--custom'"
+                    >
+                      {{ note.platform === 'zoom' ? 'Zoom' : 'Custom' }}
+                    </span>
+                    <p v-if="expandedNoteIds.includes(note.note_id)" class="linked-item__note-content">
+                      {{ note.content }}
+                    </p>
+                    <p v-else class="linked-item__note-preview">
+                      {{ (note.content || '').substring(0, 100) }}{{ (note.content || '').length > 100 ? '...' : '' }}
+                    </p>
+                  </div>
+                  <v-icon
+                    :name="expandedNoteIds.includes(note.note_id) ? 'hi-chevron-up' : 'hi-chevron-down'"
+                    scale="0.7"
+                    class="linked-item__expand"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Manage Links Button -->
+            <button
+              v-if="['draft', 'pending_payment'].includes(prescription.status?.toLowerCase())"
+              class="manage-links-btn"
+              @click="showManageLinksDialog = true"
             >
-              View Profile
-            </router-link>
+              <v-icon name="hi-pencil" scale="0.7" />
+              Manage Links
+            </button>
           </div>
-        </div>
 
-        <!-- Medications -->
-        <div class="info-card">
-          <h3>Medications ({{ prescription.items?.length || 0 }})</h3>
-          <div class="medications-list">
-            <div
-              v-for="(item, index) in prescription.items"
-              :key="index"
-              class="medication-item"
-            >
-              <div class="medication-main">
-                <div class="medication-info">
-                  <h4>{{ item.drug_name }}</h4>
-                  <p class="generic">{{ item.generic_name || item.drug_snapshot?.generic_name }} | {{ item.drug_strength || item.drug_snapshot?.strength }}</p>
-                  <p class="manufacturer" v-if="item.manufacturer || item.drug_snapshot?.manufacturer">
-                    <span class="mfg-label">Mfr:</span> {{ item.manufacturer || item.drug_snapshot?.manufacturer }}
-                  </p>
+          <!-- Medications -->
+          <div class="info-card">
+            <div class="section-title">
+              <v-icon name="ri-capsule-line" scale="0.9" />
+              <h2>Medications ({{ prescription.items?.length || 0 }})</h2>
+            </div>
+            <div class="medications-list">
+              <div
+                v-for="(item, index) in prescription.items"
+                :key="index"
+                class="medication-item"
+              >
+                <div class="medication-item__accent" />
+                <div class="medication-item__body">
+                  <div class="medication-item__header">
+                    <div class="medication-info">
+                      <h4>{{ item.drug_name }}</h4>
+                      <p class="generic">{{ item.generic_name || item.drug_snapshot?.generic_name }} | {{ item.drug_strength || item.drug_snapshot?.strength }}</p>
+                      <p v-if="item.manufacturer || item.drug_snapshot?.manufacturer" class="manufacturer">
+                        {{ item.manufacturer || item.drug_snapshot?.manufacturer }}
+                      </p>
+                    </div>
+                    <div class="medication-price">
+                      <span class="qty">x{{ item.quantity }}</span>
+                      <span class="price">NGN {{ formatCurrency(item.unit_price * item.quantity) }}</span>
+                    </div>
+                  </div>
+                  <div class="medication-item__dosage">
+                    <div v-if="item.dosage" class="dosage-tag">
+                      <v-icon name="ri-capsule-line" scale="0.65" />
+                      {{ item.dosage }}
+                    </div>
+                    <div v-if="item.frequency" class="dosage-tag">
+                      <v-icon name="hi-clock" scale="0.65" />
+                      {{ item.frequency }}
+                    </div>
+                    <div v-if="item.duration" class="dosage-tag">
+                      <v-icon name="hi-calendar" scale="0.65" />
+                      {{ item.duration }}
+                    </div>
+                  </div>
+                  <div v-if="item.instructions || item.notes" class="medication-item__instructions">
+                    <v-icon name="hi-information-circle" scale="0.7" />
+                    <span>{{ item.instructions || item.notes }}</span>
+                  </div>
                 </div>
-                <div class="medication-quantity">
-                  <span class="qty">x{{ item.quantity }}</span>
-                  <span class="price">NGN {{ formatCurrency(item.unit_price * item.quantity) }}</span>
-                </div>
-              </div>
-              <div class="medication-details">
-                <div class="detail">
-                  <span class="label">Dosage:</span>
-                  <span class="value">{{ item.dosage || 'Not specified' }}</span>
-                </div>
-                <div class="detail" v-if="item.frequency">
-                  <span class="label">Frequency:</span>
-                  <span class="value">{{ item.frequency }}</span>
-                </div>
-                <div class="detail" v-if="item.duration">
-                  <span class="label">Duration:</span>
-                  <span class="value">{{ item.duration }}</span>
-                </div>
-                <div class="detail" v-if="item.instructions || item.notes">
-                  <span class="label">Instructions:</span>
-                  <span class="value">{{ item.instructions || item.notes }}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Payment Info -->
-        <div class="info-card">
-          <h3>Payment Information</h3>
-          <div class="info-grid">
-            <div class="info-item">
-              <span class="label">Subtotal</span>
-              <span class="value">NGN {{ formatCurrency(prescription.subtotal) }}</span>
-            </div>
-            <div class="info-item" v-if="prescription.delivery_fee">
-              <span class="label">Delivery Fee</span>
-              <span class="value">NGN {{ formatCurrency(prescription.delivery_fee) }}</span>
-            </div>
-            <div class="info-item total">
-              <span class="label">Total Amount</span>
-              <span class="value">NGN {{ formatCurrency(prescription.total_amount) }}</span>
-            </div>
-          </div>
-          <div class="payment-status-row">
-            <div class="status-item">
-              <span class="label">Payment Method</span>
-              <span class="value">{{ formatPaymentMethod(prescription.payment_method) }}</span>
-            </div>
-            <div class="status-item">
-              <span class="label">Payment Status</span>
-              <span :class="['payment-badge', `payment-badge--${prescription.payment_status?.toLowerCase()}`]">
-                {{ formatPaymentStatus(prescription.payment_status) }}
-              </span>
-            </div>
-          </div>
-          <!-- Linked Pharmacy Order Reference -->
-          <div class="linked-order-row" v-if="prescription.linked_pharmacy_order_number">
-            <div class="linked-order-info">
-              <span class="label">Linked Order</span>
-              <span class="linked-order-number">{{ prescription.linked_pharmacy_order_number }}</span>
-              <span class="linked-order-note">Patient paid via pharmacy checkout</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Delivery Info -->
-        <div class="info-card" v-if="prescription.delivery">
-          <h3>Delivery Information</h3>
-          <div class="info-grid">
-            <div class="info-item">
-              <span class="label">Delivery Type</span>
-              <span class="value">{{ prescription.delivery.type === 'PICKUP' ? 'Pickup at Clinic' : 'Home Delivery' }}</span>
-            </div>
-            <div class="info-item" v-if="prescription.delivery.address">
-              <span class="label">Address</span>
-              <span class="value">{{ prescription.delivery.address }}</span>
-            </div>
-            <div class="info-item" v-if="prescription.delivery.tracking_number">
-              <span class="label">Tracking Number</span>
-              <span class="value">{{ prescription.delivery.tracking_number }}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Timeline -->
-        <div class="info-card">
-          <h3>Status Timeline</h3>
-          <div class="timeline">
-            <div
-              v-for="event in statusTimeline"
-              :key="event.status"
-              :class="['timeline-item', { completed: event.completed, current: event.current }]"
-            >
-              <div class="timeline-marker">
-                <rc-icon v-if="event.completed" icon-name="check" size="xs" />
-              </div>
-              <div class="timeline-content">
-                <p class="event-status">{{ event.label }}</p>
-                <p class="event-date" v-if="event.date">{{ formatDateTime(event.date) }}</p>
               </div>
             </div>
           </div>
-        </div>
 
-        <!-- Notes -->
-        <div class="info-card" v-if="prescription.notes">
-          <h3>Notes</h3>
-          <p class="notes-text">{{ prescription.notes }}</p>
-        </div>
-
-        <!-- Dates -->
-        <div class="info-card">
-          <h3>Details</h3>
-          <div class="info-grid">
-            <div class="info-item">
-              <span class="label">Created</span>
-              <span class="value">{{ formatDateTime(prescription.created_at) }}</span>
+          <!-- Payment Info -->
+          <div class="info-card">
+            <div class="section-title">
+              <v-icon name="hi-credit-card" scale="0.9" />
+              <h2>Payment Information</h2>
             </div>
-            <div class="info-item" v-if="prescription.updated_at">
-              <span class="label">Last Updated</span>
-              <span class="value">{{ formatDateTime(prescription.updated_at) }}</span>
+            <div class="payment-breakdown">
+              <div class="payment-line">
+                <span>Subtotal</span>
+                <span>NGN {{ formatCurrency(prescription.subtotal) }}</span>
+              </div>
+              <div v-if="prescription.delivery_fee" class="payment-line">
+                <span>Delivery Fee</span>
+                <span>NGN {{ formatCurrency(prescription.delivery_fee) }}</span>
+              </div>
+              <div class="payment-line payment-line--total">
+                <span>Total Amount</span>
+                <span>NGN {{ formatCurrency(prescription.total_amount) }}</span>
+              </div>
             </div>
-            <div class="info-item" v-if="prescription.reservation_expires_at">
-              <span class="label">Reservation Expires</span>
-              <span class="value expiring">{{ formatDateTime(prescription.reservation_expires_at) }}</span>
+            <div class="payment-meta">
+              <div class="payment-meta__item">
+                <span class="label">Payment Method</span>
+                <span class="value">{{ formatPaymentMethod(prescription.payment_method) }}</span>
+              </div>
+              <div class="payment-meta__item">
+                <span class="label">Payment Status</span>
+                <PharmacyStatusBadge
+                  :status="getPaymentStatusClass(prescription.payment_status)"
+                  :label="formatPaymentStatus(prescription.payment_status)"
+                />
+              </div>
+            </div>
+            <div v-if="prescription.linked_pharmacy_order_number" class="linked-order">
+              <v-icon name="hi-link" scale="0.8" />
+              <div>
+                <span class="linked-order__number">{{ prescription.linked_pharmacy_order_number }}</span>
+                <span class="linked-order__note">Patient paid via pharmacy checkout</span>
+              </div>
             </div>
           </div>
-        </div>
+
+          <!-- Delivery Info -->
+          <div v-if="prescription.delivery" class="info-card">
+            <div class="section-title">
+              <v-icon name="hi-truck" scale="0.9" />
+              <h2>Delivery Information</h2>
+            </div>
+            <div class="delivery-grid">
+              <div class="delivery-item">
+                <span class="label">Delivery Type</span>
+                <span class="value">{{ prescription.delivery.type === 'PICKUP' ? 'Pickup at Clinic' : 'Home Delivery' }}</span>
+              </div>
+              <div v-if="prescription.delivery.address" class="delivery-item">
+                <span class="label">Address</span>
+                <span class="value">{{ prescription.delivery.address }}</span>
+              </div>
+              <div v-if="prescription.delivery.tracking_number" class="delivery-item">
+                <span class="label">Tracking Number</span>
+                <span class="value tracking">{{ prescription.delivery.tracking_number }}</span>
+              </div>
+              <div v-if="prescription.delivery.carrier" class="delivery-item">
+                <span class="label">Carrier</span>
+                <span class="value">{{ prescription.delivery.carrier }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Notes -->
+          <div v-if="prescription.notes" class="info-card">
+            <div class="section-title">
+              <v-icon name="hi-annotation" scale="0.9" />
+              <h2>Notes</h2>
+            </div>
+            <div class="notes-content">
+              <p class="notes-text">{{ prescription.notes }}</p>
+            </div>
+          </div>
+
+          <!-- Dates -->
+          <div class="info-card">
+            <div class="section-title">
+              <v-icon name="hi-calendar" scale="0.9" />
+              <h2>Timeline</h2>
+            </div>
+            <div class="dates-grid">
+              <div class="date-item">
+                <span class="label">Created</span>
+                <span class="value">{{ formatDateTime(prescription.created_at) }}</span>
+              </div>
+              <div v-if="prescription.updated_at" class="date-item">
+                <span class="label">Last Updated</span>
+                <span class="value">{{ formatDateTime(prescription.updated_at) }}</span>
+              </div>
+              <div v-if="prescription.reservation_expires_at" class="date-item">
+                <span class="label">Reservation Expires</span>
+                <span class="value value--warning">{{ formatDateTime(prescription.reservation_expires_at) }}</span>
+              </div>
+            </div>
+          </div>
+        </template>
       </div>
     </div>
 
     <!-- Cancel Dialog -->
-    <div v-if="showCancelDialog" class="dialog-overlay">
-      <div class="dialog">
-        <h3>Cancel Prescription</h3>
-        <p>Are you sure you want to cancel this prescription? This action cannot be undone.</p>
-        <div class="form-group">
-          <label>Reason for cancellation</label>
-          <textarea v-model="cancelReason" rows="3" placeholder="Enter reason..."></textarea>
-        </div>
-        <div class="dialog-actions">
-          <button class="btn btn-secondary" @click="showCancelDialog = false">Cancel</button>
-          <button class="btn btn-danger" @click="cancelPrescription" :disabled="!cancelReason">
-            Confirm Cancellation
-          </button>
-        </div>
+    <PharmacyConfirmDialog
+      v-model="showCancelDialog"
+      title="Cancel Prescription"
+      message="Are you sure you want to cancel this prescription? This action cannot be undone."
+      confirm-label="Confirm Cancellation"
+      confirm-variant="danger"
+      :loading="actionLoading"
+      :confirm-disabled="!cancelReason"
+      @confirm="cancelPrescription"
+    >
+      <div class="form-group">
+        <label>Reason for cancellation</label>
+        <textarea v-model="cancelReason" rows="3" placeholder="Enter reason..." />
       </div>
-    </div>
+    </PharmacyConfirmDialog>
 
     <!-- Dispense Dialog -->
-    <div v-if="showDispenseDialog" class="dialog-overlay">
-      <div class="dialog">
-        <h3>Mark as Dispensed</h3>
-        <p>Confirm that all medications have been dispensed.</p>
-        <div class="form-group">
-          <label>Notes (optional)</label>
-          <textarea v-model="dispenseNotes" rows="2" placeholder="Any notes..."></textarea>
-        </div>
-        <div class="dialog-actions">
-          <button class="btn btn-secondary" @click="showDispenseDialog = false">Cancel</button>
-          <button class="btn btn-primary" @click="markDispensed">Confirm</button>
-        </div>
+    <PharmacyConfirmDialog
+      v-model="showDispenseDialog"
+      title="Mark as Dispensed"
+      message="Confirm that all medications have been dispensed."
+      confirm-label="Confirm Dispensed"
+      :loading="actionLoading"
+      @confirm="markDispensed"
+    >
+      <div class="form-group">
+        <label>Notes (optional)</label>
+        <textarea v-model="dispenseNotes" rows="2" placeholder="Any notes..." />
       </div>
-    </div>
+    </PharmacyConfirmDialog>
 
     <!-- Ship Dialog -->
-    <div v-if="showShipDialog" class="dialog-overlay">
-      <div class="dialog">
-        <h3>Mark as Shipped</h3>
-        <div class="form-group">
-          <label>Tracking Number (optional)</label>
-          <input v-model="trackingNumber" type="text" placeholder="Enter tracking number..." />
-        </div>
-        <div class="form-group">
-          <label>Carrier (optional)</label>
-          <input v-model="carrier" type="text" placeholder="e.g., DHL, FedEx..." />
-        </div>
-        <div class="dialog-actions">
-          <button class="btn btn-secondary" @click="showShipDialog = false">Cancel</button>
-          <button class="btn btn-primary" @click="markShipped">Confirm</button>
-        </div>
+    <PharmacyConfirmDialog
+      v-model="showShipDialog"
+      title="Mark as Shipped"
+      confirm-label="Confirm Shipped"
+      :loading="actionLoading"
+      @confirm="markShipped"
+    >
+      <div class="form-group">
+        <label>Tracking Number (optional)</label>
+        <input v-model="trackingNumber" type="text" placeholder="Enter tracking number..." />
       </div>
-    </div>
+      <div class="form-group">
+        <label>Carrier (optional)</label>
+        <input v-model="carrier" type="text" placeholder="e.g., DHL, FedEx..." />
+      </div>
+    </PharmacyConfirmDialog>
 
     <!-- Deliver Dialog -->
-    <div v-if="showDeliverDialog" class="dialog-overlay">
-      <div class="dialog">
-        <h3>Mark as Delivered</h3>
-        <p>Confirm that the prescription has been delivered to the patient.</p>
-        <div class="form-group">
-          <label>Notes (optional)</label>
-          <textarea v-model="deliverNotes" rows="2" placeholder="Any notes..."></textarea>
-        </div>
-        <div class="dialog-actions">
-          <button class="btn btn-secondary" @click="showDeliverDialog = false">Cancel</button>
-          <button class="btn btn-primary" @click="markDelivered">Confirm</button>
-        </div>
+    <PharmacyConfirmDialog
+      v-model="showDeliverDialog"
+      title="Mark as Delivered"
+      message="Confirm that the prescription has been delivered to the patient."
+      confirm-label="Confirm Delivered"
+      :loading="actionLoading"
+      @confirm="markDelivered"
+    >
+      <div class="form-group">
+        <label>Notes (optional)</label>
+        <textarea v-model="deliverNotes" rows="2" placeholder="Any notes..." />
       </div>
-    </div>
+    </PharmacyConfirmDialog>
   </div>
 </template>
 
-<script>
-import TopBar from "@/components/Navigation/top-bar";
-import Loader from "@/components/Loader/main-loader";
-import RcIcon from "@/components/RCIcon";
-import apiFactory from "@/services/apiFactory";
-import moment from "moment";
+<script setup>
+import { ref, computed, onMounted } from 'vue';
+import { useRoute } from 'vue-router';
+import { useToast } from 'vue-toast-notification';
+import TopBar from '@/components/Navigation/top-bar';
+import RcAvatar from '@/components/RCAvatar';
+import apiFactory from '@/services/apiFactory';
+import PharmacyStatusBadge from './components/PharmacyStatusBadge.vue';
+import PharmacyConfirmDialog from './components/PharmacyConfirmDialog.vue';
+import { usePharmacy } from './composables/usePharmacy';
 
-export default {
-  name: "PrescriptionDetails",
-  components: {
-    TopBar,
-    Loader,
-    RcIcon,
-  },
-  data() {
-    return {
-      isLoading: true,
-      prescription: {},
-      actionsMenuOpen: false,
-      // Dialogs
-      showCancelDialog: false,
-      showDispenseDialog: false,
-      showShipDialog: false,
-      showDeliverDialog: false,
-      // Form data
-      cancelReason: "",
-      dispenseNotes: "",
-      trackingNumber: "",
-      carrier: "",
-      deliverNotes: "",
-    };
-  },
-  computed: {
-    prescriptionId() {
-      return this.$route.params.id;
-    },
-    getPatientId() {
-      const patientId = this.prescription.patient_id;
-      if (!patientId) return '';
-      // Handle ObjectId - could be string or object
-      if (typeof patientId === 'string') return patientId;
-      if (patientId._id) return patientId._id;
-      if (patientId.$oid) return patientId.$oid;
-      return String(patientId);
-    },
-    canTakeActions() {
-      const status = this.prescription.status?.toLowerCase();
-      return !["delivered", "cancelled"].includes(status);
-    },
-    showActionsDropdown() {
-      const status = this.prescription.status?.toLowerCase();
-      return ["draft", "pending_payment", "paid", "dispensed", "shipped"].includes(status);
-    },
-    statusTimeline() {
-      const statuses = [
-        { status: "draft", label: "Created" },
-        { status: "pending_payment", label: "Pending Payment" },
-        { status: "paid", label: "Paid" },
-        { status: "processing", label: "Processing" },
-        { status: "dispensed", label: "Dispensed" },
-        { status: "shipped", label: "Shipped" },
-        { status: "delivered", label: "Delivered" },
-      ];
+const route = useRoute();
+const $toast = useToast();
+const { formatCurrency, formatDateTime, formatPaymentMethod, formatPaymentStatus, formatStatus } = usePharmacy();
 
-      const currentStatus = this.prescription.status?.toLowerCase();
-      const currentIndex = statuses.findIndex(s => s.status === currentStatus);
+const isLoading = ref(true);
+const actionLoading = ref(false);
+const prescription = ref({});
 
-      return statuses.map((s, index) => ({
-        ...s,
-        completed: index <= currentIndex, // Include current as completed (green)
-        current: index === currentIndex,
-        date: this.getStatusDate(s.status),
-      }));
-    },
-  },
-  async mounted() {
-    await this.fetchPrescription();
-    document.addEventListener("click", this.handleClickOutside);
-  },
-  beforeUnmount() {
-    document.removeEventListener("click", this.handleClickOutside);
-  },
-  methods: {
-    async fetchPrescription() {
-      try {
-        this.isLoading = true;
-        const response = await apiFactory.$_getSpecialistPrescriptionDetails(this.prescriptionId);
-        const result = response.data?.data || response.data?.result;
-        if (result) {
-          this.prescription = result;
-        }
-      } catch (error) {
-        console.error("Error fetching prescription:", error);
-        this.$toast.error("Failed to load prescription details");
-      } finally {
-        this.isLoading = false;
-      }
-    },
-    toggleActionsMenu() {
-      this.actionsMenuOpen = !this.actionsMenuOpen;
-    },
-    handleClickOutside(event) {
-      if (!event.target.closest(".dropdown")) {
-        this.actionsMenuOpen = false;
-      }
-    },
-    getStatusDate(status) {
-      const statusHistory = this.prescription.status_history || [];
-      const entry = statusHistory.find(h => h.status === status);
-      return entry?.changed_at;
-    },
-    async sendPaymentLink() {
-      try {
-        await apiFactory.$_sendPrescriptionPaymentLink(this.prescriptionId, {
-          email: this.prescription.patient?.email,
-        });
-        this.$toast.success("Payment link sent to patient");
-        this.actionsMenuOpen = false;
-      } catch (error) {
-        console.error("Error sending payment link:", error);
-        this.$toast.error("Failed to send payment link");
-      }
-    },
-    async cancelPrescription() {
-      try {
-        await apiFactory.$_cancelSpecialistPrescription(this.prescriptionId, {
-          reason: this.cancelReason,
-        });
-        this.$toast.success("Prescription cancelled");
-        this.showCancelDialog = false;
-        await this.fetchPrescription();
-      } catch (error) {
-        console.error("Error cancelling prescription:", error);
-        this.$toast.error("Failed to cancel prescription");
-      }
-    },
-    async markDispensed() {
-      try {
-        await apiFactory.$_dispensePrescription(this.prescriptionId, {
-          notes: this.dispenseNotes,
-        });
-        this.$toast.success("Prescription marked as dispensed");
-        this.showDispenseDialog = false;
-        await this.fetchPrescription();
-      } catch (error) {
-        console.error("Error marking dispensed:", error);
-        this.$toast.error("Failed to update prescription");
-      }
-    },
-    async markShipped() {
-      try {
-        await apiFactory.$_shipPrescription(this.prescriptionId, {
-          tracking_number: this.trackingNumber,
-          carrier: this.carrier,
-        });
-        this.$toast.success("Prescription marked as shipped");
-        this.showShipDialog = false;
-        await this.fetchPrescription();
-      } catch (error) {
-        console.error("Error marking shipped:", error);
-        this.$toast.error("Failed to update prescription");
-      }
-    },
-    async markDelivered() {
-      try {
-        await apiFactory.$_deliverPrescription(this.prescriptionId, {
-          notes: this.deliverNotes,
-        });
-        this.$toast.success("Prescription marked as delivered");
-        this.showDeliverDialog = false;
-        await this.fetchPrescription();
-      } catch (error) {
-        console.error("Error marking delivered:", error);
-        this.$toast.error("Failed to update prescription");
-      }
-    },
-    getInitials(name) {
-      if (!name) return "?";
-      return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
-    },
-    formatCurrency(amount) {
-      if (!amount) return "0.00";
-      return Number(amount).toLocaleString("en-NG", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      });
-    },
-    formatDateTime(date) {
-      if (!date) return "";
-      return moment(date).format("MMM D, YYYY h:mm A");
-    },
-    formatStatus(status) {
-      if (!status) return "";
-      return status.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
-    },
-    formatPaymentMethod(method) {
-      const methods = {
-        SPECIALIST_WALLET: "Wallet Payment",
-        PATIENT_ONLINE: "Patient Online Payment",
-        PATIENT_CASH: "Cash Payment",
-      };
-      return methods[method] || method || "Not set";
-    },
-    formatPaymentStatus(status) {
-      const statuses = {
-        PENDING: "Pending",
-        PROCESSING: "Processing",
-        COMPLETED: "Paid",
-        FAILED: "Failed",
-        REFUNDED: "Refunded",
-      };
-      return statuses[status] || status || "N/A";
-    },
-  },
-};
+// Dialog states
+const showCancelDialog = ref(false);
+const showDispenseDialog = ref(false);
+const showShipDialog = ref(false);
+const showDeliverDialog = ref(false);
+
+// Form data
+const cancelReason = ref('');
+const dispenseNotes = ref('');
+const trackingNumber = ref('');
+const carrier = ref('');
+const deliverNotes = ref('');
+
+// Linked records
+const expandedNoteIds = ref([]);
+const showManageLinksDialog = ref(false);
+
+function toggleNoteExpand(noteId) {
+  const index = expandedNoteIds.value.indexOf(noteId);
+  if (index >= 0) {
+    expandedNoteIds.value.splice(index, 1);
+  } else {
+    expandedNoteIds.value.push(noteId);
+  }
+}
+
+const prescriptionId = route.params.id;
+
+const isCancelled = computed(() => {
+  return prescription.value.status?.toLowerCase() === 'cancelled';
+});
+
+const getPatientId = computed(() => {
+  const patientId = prescription.value.patient_id;
+  if (!patientId) return '';
+  if (typeof patientId === 'string') return patientId;
+  if (patientId._id) return patientId._id;
+  if (patientId.$oid) return patientId.$oid;
+  return String(patientId);
+});
+
+const statusPipeline = computed(() => {
+  const statuses = [
+    { status: 'draft', label: 'Created' },
+    { status: 'pending_payment', label: 'Payment' },
+    { status: 'paid', label: 'Paid' },
+    { status: 'dispensed', label: 'Dispensed' },
+    { status: 'shipped', label: 'Shipped' },
+    { status: 'delivered', label: 'Delivered' },
+  ];
+
+  const currentStatus = prescription.value.status?.toLowerCase();
+  const currentIndex = statuses.findIndex(s => s.status === currentStatus);
+
+  return statuses.map((s, index) => ({
+    ...s,
+    completed: index <= currentIndex,
+    current: index === currentIndex,
+  }));
+});
+
+const availableActions = computed(() => {
+  const status = prescription.value.status?.toLowerCase();
+  const actions = [];
+
+  if (status === 'draft') {
+    actions.push({
+      id: 'send_payment',
+      label: 'Send Payment Link',
+      icon: 'hi-mail',
+      variant: 'primary',
+    });
+  }
+
+  if (status === 'paid') {
+    actions.push({
+      id: 'dispense',
+      label: 'Mark as Dispensed',
+      icon: 'hi-check-circle',
+      variant: 'primary',
+    });
+  }
+
+  if (status === 'dispensed') {
+    actions.push({
+      id: 'ship',
+      label: 'Mark as Shipped',
+      icon: 'hi-truck',
+      variant: 'primary',
+    });
+  }
+
+  if (status === 'shipped') {
+    actions.push({
+      id: 'deliver',
+      label: 'Mark as Delivered',
+      icon: 'hi-check-circle',
+      variant: 'success',
+    });
+  }
+
+  if (['draft', 'pending_payment', 'paid', 'processing', 'dispensed'].includes(status)) {
+    actions.push({
+      id: 'cancel',
+      label: 'Cancel',
+      icon: 'hi-x-circle',
+      variant: 'danger',
+    });
+  }
+
+  return actions;
+});
+
+function getFirstName(name) {
+  if (!name) return '';
+  return name.split(' ')[0] || '';
+}
+
+function getLastName(name) {
+  if (!name) return '';
+  const parts = name.split(' ');
+  return parts.length > 1 ? parts[parts.length - 1] : '';
+}
+
+function getPaymentStatusClass(status) {
+  if (!status) return 'draft';
+  const normalized = status.toUpperCase();
+  if (normalized === 'COMPLETED' || normalized === 'PAID') return 'delivered';
+  if (normalized === 'PENDING') return 'pending_payment';
+  if (normalized === 'FAILED') return 'cancelled';
+  if (normalized === 'PROCESSING') return 'processing';
+  return 'draft';
+}
+
+function handleAction(actionId) {
+  switch (actionId) {
+    case 'send_payment':
+      sendPaymentLink();
+      break;
+    case 'dispense':
+      showDispenseDialog.value = true;
+      break;
+    case 'ship':
+      showShipDialog.value = true;
+      break;
+    case 'deliver':
+      showDeliverDialog.value = true;
+      break;
+    case 'cancel':
+      showCancelDialog.value = true;
+      break;
+  }
+}
+
+async function fetchPrescription() {
+  try {
+    isLoading.value = true;
+    const response = await apiFactory.$_getSpecialistPrescriptionDetails(prescriptionId);
+    const result = response.data?.data || response.data?.result;
+    if (result) {
+      prescription.value = result;
+    }
+  } catch (error) {
+    console.error('Error fetching prescription:', error);
+    $toast.error('Failed to load prescription details');
+  } finally {
+    isLoading.value = false;
+  }
+}
+
+async function sendPaymentLink() {
+  try {
+    actionLoading.value = true;
+    await apiFactory.$_sendPrescriptionPaymentLink(prescriptionId, {
+      email: prescription.value.patient?.email,
+    });
+    $toast.success('Payment link sent to patient');
+  } catch (error) {
+    console.error('Error sending payment link:', error);
+    $toast.error('Failed to send payment link');
+  } finally {
+    actionLoading.value = false;
+  }
+}
+
+async function cancelPrescription() {
+  try {
+    actionLoading.value = true;
+    await apiFactory.$_cancelSpecialistPrescription(prescriptionId, {
+      reason: cancelReason.value,
+    });
+    $toast.success('Prescription cancelled');
+    showCancelDialog.value = false;
+    cancelReason.value = '';
+    await fetchPrescription();
+  } catch (error) {
+    console.error('Error cancelling prescription:', error);
+    $toast.error('Failed to cancel prescription');
+  } finally {
+    actionLoading.value = false;
+  }
+}
+
+async function markDispensed() {
+  try {
+    actionLoading.value = true;
+    await apiFactory.$_dispensePrescription(prescriptionId, {
+      notes: dispenseNotes.value,
+    });
+    $toast.success('Prescription marked as dispensed');
+    showDispenseDialog.value = false;
+    dispenseNotes.value = '';
+    await fetchPrescription();
+  } catch (error) {
+    console.error('Error marking dispensed:', error);
+    $toast.error('Failed to update prescription');
+  } finally {
+    actionLoading.value = false;
+  }
+}
+
+async function markShipped() {
+  try {
+    actionLoading.value = true;
+    await apiFactory.$_shipPrescription(prescriptionId, {
+      shipping_method: carrier.value || 'Courier',
+      tracking_number: trackingNumber.value || undefined,
+      courier_name: carrier.value || undefined,
+    });
+    $toast.success('Prescription marked as shipped');
+    showShipDialog.value = false;
+    trackingNumber.value = '';
+    carrier.value = '';
+    await fetchPrescription();
+  } catch (error) {
+    console.error('Error marking shipped:', error);
+    $toast.error('Failed to update prescription');
+  } finally {
+    actionLoading.value = false;
+  }
+}
+
+async function markDelivered() {
+  try {
+    actionLoading.value = true;
+    await apiFactory.$_deliverPrescription(prescriptionId, {
+      notes: deliverNotes.value,
+    });
+    $toast.success('Prescription marked as delivered');
+    showDeliverDialog.value = false;
+    deliverNotes.value = '';
+    await fetchPrescription();
+  } catch (error) {
+    console.error('Error marking delivered:', error);
+    $toast.error('Failed to update prescription');
+  } finally {
+    actionLoading.value = false;
+  }
+}
+
+onMounted(() => {
+  fetchPrescription();
+});
 </script>
 
 <style scoped lang="scss">
 .page-content {
-  @include flexItem(vertical) {
-    width: 100%;
-    height: 100%;
-    background-color: $color-g-97;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100vh;
+  padding: 0 128px;
+
+  @include responsive(tab-portrait) {
+    padding: 0;
+  }
+
+  @include responsive(phone) {
+    padding: 0;
   }
 
   &__body {
-    flex-grow: 1;
+    width: 100%;
+    padding: $size-24 $size-32;
     overflow-y: auto;
-    padding: $size-24;
 
-    @include responsive(tab-portrait) {
+    @include responsive(phone) {
       padding: $size-16;
+    }
+
+    &::-webkit-scrollbar {
+      display: none;
     }
   }
 }
 
 .prescription-details-container {
-  max-width: 800px;
-  margin: 0 auto;
-}
-
-.page-header {
+  width: 100%;
+  max-width: 700px;
   display: flex;
-  align-items: center;
-  gap: $size-16;
-  margin-bottom: $size-24;
+  flex-direction: column;
+  gap: $size-24;
+  padding-bottom: $size-32;
+}
 
-  .back-btn {
-    width: $size-40;
-    height: $size-40;
-    border-radius: 50%;
-    border: none;
-    background: $color-white;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+// Skeleton Hero
+.skeleton-hero {
+  border-radius: $size-20;
+  height: 150px;
+  background: linear-gradient(135deg, rgba(14, 174, 196, 0.15) 0%, rgba(14, 174, 196, 0.08) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
 
-    &:hover {
-      background: $color-g-95;
-    }
-  }
-
-  .header-content {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    gap: $size-12;
-
-    h1 {
-      font-size: $size-22;
-      font-weight: $fw-semi-bold;
-      color: $color-g-21;
-    }
-  }
-
-  .header-actions {
-    position: relative;
+  @include responsive(phone) {
+    height: 180px;
+    border-radius: $size-12;
   }
 }
 
-.dropdown {
+// Hero Section
+.hero-section {
+  background: linear-gradient(135deg, #0EAEC4 0%, #0891b2 50%, #0e7490 100%);
+  border-radius: $size-20;
+  padding: $size-24 $size-28;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   position: relative;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(14, 174, 196, 0.25);
+  color: white;
 
-  &-menu {
+  &::before {
+    content: '';
     position: absolute;
-    top: 100%;
-    right: 0;
-    margin-top: $size-4;
-    background: $color-white;
-    border-radius: $size-8;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    min-width: 180px;
-    z-index: 100;
-    overflow: hidden;
+    top: -50%;
+    right: -10%;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
 
-    button {
-      display: block;
-      width: 100%;
-      padding: $size-12 $size-16;
+  @include responsive(tab-portrait) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: $size-16;
+    padding: $size-20;
+    border-radius: $size-16;
+  }
+
+  @include responsive(phone) {
+    padding: $size-16;
+    border-radius: $size-12;
+  }
+
+  .hero-content {
+    z-index: 1;
+
+    .hero-back {
+      display: inline-flex;
+      align-items: center;
+      gap: $size-4;
+      background: rgba(255, 255, 255, 0.15);
       border: none;
-      background: none;
-      text-align: left;
-      font-size: $size-15;
-      color: $color-g-36;
+      color: white;
+      font-size: $size-12;
+      font-weight: $fw-medium;
+      padding: $size-4 $size-10;
+      border-radius: $size-8;
       cursor: pointer;
+      margin-bottom: $size-12;
+      transition: background 0.2s;
+      text-decoration: none;
 
       &:hover {
-        background: $color-g-97;
+        background: rgba(255, 255, 255, 0.25);
+      }
+    }
+
+    .hero-title {
+      display: flex;
+      align-items: center;
+      gap: $size-8;
+      font-size: $size-20;
+      font-weight: $fw-bold;
+      margin-bottom: $size-8;
+
+      @include responsive(phone) {
+        font-size: $size-18;
+      }
+    }
+
+    .hero-meta {
+      display: flex;
+      align-items: center;
+      gap: $size-12;
+      flex-wrap: wrap;
+
+      .hero-status-badge {
+        font-size: $size-11;
+        font-weight: $fw-semi-bold;
+        padding: $size-4 $size-10;
+        border-radius: $size-6;
+        background: rgba(255, 255, 255, 0.2);
+        text-transform: capitalize;
+
+        &.delivered { background: rgba(16, 185, 129, 0.3); }
+        &.cancelled { background: rgba(239, 68, 68, 0.3); }
+        &.paid, &.processing { background: rgba(59, 130, 246, 0.3); }
+        &.dispensed, &.shipped { background: rgba(139, 92, 246, 0.3); }
+        &.pending_payment { background: rgba(245, 158, 11, 0.3); }
       }
 
-      &.danger {
-        color: #ef4444;
+      .hero-date {
+        display: flex;
+        align-items: center;
+        gap: $size-4;
+        font-size: $size-12;
+        opacity: 0.85;
+      }
+    }
+  }
+
+  .hero-right {
+    z-index: 1;
+
+    .hero-patient-badge {
+      display: flex;
+      align-items: center;
+      gap: $size-10;
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: $size-10;
+      padding: $size-8 $size-14;
+
+      .hero-patient-avatar {
+        border: 2px solid rgba(255, 255, 255, 0.4);
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+
+      .hero-patient-info {
+        display: flex;
+        flex-direction: column;
+
+        .hero-patient-name {
+          font-size: $size-13;
+          font-weight: $fw-semi-bold;
+        }
+
+        .hero-patient-label {
+          font-size: $size-11;
+          opacity: 0.75;
+        }
       }
     }
   }
 }
 
-.status {
-  font-size: $size-12;
-  padding: $size-4 $size-12;
-  border-radius: $size-12;
-  font-weight: $fw-medium;
-  text-transform: uppercase;
-
-  &--draft {
-    background: $color-g-90;
-    color: $color-g-44;
-  }
-
-  &--pending_payment {
-    background: rgba(#f59e0b, 0.1);
-    color: #d97706;
-  }
-
-  &--paid,
-  &--processing {
-    background: rgba(#3b82f6, 0.1);
-    color: #2563eb;
-  }
-
-  &--dispensed,
-  &--shipped {
-    background: rgba(#8b5cf6, 0.1);
-    color: #7c3aed;
-  }
-
-  &--delivered {
-    background: rgba(#10b981, 0.1);
-    color: #059669;
-  }
-
-  &--cancelled {
-    background: rgba(#ef4444, 0.1);
-    color: #dc2626;
-  }
-}
-
-.info-card {
-  background: $color-white;
-  padding: $size-20;
-  border-radius: $size-12;
+// Section Title Pattern
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: $size-8;
   margin-bottom: $size-16;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 
-  h3 {
+  svg {
+    color: #0EAEC4;
+  }
+
+  h2 {
     font-size: $size-16;
     font-weight: $fw-semi-bold;
     color: $color-g-21;
-    margin-bottom: $size-16;
+    margin: 0;
   }
 }
 
+// Skeleton Loading (Shimmer)
+.skeleton-card {
+  border-radius: $size-16;
+  background: linear-gradient(90deg, $color-g-92 25%, $color-g-97 50%, $color-g-92 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  height: 160px;
+
+  &--sm { height: 80px; }
+  &--lg { height: 280px; }
+}
+
+// Status Pipeline Card
+.status-pipeline-card {
+  background: $color-white;
+  padding: $size-20 $size-24;
+  border-radius: $size-16;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+
+  @include responsive(phone) {
+    padding: $size-16;
+  }
+}
+
+.status-pipeline {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  overflow-x: auto;
+  padding: $size-8 0;
+}
+
+.pipeline-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  flex: 1;
+  min-width: 0;
+
+  &__marker {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: $color-g-92;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: $size-12;
+    font-weight: $fw-bold;
+    color: $color-g-54;
+    margin-bottom: $size-8;
+    z-index: 1;
+    transition: all 0.3s ease;
+  }
+
+  &__label {
+    font-size: $size-11;
+    color: $color-g-54;
+    text-align: center;
+    white-space: nowrap;
+    font-weight: $fw-medium;
+
+    @include responsive(phone) {
+      font-size: 9px;
+    }
+  }
+
+  &__connector {
+    position: absolute;
+    top: 16px;
+    left: 50%;
+    width: 100%;
+    height: 2px;
+    background: $color-g-92;
+    z-index: 0;
+    transition: background 0.3s ease;
+  }
+
+  &.completed {
+    .pipeline-step__marker {
+      background: linear-gradient(135deg, #0EAEC4 0%, #0891b2 100%);
+      color: $color-white;
+      box-shadow: 0 2px 6px rgba(#0EAEC4, 0.3);
+    }
+
+    .pipeline-step__label {
+      color: #0891b2;
+      font-weight: $fw-semi-bold;
+    }
+
+    .pipeline-step__connector {
+      background: linear-gradient(90deg, #0EAEC4, #0891b2);
+    }
+  }
+
+  &.current {
+    .pipeline-step__marker {
+      background: linear-gradient(135deg, #0EAEC4 0%, #0891b2 100%);
+      color: $color-white;
+      box-shadow: 0 0 0 4px rgba(#0EAEC4, 0.2), 0 2px 8px rgba(#0EAEC4, 0.3);
+      transform: scale(1.1);
+    }
+
+    .pipeline-step__label {
+      color: #0EAEC4;
+      font-weight: $fw-bold;
+    }
+  }
+
+  &.cancelled {
+    .pipeline-step__marker {
+      background: $color-g-92;
+      color: $color-g-54;
+      box-shadow: none;
+    }
+  }
+}
+
+// Action Buttons
+.actions-card {
+  display: flex;
+  gap: $size-10;
+  flex-wrap: wrap;
+  padding: $size-16 $size-20;
+  background: $color-white;
+  border-radius: $size-16;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  gap: $size-8;
+  padding: $size-10 $size-20;
+  border-radius: $size-10;
+  font-size: $size-14;
+  font-weight: $fw-semi-bold;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &--primary {
+    background: rgba(14, 174, 196, 0.1);
+    color: #0EAEC4;
+
+    &:hover:not(:disabled) {
+      background: rgba(14, 174, 196, 0.18);
+    }
+  }
+
+  &--success {
+    background: rgba(16, 185, 129, 0.1);
+    color: #059669;
+
+    &:hover:not(:disabled) {
+      background: rgba(16, 185, 129, 0.18);
+    }
+  }
+
+  &--danger {
+    background: rgba(#ef4444, 0.08);
+    color: #dc2626;
+    border: 1px solid rgba(#ef4444, 0.2);
+
+    &:hover:not(:disabled) {
+      background: rgba(#ef4444, 0.14);
+      border-color: rgba(#ef4444, 0.35);
+    }
+  }
+}
+
+// Info Card
+.info-card {
+  background: $color-white;
+  padding: $size-24;
+  border-radius: $size-16;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+
+  @include responsive(phone) {
+    padding: $size-16;
+  }
+}
+
+// Patient Row
 .patient-row {
   display: flex;
   align-items: center;
   gap: $size-16;
-}
+  padding: $size-16;
+  background: rgba(#0EAEC4, 0.03);
+  border-radius: $size-12;
+  border: 1px solid rgba(#0EAEC4, 0.08);
 
-.patient-avatar {
-  width: $size-56;
-  height: $size-56;
-  border-radius: 50%;
-  background: $color-pri;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  flex-shrink: 0;
-
-  img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-
-  span {
-    font-size: $size-18;
-    font-weight: $fw-semi-bold;
-    color: $color-white;
+  @include responsive(phone) {
+    flex-wrap: wrap;
   }
 }
 
 .patient-details {
   flex: 1;
+  min-width: 0;
 
   .name {
-    font-size: $size-16;
+    font-size: $size-15;
     font-weight: $fw-semi-bold;
     color: $color-g-21;
+    margin-bottom: $size-4;
   }
 
-  .email,
-  .phone {
+  .email, .phone {
+    display: flex;
+    align-items: center;
+    gap: $size-6;
     font-size: $size-12;
     color: $color-g-54;
+    margin-top: $size-2;
+
+    svg {
+      color: #0EAEC4;
+    }
   }
 }
 
 .view-patient-btn {
-  font-size: $size-15;
-  color: $color-pri;
+  display: flex;
+  align-items: center;
+  gap: $size-4;
+  font-size: $size-13;
+  color: #0EAEC4;
   text-decoration: none;
+  font-weight: $fw-semi-bold;
+  white-space: nowrap;
+  padding: $size-8 $size-14;
+  background: rgba(#0EAEC4, 0.06);
+  border-radius: $size-8;
+  transition: all 0.2s ease;
 
   &:hover {
-    text-decoration: underline;
+    background: rgba(#0EAEC4, 0.12);
   }
 }
 
+// Medications
 .medications-list {
   display: flex;
   flex-direction: column;
@@ -741,330 +1179,314 @@ export default {
 }
 
 .medication-item {
-  padding: $size-16;
-  background: $color-g-97;
-  border-radius: $size-10;
-}
-
-.medication-main {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: $size-12;
-}
+  border-radius: $size-12;
+  overflow: hidden;
+  border: 1px solid $color-g-92;
+  transition: all 0.2s ease;
 
-.medication-info {
-  h4 {
-    font-size: $size-15;
-    font-weight: $fw-semi-bold;
-    color: $color-g-21;
-    margin-bottom: $size-2;
+  &:hover {
+    border-color: rgba(#0EAEC4, 0.25);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   }
 
-  .generic {
-    font-size: $size-12;
-    color: $color-g-54;
+  &__accent {
+    width: 4px;
+    background: linear-gradient(180deg, #0EAEC4 0%, #0891b2 100%);
+    flex-shrink: 0;
   }
 
-  .manufacturer {
-    font-size: $size-12;
-    color: $color-g-67;
-    margin-top: $size-2;
+  &__body {
+    flex: 1;
+    padding: $size-16;
+  }
 
-    .mfg-label {
-      color: $color-g-54;
-      font-weight: $fw-medium;
+  &__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: $size-10;
+
+    .medication-info {
+      h4 {
+        font-size: $size-15;
+        font-weight: $fw-semi-bold;
+        color: $color-g-21;
+        margin-bottom: $size-2;
+      }
+
+      .generic {
+        font-size: $size-12;
+        color: $color-g-54;
+      }
+
+      .manufacturer {
+        font-size: $size-12;
+        color: $color-g-67;
+        margin-top: $size-2;
+      }
+    }
+
+    .medication-price {
+      text-align: right;
+
+      .qty {
+        display: block;
+        font-size: $size-12;
+        color: $color-g-54;
+        margin-bottom: $size-2;
+      }
+
+      .price {
+        font-size: $size-15;
+        font-weight: $fw-bold;
+        color: #0EAEC4;
+      }
     }
   }
-}
 
-.medication-quantity {
-  text-align: right;
-
-  .qty {
-    display: block;
-    font-size: $size-15;
-    color: $color-g-54;
-  }
-
-  .price {
-    font-size: $size-16;
-    font-weight: $fw-semi-bold;
-    color: $color-g-21;
-  }
-}
-
-.medication-details {
-  border-top: 1px solid $color-g-90;
-  padding-top: $size-12;
-
-  .detail {
+  &__dosage {
     display: flex;
+    flex-wrap: wrap;
+    gap: $size-8;
+    margin-bottom: $size-8;
+
+    .dosage-tag {
+      display: flex;
+      align-items: center;
+      gap: $size-4;
+      font-size: $size-12;
+      padding: $size-4 $size-10;
+      background: rgba(#0EAEC4, 0.06);
+      border-radius: $size-8;
+      color: #0891b2;
+      font-weight: $fw-medium;
+
+      svg {
+        color: #0EAEC4;
+      }
+    }
+  }
+
+  &__instructions {
+    display: flex;
+    align-items: flex-start;
     gap: $size-8;
     font-size: $size-12;
-    margin-bottom: $size-4;
+    color: $color-g-54;
+    font-style: italic;
+    line-height: 1.5;
+    padding: $size-10 $size-12;
+    background: $color-g-97;
+    border-radius: $size-8;
+    border-left: 3px solid rgba(#0EAEC4, 0.4);
 
-    &:last-child {
-      margin-bottom: 0;
+    svg {
+      color: #0EAEC4;
+      flex-shrink: 0;
+      margin-top: 1px;
     }
+  }
+}
 
+// Payment
+.payment-breakdown {
+  margin-bottom: $size-16;
+  padding: $size-16;
+  background: $color-g-97;
+  border-radius: $size-12;
+}
+
+.payment-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: $size-8 0;
+  font-size: $size-14;
+  color: $color-g-44;
+
+  &--total {
+    padding-top: $size-14;
+    margin-top: $size-10;
+    border-top: 2px solid $color-g-92;
+    font-size: $size-18;
+    font-weight: $fw-bold;
+    color: #0EAEC4;
+  }
+}
+
+.payment-meta {
+  display: flex;
+  gap: $size-24;
+
+  @include responsive(phone) {
+    flex-direction: column;
+    gap: $size-12;
+  }
+
+  &__item {
     .label {
+      display: block;
+      font-size: $size-12;
       color: $color-g-54;
-      min-width: 80px;
+      margin-bottom: $size-6;
     }
 
     .value {
-      color: $color-g-36;
+      font-size: $size-14;
+      font-weight: $fw-semi-bold;
+      color: $color-g-21;
     }
   }
 }
 
-.info-grid {
+.linked-order {
+  display: flex;
+  align-items: center;
+  gap: $size-12;
+  margin-top: $size-16;
+  padding: $size-14;
+  background: rgba(#3b82f6, 0.05);
+  border-radius: $size-12;
+  border: 1px solid rgba(#3b82f6, 0.15);
+
+  svg {
+    color: #3b82f6;
+  }
+
+  &__number {
+    display: block;
+    font-size: $size-14;
+    font-weight: $fw-semi-bold;
+    color: #2563eb;
+  }
+
+  &__note {
+    display: block;
+    font-size: $size-12;
+    color: $color-g-54;
+    margin-top: $size-2;
+  }
+}
+
+// Delivery
+.delivery-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: $size-12;
+  gap: $size-16;
 
   @include responsive(phone) {
     grid-template-columns: 1fr;
   }
 }
 
-.info-item {
+.delivery-item {
   display: flex;
   flex-direction: column;
-  gap: $size-4;
+  gap: $size-6;
+  padding: $size-14;
+  background: $color-g-97;
+  border-radius: $size-10;
 
   .label {
     font-size: $size-12;
     color: $color-g-54;
+    font-weight: $fw-medium;
   }
 
   .value {
-    font-size: $size-15;
-    font-weight: $fw-medium;
+    font-size: $size-14;
+    font-weight: $fw-semi-bold;
     color: $color-g-21;
 
-    &.expiring {
-      color: #d97706;
-    }
-  }
-
-  &.total {
-    grid-column: span 2;
-    padding-top: $size-12;
-    border-top: 1px solid $color-g-92;
-
-    @include responsive(phone) {
-      grid-column: span 1;
-    }
-
-    .value {
-      font-size: $size-20;
-      font-weight: $fw-bold;
-      color: $color-pri;
+    &.tracking {
+      color: #0EAEC4;
+      font-family: monospace;
+      letter-spacing: 0.5px;
     }
   }
 }
 
-.payment-status-row {
-  display: flex;
-  gap: $size-24;
-  margin-top: $size-16;
-  padding-top: $size-16;
-  border-top: 1px solid $color-g-92;
-
-  .status-item {
-    .label {
-      font-size: $size-12;
-      color: $color-g-54;
-      display: block;
-      margin-bottom: $size-4;
-    }
-
-    .value {
-      font-size: $size-15;
-      font-weight: $fw-medium;
-      color: $color-g-36;
-    }
-  }
-}
-
-.payment-badge {
-  font-size: $size-12;
-  padding: $size-4 $size-10;
-  border-radius: $size-12;
-  font-weight: $fw-medium;
-
-  &--pending {
-    background: rgba(#f59e0b, 0.1);
-    color: #d97706;
-  }
-
-  &--completed,
-  &--paid {
-    background: rgba(#10b981, 0.1);
-    color: #059669;
-  }
-
-  &--failed {
-    background: rgba(#ef4444, 0.1);
-    color: #dc2626;
-  }
-}
-
-.linked-order-row {
-  margin-top: $size-12;
-  padding: $size-12;
-  background: rgba(#3b82f6, 0.08);
-  border-radius: $size-8;
-  border: 1px solid rgba(#3b82f6, 0.2);
-
-  .linked-order-info {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: $size-8;
-
-    .label {
-      font-size: $size-12;
-      color: $color-g-54;
-    }
-
-    .linked-order-number {
-      font-size: $size-14;
-      font-weight: $fw-semi-bold;
-      color: #2563eb;
-    }
-
-    .linked-order-note {
-      font-size: $size-12;
-      color: $color-g-54;
-      flex-basis: 100%;
-      margin-top: $size-4;
-    }
-  }
-}
-
-.timeline {
-  position: relative;
-  padding-left: $size-24;
-
-  &::before {
-    content: "";
-    position: absolute;
-    left: 7px;
-    top: 0;
-    bottom: 0;
-    width: 2px;
-    background: $color-g-90;
-  }
-}
-
-.timeline-item {
-  position: relative;
-  padding-bottom: $size-20;
-
-  &:last-child {
-    padding-bottom: 0;
-  }
-
-  .timeline-marker {
-    position: absolute;
-    left: -24px;
-    top: 0;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    background: $color-g-90;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  &.completed .timeline-marker,
-  &.current .timeline-marker {
-    background: #10b981;
-    color: $color-white;
-  }
-
-  .timeline-content {
-    .event-status {
-      font-size: $size-15;
-      font-weight: $fw-medium;
-      color: $color-g-36;
-    }
-
-    .event-date {
-      font-size: $size-12;
-      color: $color-g-54;
-      margin-top: $size-2;
-    }
-  }
+// Notes
+.notes-content {
+  padding: $size-14;
+  background: $color-g-97;
+  border-radius: $size-10;
+  border-left: 4px solid rgba(#0EAEC4, 0.4);
 }
 
 .notes-text {
-  font-size: $size-15;
+  font-size: $size-14;
   color: $color-g-44;
-  line-height: 1.6;
+  line-height: 1.7;
 }
 
-.dialog-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+// Dates
+.dates-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: $size-14;
+
+  @include responsive(phone) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.date-item {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
+  flex-direction: column;
+  gap: $size-6;
+  padding: $size-14;
+  background: $color-g-97;
+  border-radius: $size-10;
 
-.dialog {
-  background: $color-white;
-  padding: $size-24;
-  border-radius: $size-16;
-  max-width: 400px;
-  width: 90%;
+  .label {
+    font-size: $size-12;
+    color: $color-g-54;
+    font-weight: $fw-medium;
+  }
 
-  h3 {
-    font-size: $size-18;
+  .value {
+    font-size: $size-14;
     font-weight: $fw-semi-bold;
     color: $color-g-21;
-    margin-bottom: $size-12;
-  }
 
-  > p {
-    font-size: $size-15;
-    color: $color-g-54;
-    margin-bottom: $size-16;
+    &--warning {
+      color: #d97706;
+    }
   }
 }
 
+// Form groups (for dialogs)
 .form-group {
   margin-bottom: $size-16;
 
   label {
     display: block;
     font-size: $size-12;
-    font-weight: $fw-medium;
+    font-weight: $fw-semi-bold;
     color: $color-g-44;
-    margin-bottom: $size-6;
+    margin-bottom: $size-8;
   }
 
   input,
   textarea {
     width: 100%;
-    padding: $size-10 $size-12;
+    padding: $size-12 $size-14;
     border: 1px solid $color-g-85;
-    border-radius: $size-8;
-    font-size: $size-15;
+    border-radius: $size-10;
+    font-size: $size-14;
     color: $color-g-21;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
 
     &:focus {
       outline: none;
-      border-color: $color-pri;
+      border-color: #0EAEC4;
+      box-shadow: 0 0 0 3px rgba(#0EAEC4, 0.1);
+    }
+
+    &::placeholder {
+      color: $color-g-67;
     }
   }
 
@@ -1073,55 +1495,149 @@ export default {
   }
 }
 
-.dialog-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: $size-12;
-  margin-top: $size-20;
+// Linked Records Styles
+.linked-section {
+  margin-bottom: $size-16;
+
+  &__label {
+    font-size: $size-12;
+    font-weight: $fw-semi-bold;
+    color: $color-g-54;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: $size-8;
+  }
 }
 
-.btn {
-  padding: $size-10 $size-20;
+.linked-items {
+  display: flex;
+  flex-direction: column;
+  gap: $size-8;
+}
+
+.linked-item {
+  display: flex;
+  align-items: flex-start;
+  gap: $size-10;
+  padding: $size-10 $size-12;
+  border: 1px solid $color-g-92;
   border-radius: $size-8;
-  font-size: $size-15;
-  font-weight: $fw-medium;
-  cursor: pointer;
-  border: none;
-  transition: all 0.2s ease;
+  transition: background 0.15s;
+
+  &--note {
+    cursor: pointer;
+
+    &:hover {
+      background: $color-g-97;
+    }
+  }
+
+  &__icon {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(14, 174, 196, 0.08);
+    border-radius: $size-6;
+    color: $color-pri;
+    flex-shrink: 0;
+  }
+
+  &__content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__date {
+    font-size: $size-13;
+    font-weight: $fw-medium;
+    color: $color-g-21;
+    display: block;
+  }
+
+  &__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $size-4;
+    margin-top: $size-4;
+  }
+
+  &__platform {
+    font-size: $size-11;
+    padding: 1px $size-6;
+    border-radius: $size-4;
+    display: inline-block;
+    margin-top: $size-4;
+
+    &.platform--zoom {
+      background: rgba(45, 140, 255, 0.1);
+      color: #2d8cff;
+    }
+
+    &.platform--custom {
+      background: rgba(14, 174, 196, 0.1);
+      color: $color-pri;
+    }
+  }
+
+  &__note-preview {
+    font-size: $size-12;
+    color: $color-g-54;
+    margin-top: $size-4;
+    line-height: 1.4;
+  }
+
+  &__note-content {
+    font-size: $size-12;
+    color: $color-g-36;
+    margin-top: $size-4;
+    line-height: 1.5;
+    white-space: pre-wrap;
+  }
+
+  &__expand {
+    color: $color-g-67;
+    flex-shrink: 0;
+    margin-top: $size-4;
+  }
+}
+
+.linked-tag {
+  font-size: $size-11;
+  color: $color-g-54;
+  background: $color-g-95;
+  padding: 2px $size-6;
+  border-radius: $size-4;
+
+  &--notes {
+    color: $color-pri;
+    background: rgba(14, 174, 196, 0.08);
+  }
+}
+
+.manage-links-btn {
   display: flex;
   align-items: center;
-  gap: $size-8;
+  gap: $size-6;
+  margin-top: $size-12;
+  padding: $size-8 $size-12;
+  font-size: $size-12;
+  font-weight: $fw-medium;
+  color: $color-pri;
+  background: rgba(14, 174, 196, 0.06);
+  border: 1px solid rgba(14, 174, 196, 0.2);
+  border-radius: $size-6;
+  cursor: pointer;
+  transition: all 0.2s;
 
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+  &:hover {
+    background: rgba(14, 174, 196, 0.12);
   }
+}
 
-  &-primary {
-    background: $color-pri;
-    color: $color-white;
-
-    &:hover:not(:disabled) {
-      background: darken($color-pri, 10%);
-    }
-  }
-
-  &-secondary {
-    background: $color-g-90;
-    color: $color-g-36;
-
-    &:hover:not(:disabled) {
-      background: $color-g-85;
-    }
-  }
-
-  &-danger {
-    background: #ef4444;
-    color: $color-white;
-
-    &:hover:not(:disabled) {
-      background: darken(#ef4444, 10%);
-    }
-  }
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 </style>

@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, IsOptional } from 'class-validator';
+import { IsNotEmpty, IsString, IsOptional, IsBoolean } from 'class-validator';
 import { Types } from 'mongoose';
 
 export class RescheduleAppointmentDto {
@@ -17,4 +17,12 @@ export class RescheduleAppointmentDto {
   @IsOptional()
   @IsString()
   meeting_channel: string;
+
+  @IsOptional()
+  @IsString()
+  reason: string;
+
+  @IsOptional()
+  @IsBoolean()
+  notify_patient: boolean;
 }

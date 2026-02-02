@@ -144,7 +144,7 @@ export class PrescriptionsService {
           profile: {
             first_name: specialist.profile?.first_name || 'Doctor',
             last_name: specialist.profile?.last_name || '',
-            profile_photo: specialist.profile?.profile_photo || specialist.profile?.profile_image || null,
+            profile_photo: await this.fileUpload.resolveProfileImage(specialist.profile?.profile_photo || specialist.profile?.profile_image || null),
             professional_practice: {
               area_of_specialty: specialist.profile?.specialist_info?.specialties?.[0] || 'General Practice',
               years_of_practice: specialist.profile?.specialist_info?.years_of_experience || '5+ years',
@@ -203,11 +203,20 @@ export class PrescriptionsService {
   }
 
   async getSpecialistPrescriptionsByPatient(patientId: Types.ObjectId) {
-    return await this.specialistPrescriptionModel
+    const prescriptions = await this.specialistPrescriptionModel
       .find({ patient_id: patientId })
       .populate('specialist_id', 'profile.first_name profile.last_name profile.profile_image specializations')
       .sort({ created_at: -1 })
       .lean();
+
+    return Promise.all(
+      prescriptions.map(async (rx: any) => {
+        if (rx.specialist_id?.profile?.profile_image) {
+          rx.specialist_id.profile.profile_image = await this.fileUpload.resolveProfileImage(rx.specialist_id.profile.profile_image);
+        }
+        return rx;
+      }),
+    );
   }
 
   async getPatientOrders(userId: Types.ObjectId) {
