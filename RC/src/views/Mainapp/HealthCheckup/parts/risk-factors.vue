@@ -1,35 +1,17 @@
 <template>
     <Loader v-if="isLoading" :useOverlay="false" style="z-index:1" />
     <div v-else class="risk-page">
-        <!-- Step Header (Hero Style) -->
-        <div class="step-hero">
-            <div class="step-hero__content">
-                <div class="step-hero__top">
-                    <button class="step-hero__back" @click="onSubmit(0)">
-                        <v-icon name="hi-arrow-left" />
-                    </button>
-                    <div class="step-hero__progress">
-                        <span class="step-hero__step">Step 4 of 8</span>
-                        <div class="step-hero__bar">
-                            <div class="step-hero__fill" style="width: 50%"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="step-hero__icon">
-                    <v-icon name="hi-shield-check" />
-                </div>
-                <h1 class="step-hero__title">Risk Factors</h1>
-                <p class="step-hero__subtitle">
-                    <span v-if="patientInfo.patientType === 'Self'">Select any statements that apply to you</span>
-                    <span v-else>Select any statements that apply to {{ patientInfo.gender === 'male' ? 'him' : 'her' }}</span>
-                </p>
-            </div>
-            <div class="step-hero__decoration">
-                <div class="decoration-circle decoration-circle--1"></div>
-                <div class="decoration-circle decoration-circle--2"></div>
-                <div class="decoration-circle decoration-circle--3"></div>
-            </div>
-        </div>
+        <!-- Step Header -->
+        <StepHero
+            :step="4"
+            :totalSteps="8"
+            icon="hi-shield-check"
+            title="Risk Factors"
+            :subtitle="patientInfo.patientType === 'Self'
+                ? 'Select any statements that apply to you'
+                : `Select any statements that apply to ${patientInfo.gender === 'male' ? 'him' : 'her'}`"
+            @back="() => onSubmit(0)"
+        />
 
         <!-- Risk Factors List -->
         <div class="risk-cards">
@@ -83,21 +65,11 @@
         </div>
 
         <!-- Navigation Footer -->
-        <div class="step-footer">
-            <button class="step-footer__btn step-footer__btn--back" @click="onSubmit(0)">
-                <v-icon name="hi-arrow-left" />
-                <span>Back</span>
-            </button>
-            <button
-                class="step-footer__btn step-footer__btn--next"
-                :class="{ 'step-footer__btn--disabled': riskFactors.length < riskFactorOptions.length }"
-                :disabled="riskFactors.length < riskFactorOptions.length"
-                @click="onSubmit(1)"
-            >
-                <span>Continue</span>
-                <v-icon name="hi-arrow-right" />
-            </button>
-        </div>
+        <StepFooter
+            :disabled="riskFactors.length < riskFactorOptions.length"
+            @back="() => onSubmit(0)"
+            @next="() => onSubmit(1)"
+        />
     </div>
 </template>
 
@@ -106,6 +78,8 @@ import { ref, inject, watchEffect } from "vue";
 import RcRadio from "@/components/RCRadio";
 import RcButton from "@/components/buttons/button-primary";
 import Loader from "@/components/Loader/main-loader.vue";
+import StepHero from "./components/StepHero.vue";
+import StepFooter from "./components/StepFooter.vue";
 
 const $http = inject('$http');
 const { navigator, useNavigator } = inject('$_NAVIGATOR');
@@ -212,200 +186,28 @@ const onSubmit = (activeScreen) => {
 </script>
 
 <style scoped lang="scss">
+// Design System Colors
+$sky: #4FC3F7;
+$sky-light: #E1F5FE;
+$sky-dark: #0288D1;
+$navy: #0F172A;
+$slate: #334155;
+$gray: #64748B;
+$bg: #F8FAFC;
+
 .risk-page {
     width: 100%;
     min-height: 100%;
     display: flex;
     flex-direction: column;
-    gap: $size-32;
-    padding-bottom: $size-120;
+    gap: 32px;
+    padding-bottom: 120px;
     max-width: 700px;
     margin: 0 auto;
 
-    @include responsive(phone) {
-        gap: $size-24;
-        padding-bottom: $size-100;
-    }
-}
-
-// Step Hero (matching entry.vue)
-.step-hero {
-    position: relative;
-    background: linear-gradient(135deg, #0EAEC4 0%, #0891b2 50%, #0e7490 100%);
-    border-radius: $size-24;
-    padding: 32px 32px 40px;
-    box-shadow: 0 10px 40px rgba(14, 174, 196, 0.3);
-
-    @include responsive(phone) {
-        padding: 20px 24px 28px;
-        border-radius: $size-16;
-    }
-
-    &__content {
-        position: relative;
-        z-index: 2;
-    }
-
-    &__top {
-        display: flex;
-        align-items: center;
-        gap: $size-16;
-        margin-bottom: $size-20;
-    }
-
-    &__back {
-        width: 40px;
-        height: 40px;
-        background: rgba(255, 255, 255, 0.2);
-        backdrop-filter: blur(10px);
-        border: none;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        transition: all 0.3s ease;
-
-        @include responsive(phone) {
-            width: 36px;
-            height: 36px;
-            border-radius: 10px;
-        }
-
-        &:hover {
-            background: rgba(255, 255, 255, 0.3);
-        }
-
-        svg {
-            width: 20px;
-            height: 20px;
-            color: white;
-
-            @include responsive(phone) {
-                width: 18px;
-                height: 18px;
-            }
-        }
-    }
-
-    &__progress {
-        flex: 1;
-    }
-
-    &__step {
-        font-size: $size-13;
-        font-weight: $fw-medium;
-        color: rgba(255, 255, 255, 0.9);
-        margin-bottom: $size-8;
-        display: block;
-    }
-
-    &__bar {
-        height: 6px;
-        background: rgba(255, 255, 255, 0.2);
-        border-radius: 3px;
-        
-    }
-
-    &__fill {
-        height: 100%;
-        background: white;
-        border-radius: 3px;
-        transition: width 0.5s ease;
-    }
-
-    &__icon {
-        width: 72px;
-        height: 72px;
-        background: rgba(255, 255, 255, 0.2);
-        backdrop-filter: blur(10px);
-        border-radius: 20px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin: 0 auto $size-20;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-
-        @include responsive(phone) {
-            width: 60px;
-            height: 60px;
-            border-radius: 16px;
-        }
-
-        svg {
-            width: 36px;
-            height: 36px;
-            color: white;
-
-            @include responsive(phone) {
-                width: 28px;
-                height: 28px;
-            }
-        }
-    }
-
-    &__title {
-        font-size: $size-28;
-        font-weight: $fw-bold;
-        color: white;
-        margin: 0 0 $size-8 0;
-        text-align: center;
-        letter-spacing: -0.5px;
-
-        @include responsive(phone) {
-            font-size: $size-22;
-        }
-    }
-
-    &__subtitle {
-        font-size: $size-15;
-        color: rgba(255, 255, 255, 0.9);
-        margin: 0;
-        text-align: center;
-        max-width: 400px;
-        margin: 0 auto;
-        line-height: 1.5;
-
-        @include responsive(phone) {
-            font-size: $size-14;
-        }
-    }
-
-    &__decoration {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        pointer-events: none;
-        
-    }
-}
-
-.decoration-circle {
-    position: absolute;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.1);
-
-    &--1 {
-        width: 200px;
-        height: 200px;
-        top: -60px;
-        right: -40px;
-    }
-
-    &--2 {
-        width: 150px;
-        height: 150px;
-        bottom: -40px;
-        left: -30px;
-    }
-
-    &--3 {
-        width: 80px;
-        height: 80px;
-        top: 40%;
-        right: 15%;
+    @media (max-width: 640px) {
+        gap: 24px;
+        padding-bottom: 100px;
     }
 }
 
@@ -413,30 +215,30 @@ const onSubmit = (activeScreen) => {
 .risk-cards {
     display: flex;
     flex-direction: column;
-    gap: $size-16;
+    gap: 16px;
 }
 
 .risk-card {
-    background: $color-white;
-    border: 2px solid $color-g-92;
-    border-radius: $size-16;
-    padding: $size-20;
+    background: white;
+    border: 2px solid rgba(0, 0, 0, 0.08);
+    border-radius: 16px;
+    padding: 20px;
     transition: all 0.3s ease;
 
-    @include responsive(phone) {
-        padding: $size-16;
+    @media (max-width: 640px) {
+        padding: 16px;
     }
 
     &:hover {
-        border-color: $color-g-85;
+        border-color: rgba(0, 0, 0, 0.12);
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
     }
 
     &__question {
         display: flex;
         align-items: flex-start;
-        gap: $size-12;
-        margin-bottom: $size-16;
+        gap: 12px;
+        margin-bottom: 16px;
     }
 
     &__icon {
@@ -457,23 +259,23 @@ const onSubmit = (activeScreen) => {
     }
 
     &__text {
-        font-size: $size-16;
-        font-weight: $fw-medium;
-        color: $color-black;
+        font-size: 16px;
+        font-weight: 500;
+        color: $navy;
         line-height: 1.4;
-        padding-top: $size-4;
+        padding-top: 4px;
 
-        @include responsive(phone) {
-            font-size: $size-15;
+        @media (max-width: 640px) {
+            font-size: 15px;
         }
     }
 
     &__options {
         display: flex;
-        gap: $size-10;
+        gap: 10px;
 
-        @include responsive(phone) {
-            gap: $size-8;
+        @media (max-width: 640px) {
+            gap: 8px;
         }
     }
 }
@@ -483,34 +285,34 @@ const onSubmit = (activeScreen) => {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: $size-6;
-    padding: $size-12 $size-16;
-    background: $color-g-97;
+    gap: 6px;
+    padding: 12px 16px;
+    background: $bg;
     border: 2px solid transparent;
-    border-radius: $size-10;
-    font-size: $size-14;
-    font-weight: $fw-medium;
-    color: $color-g-54;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    color: $gray;
     cursor: pointer;
     transition: all 0.3s ease;
 
-    @include responsive(phone) {
-        padding: $size-10 $size-12;
-        font-size: $size-13;
+    @media (max-width: 640px) {
+        padding: 10px 12px;
+        font-size: 13px;
     }
 
     svg {
         width: 16px;
         height: 16px;
 
-        @include responsive(phone) {
+        @media (max-width: 640px) {
             width: 14px;
             height: 14px;
         }
     }
 
     &:hover {
-        background: $color-g-92;
+        background: rgba(0, 0, 0, 0.06);
     }
 
     &--selected {
@@ -527,9 +329,9 @@ const onSubmit = (activeScreen) => {
         }
 
         &.risk-option--unknown {
-            background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
-            border-color: #0ea5e9;
-            color: #0369a1;
+            background: linear-gradient(135deg, $sky-light 0%, #B3E5FC 100%);
+            border-color: $sky;
+            color: $sky-dark;
         }
     }
 }
@@ -538,19 +340,19 @@ const onSubmit = (activeScreen) => {
 .risk-toggle {
     display: flex;
     justify-content: center;
-    margin-top: $size-8;
+    margin-top: 8px;
 
     &__btn {
         display: flex;
         align-items: center;
-        gap: $size-8;
-        padding: $size-12 $size-24;
+        gap: 8px;
+        padding: 12px 24px;
         background: transparent;
-        border: 2px solid #0EAEC4;
-        border-radius: $size-24;
-        color: #0EAEC4;
-        font-size: $size-14;
-        font-weight: $fw-medium;
+        border: 2px solid $sky;
+        border-radius: 24px;
+        color: $sky-dark;
+        font-size: 14px;
+        font-weight: 500;
         cursor: pointer;
         transition: all 0.3s ease;
 
@@ -560,78 +362,8 @@ const onSubmit = (activeScreen) => {
         }
 
         &:hover {
-            background: #0EAEC4;
+            background: $sky;
             color: white;
-        }
-    }
-}
-
-// Navigation Footer
-.step-footer {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: $size-16 $size-48;
-    background: white;
-    border-top: 1px solid $color-g-92;
-    z-index: 100;
-
-    @include responsive(phone) {
-        padding: $size-16 $size-24;
-    }
-
-    &__btn {
-        display: flex;
-        align-items: center;
-        gap: $size-8;
-        padding: $size-12 $size-24;
-        border-radius: $size-12;
-        font-size: $size-15;
-        font-weight: $fw-semi-bold;
-        cursor: pointer;
-        transition: all 0.3s ease;
-
-        @include responsive(phone) {
-            padding: $size-12 $size-20;
-            font-size: $size-14;
-        }
-
-        svg {
-            width: 18px;
-            height: 18px;
-        }
-
-        &--back {
-            background: transparent;
-            border: 2px solid $color-g-85;
-            color: $color-g-44;
-
-            &:hover {
-                border-color: $color-g-77;
-                background: $color-g-97;
-            }
-        }
-
-        &--next {
-            background: linear-gradient(135deg, #0EAEC4 0%, #0891b2 100%);
-            border: none;
-            color: white;
-            box-shadow: 0 4px 14px rgba(14, 174, 196, 0.4);
-
-            &:hover:not(:disabled) {
-                box-shadow: 0 6px 20px rgba(14, 174, 196, 0.5);
-                transform: translateY(-1px);
-            }
-        }
-
-        &--disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            box-shadow: none;
         }
     }
 }

@@ -1,31 +1,14 @@
 <template>
     <div class="gender-page">
-        <!-- Step Header (Hero Style) -->
-        <div class="step-hero">
-            <div class="step-hero__content">
-                <div class="step-hero__top">
-                    <button class="step-hero__back" @click="goBack">
-                        <v-icon name="hi-arrow-left" />
-                    </button>
-                    <div class="step-hero__progress">
-                        <span class="step-hero__step">Step 1 of 8</span>
-                        <div class="step-hero__bar">
-                            <div class="step-hero__fill" style="width: 12.5%"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="step-hero__icon">
-                    <v-icon name="hi-users" />
-                </div>
-                <h1 class="step-hero__title">Select Gender</h1>
-                <p class="step-hero__subtitle">Choose the gender for this health assessment</p>
-            </div>
-            <div class="step-hero__decoration">
-                <div class="decoration-circle decoration-circle--1"></div>
-                <div class="decoration-circle decoration-circle--2"></div>
-                <div class="decoration-circle decoration-circle--3"></div>
-            </div>
-        </div>
+        <!-- Step Header -->
+        <StepHero
+            :step="1"
+            :totalSteps="8"
+            icon="hi-users"
+            title="Select Gender"
+            subtitle="Choose the gender for this health assessment"
+            @back="goBack"
+        />
 
         <!-- Gender Cards -->
         <div class="gender-cards">
@@ -57,19 +40,17 @@
         </div>
 
         <!-- Info Notice -->
-        <div class="gender-notice">
-            <div class="gender-notice__icon">
-                <v-icon name="hi-information-circle" />
-            </div>
-            <p class="gender-notice__text">
-                Gender information helps provide more accurate health assessments based on biological factors.
-            </p>
-        </div>
+        <InfoNotice
+            type="info"
+            text="Gender information helps provide more accurate health assessments based on biological factors."
+        />
     </div>
 </template>
 
 <script setup>
 import { inject } from "vue";
+import StepHero from "./components/StepHero.vue";
+import InfoNotice from "./components/InfoNotice.vue";
 
 const { navigator, useNavigator } = inject('$_NAVIGATOR');
 const { patientInfo, usePatientInfo } = inject('$_PATIENT_INFO');
@@ -87,201 +68,28 @@ const onSelectedGender = (gender) => {
 </script>
 
 <style scoped lang="scss">
+// Design System Colors
+$sky: #4FC3F7;
+$sky-light: #E1F5FE;
+$sky-dark: #0288D1;
+$navy: #0F172A;
+$slate: #334155;
+$gray: #64748B;
+$bg: #F8FAFC;
+
 .gender-page {
     width: 100%;
     min-height: 100%;
     display: flex;
     flex-direction: column;
-    gap: $size-32;
-    padding-bottom: $size-48;
+    gap: 32px;
+    padding-bottom: 48px;
     max-width: 600px;
     margin: 0 auto;
 
-    @include responsive(phone) {
-        gap: $size-24;
-        padding-bottom: $size-32;
-    }
-}
-
-// Step Hero (matching entry.vue)
-.step-hero {
-    position: relative;
-    background: linear-gradient(135deg, #0EAEC4 0%, #0891b2 50%, #0e7490 100%);
-    border-radius: $size-24;
-    padding: 24px 32px 32px;
-    
-    box-shadow: 0 10px 40px rgba(14, 174, 196, 0.3);
-
-    @include responsive(phone) {
-        padding: 20px 24px 28px;
-        border-radius: $size-16;
-    }
-
-    &__content {
-        position: relative;
-        z-index: 2;
-    }
-
-    &__top {
-        display: flex;
-        align-items: center;
-        gap: $size-16;
-        margin-bottom: $size-20;
-    }
-
-    &__back {
-        width: 40px;
-        height: 40px;
-        background: rgba(255, 255, 255, 0.2);
-        backdrop-filter: blur(10px);
-        border: none;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        transition: all 0.3s ease;
-
-        @include responsive(phone) {
-            width: 36px;
-            height: 36px;
-            border-radius: 10px;
-        }
-
-        &:hover {
-            background: rgba(255, 255, 255, 0.3);
-        }
-
-        svg {
-            width: 20px;
-            height: 20px;
-            color: white;
-
-            @include responsive(phone) {
-                width: 18px;
-                height: 18px;
-            }
-        }
-    }
-
-    &__progress {
-        flex: 1;
-    }
-
-    &__step {
-        font-size: $size-13;
-        font-weight: $fw-medium;
-        color: rgba(255, 255, 255, 0.9);
-        margin-bottom: $size-8;
-        display: block;
-    }
-
-    &__bar {
-        height: 6px;
-        background: rgba(255, 255, 255, 0.2);
-        border-radius: 3px;
-        
-    }
-
-    &__fill {
-        height: 100%;
-        background: white;
-        border-radius: 3px;
-        transition: width 0.5s ease;
-    }
-
-    &__icon {
-        width: 72px;
-        height: 72px;
-        background: rgba(255, 255, 255, 0.2);
-        backdrop-filter: blur(10px);
-        border-radius: 20px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin: 0 auto $size-20;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-
-        @include responsive(phone) {
-            width: 60px;
-            height: 60px;
-            border-radius: 16px;
-        }
-
-        svg {
-            width: 36px;
-            height: 36px;
-            color: white;
-
-            @include responsive(phone) {
-                width: 28px;
-                height: 28px;
-            }
-        }
-    }
-
-    &__title {
-        font-size: $size-28;
-        font-weight: $fw-bold;
-        color: white;
-        margin: 0 0 $size-8 0;
-        text-align: center;
-        letter-spacing: -0.5px;
-
-        @include responsive(phone) {
-            font-size: $size-22;
-        }
-    }
-
-    &__subtitle {
-        font-size: $size-15;
-        color: rgba(255, 255, 255, 0.9);
-        margin: 0;
-        text-align: center;
-        max-width: 400px;
-        margin: 0 auto;
-        line-height: 1.5;
-
-        @include responsive(phone) {
-            font-size: $size-14;
-        }
-    }
-
-    &__decoration {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        pointer-events: none;
-        
-    }
-}
-
-.decoration-circle {
-    position: absolute;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.1);
-
-    &--1 {
-        width: 200px;
-        height: 200px;
-        top: -60px;
-        right: -40px;
-    }
-
-    &--2 {
-        width: 150px;
-        height: 150px;
-        bottom: -40px;
-        left: -30px;
-    }
-
-    &--3 {
-        width: 80px;
-        height: 80px;
-        top: 40%;
-        right: 15%;
+    @media (max-width: 640px) {
+        gap: 24px;
+        padding-bottom: 32px;
     }
 }
 
@@ -289,23 +97,23 @@ const onSelectedGender = (gender) => {
 .gender-cards {
     display: flex;
     flex-direction: column;
-    gap: $size-16;
+    gap: 16px;
 }
 
 .gender-card {
     display: flex;
     align-items: center;
-    gap: $size-20;
-    padding: $size-24;
-    background: $color-white;
-    border: 2px solid $color-g-92;
-    border-radius: $size-16;
+    gap: 20px;
+    padding: 24px;
+    background: white;
+    border: 2px solid rgba(0, 0, 0, 0.08);
+    border-radius: 16px;
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
-    @include responsive(phone) {
-        padding: $size-20;
-        gap: $size-16;
+    @media (max-width: 640px) {
+        padding: 20px;
+        gap: 16px;
     }
 
     &:hover {
@@ -331,7 +139,7 @@ const onSelectedGender = (gender) => {
         flex-shrink: 0;
         transition: all 0.3s ease;
 
-        @include responsive(phone) {
+        @media (max-width: 640px) {
             width: 56px;
             height: 56px;
             border-radius: 14px;
@@ -341,7 +149,7 @@ const onSelectedGender = (gender) => {
             width: 32px;
             height: 32px;
 
-            @include responsive(phone) {
+            @media (max-width: 640px) {
                 width: 28px;
                 height: 28px;
             }
@@ -353,23 +161,23 @@ const onSelectedGender = (gender) => {
     }
 
     &__title {
-        font-size: $size-20;
-        font-weight: $fw-semi-bold;
-        color: $color-black;
-        margin: 0 0 $size-4 0;
+        font-size: 20px;
+        font-weight: 600;
+        color: $navy;
+        margin: 0 0 4px 0;
 
-        @include responsive(phone) {
-            font-size: $size-18;
+        @media (max-width: 640px) {
+            font-size: 18px;
         }
     }
 
     &__desc {
-        font-size: $size-14;
-        color: $color-g-54;
+        font-size: 14px;
+        color: $gray;
         margin: 0;
 
-        @include responsive(phone) {
-            font-size: $size-13;
+        @media (max-width: 640px) {
+            font-size: 13px;
         }
     }
 
@@ -380,7 +188,7 @@ const onSelectedGender = (gender) => {
         svg {
             width: 20px;
             height: 20px;
-            color: $color-g-77;
+            color: $gray;
         }
     }
 
@@ -437,42 +245,6 @@ const onSelectedGender = (gender) => {
             svg {
                 color: #ec4899;
             }
-        }
-    }
-}
-
-// Info Notice
-.gender-notice {
-    display: flex;
-    align-items: flex-start;
-    gap: $size-12;
-    padding: $size-16;
-    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-    border: 1px solid #bae6fd;
-    border-radius: $size-12;
-
-    @include responsive(phone) {
-        padding: $size-14;
-    }
-
-    &__icon {
-        flex-shrink: 0;
-
-        svg {
-            width: 20px;
-            height: 20px;
-            color: #0284c7;
-        }
-    }
-
-    &__text {
-        font-size: $size-13;
-        color: #0369a1;
-        margin: 0;
-        line-height: 1.5;
-
-        @include responsive(phone) {
-            font-size: $size-12;
         }
     }
 }

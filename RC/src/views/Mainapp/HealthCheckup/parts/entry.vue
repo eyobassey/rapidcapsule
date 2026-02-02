@@ -1,126 +1,202 @@
 <template>
-    <Loader v-if="isFetching || isLoading" :useOverlay="false" style="z-index:1" />
-    <div v-else class="health-entry">
-        <!-- Hero Section -->
-        <div class="health-entry__hero">
-            <div class="health-entry__hero-content">
-                <div class="health-entry__hero-icon">
-                    <v-icon name="fa-heartbeat" />
-                </div>
-                <h1 class="health-entry__hero-title">AI Health Checkup</h1>
-                <p class="health-entry__hero-subtitle">
-                    Get personalized health insights powered by advanced AI technology
-                </p>
-            </div>
-            <div class="health-entry__hero-decoration">
-                <div class="decoration-circle decoration-circle--1"></div>
-                <div class="decoration-circle decoration-circle--2"></div>
-                <div class="decoration-circle decoration-circle--3"></div>
-            </div>
+  <Loader v-if="isFetching || isLoading" :useOverlay="false" style="z-index: 1" />
+  <div v-else class="health-entry">
+    <!-- Hero Section - Split Layout -->
+    <section class="hero">
+      <div class="hero__content">
+        <div class="hero__badge">
+          <div class="badge-pulse"></div>
+          <v-icon name="hi-sparkles" />
+          <span>Powered by AI</span>
         </div>
-
-        <!-- Main Content -->
-        <div class="health-entry__main">
-            <div class="health-entry__question">
-                <h2 class="health-entry__question-title">Who is this checkup for?</h2>
-                <p class="health-entry__question-desc">Select the person you'd like to run the health assessment for</p>
-            </div>
-
-            <!-- Patient Selection Cards -->
-            <div class="health-entry__cards">
-                <!-- Self Card -->
-                <div class="patient-card patient-card--self" @click="onSelectedPatient(userprofile, 'Self')">
-                    <div class="patient-card__avatar">
-                        <avatar-fixed
-                            size="small"
-                            :firstname="profile.first_name"
-                            :lastname="profile.last_name"
-                        />
-                        <div class="patient-card__badge">
-                            <v-icon name="hi-check-circle" />
-                        </div>
-                    </div>
-                    <div class="patient-card__info">
-                        <h3 class="patient-card__name">Myself</h3>
-                        <p class="patient-card__label">Personal checkup</p>
-                    </div>
-                    <div class="patient-card__arrow">
-                        <v-icon name="hi-arrow-right" />
-                    </div>
-                </div>
-
-                <!-- Dependants -->
-                <template v-for="dependant in dependantsList" :key="dependant._id || dependant.first_name">
-                    <div class="patient-card patient-card--dependant" @click="onSelectedPatient(dependant, 'Dependant')">
-                        <div class="patient-card__avatar">
-                            <avatar-fixed
-                                size="small"
-                                :firstname="dependant.first_name"
-                                :lastname="dependant.last_name"
-                            />
-                        </div>
-                        <div class="patient-card__info">
-                            <h3 class="patient-card__name">{{ dependant.first_name }}</h3>
-                            <p class="patient-card__label">Dependant</p>
-                        </div>
-                        <div class="patient-card__arrow">
-                            <v-icon name="hi-arrow-right" />
-                        </div>
-                    </div>
-                </template>
-
-                <!-- Someone Else Card -->
-                <div class="patient-card patient-card--other" @click="onSelectedPatient('', 'Third Party')">
-                    <div class="patient-card__avatar patient-card__avatar--icon">
-                        <v-icon name="hi-user-add" />
-                    </div>
-                    <div class="patient-card__info">
-                        <h3 class="patient-card__name">Someone else</h3>
-                        <p class="patient-card__label">Check for another person</p>
-                    </div>
-                    <div class="patient-card__arrow">
-                        <v-icon name="hi-arrow-right" />
-                    </div>
-                </div>
-            </div>
-
-            <!-- Features Section -->
-            <div class="health-entry__features">
-                <div class="feature-item">
-                    <div class="feature-item__icon feature-item__icon--blue">
-                        <v-icon name="hi-shield-check" />
-                    </div>
-                    <span class="feature-item__text">Secure & Private</span>
-                </div>
-                <div class="feature-item">
-                    <div class="feature-item__icon feature-item__icon--green">
-                        <v-icon name="hi-lightning-bolt" />
-                    </div>
-                    <span class="feature-item__text">AI-Powered</span>
-                </div>
-                <div class="feature-item">
-                    <div class="feature-item__icon feature-item__icon--purple">
-                        <v-icon name="hi-clock" />
-                    </div>
-                    <span class="feature-item__text">Quick Results</span>
-                </div>
-            </div>
-
-            <!-- History Button -->
-            <div class="health-entry__history">
-                <button @click="viewHistory" class="history-btn">
-                    <div class="history-btn__icon">
-                        <v-icon name="hi-clipboard-list" />
-                    </div>
-                    <div class="history-btn__content">
-                        <span class="history-btn__title">View Checkup History</span>
-                        <span class="history-btn__desc">Access your previous health assessments</span>
-                    </div>
-                    <v-icon name="hi-chevron-right" class="history-btn__arrow" />
-                </button>
-            </div>
+        <h1 class="hero__title">
+          AI Health<br/>
+          <span class="hero__title-accent">Checkup</span>
+        </h1>
+        <p class="hero__subtitle">
+          Get instant health insights with our intelligent symptom checker trusted by thousands.
+        </p>
+        <div class="hero__stats">
+          <div class="hero-stat">
+            <span class="hero-stat__value">98%</span>
+            <span class="hero-stat__label">Accuracy</span>
+          </div>
+          <div class="hero-stat__divider"></div>
+          <div class="hero-stat">
+            <span class="hero-stat__value">5min</span>
+            <span class="hero-stat__label">Average</span>
+          </div>
+          <div class="hero-stat__divider"></div>
+          <div class="hero-stat">
+            <span class="hero-stat__value">24/7</span>
+            <span class="hero-stat__label">Available</span>
+          </div>
         </div>
-    </div>
+      </div>
+      <div class="hero__visual">
+        <div class="health-orb">
+          <div class="orb-ring orb-ring--1"></div>
+          <div class="orb-ring orb-ring--2"></div>
+          <div class="orb-ring orb-ring--3"></div>
+          <div class="orb-core">
+            <v-icon name="fa-heartbeat" />
+          </div>
+        </div>
+        <div class="floating-icons">
+          <div class="float-icon float-icon--1"><v-icon name="hi-shield-check" /></div>
+          <div class="float-icon float-icon--2"><v-icon name="hi-lightning-bolt" /></div>
+          <div class="float-icon float-icon--3"><v-icon name="hi-chart-bar" /></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Bento Grid -->
+    <section class="bento-grid">
+      <!-- Patient Selection Card (Large) -->
+      <div class="bento-card bento-card--patients">
+        <div class="card-header">
+          <div class="card-header__icon">
+            <v-icon name="hi-users" />
+          </div>
+          <div class="card-header__text">
+            <h3>Start Checkup</h3>
+            <p>Select who this assessment is for</p>
+          </div>
+        </div>
+        <div class="patients-grid">
+          <!-- Self -->
+          <button class="patient-btn patient-btn--self" @click="onSelectedPatient(userprofile, 'Self')">
+            <div class="patient-btn__avatar">
+              <img
+                v-if="profilePhoto"
+                :src="profilePhoto"
+                :alt="profile.first_name"
+                class="patient-btn__img"
+              />
+              <avatar-fixed
+                v-else
+                size="small"
+                :firstname="profile.first_name"
+                :lastname="profile.last_name"
+              />
+              <div class="patient-btn__verified">
+                <v-icon name="hi-check" />
+              </div>
+            </div>
+            <div class="patient-btn__info">
+              <span class="patient-btn__name">Myself</span>
+              <span class="patient-btn__meta">Personal checkup</span>
+            </div>
+            <v-icon name="hi-arrow-right" class="patient-btn__arrow" />
+          </button>
+
+          <!-- Dependants -->
+          <template v-for="dependant in dependantsList" :key="dependant._id || dependant.first_name">
+            <button class="patient-btn" @click="onSelectedPatient(dependant, 'Dependant')">
+              <div class="patient-btn__avatar">
+                <avatar-fixed
+                  size="small"
+                  :firstname="dependant.first_name"
+                  :lastname="dependant.last_name"
+                />
+              </div>
+              <div class="patient-btn__info">
+                <span class="patient-btn__name">{{ dependant.first_name }}</span>
+                <span class="patient-btn__meta">Dependant</span>
+              </div>
+              <v-icon name="hi-arrow-right" class="patient-btn__arrow" />
+            </button>
+          </template>
+
+          <!-- Someone Else -->
+          <button class="patient-btn patient-btn--add" @click="onSelectedPatient('', 'Third Party')">
+            <div class="patient-btn__icon">
+              <v-icon name="hi-user-add" />
+            </div>
+            <div class="patient-btn__info">
+              <span class="patient-btn__name">Someone else</span>
+              <span class="patient-btn__meta">New person</span>
+            </div>
+            <v-icon name="hi-arrow-right" class="patient-btn__arrow" />
+          </button>
+        </div>
+      </div>
+
+      <!-- How it Works Card -->
+      <div class="bento-card bento-card--how">
+        <div class="card-header card-header--small">
+          <v-icon name="hi-light-bulb" />
+          <h3>How it works</h3>
+        </div>
+        <div class="steps-list">
+          <div class="step-item">
+            <div class="step-item__number">1</div>
+            <span>Answer quick questions about your symptoms</span>
+          </div>
+          <div class="step-item">
+            <div class="step-item__number">2</div>
+            <span>Our AI analyzes your responses</span>
+          </div>
+          <div class="step-item">
+            <div class="step-item__number">3</div>
+            <span>Get personalized health insights</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Features Card -->
+      <div class="bento-card bento-card--features">
+        <div class="features-grid">
+          <div class="feature-box feature-box--secure">
+            <div class="feature-box__icon">
+              <v-icon name="hi-shield-check" />
+            </div>
+            <span class="feature-box__label">Secure & Private</span>
+          </div>
+          <div class="feature-box feature-box--ai">
+            <div class="feature-box__icon">
+              <v-icon name="hi-sparkles" />
+            </div>
+            <span class="feature-box__label">AI-Powered</span>
+          </div>
+          <div class="feature-box feature-box--fast">
+            <div class="feature-box__icon">
+              <v-icon name="hi-lightning-bolt" />
+            </div>
+            <span class="feature-box__label">Quick Results</span>
+          </div>
+          <div class="feature-box feature-box--trusted">
+            <div class="feature-box__icon">
+              <v-icon name="hi-badge-check" />
+            </div>
+            <span class="feature-box__label">Trusted</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- History Card -->
+      <div class="bento-card bento-card--history" @click="viewHistory">
+        <div class="history-card__content">
+          <div class="history-card__icon">
+            <v-icon name="hi-clock" />
+          </div>
+          <div class="history-card__text">
+            <h3>Checkup History</h3>
+            <p>View your previous assessments</p>
+          </div>
+        </div>
+        <v-icon name="hi-chevron-right" class="history-card__arrow" />
+      </div>
+    </section>
+
+    <!-- Trust Banner -->
+    <section class="trust-banner">
+      <div class="trust-banner__content">
+        <v-icon name="hi-information-circle" />
+        <p>This tool provides general health information and is not a substitute for professional medical advice.</p>
+      </div>
+    </section>
+  </div>
 </template>
 
 <script setup>
@@ -137,573 +213,842 @@ const { navigator, useNavigator } = inject('$_NAVIGATOR');
 const { patientInfo, usePatientInfo } = inject('$_PATIENT_INFO');
 const { userprofile } = mapGetters();
 
-const profile = {...userprofile.value.profile};
-const dependants = {...userprofile.value.dependants};
+const profile = { ...userprofile.value.profile };
+const dependants = { ...userprofile.value.dependants };
 const isFetching = ref(false);
 
-// Convert dependants object to array for proper iteration
+const profilePhoto = computed(() => {
+  return userprofile.value?.profile?.profile_photo;
+});
+
 const dependantsList = computed(() => {
-    if (!dependants || typeof dependants !== 'object') return [];
-    return Object.values(dependants).filter(d => d && d.first_name);
+  if (!dependants || typeof dependants !== 'object') return [];
+  return Object.values(dependants).filter(d => d && d.first_name);
 });
 
 const onSelectedPatient = async (patient, patientType) => {
-	isFetching.value = true;
-	const payload = {
-		checkup_owner_id: patient._id,
-		health_check_for: patientType
-	};
+  isFetching.value = true;
+  const payload = {
+    checkup_owner_id: patient._id,
+    health_check_for: patientType
+  };
 
-	await $http.$_beginHealthCheckup(payload).then(({ data }) => {
-		const { current, from, to } = navigator.value;
+  await $http.$_beginHealthCheckup(payload).then(({ data }) => {
+    const { current, from, to } = navigator.value;
 
-		if (patientType === 'Self') {
-			const age = calculateAge(patient?.profile?.date_of_birth);
-			const gender = patient.profile.gender?.toLowerCase();
-			usePatientInfo({ ...patient.profile, age, gender, patientType });
-			useNavigator({ current, from: current, to: 3 });
-		} else if (patientType === 'Dependant') {
-			const age = calculateAge(patient?.date_of_birth);
-			usePatientInfo({ ...patient, age, patientType });
-			useNavigator({ current, from: current, to: 1 });
-		} else if (patientType === 'Third Party') {
-			usePatientInfo({ patientType });
-			useNavigator({ current, from: current, to: 1 });
-		}
+    if (patientType === 'Self') {
+      const age = calculateAge(patient?.profile?.date_of_birth);
+      const gender = patient.profile.gender?.toLowerCase();
+      usePatientInfo({ ...patient.profile, age, gender, patientType });
+      useNavigator({ current, from: current, to: 3 });
+    } else if (patientType === 'Dependant') {
+      const age = calculateAge(patient?.date_of_birth);
+      usePatientInfo({ ...patient, age, patientType });
+      useNavigator({ current, from: current, to: 1 });
+    } else if (patientType === 'Third Party') {
+      usePatientInfo({ patientType });
+      useNavigator({ current, from: current, to: 1 });
+    }
 
-		isFetching.value = false;
-	}).catch((error) => {
-		isFetching.value = false;
-		$toast.error(error.message, { duration: 3000 });
-	});
-}
+    isFetching.value = false;
+  }).catch((error) => {
+    isFetching.value = false;
+    $toast.error(error.message, { duration: 3000 });
+  });
+};
 
 const viewHistory = () => {
-	const { current } = navigator.value;
-	useNavigator({ current, from: current, to: 10 });
-}
-
+  const { current } = navigator.value;
+  useNavigator({ current, from: current, to: 10 });
+};
 </script>
 
 <style scoped lang="scss">
+// Design System
+$sky: #4FC3F7;
+$sky-light: #E1F5FE;
+$sky-dark: #0288D1;
+$sky-darker: #01579B;
+$navy: #0F172A;
+$slate: #334155;
+$gray: #64748B;
+$light-gray: #94A3B8;
+$bg: #F8FAFC;
+$white: #FFFFFF;
+
+// Accent colors
+$emerald: #10B981;
+$emerald-light: #D1FAE5;
+$violet: #8B5CF6;
+$violet-light: #EDE9FE;
+$amber: #F59E0B;
+$amber-light: #FEF3C7;
+$rose: #F43F5E;
+$rose-light: #FFE4E6;
+
 .health-entry {
-    width: 100%;
-    min-height: 100%;
+  width: 100%;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding-bottom: 48px;
+  max-width: 1400px;
+  margin: 0 auto;
+
+  @media (max-width: 768px) {
+    padding: 0 16px;
+  }
+
+  @media (max-width: 640px) {
+    gap: 20px;
+    padding-bottom: 32px;
+  }
+}
+
+// ============================================
+// HERO SECTION
+// ============================================
+.hero {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+  padding: 40px;
+  background: linear-gradient(135deg, $sky 0%, $sky-dark 50%, $sky-darker 100%);
+  border-radius: 28px;
+  position: relative;
+  overflow: hidden;
+  box-shadow:
+    0 20px 60px rgba(2, 136, 209, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    padding: 32px 24px;
+    gap: 24px;
+    text-align: center;
+  }
+
+  &__content {
     display: flex;
     flex-direction: column;
-    gap: $size-32;
-    padding-bottom: $size-48;
-
-    @include responsive(phone) {
-        gap: $size-24;
-        padding-bottom: $size-32;
-    }
-
-    // Hero Section
-    &__hero {
-        position: relative;
-        background: linear-gradient(135deg, #0EAEC4 0%, #0891b2 50%, #0e7490 100%);
-        border-radius: $size-24;
-        padding: $size-40 $size-32;
-        overflow: hidden;
-        box-shadow: 0 10px 40px rgba(14, 174, 196, 0.3);
-
-        @include responsive(phone) {
-            padding: $size-32 $size-24;
-            border-radius: $size-16;
-        }
-
-        &-content {
-            position: relative;
-            z-index: 2;
-            text-align: center;
-        }
-
-        &-icon {
-            width: 72px;
-            height: 72px;
-            background: rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto $size-20;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-
-            @include responsive(phone) {
-                width: 60px;
-                height: 60px;
-                border-radius: 16px;
-            }
-
-            svg {
-                width: 36px;
-                height: 36px;
-                color: white;
-
-                @include responsive(phone) {
-                    width: 28px;
-                    height: 28px;
-                }
-            }
-        }
-
-        &-title {
-            font-size: $size-32;
-            font-weight: $fw-bold;
-            color: white;
-            margin: 0 0 $size-12 0;
-            letter-spacing: -0.5px;
-
-            @include responsive(phone) {
-                font-size: $size-24;
-            }
-        }
-
-        &-subtitle {
-            font-size: $size-16;
-            color: rgba(255, 255, 255, 0.9);
-            margin: 0;
-            max-width: 400px;
-            margin: 0 auto;
-            line-height: 1.5;
-
-            @include responsive(phone) {
-                font-size: $size-14;
-            }
-        }
-
-        &-decoration {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            pointer-events: none;
-            overflow: hidden;
-        }
-    }
-
-    .decoration-circle {
-        position: absolute;
-        border-radius: 50%;
-        background: rgba(255, 255, 255, 0.1);
-
-        &--1 {
-            width: 200px;
-            height: 200px;
-            top: -60px;
-            right: -40px;
-        }
-
-        &--2 {
-            width: 150px;
-            height: 150px;
-            bottom: -40px;
-            left: -30px;
-        }
-
-        &--3 {
-            width: 80px;
-            height: 80px;
-            top: 40%;
-            right: 15%;
-        }
-    }
-
-    // Main Content
-    &__main {
-        display: flex;
-        flex-direction: column;
-        gap: $size-32;
-
-        @include responsive(phone) {
-            gap: $size-24;
-        }
-    }
-
-    &__question {
-        text-align: center;
-
-        &-title {
-            font-size: $size-24;
-            font-weight: $fw-bold;
-            color: $color-black;
-            margin: 0 0 $size-8 0;
-
-            @include responsive(phone) {
-                font-size: $size-20;
-            }
-        }
-
-        &-desc {
-            font-size: $size-15;
-            color: $color-g-54;
-            margin: 0;
-
-            @include responsive(phone) {
-                font-size: $size-14;
-            }
-        }
-    }
-
-    // Patient Cards
-    &__cards {
-        display: flex;
-        flex-direction: column;
-        gap: $size-12;
-        max-width: 500px;
-        margin: 0 auto;
-        width: 100%;
-    }
-}
-
-.patient-card {
-    display: flex;
-    align-items: center;
-    gap: $size-16;
-    padding: $size-20 $size-24;
-    background: $color-white;
-    border: 2px solid $color-g-92;
-    border-radius: $size-16;
-    cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-
-    @include responsive(phone) {
-        padding: $size-16 $size-20;
-        gap: $size-14;
-    }
-
-    &:hover {
-        border-color: #0EAEC4;
-        background: linear-gradient(135deg, #f0fdfa 0%, #ecfeff 100%);
-        transform: translateY(-2px);
-        box-shadow: 0 8px 24px rgba(14, 174, 196, 0.15);
-
-        .patient-card__arrow {
-            transform: translateX(4px);
-            color: #0EAEC4;
-        }
-    }
-
-    &:active {
-        transform: translateY(0);
-    }
-
-    &__avatar {
-        position: relative;
-        flex-shrink: 0;
-
-        :deep(.avatar) {
-            width: 52px !important;
-            height: 52px !important;
-            font-size: $size-18 !important;
-
-            @include responsive(phone) {
-                width: 46px !important;
-                height: 46px !important;
-                font-size: $size-16 !important;
-            }
-        }
-
-        &--icon {
-            width: 52px;
-            height: 52px;
-            background: linear-gradient(135deg, $color-g-92 0%, $color-g-85 100%);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-
-            @include responsive(phone) {
-                width: 46px;
-                height: 46px;
-            }
-
-            svg {
-                width: 24px;
-                height: 24px;
-                color: $color-g-54;
-
-                @include responsive(phone) {
-                    width: 22px;
-                    height: 22px;
-                }
-            }
-        }
-    }
-
-    &__badge {
-        position: absolute;
-        bottom: -2px;
-        right: -2px;
-        width: 20px;
-        height: 20px;
-        background: #10b981;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border: 2px solid white;
-
-        svg {
-            width: 12px;
-            height: 12px;
-            color: white;
-        }
-    }
-
-    &__info {
-        flex: 1;
-        min-width: 0;
-    }
-
-    &__name {
-        font-size: $size-18;
-        font-weight: $fw-semi-bold;
-        color: $color-black;
-        margin: 0 0 $size-4 0;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-
-        @include responsive(phone) {
-            font-size: $size-16;
-        }
-    }
-
-    &__label {
-        font-size: $size-13;
-        color: $color-g-54;
-        margin: 0;
-
-        @include responsive(phone) {
-            font-size: $size-12;
-        }
-    }
-
-    &__arrow {
-        flex-shrink: 0;
-        transition: all 0.3s ease;
-
-        svg {
-            width: 20px;
-            height: 20px;
-            color: $color-g-77;
-        }
-    }
-
-    // Card variants
-    &--self {
-        border-color: rgba(14, 174, 196, 0.3);
-        background: linear-gradient(135deg, #fafffe 0%, #f0fdfa 100%);
-
-        &:hover {
-            border-color: #0EAEC4;
-        }
-    }
-
-    &--other {
-        border-style: dashed;
-
-        &:hover {
-            border-style: solid;
-
-            .patient-card__avatar--icon {
-                background: linear-gradient(135deg, #0EAEC4 0%, #0891b2 100%);
-
-                svg {
-                    color: white;
-                }
-            }
-        }
-    }
-}
-
-// Features Section
-.health-entry__features {
-    display: flex;
     justify-content: center;
-    gap: $size-24;
-    flex-wrap: wrap;
+    z-index: 2;
+  }
 
-    @include responsive(phone) {
-        gap: $size-16;
+  &__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    border-radius: 24px;
+    width: fit-content;
+    margin-bottom: 20px;
+    position: relative;
+
+    @media (max-width: 768px) {
+      margin: 0 auto 16px;
     }
-}
 
-.feature-item {
+    .badge-pulse {
+      position: absolute;
+      left: 12px;
+      width: 8px;
+      height: 8px;
+      background: $emerald;
+      border-radius: 50%;
+      animation: pulse 2s ease-in-out infinite;
+
+      &::after {
+        content: '';
+        position: absolute;
+        inset: -4px;
+        background: rgba($emerald, 0.4);
+        border-radius: 50%;
+        animation: pulse-ring 2s ease-out infinite;
+      }
+    }
+
+    svg {
+      width: 16px;
+      height: 16px;
+      color: white;
+      margin-left: 12px;
+    }
+
+    span {
+      font-size: 13px;
+      font-weight: 600;
+      color: white;
+      letter-spacing: 0.3px;
+    }
+  }
+
+  &__title {
+    font-size: 48px;
+    font-weight: 800;
+    color: white;
+    line-height: 1.1;
+    margin: 0 0 16px;
+    letter-spacing: -1px;
+
+    @media (max-width: 768px) {
+      font-size: 36px;
+    }
+
+    &-accent {
+      background: linear-gradient(90deg, #fff 0%, rgba(255,255,255,0.7) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+  }
+
+  &__subtitle {
+    font-size: 16px;
+    color: rgba(255, 255, 255, 0.85);
+    line-height: 1.6;
+    margin: 0 0 24px;
+    max-width: 340px;
+
+    @media (max-width: 768px) {
+      font-size: 15px;
+      max-width: 100%;
+    }
+  }
+
+  &__stats {
     display: flex;
     align-items: center;
-    gap: $size-10;
+    gap: 20px;
+    padding: 16px 20px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 16px;
+    width: fit-content;
 
-    &__icon {
-        width: 36px;
-        height: 36px;
-        border-radius: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-
-        @include responsive(phone) {
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
-        }
-
-        svg {
-            width: 18px;
-            height: 18px;
-
-            @include responsive(phone) {
-                width: 16px;
-                height: 16px;
-            }
-        }
-
-        &--blue {
-            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-
-            svg {
-                color: #2563eb;
-            }
-        }
-
-        &--green {
-            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
-
-            svg {
-                color: #059669;
-            }
-        }
-
-        &--purple {
-            background: linear-gradient(135deg, #e9d5ff 0%, #d8b4fe 100%);
-
-            svg {
-                color: #7c3aed;
-            }
-        }
+    @media (max-width: 768px) {
+      width: 100%;
+      justify-content: center;
+      padding: 14px 16px;
+      gap: 16px;
     }
+  }
 
-    &__text {
-        font-size: $size-14;
-        font-weight: $fw-medium;
-        color: $color-g-44;
-
-        @include responsive(phone) {
-            font-size: $size-13;
-        }
-    }
-}
-
-// History Button
-.health-entry__history {
-    max-width: 500px;
-    margin: 0 auto;
-    width: 100%;
-}
-
-.history-btn {
-    width: 100%;
+  &__visual {
     display: flex;
     align-items: center;
-    gap: $size-16;
-    padding: $size-20 $size-24;
-    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-    border: 2px solid $color-g-90;
-    border-radius: $size-16;
+    justify-content: center;
+    position: relative;
+
+    @media (max-width: 768px) {
+      display: none;
+    }
+  }
+}
+
+.hero-stat {
+  text-align: center;
+
+  &__value {
+    display: block;
+    font-size: 24px;
+    font-weight: 700;
+    color: white;
+    line-height: 1;
+
+    @media (max-width: 640px) {
+      font-size: 20px;
+    }
+  }
+
+  &__label {
+    display: block;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.7);
+    margin-top: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  &__divider {
+    width: 1px;
+    height: 32px;
+    background: rgba(255, 255, 255, 0.2);
+  }
+}
+
+// Health Orb
+.health-orb {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.orb-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+
+  &--1 {
+    width: 100%;
+    height: 100%;
+    animation: spin-slow 20s linear infinite;
+  }
+
+  &--2 {
+    width: 80%;
+    height: 80%;
+    animation: spin-slow 15s linear infinite reverse;
+  }
+
+  &--3 {
+    width: 60%;
+    height: 60%;
+    animation: spin-slow 10s linear infinite;
+    border-style: dashed;
+  }
+}
+
+.orb-core {
+  width: 100px;
+  height: 100px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(20px);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    0 0 40px rgba(255, 255, 255, 0.3),
+    0 0 80px rgba(79, 195, 247, 0.3);
+  animation: pulse-glow 3s ease-in-out infinite;
+
+  svg {
+    width: 48px;
+    height: 48px;
+    color: white;
+  }
+}
+
+.floating-icons {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+}
+
+.float-icon {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: float 4s ease-in-out infinite;
+
+  svg {
+    width: 22px;
+    height: 22px;
+    color: white;
+  }
+
+  &--1 {
+    top: 10px;
+    right: 20px;
+    animation-delay: 0s;
+  }
+
+  &--2 {
+    bottom: 30px;
+    right: 0;
+    animation-delay: 1s;
+  }
+
+  &--3 {
+    bottom: 10px;
+    left: 20px;
+    animation-delay: 2s;
+  }
+}
+
+// ============================================
+// BENTO GRID
+// ============================================
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+}
+
+.bento-card {
+  background: $white;
+  border-radius: 20px;
+  padding: 24px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  transition: all 0.3s ease;
+
+  @media (max-width: 640px) {
+    padding: 20px;
+    border-radius: 18px;
+  }
+
+  &:hover {
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  }
+
+  // Patients Card (spans full width)
+  &--patients {
+    grid-column: 1 / -1;
+    background: linear-gradient(135deg, $white 0%, $sky-light 100%);
+  }
+
+  // How it works Card
+  &--how {
+    background: linear-gradient(135deg, $violet-light 0%, $white 100%);
+  }
+
+  // Features Card
+  &--features {
+    background: $white;
+  }
+
+  // History Card
+  &--history {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
     cursor: pointer;
-    transition: all 0.3s ease;
+    background: linear-gradient(135deg, $slate 0%, $navy 100%);
+    color: white;
 
-    @include responsive(phone) {
-        padding: $size-16 $size-20;
-        gap: $size-14;
+    @media (max-width: 640px) {
+      padding: 18px 20px;
     }
 
     &:hover {
-        border-color: #0EAEC4;
-        background: white;
-        box-shadow: 0 4px 16px rgba(14, 174, 196, 0.12);
+      transform: translateY(-2px);
+      box-shadow: 0 12px 32px rgba(15, 23, 42, 0.2);
 
-        .history-btn__icon {
-            background: linear-gradient(135deg, #0EAEC4 0%, #0891b2 100%);
+      .history-card__arrow {
+        transform: translateX(4px);
+      }
+    }
+  }
+}
 
-            svg {
-                color: white;
-            }
-        }
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 20px;
 
-        .history-btn__arrow {
-            transform: translateX(4px);
-            color: #0EAEC4;
-        }
+  &__icon {
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, $sky 0%, $sky-dark 100%);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(79, 195, 247, 0.3);
+
+    svg {
+      width: 24px;
+      height: 24px;
+      color: white;
+    }
+  }
+
+  &__text {
+    h3 {
+      font-size: 18px;
+      font-weight: 700;
+      color: $navy;
+      margin: 0 0 4px;
     }
 
-    &__icon {
-        width: 48px;
-        height: 48px;
-        background: $color-g-92;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.3s ease;
-        flex-shrink: 0;
+    p {
+      font-size: 14px;
+      color: $gray;
+      margin: 0;
+    }
+  }
 
-        @include responsive(phone) {
-            width: 44px;
-            height: 44px;
-            border-radius: 10px;
-        }
+  &--small {
+    gap: 10px;
+    margin-bottom: 16px;
 
-        svg {
-            width: 24px;
-            height: 24px;
-            color: $color-g-54;
-            transition: color 0.3s ease;
-
-            @include responsive(phone) {
-                width: 22px;
-                height: 22px;
-            }
-        }
+    svg {
+      width: 20px;
+      height: 20px;
+      color: $violet;
     }
 
-    &__content {
-        flex: 1;
-        text-align: left;
+    h3 {
+      font-size: 15px;
+      font-weight: 600;
+      color: $navy;
+      margin: 0;
+    }
+  }
+}
+
+// Patients Grid
+.patients-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.patient-btn {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  background: $white;
+  border: 2px solid rgba(0, 0, 0, 0.06);
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  text-align: left;
+
+  &:hover {
+    border-color: $sky;
+    background: $white;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(79, 195, 247, 0.15);
+
+    .patient-btn__arrow {
+      transform: translateX(4px);
+      color: $sky-dark;
+    }
+  }
+
+  &--self {
+    border-color: rgba($sky, 0.3);
+    background: linear-gradient(135deg, rgba($sky-light, 0.5) 0%, $white 100%);
+  }
+
+  &--add {
+    border-style: dashed;
+    border-color: rgba(0, 0, 0, 0.1);
+
+    &:hover {
+      border-style: solid;
+
+      .patient-btn__icon {
+        background: linear-gradient(135deg, $sky 0%, $sky-dark 100%);
+        svg { color: white; }
+      }
+    }
+  }
+
+  &__avatar {
+    position: relative;
+    flex-shrink: 0;
+
+    :deep(.avatar) {
+      width: 44px !important;
+      height: 44px !important;
+      font-size: 16px !important;
+      border-radius: 12px !important;
+    }
+  }
+
+  &__img {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    object-fit: cover;
+  }
+
+  &__verified {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 18px;
+    height: 18px;
+    background: $emerald;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid $white;
+
+    svg {
+      width: 10px;
+      height: 10px;
+      color: white;
+    }
+  }
+
+  &__icon {
+    width: 44px;
+    height: 44px;
+    background: linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 100%);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.25s ease;
+
+    svg {
+      width: 22px;
+      height: 22px;
+      color: $gray;
+    }
+  }
+
+  &__info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__name {
+    display: block;
+    font-size: 15px;
+    font-weight: 600;
+    color: $navy;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__meta {
+    display: block;
+    font-size: 12px;
+    color: $gray;
+    margin-top: 2px;
+  }
+
+  &__arrow {
+    width: 18px;
+    height: 18px;
+    color: $light-gray;
+    flex-shrink: 0;
+    transition: all 0.25s ease;
+  }
+}
+
+// Steps List
+.steps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.step-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  &__number {
+    width: 28px;
+    height: 28px;
+    background: linear-gradient(135deg, $violet 0%, darken($violet, 10%) 100%);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: white;
+    flex-shrink: 0;
+  }
+
+  span {
+    font-size: 14px;
+    color: $slate;
+    line-height: 1.4;
+  }
+}
+
+// Features Grid
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.feature-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 12px;
+  background: $bg;
+  border-radius: 14px;
+  transition: all 0.25s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+  }
+
+  &__icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    svg {
+      width: 22px;
+      height: 22px;
+    }
+  }
+
+  &__label {
+    font-size: 12px;
+    font-weight: 600;
+    color: $slate;
+    text-align: center;
+  }
+
+  &--secure .feature-box__icon {
+    background: linear-gradient(135deg, $sky-light 0%, lighten($sky-light, 3%) 100%);
+    svg { color: $sky-dark; }
+  }
+
+  &--ai .feature-box__icon {
+    background: linear-gradient(135deg, $violet-light 0%, lighten($violet-light, 3%) 100%);
+    svg { color: $violet; }
+  }
+
+  &--fast .feature-box__icon {
+    background: linear-gradient(135deg, $amber-light 0%, lighten($amber-light, 3%) 100%);
+    svg { color: $amber; }
+  }
+
+  &--trusted .feature-box__icon {
+    background: linear-gradient(135deg, $emerald-light 0%, lighten($emerald-light, 3%) 100%);
+    svg { color: $emerald; }
+  }
+}
+
+// History Card Content
+.history-card {
+  &__content {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  &__icon {
+    width: 44px;
+    height: 44px;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    svg {
+      width: 22px;
+      height: 22px;
+      color: white;
+    }
+  }
+
+  &__text {
+    h3 {
+      font-size: 16px;
+      font-weight: 600;
+      color: white;
+      margin: 0 0 4px;
     }
 
-    &__title {
-        display: block;
-        font-size: $size-16;
-        font-weight: $fw-semi-bold;
-        color: $color-black;
-        margin-bottom: $size-4;
+    p {
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.7);
+      margin: 0;
+    }
+  }
 
-        @include responsive(phone) {
-            font-size: $size-15;
-        }
+  &__arrow {
+    width: 20px;
+    height: 20px;
+    color: rgba(255, 255, 255, 0.7);
+    transition: all 0.25s ease;
+  }
+}
+
+// ============================================
+// TRUST BANNER
+// ============================================
+.trust-banner {
+  padding: 16px 20px;
+  background: $bg;
+  border-radius: 14px;
+  border: 1px solid rgba(0, 0, 0, 0.04);
+
+  &__content {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+
+    svg {
+      width: 18px;
+      height: 18px;
+      color: $gray;
+      flex-shrink: 0;
+      margin-top: 1px;
     }
 
-    &__desc {
-        display: block;
-        font-size: $size-13;
-        color: $color-g-54;
-
-        @include responsive(phone) {
-            font-size: $size-12;
-        }
+    p {
+      font-size: 13px;
+      color: $gray;
+      line-height: 1.5;
+      margin: 0;
     }
+  }
+}
 
-    &__arrow {
-        flex-shrink: 0;
-        width: 20px;
-        height: 20px;
-        color: $color-g-77;
-        transition: all 0.3s ease;
-    }
+// ============================================
+// ANIMATIONS
+// ============================================
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.1); opacity: 0.8; }
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(1); opacity: 0.8; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 40px rgba(255, 255, 255, 0.3), 0 0 80px rgba(79, 195, 247, 0.3); }
+  50% { box-shadow: 0 0 60px rgba(255, 255, 255, 0.4), 0 0 100px rgba(79, 195, 247, 0.4); }
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
 }
 </style>

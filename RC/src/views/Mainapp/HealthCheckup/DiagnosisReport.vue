@@ -84,7 +84,7 @@
                                             name="md-localhospital-round"
                                             width="156"
                                             height="156"
-                                            :fill="conditions.length ? '#D12A05' : '#0EAEC4'"
+                                            :fill="conditions.length ? '#D12A05' : '#4FC3F7'"
                                         />
                                     </div>
                                     <div class="recommendation-body-content__info">
@@ -886,17 +886,17 @@ const goToBookAppointment = () => {
                             
                             .clickable-diagnosis {
                                 cursor: pointer !important;
-                                color: #0EAEC4 !important;
+                                color: #4FC3F7 !important;
                                 text-decoration: underline !important;
                                 pointer-events: auto !important;
                                 user-select: none !important;
-                                
+
                                 &:hover {
                                     opacity: 0.8;
                                     transform: scale(1.05);
                                 }
                             }
-                            
+
                             .diagnosis-button {
                                 background: none !important;
                                 border: none !important;
@@ -906,18 +906,18 @@ const goToBookAppointment = () => {
                                 font-size: $size-18 !important;
                                 font-weight: $fw-semi-bold !important;
                                 line-height: 22px !important;
-                                color: #0EAEC4 !important;
+                                color: #4FC3F7 !important;
                                 text-decoration: underline !important;
                                 cursor: pointer !important;
                                 outline: none !important;
-                                
+
                                 &:hover {
                                     opacity: 0.8;
                                     transform: scale(1.05);
                                 }
-                                
+
                                 &:focus {
-                                    outline: 2px solid #0EAEC4;
+                                    outline: 2px solid #4FC3F7;
                                     outline-offset: 2px;
                                 }
                             }
@@ -975,18 +975,18 @@ const goToBookAppointment = () => {
                         font-size: $size-18 !important;
                         font-weight: $fw-semi-bold !important;
                         line-height: 22px !important;
-                        color: #0EAEC4 !important;
+                        color: #4FC3F7 !important;
                         text-decoration: underline !important;
                         cursor: pointer !important;
                         outline: none !important;
-                        
+
                         &:hover {
                             opacity: 0.8;
                             transform: scale(1.05);
                         }
-                        
+
                         &:focus {
-                            outline: 2px solid #0EAEC4;
+                            outline: 2px solid #4FC3F7;
                             outline-offset: 2px;
                         }
                     }

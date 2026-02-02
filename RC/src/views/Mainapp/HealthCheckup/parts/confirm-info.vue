@@ -1,31 +1,14 @@
 <template>
     <div class="confirm-page">
-        <!-- Step Header (Hero Style) -->
-        <div class="step-hero">
-            <div class="step-hero__content">
-                <div class="step-hero__top">
-                    <button class="step-hero__back" @click="onSubmit(0)">
-                        <v-icon name="hi-arrow-left" />
-                    </button>
-                    <div class="step-hero__progress">
-                        <span class="step-hero__step">Step 3 of 8</span>
-                        <div class="step-hero__bar">
-                            <div class="step-hero__fill" style="width: 37.5%"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="step-hero__icon">
-                    <v-icon name="hi-clipboard-list" />
-                </div>
-                <h1 class="step-hero__title">Confirm Your Information</h1>
-                <p class="step-hero__subtitle">Please verify that the following health information is correct</p>
-            </div>
-            <div class="step-hero__decoration">
-                <div class="decoration-circle decoration-circle--1"></div>
-                <div class="decoration-circle decoration-circle--2"></div>
-                <div class="decoration-circle decoration-circle--3"></div>
-            </div>
-        </div>
+        <!-- Step Header -->
+        <StepHero
+            :step="3"
+            :totalSteps="8"
+            icon="hi-clipboard-list"
+            title="Confirm Your Information"
+            subtitle="Please verify that the following health information is correct"
+            @back="() => onSubmit(0)"
+        />
 
         <!-- Info Cards -->
         <div class="info-cards">
@@ -150,33 +133,17 @@
         </div>
 
         <!-- Info Notice -->
-        <div class="confirm-notice">
-            <div class="confirm-notice__icon">
-                <v-icon name="hi-information-circle" />
-            </div>
-            <div class="confirm-notice__content">
-                <p class="confirm-notice__text">
-                    Changes made here will be saved to your profile for future health assessments.
-                </p>
-            </div>
-        </div>
+        <InfoNotice
+            type="info"
+            text="Changes made here will be saved to your profile for future health assessments."
+        />
 
         <!-- Navigation Footer -->
-        <div class="step-footer">
-            <button class="step-footer__btn step-footer__btn--back" @click="onSubmit(0)">
-                <v-icon name="hi-arrow-left" />
-                <span>Back</span>
-            </button>
-            <button
-                class="step-footer__btn step-footer__btn--next"
-                :class="{ 'step-footer__btn--disabled': !canProceed }"
-                :disabled="!canProceed"
-                @click="onSubmit(1)"
-            >
-                <span>Continue</span>
-                <v-icon name="hi-arrow-right" />
-            </button>
-        </div>
+        <StepFooter
+            :disabled="!canProceed"
+            @back="() => onSubmit(0)"
+            @next="() => onSubmit(1)"
+        />
     </div>
 
     <!-- Edit Modal -->
@@ -217,6 +184,9 @@ import RcButton from "@/components/buttons/button-primary";
 import RcModal from "@/components/modals/dialog-modal";
 import DigitsSuffix from "@/components/inputs/digits-suffix";
 import { mapGetters } from "@/utilities/utilityStore";
+import StepHero from "./components/StepHero.vue";
+import StepFooter from "./components/StepFooter.vue";
+import InfoNotice from "./components/InfoNotice.vue";
 
 const $toast = useToast();
 const route = useRoute();
@@ -333,201 +303,28 @@ const onSubmit = (activeScreen) => {
 </script>
 
 <style scoped lang="scss">
+// Design System Colors
+$sky: #4FC3F7;
+$sky-light: #E1F5FE;
+$sky-dark: #0288D1;
+$navy: #0F172A;
+$slate: #334155;
+$gray: #64748B;
+$bg: #F8FAFC;
+
 .confirm-page {
     width: 100%;
     min-height: 100%;
     display: flex;
     flex-direction: column;
-    gap: $size-32;
-    padding-bottom: $size-120;
+    gap: 32px;
+    padding-bottom: 120px;
     max-width: 600px;
     margin: 0 auto;
 
-    @include responsive(phone) {
-        gap: $size-24;
-        padding-bottom: $size-100;
-    }
-}
-
-// Step Hero (matching entry.vue)
-.step-hero {
-    position: relative;
-    background: linear-gradient(135deg, #0EAEC4 0%, #0891b2 50%, #0e7490 100%);
-    border-radius: $size-24;
-    padding: 24px 32px 32px;
-    
-    box-shadow: 0 10px 40px rgba(14, 174, 196, 0.3);
-
-    @include responsive(phone) {
-        padding: 20px 24px 28px;
-        border-radius: $size-16;
-    }
-
-    &__content {
-        position: relative;
-        z-index: 2;
-    }
-
-    &__top {
-        display: flex;
-        align-items: center;
-        gap: $size-16;
-        margin-bottom: $size-20;
-    }
-
-    &__back {
-        width: 40px;
-        height: 40px;
-        background: rgba(255, 255, 255, 0.2);
-        backdrop-filter: blur(10px);
-        border: none;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        transition: all 0.3s ease;
-
-        @include responsive(phone) {
-            width: 36px;
-            height: 36px;
-            border-radius: 10px;
-        }
-
-        &:hover {
-            background: rgba(255, 255, 255, 0.3);
-        }
-
-        svg {
-            width: 20px;
-            height: 20px;
-            color: white;
-
-            @include responsive(phone) {
-                width: 18px;
-                height: 18px;
-            }
-        }
-    }
-
-    &__progress {
-        flex: 1;
-    }
-
-    &__step {
-        font-size: $size-13;
-        font-weight: $fw-medium;
-        color: rgba(255, 255, 255, 0.9);
-        margin-bottom: $size-8;
-        display: block;
-    }
-
-    &__bar {
-        height: 6px;
-        background: rgba(255, 255, 255, 0.2);
-        border-radius: 3px;
-        
-    }
-
-    &__fill {
-        height: 100%;
-        background: white;
-        border-radius: 3px;
-        transition: width 0.5s ease;
-    }
-
-    &__icon {
-        width: 72px;
-        height: 72px;
-        background: rgba(255, 255, 255, 0.2);
-        backdrop-filter: blur(10px);
-        border-radius: 20px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin: 0 auto $size-20;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-
-        @include responsive(phone) {
-            width: 60px;
-            height: 60px;
-            border-radius: 16px;
-        }
-
-        svg {
-            width: 36px;
-            height: 36px;
-            color: white;
-
-            @include responsive(phone) {
-                width: 28px;
-                height: 28px;
-            }
-        }
-    }
-
-    &__title {
-        font-size: $size-28;
-        font-weight: $fw-bold;
-        color: white;
-        margin: 0 0 $size-8 0;
-        text-align: center;
-        letter-spacing: -0.5px;
-
-        @include responsive(phone) {
-            font-size: $size-22;
-        }
-    }
-
-    &__subtitle {
-        font-size: $size-15;
-        color: rgba(255, 255, 255, 0.9);
-        margin: 0;
-        text-align: center;
-        max-width: 400px;
-        margin: 0 auto;
-        line-height: 1.5;
-
-        @include responsive(phone) {
-            font-size: $size-14;
-        }
-    }
-
-    &__decoration {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        pointer-events: none;
-        
-    }
-}
-
-.decoration-circle {
-    position: absolute;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.1);
-
-    &--1 {
-        width: 200px;
-        height: 200px;
-        top: -60px;
-        right: -40px;
-    }
-
-    &--2 {
-        width: 150px;
-        height: 150px;
-        bottom: -40px;
-        left: -30px;
-    }
-
-    &--3 {
-        width: 80px;
-        height: 80px;
-        top: 40%;
-        right: 15%;
+    @media (max-width: 640px) {
+        gap: 24px;
+        padding-bottom: 100px;
     }
 }
 
@@ -535,26 +332,26 @@ const onSubmit = (activeScreen) => {
 .info-cards {
     display: flex;
     flex-direction: column;
-    gap: $size-16;
+    gap: 16px;
 }
 
 .info-card {
-    background: $color-white;
-    border: 2px solid $color-g-92;
-    border-radius: $size-16;
-    padding: $size-20;
+    background: white;
+    border: 2px solid rgba(0, 0, 0, 0.08);
+    border-radius: 16px;
+    padding: 20px;
     display: flex;
     align-items: center;
-    gap: $size-16;
+    gap: 16px;
     transition: all 0.3s ease;
 
-    @include responsive(phone) {
-        padding: $size-16;
+    @media (max-width: 640px) {
+        padding: 16px;
         flex-wrap: wrap;
     }
 
     &:hover {
-        border-color: $color-g-85;
+        border-color: rgba(0, 0, 0, 0.12);
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
     }
 
@@ -574,14 +371,14 @@ const onSubmit = (activeScreen) => {
     &__icon {
         width: 48px;
         height: 48px;
-        background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+        background: linear-gradient(135deg, $sky-light 0%, #B3E5FC 100%);
         border-radius: 12px;
         display: flex;
         align-items: center;
         justify-content: center;
         flex-shrink: 0;
 
-        @include responsive(phone) {
+        @media (max-width: 640px) {
             width: 44px;
             height: 44px;
         }
@@ -589,9 +386,9 @@ const onSubmit = (activeScreen) => {
         svg {
             width: 24px;
             height: 24px;
-            color: #0284c7;
+            color: $sky-dark;
 
-            @include responsive(phone) {
+            @media (max-width: 640px) {
                 width: 22px;
                 height: 22px;
             }
@@ -618,32 +415,32 @@ const onSubmit = (activeScreen) => {
         flex: 1;
         display: flex;
         flex-direction: column;
-        gap: $size-4;
+        gap: 4px;
     }
 
     &__label {
-        font-size: $size-13;
-        color: $color-g-54;
-        font-weight: $fw-medium;
+        font-size: 13px;
+        color: $gray;
+        font-weight: 500;
     }
 
     &__value {
-        font-size: $size-18;
-        font-weight: $fw-semi-bold;
-        color: $color-black;
+        font-size: 18px;
+        font-weight: 600;
+        color: $navy;
 
-        @include responsive(phone) {
-            font-size: $size-16;
+        @media (max-width: 640px) {
+            font-size: 16px;
         }
     }
 
     &__status {
         display: flex;
         align-items: center;
-        gap: $size-6;
-        padding: $size-8 $size-14;
+        gap: 6px;
+        padding: 8px 14px;
         background: #10b981;
-        border-radius: $size-8;
+        border-radius: 8px;
 
         svg {
             width: 16px;
@@ -652,34 +449,34 @@ const onSubmit = (activeScreen) => {
         }
 
         span {
-            font-size: $size-13;
-            font-weight: $fw-medium;
+            font-size: 13px;
+            font-weight: 500;
             color: white;
         }
     }
 
     &__actions {
         display: flex;
-        gap: $size-8;
+        gap: 8px;
 
-        @include responsive(phone) {
+        @media (max-width: 640px) {
             width: 100%;
-            margin-top: $size-8;
+            margin-top: 8px;
         }
     }
 
     &__btn {
         display: flex;
         align-items: center;
-        gap: $size-6;
-        padding: $size-10 $size-16;
-        border-radius: $size-10;
-        font-size: $size-13;
-        font-weight: $fw-medium;
+        gap: 6px;
+        padding: 10px 16px;
+        border-radius: 10px;
+        font-size: 13px;
+        font-weight: 500;
         cursor: pointer;
         transition: all 0.3s ease;
 
-        @include responsive(phone) {
+        @media (max-width: 640px) {
             flex: 1;
             justify-content: center;
         }
@@ -691,12 +488,12 @@ const onSubmit = (activeScreen) => {
 
         &--edit {
             background: transparent;
-            border: 1px solid $color-g-85;
-            color: $color-g-44;
+            border: 1px solid rgba(0, 0, 0, 0.15);
+            color: $slate;
 
             &:hover:not(:disabled) {
-                background: $color-g-97;
-                border-color: $color-g-77;
+                background: $bg;
+                border-color: rgba(0, 0, 0, 0.2);
             }
 
             &:disabled {
@@ -722,114 +519,8 @@ const onSubmit = (activeScreen) => {
     }
 }
 
-// Notice
-.confirm-notice {
-    display: flex;
-    align-items: flex-start;
-    gap: $size-12;
-    padding: $size-16;
-    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-    border: 1px solid #bae6fd;
-    border-radius: $size-12;
-
-    @include responsive(phone) {
-        padding: $size-14;
-    }
-
-    &__icon {
-        flex-shrink: 0;
-
-        svg {
-            width: 20px;
-            height: 20px;
-            color: #0284c7;
-        }
-    }
-
-    &__text {
-        font-size: $size-13;
-        color: #0369a1;
-        margin: 0;
-        line-height: 1.5;
-
-        @include responsive(phone) {
-            font-size: $size-12;
-        }
-    }
-}
-
-// Navigation Footer
-.step-footer {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: $size-16 $size-48;
-    background: white;
-    border-top: 1px solid $color-g-92;
-    z-index: 100;
-
-    @include responsive(phone) {
-        padding: $size-16 $size-24;
-    }
-
-    &__btn {
-        display: flex;
-        align-items: center;
-        gap: $size-8;
-        padding: $size-12 $size-24;
-        border-radius: $size-12;
-        font-size: $size-15;
-        font-weight: $fw-semi-bold;
-        cursor: pointer;
-        transition: all 0.3s ease;
-
-        @include responsive(phone) {
-            padding: $size-12 $size-20;
-            font-size: $size-14;
-        }
-
-        svg {
-            width: 18px;
-            height: 18px;
-        }
-
-        &--back {
-            background: transparent;
-            border: 2px solid $color-g-85;
-            color: $color-g-44;
-
-            &:hover {
-                border-color: $color-g-77;
-                background: $color-g-97;
-            }
-        }
-
-        &--next {
-            background: linear-gradient(135deg, #0EAEC4 0%, #0891b2 100%);
-            border: none;
-            color: white;
-            box-shadow: 0 4px 14px rgba(14, 174, 196, 0.4);
-
-            &:hover:not(:disabled) {
-                box-shadow: 0 6px 20px rgba(14, 174, 196, 0.5);
-                transform: translateY(-1px);
-            }
-        }
-
-        &--disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            box-shadow: none;
-        }
-    }
-}
-
 :deep(.modal__footer) button {
-    @include responsive(phone) {
+    @media (max-width: 640px) {
         width: 100%;
     }
 }

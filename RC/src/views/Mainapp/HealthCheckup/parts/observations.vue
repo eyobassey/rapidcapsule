@@ -1,42 +1,23 @@
 <template>
     <div class="observations-page">
-        <!-- Step Header (Hero Style) -->
-        <div class="step-hero">
-            <div class="step-hero__content">
-                <div class="step-hero__top">
-                    <button class="step-hero__back" @click="onSubmit(0)">
-                        <v-icon name="hi-arrow-left" />
-                    </button>
-                    <div class="step-hero__progress">
-                        <span class="step-hero__step">Step 5 of 8</span>
-                        <div class="step-hero__bar">
-                            <div class="step-hero__fill" style="width: 62.5%"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="step-hero__icon">
-                    <v-icon name="hi-search" />
-                </div>
-                <h1 class="step-hero__title">What are your symptoms?</h1>
-                <p class="step-hero__subtitle">Search for symptoms or select a body part to add them</p>
-            </div>
-            <div class="step-hero__decoration">
-                <div class="decoration-circle decoration-circle--1"></div>
-                <div class="decoration-circle decoration-circle--2"></div>
-                <div class="decoration-circle decoration-circle--3"></div>
-            </div>
-        </div>
+        <!-- Step Header -->
+        <StepHero
+            :step="5"
+            :totalSteps="8"
+            icon="hi-search"
+            title="What are your symptoms?"
+            subtitle="Search for symptoms or select a body part to add them"
+            @back="() => onSubmit(0)"
+        />
 
         <!-- Symptom Count Notice -->
-        <div v-if="selectedSymptoms.length < 2" class="symptom-notice" :class="{ 'symptom-notice--warning': selectedSymptoms.length === 1 }">
-            <div class="symptom-notice__icon">
-                <v-icon name="hi-information-circle" />
-            </div>
-            <p class="symptom-notice__text">
-                Please add a minimum of <strong>2 symptoms</strong> for a more accurate diagnosis.
-                <span v-if="selectedSymptoms.length === 1">(1 more needed)</span>
-            </p>
-        </div>
+        <InfoNotice
+            v-if="selectedSymptoms.length < 2"
+            :type="selectedSymptoms.length === 1 ? 'warning' : 'info'"
+        >
+            Please add a minimum of <strong>2 symptoms</strong> for a more accurate diagnosis.
+            <span v-if="selectedSymptoms.length === 1">(1 more needed)</span>
+        </InfoNotice>
 
         <!-- Mobile Tab View -->
         <div class="mobile-view">
@@ -188,21 +169,11 @@
         </div>
 
         <!-- Navigation Footer -->
-        <div class="step-footer">
-            <button class="step-footer__btn step-footer__btn--back" @click="onSubmit(0)">
-                <v-icon name="hi-arrow-left" />
-                <span>Back</span>
-            </button>
-            <button
-                class="step-footer__btn step-footer__btn--next"
-                :class="{ 'step-footer__btn--disabled': !selectedSymptoms.length }"
-                :disabled="!selectedSymptoms.length"
-                @click="onSubmit(1)"
-            >
-                <span>Continue</span>
-                <v-icon name="hi-arrow-right" />
-            </button>
-        </div>
+        <StepFooter
+            :disabled="!selectedSymptoms.length"
+            @back="() => onSubmit(0)"
+            @next="() => onSubmit(1)"
+        />
     </div>
 </template>
 
@@ -217,6 +188,9 @@ import Icons from "@/components/icons.vue";
 import Loader from "@/components/Loader/main-loader.vue";
 import RcButton from "@/components/buttons/button-primary";
 import RcTab from "@/components/RCTab";
+import StepHero from "./components/StepHero.vue";
+import StepFooter from "./components/StepFooter.vue";
+import InfoNotice from "./components/InfoNotice.vue";
 
 const $http = inject('$http');
 const { navigator, useNavigator } = inject('$_NAVIGATOR');
@@ -291,249 +265,28 @@ const onSubmit = (activeScreen) => {
 </script>
 
 <style scoped lang="scss">
+// Design System Colors
+$sky: #4FC3F7;
+$sky-light: #E1F5FE;
+$sky-dark: #0288D1;
+$navy: #0F172A;
+$slate: #334155;
+$gray: #64748B;
+$bg: #F8FAFC;
+
 .observations-page {
     width: 100%;
     min-height: 100%;
     display: flex;
     flex-direction: column;
-    gap: $size-24;
-    padding-bottom: $size-120;
+    gap: 24px;
+    padding-bottom: 120px;
     max-width: 900px;
     margin: 0 auto;
 
-    @include responsive(phone) {
-        gap: $size-20;
-        padding-bottom: $size-100;
-    }
-}
-
-// Step Hero (matching entry.vue)
-.step-hero {
-    position: relative;
-    background: linear-gradient(135deg, #0EAEC4 0%, #0891b2 50%, #0e7490 100%);
-    border-radius: $size-24;
-    padding: 24px 32px 32px;
-    
-    box-shadow: 0 10px 40px rgba(14, 174, 196, 0.3);
-
-    @include responsive(phone) {
-        padding: 20px 24px 28px;
-        border-radius: $size-16;
-    }
-
-    &__content {
-        position: relative;
-        z-index: 2;
-    }
-
-    &__top {
-        display: flex;
-        align-items: center;
-        gap: $size-16;
-        margin-bottom: $size-20;
-    }
-
-    &__back {
-        width: 40px;
-        height: 40px;
-        background: rgba(255, 255, 255, 0.2);
-        backdrop-filter: blur(10px);
-        border: none;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        transition: all 0.3s ease;
-
-        @include responsive(phone) {
-            width: 36px;
-            height: 36px;
-            border-radius: 10px;
-        }
-
-        &:hover {
-            background: rgba(255, 255, 255, 0.3);
-        }
-
-        svg {
-            width: 20px;
-            height: 20px;
-            color: white;
-
-            @include responsive(phone) {
-                width: 18px;
-                height: 18px;
-            }
-        }
-    }
-
-    &__progress {
-        flex: 1;
-    }
-
-    &__step {
-        font-size: $size-13;
-        font-weight: $fw-medium;
-        color: rgba(255, 255, 255, 0.9);
-        margin-bottom: $size-8;
-        display: block;
-    }
-
-    &__bar {
-        height: 6px;
-        background: rgba(255, 255, 255, 0.2);
-        border-radius: 3px;
-        
-    }
-
-    &__fill {
-        height: 100%;
-        background: white;
-        border-radius: 3px;
-        transition: width 0.5s ease;
-    }
-
-    &__icon {
-        width: 72px;
-        height: 72px;
-        background: rgba(255, 255, 255, 0.2);
-        backdrop-filter: blur(10px);
-        border-radius: 20px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin: 0 auto $size-20;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-
-        @include responsive(phone) {
-            width: 60px;
-            height: 60px;
-            border-radius: 16px;
-        }
-
-        svg {
-            width: 36px;
-            height: 36px;
-            color: white;
-
-            @include responsive(phone) {
-                width: 28px;
-                height: 28px;
-            }
-        }
-    }
-
-    &__title {
-        font-size: $size-28;
-        font-weight: $fw-bold;
-        color: white;
-        margin: 0 0 $size-8 0;
-        text-align: center;
-        letter-spacing: -0.5px;
-
-        @include responsive(phone) {
-            font-size: $size-22;
-        }
-    }
-
-    &__subtitle {
-        font-size: $size-15;
-        color: rgba(255, 255, 255, 0.9);
-        margin: 0;
-        text-align: center;
-        max-width: 400px;
-        margin: 0 auto;
-        line-height: 1.5;
-
-        @include responsive(phone) {
-            font-size: $size-14;
-        }
-    }
-
-    &__decoration {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        pointer-events: none;
-        
-    }
-}
-
-.decoration-circle {
-    position: absolute;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.1);
-
-    &--1 {
-        width: 200px;
-        height: 200px;
-        top: -60px;
-        right: -40px;
-    }
-
-    &--2 {
-        width: 150px;
-        height: 150px;
-        bottom: -40px;
-        left: -30px;
-    }
-
-    &--3 {
-        width: 80px;
-        height: 80px;
-        top: 40%;
-        right: 15%;
-    }
-}
-
-// Symptom Notice
-.symptom-notice {
-    display: flex;
-    align-items: center;
-    gap: $size-12;
-    padding: $size-14 $size-18;
-    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-    border: 1px solid #bae6fd;
-    border-radius: $size-12;
-
-    &--warning {
-        background: linear-gradient(135deg, #fefce8 0%, #fef9c3 100%);
-        border-color: #fde047;
-
-        .symptom-notice__icon svg {
-            color: #ca8a04;
-        }
-
-        .symptom-notice__text {
-            color: #a16207;
-        }
-    }
-
-    &__icon {
-        flex-shrink: 0;
-
-        svg {
-            width: 20px;
-            height: 20px;
-            color: #0284c7;
-        }
-    }
-
-    &__text {
-        font-size: $size-14;
-        color: #0369a1;
-        margin: 0;
-
-        @include responsive(phone) {
-            font-size: $size-13;
-        }
-
-        strong {
-            font-weight: $fw-semi-bold;
-        }
+    @media (max-width: 640px) {
+        gap: 20px;
+        padding-bottom: 100px;
     }
 }
 
@@ -541,9 +294,9 @@ const onSubmit = (activeScreen) => {
 .mobile-view {
     display: none;
     flex-direction: column;
-    gap: $size-20;
+    gap: 20px;
 
-    @include responsive(phone) {
+    @media (max-width: 640px) {
         display: flex;
     }
 }
@@ -552,14 +305,14 @@ const onSubmit = (activeScreen) => {
 .desktop-view {
     display: block;
 
-    @include responsive(phone) {
+    @media (max-width: 640px) {
         display: none;
     }
 }
 
 .desktop-layout {
     display: flex;
-    gap: $size-24;
+    gap: 24px;
     align-items: flex-start;
     overflow: visible;
 }
@@ -568,7 +321,7 @@ const onSubmit = (activeScreen) => {
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: $size-20;
+    gap: 20px;
     position: relative;
 }
 
@@ -591,10 +344,10 @@ const onSubmit = (activeScreen) => {
 // Symptom Tabs
 .symptom-tabs {
     display: flex;
-    gap: $size-8;
-    background: $color-g-97;
-    padding: $size-6;
-    border-radius: $size-12;
+    gap: 8px;
+    background: $bg;
+    padding: 6px;
+    border-radius: 12px;
 }
 
 .symptom-tab {
@@ -602,14 +355,14 @@ const onSubmit = (activeScreen) => {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: $size-8;
-    padding: $size-12 $size-16;
+    gap: 8px;
+    padding: 12px 16px;
     background: transparent;
     border: none;
-    border-radius: $size-10;
-    font-size: $size-14;
-    font-weight: $fw-medium;
-    color: $color-g-54;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    color: $gray;
     cursor: pointer;
     transition: all 0.3s ease;
 
@@ -620,7 +373,7 @@ const onSubmit = (activeScreen) => {
 
     &--active {
         background: white;
-        color: #0EAEC4;
+        color: $sky-dark;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
 }
@@ -633,35 +386,35 @@ const onSubmit = (activeScreen) => {
 
     &__icon {
         position: absolute;
-        left: $size-16;
+        left: 16px;
         width: 20px;
         height: 20px;
-        color: $color-g-54;
+        color: $gray;
     }
 
     &__input {
         width: 100%;
-        padding: $size-14 $size-16 $size-14 $size-48;
-        background: $color-white;
-        border: 2px solid $color-g-92;
-        border-radius: $size-12;
-        font-size: $size-15;
-        color: $color-black;
+        padding: 14px 16px 14px 48px;
+        background: white;
+        border: 2px solid rgba(0, 0, 0, 0.08);
+        border-radius: 12px;
+        font-size: 15px;
+        color: $navy;
         transition: all 0.3s ease;
 
-        @include responsive(phone) {
-            font-size: $size-14;
-            padding: $size-12 $size-14 $size-12 $size-44;
+        @media (max-width: 640px) {
+            font-size: 14px;
+            padding: 12px 14px 12px 44px;
         }
 
         &::placeholder {
-            color: $color-g-67;
+            color: $gray;
         }
 
         &:focus {
             outline: none;
-            border-color: #0EAEC4;
-            box-shadow: 0 0 0 3px rgba(14, 174, 196, 0.1);
+            border-color: $sky;
+            box-shadow: 0 0 0 3px rgba(79, 195, 247, 0.1);
         }
     }
 }
@@ -673,35 +426,35 @@ const onSubmit = (activeScreen) => {
     left: 0;
     right: 0;
     background: white;
-    border: 1px solid $color-g-92;
-    border-radius: $size-12;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 12px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
     max-height: 280px;
     overflow-y: auto;
     z-index: 50;
-    margin-top: $size-8;
+    margin-top: 8px;
 
     &__item {
         display: flex;
         align-items: center;
-        gap: $size-12;
-        padding: $size-12 $size-16;
+        gap: 12px;
+        padding: 12px 16px;
         cursor: pointer;
         transition: all 0.2s ease;
 
         svg {
             width: 18px;
             height: 18px;
-            color: #0EAEC4;
+            color: $sky;
         }
 
         span {
-            font-size: $size-14;
-            color: $color-black;
+            font-size: 14px;
+            color: $navy;
         }
 
         &:hover {
-            background: linear-gradient(135deg, #f0fdfa 0%, #ecfeff 100%);
+            background: linear-gradient(135deg, $sky-light 0%, #B3E5FC 100%);
         }
     }
 
@@ -710,9 +463,9 @@ const onSubmit = (activeScreen) => {
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: $size-8;
-        padding: $size-32;
-        color: $color-g-54;
+        gap: 8px;
+        padding: 32px;
+        color: $gray;
 
         svg {
             width: 32px;
@@ -720,7 +473,7 @@ const onSubmit = (activeScreen) => {
         }
 
         span {
-            font-size: $size-14;
+            font-size: 14px;
         }
     }
 }
@@ -734,7 +487,7 @@ const onSubmit = (activeScreen) => {
 .body-section {
     display: flex;
     justify-content: center;
-    padding: $size-16 0;
+    padding: 16px 0;
 
     .body-avatar {
         max-width: 300px;
@@ -747,42 +500,42 @@ const onSubmit = (activeScreen) => {
     &__title {
         display: flex;
         align-items: center;
-        gap: $size-8;
-        font-size: $size-15;
-        font-weight: $fw-semi-bold;
-        color: $color-black;
-        margin: 0 0 $size-12 0;
+        gap: 8px;
+        font-size: 15px;
+        font-weight: 600;
+        color: $navy;
+        margin: 0 0 12px 0;
 
         svg {
             width: 20px;
             height: 20px;
-            color: #0EAEC4;
+            color: $sky;
         }
     }
 
     &__list {
         display: flex;
         flex-wrap: wrap;
-        gap: $size-10;
+        gap: 10px;
     }
 }
 
 .symptom-chip {
     display: flex;
     align-items: center;
-    gap: $size-8;
-    padding: $size-10 $size-14;
-    background: linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%);
-    border: 1px solid #99f6e4;
-    border-radius: $size-24;
+    gap: 8px;
+    padding: 10px 14px;
+    background: linear-gradient(135deg, $sky-light 0%, #B3E5FC 100%);
+    border: 1px solid #81D4FA;
+    border-radius: 24px;
 
     span {
-        font-size: $size-14;
-        color: #0d9488;
-        font-weight: $fw-medium;
+        font-size: 14px;
+        color: $sky-dark;
+        font-weight: 500;
 
-        @include responsive(phone) {
-            font-size: $size-13;
+        @media (max-width: 640px) {
+            font-size: 13px;
         }
     }
 
@@ -792,7 +545,7 @@ const onSubmit = (activeScreen) => {
         justify-content: center;
         width: 20px;
         height: 20px;
-        background: #14b8a6;
+        background: $sky;
         border: none;
         border-radius: 50%;
         cursor: pointer;
@@ -805,77 +558,7 @@ const onSubmit = (activeScreen) => {
         }
 
         &:hover {
-            background: #0d9488;
-        }
-    }
-}
-
-// Navigation Footer
-.step-footer {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: $size-16 $size-48;
-    background: white;
-    border-top: 1px solid $color-g-92;
-    z-index: 100;
-
-    @include responsive(phone) {
-        padding: $size-16 $size-24;
-    }
-
-    &__btn {
-        display: flex;
-        align-items: center;
-        gap: $size-8;
-        padding: $size-12 $size-24;
-        border-radius: $size-12;
-        font-size: $size-15;
-        font-weight: $fw-semi-bold;
-        cursor: pointer;
-        transition: all 0.3s ease;
-
-        @include responsive(phone) {
-            padding: $size-12 $size-20;
-            font-size: $size-14;
-        }
-
-        svg {
-            width: 18px;
-            height: 18px;
-        }
-
-        &--back {
-            background: transparent;
-            border: 2px solid $color-g-85;
-            color: $color-g-44;
-
-            &:hover {
-                border-color: $color-g-77;
-                background: $color-g-97;
-            }
-        }
-
-        &--next {
-            background: linear-gradient(135deg, #0EAEC4 0%, #0891b2 100%);
-            border: none;
-            color: white;
-            box-shadow: 0 4px 14px rgba(14, 174, 196, 0.4);
-
-            &:hover:not(:disabled) {
-                box-shadow: 0 6px 20px rgba(14, 174, 196, 0.5);
-                transform: translateY(-1px);
-            }
-        }
-
-        &--disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            box-shadow: none;
+            background: $sky-dark;
         }
     }
 }

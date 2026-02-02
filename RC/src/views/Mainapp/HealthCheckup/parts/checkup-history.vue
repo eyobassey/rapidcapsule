@@ -1,110 +1,115 @@
 <template>
     <div class="checkup-history">
-        <!-- Hero Banner -->
-        <div class="history-hero">
-            <div class="history-hero__content">
-                <div class="history-hero__top">
-                    <button class="history-hero__back" @click="goBack">
-                        <v-icon name="hi-arrow-left" />
-                    </button>
-                    <div class="history-hero__badge">
-                        <v-icon name="hi-shield-check" />
-                        <span>Health Records</span>
+        <!-- Hero Section - Split Layout -->
+        <section class="hero">
+            <div class="hero__content">
+                <button class="hero__back" @click="goBack">
+                    <v-icon name="hi-arrow-left" />
+                    <span>Back</span>
+                </button>
+                <div class="hero__badge">
+                    <div class="badge-pulse"></div>
+                    <v-icon name="hi-shield-check" />
+                    <span>Health Records</span>
+                </div>
+                <h1 class="hero__title">Checkup<br/><span class="hero__title-accent">History</span></h1>
+                <p class="hero__subtitle">View, manage and track all your AI health assessments in one place.</p>
+            </div>
+            <div class="hero__visual">
+                <div class="history-orb">
+                    <div class="orb-ring orb-ring--1"></div>
+                    <div class="orb-ring orb-ring--2"></div>
+                    <div class="orb-core">
+                        <v-icon name="hi-clipboard-list" />
                     </div>
                 </div>
-                <div class="history-hero__icon">
-                    <v-icon name="hi-clipboard-list" />
-                </div>
-                <h1 class="history-hero__title">Checkup History</h1>
-                <p class="history-hero__subtitle">View and manage your health assessments</p>
             </div>
-            <div class="history-hero__decoration">
-                <div class="decoration-circle decoration-circle--1"></div>
-                <div class="decoration-circle decoration-circle--2"></div>
-                <div class="decoration-circle decoration-circle--3"></div>
-            </div>
-        </div>
+        </section>
 
-        <!-- Sort Controls -->
-        <div class="checkup-history__controls">
-            <div class="checkup-history__sort">
-                <v-icon name="hi-sort-descending" class="sort-icon" />
-                <select v-model="sortOrder" @change="fetchHistory" class="sort-select">
-                    <option value="desc">Newest First</option>
-                    <option value="asc">Oldest First</option>
-                </select>
-            </div>
-        </div>
-
-        <!-- Stats Cards -->
-        <div v-if="!isLoading && historyData.checkups && historyData.checkups.length > 0" class="checkup-history__stats">
-            <div class="stat-card">
-                <div class="stat-card__icon stat-card__icon--primary">
-                    <v-icon name="hi-clipboard-list" />
-                </div>
-                <div class="stat-card__content">
-                    <span class="stat-card__value">{{ totalCheckups() }}</span>
-                    <span class="stat-card__label">Total Checkups</span>
-                </div>
-            </div>
-
-            <div class="stat-card">
-                <div class="stat-card__icon stat-card__icon--info">
-                    <v-icon name="hi-clock" />
-                </div>
-                <div class="stat-card__content">
-                    <span class="stat-card__value">{{ getTimeAgo(lastCheckupDate()) }}</span>
-                    <span class="stat-card__label">Last Checkup</span>
-                </div>
-            </div>
-
-            <div class="stat-card">
-                <div class="stat-card__icon stat-card__icon--warning">
-                    <v-icon name="hi-exclamation-circle" />
-                </div>
-                <div class="stat-card__content">
-                    <span class="stat-card__value">{{ urgentCheckupsCount() }}</span>
-                    <span class="stat-card__label">Urgent Findings</span>
+        <!-- Bento Grid -->
+        <section class="bento-grid">
+            <!-- Stats Row -->
+            <div v-if="!isLoading && historyData.checkups && historyData.checkups.length > 0" class="bento-card bento-card--stats">
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-item__icon stat-item__icon--primary">
+                            <v-icon name="hi-clipboard-list" />
+                        </div>
+                        <div class="stat-item__content">
+                            <span class="stat-item__value">{{ totalCheckups() }}</span>
+                            <span class="stat-item__label">Total Checkups</span>
+                        </div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-item__icon stat-item__icon--info">
+                            <v-icon name="hi-clock" />
+                        </div>
+                        <div class="stat-item__content">
+                            <span class="stat-item__value">{{ getTimeAgo(lastCheckupDate()) }}</span>
+                            <span class="stat-item__label">Last Checkup</span>
+                        </div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-item__icon stat-item__icon--warning">
+                            <v-icon name="hi-exclamation-circle" />
+                        </div>
+                        <div class="stat-item__content">
+                            <span class="stat-item__value">{{ urgentCheckupsCount() }}</span>
+                            <span class="stat-item__label">Urgent Findings</span>
+                        </div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-item__icon stat-item__icon--success">
+                            <v-icon name="hi-sparkles" />
+                        </div>
+                        <div class="stat-item__content">
+                            <span class="stat-item__value">{{ aiSummariesCount() }}</span>
+                            <span class="stat-item__label">AI Summaries</span>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div class="stat-card">
-                <div class="stat-card__icon stat-card__icon--success">
-                    <v-icon name="fa-robot" />
-                </div>
-                <div class="stat-card__content">
-                    <span class="stat-card__value">{{ aiSummariesCount() }}</span>
-                    <span class="stat-card__label">AI Summaries</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Loading State -->
-        <div v-if="isLoading" class="checkup-history__loading">
-            <div class="loading-spinner"></div>
-            <p>Loading your checkups...</p>
-        </div>
-
-        <!-- Empty State -->
-        <div v-else-if="historyData.checkups && historyData.checkups.length === 0" class="checkup-history__empty">
-            <div class="empty-illustration">
-                <div class="empty-illustration__circle">
-                    <v-icon name="hi-clipboard-list" />
-                </div>
-                <div class="empty-illustration__dots">
-                    <span></span><span></span><span></span>
+            <!-- Controls Card -->
+            <div class="bento-card bento-card--controls">
+                <div class="controls-header">
+                    <h3 class="controls-title">
+                        <v-icon name="hi-collection" />
+                        Your Checkups
+                    </h3>
+                    <div class="sort-control">
+                        <v-icon name="hi-sort-descending" />
+                        <select v-model="sortOrder" @change="fetchHistory">
+                            <option value="desc">Newest First</option>
+                            <option value="asc">Oldest First</option>
+                        </select>
+                    </div>
                 </div>
             </div>
-            <h3 class="empty-title">No Checkups Yet</h3>
-            <p class="empty-description">Start your first AI health checkup to see your results here</p>
-            <button @click="goBack" class="empty-action">
-                <v-icon name="hi-plus" />
-                Start New Checkup
-            </button>
-        </div>
 
-        <!-- Checkup List -->
-        <div v-else-if="historyData.checkups && historyData.checkups.length > 0" class="checkup-history__list">
+            <!-- Loading State -->
+            <div v-if="isLoading" class="bento-card bento-card--loading">
+                <div class="loading-spinner"></div>
+                <p>Loading your checkups...</p>
+            </div>
+
+            <!-- Empty State -->
+            <div v-else-if="historyData.checkups && historyData.checkups.length === 0" class="bento-card bento-card--empty">
+                <div class="empty-illustration">
+                    <div class="empty-illustration__circle">
+                        <v-icon name="hi-clipboard-list" />
+                    </div>
+                </div>
+                <h3 class="empty-title">No Checkups Yet</h3>
+                <p class="empty-description">Start your first AI health checkup to see your results here</p>
+                <button @click="goBack" class="empty-action">
+                    <v-icon name="hi-plus" />
+                    Start New Checkup
+                </button>
+            </div>
+
+            <!-- Checkup List -->
+            <div v-else-if="historyData.checkups && historyData.checkups.length > 0" class="bento-card bento-card--list">
             <div
                 v-for="checkup in historyData.checkups"
                 :key="checkup._id"
@@ -189,10 +194,10 @@
                     </div>
                 </div>
             </div>
-        </div>
+            </div>
 
-        <!-- Pagination -->
-        <div v-if="historyData.pagination && historyData.pagination.total_pages > 1" class="checkup-history__pagination">
+            <!-- Pagination -->
+            <div v-if="historyData.pagination && historyData.pagination.total_pages > 1" class="bento-card bento-card--pagination">
             <button
                 @click="changePage(currentPage - 1)"
                 :disabled="currentPage === 1"
@@ -216,7 +221,8 @@
                 <span>Next</span>
                 <v-icon name="hi-chevron-right" />
             </button>
-        </div>
+            </div>
+        </section>
 
         <!-- Purchase Modal -->
         <div v-if="showPurchaseModal" class="purchase-modal-overlay" @click.self="closePurchaseModal">
@@ -814,506 +820,333 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
+// Design System Colors
+$sky: #4FC3F7;
+$sky-light: #E1F5FE;
+$sky-dark: #0288D1;
+$sky-darker: #01579B;
+$navy: #0F172A;
+$slate: #334155;
+$gray: #64748B;
+$light-gray: #94A3B8;
+$bg: #F8FAFC;
+$white: #FFFFFF;
+$emerald: #10B981;
+$emerald-light: #D1FAE5;
+$violet: #8B5CF6;
+$violet-light: #EDE9FE;
+$amber: #F59E0B;
+$amber-light: #FEF3C7;
+$rose: #F43F5E;
+
 .checkup-history {
     width: 100%;
-    max-width: 800px;
+    max-width: 1400px;
     margin: 0 auto;
-    padding: $size-24 0;
+    padding: 0 0 48px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
 
-    @include responsive(phone) {
-        padding: $size-16 0;
+    @media (max-width: 768px) {
+        padding: 0 16px 32px;
+        gap: 20px;
     }
 }
 
-// Hero Banner
-.history-hero {
+// ============================================
+// HERO SECTION - Split Layout
+// ============================================
+.hero {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+    padding: 40px;
+    background: linear-gradient(135deg, $sky 0%, $sky-dark 50%, $sky-darker 100%);
+    border-radius: 28px;
     position: relative;
-    background: linear-gradient(135deg, #0EAEC4 0%, #0891b2 50%, #0e7490 100%);
-    border-radius: $size-24;
-    padding: 24px 32px 32px;
-    margin-bottom: $size-24;
-    box-shadow: 0 10px 40px rgba(14, 174, 196, 0.3);
+    overflow: hidden;
+    box-shadow:
+        0 20px 60px rgba(2, 136, 209, 0.3),
+        0 0 0 1px rgba(255, 255, 255, 0.1) inset;
 
-    @include responsive(phone) {
-        padding: 20px 24px 28px;
-        border-radius: $size-16;
-        margin-bottom: $size-20;
+    @media (max-width: 768px) {
+        grid-template-columns: 1fr;
+        padding: 32px 24px;
+        gap: 24px;
+        text-align: center;
     }
 
     &__content {
-        position: relative;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
         z-index: 2;
     }
 
-    &__top {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: $size-20;
-    }
-
     &__back {
-        width: 40px;
-        height: 40px;
-        background: rgba(255, 255, 255, 0.2);
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 16px;
+        background: rgba(255, 255, 255, 0.15);
         backdrop-filter: blur(10px);
         border: none;
         border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        color: white;
+        font-size: 14px;
+        font-weight: 500;
         cursor: pointer;
-        transition: all 0.3s ease;
+        transition: all 0.25s ease;
+        width: fit-content;
+        margin-bottom: 20px;
 
-        @include responsive(phone) {
-            width: 36px;
-            height: 36px;
-            border-radius: 10px;
-        }
-
-        &:hover {
-            background: rgba(255, 255, 255, 0.3);
+        @media (max-width: 768px) {
+            margin: 0 auto 16px;
         }
 
         svg {
-            width: 20px;
-            height: 20px;
-            color: white;
+            width: 18px;
+            height: 18px;
+        }
 
-            @include responsive(phone) {
-                width: 18px;
-                height: 18px;
-            }
+        &:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateX(-4px);
         }
     }
 
     &__badge {
-        display: flex;
+        display: inline-flex;
         align-items: center;
-        gap: $size-6;
-        background: rgba(255, 255, 255, 0.2);
+        gap: 8px;
+        padding: 8px 16px;
+        background: rgba(255, 255, 255, 0.15);
         backdrop-filter: blur(10px);
-        padding: $size-8 $size-14;
-        border-radius: 20px;
+        border-radius: 24px;
+        width: fit-content;
+        margin-bottom: 20px;
+        position: relative;
 
-        @include responsive(phone) {
-            padding: $size-6 $size-12;
+        @media (max-width: 768px) {
+            margin: 0 auto 16px;
+        }
+
+        .badge-pulse {
+            position: absolute;
+            left: 12px;
+            width: 8px;
+            height: 8px;
+            background: $emerald;
+            border-radius: 50%;
+            animation: pulse 2s ease-in-out infinite;
         }
 
         svg {
             width: 16px;
             height: 16px;
             color: white;
+            margin-left: 12px;
         }
 
         span {
-            font-size: $size-12;
-            font-weight: $fw-semi-bold;
+            font-size: 13px;
+            font-weight: 600;
             color: white;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-
-            @include responsive(phone) {
-                font-size: $size-11;
-            }
-        }
-    }
-
-    &__icon {
-        width: 72px;
-        height: 72px;
-        background: rgba(255, 255, 255, 0.2);
-        backdrop-filter: blur(10px);
-        border-radius: 20px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin: 0 auto $size-20;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-
-        @include responsive(phone) {
-            width: 60px;
-            height: 60px;
-            border-radius: 16px;
-        }
-
-        svg {
-            width: 36px;
-            height: 36px;
-            color: white;
-
-            @include responsive(phone) {
-                width: 28px;
-                height: 28px;
-            }
+            letter-spacing: 0.3px;
         }
     }
 
     &__title {
-        font-size: $size-28;
-        font-weight: $fw-bold;
+        font-size: 48px;
+        font-weight: 800;
         color: white;
-        margin: 0 0 $size-8 0;
-        text-align: center;
-        letter-spacing: -0.5px;
+        line-height: 1.1;
+        margin: 0 0 16px;
+        letter-spacing: -1px;
 
-        @include responsive(phone) {
-            font-size: $size-22;
+        @media (max-width: 768px) {
+            font-size: 36px;
+        }
+
+        &-accent {
+            background: linear-gradient(90deg, #fff 0%, rgba(255,255,255,0.7) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
     }
 
     &__subtitle {
-        font-size: $size-15;
-        color: rgba(255, 255, 255, 0.9);
+        font-size: 16px;
+        color: rgba(255, 255, 255, 0.85);
+        line-height: 1.6;
         margin: 0;
-        text-align: center;
-        max-width: 400px;
-        margin: 0 auto;
-        line-height: 1.5;
+        max-width: 380px;
 
-        @include responsive(phone) {
-            font-size: $size-14;
+        @media (max-width: 768px) {
+            font-size: 15px;
+            max-width: 100%;
         }
     }
 
-    &__decoration {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        pointer-events: none;
-        overflow: hidden;
-        border-radius: $size-24;
+    &__visual {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
 
-        @include responsive(phone) {
-            border-radius: $size-16;
+        @media (max-width: 768px) {
+            display: none;
         }
     }
 }
 
-.decoration-circle {
+// History Orb Animation
+.history-orb {
+    position: relative;
+    width: 200px;
+    height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.orb-ring {
     position: absolute;
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.2);
 
     &--1 {
-        width: 200px;
-        height: 200px;
-        top: -60px;
-        right: -40px;
+        width: 100%;
+        height: 100%;
+        animation: spin-slow 20s linear infinite;
     }
 
     &--2 {
-        width: 150px;
-        height: 150px;
-        bottom: -40px;
-        left: -30px;
-    }
-
-    &--3 {
-        width: 80px;
-        height: 80px;
-        top: 40%;
-        right: 15%;
+        width: 75%;
+        height: 75%;
+        animation: spin-slow 15s linear infinite reverse;
+        border-style: dashed;
     }
 }
 
-.checkup-history {
-    // Header Section
-    &__controls {
-        display: flex;
-        justify-content: flex-end;
-        margin-bottom: $size-24;
+.orb-core {
+    width: 100px;
+    height: 100px;
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(20px);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow:
+        0 0 40px rgba(255, 255, 255, 0.3),
+        0 0 80px rgba(79, 195, 247, 0.3);
+    animation: pulse-glow 3s ease-in-out infinite;
 
-        @include responsive(phone) {
-            margin-bottom: $size-20;
-        }
+    svg {
+        width: 48px;
+        height: 48px;
+        color: white;
+    }
+}
+
+// ============================================
+// BENTO GRID
+// ============================================
+.bento-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.bento-card {
+    background: $white;
+    border-radius: 20px;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    transition: all 0.3s ease;
+
+    &:hover {
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
     }
 
-    // Stats Cards Section
-    &__stats {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: $size-16;
-        margin-bottom: $size-32;
-
-        @include responsive(tablet) {
-            grid-template-columns: repeat(2, 1fr);
-        }
-
-        @include responsive(phone) {
-            grid-template-columns: repeat(2, 1fr);
-            gap: $size-12;
-            margin-bottom: $size-24;
-        }
+    // Stats Card
+    &--stats {
+        padding: 24px;
+        background: linear-gradient(135deg, $white 0%, $sky-light 100%);
     }
 
-    &__sort {
-        display: flex;
-        align-items: center;
-        gap: $size-8;
-
-        .sort-icon {
-            width: 18px;
-            height: 18px;
-            color: $color-g-54;
-        }
-
-        .sort-select {
-            padding: $size-10 $size-16;
-            padding-right: $size-32;
-            border: 2px solid $color-g-90;
-            border-radius: $size-10;
-            font-size: $size-14;
-            font-weight: $fw-medium;
-            background: white;
-            color: $color-black;
-            cursor: pointer;
-            appearance: none;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%236b7280' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: right 12px center;
-            transition: all 0.2s ease;
-
-            &:hover {
-                border-color: #0EAEC4;
-            }
-
-            &:focus {
-                outline: none;
-                border-color: #0EAEC4;
-                box-shadow: 0 0 0 3px rgba(14, 174, 196, 0.1);
-            }
-        }
+    // Controls Card
+    &--controls {
+        padding: 20px 24px;
     }
 
-    // Loading State
-    &__loading {
+    // List Card
+    &--list {
+        padding: 0;
+        overflow: hidden;
+    }
+
+    // Loading Card
+    &--loading {
+        padding: 60px 24px;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        padding: $size-64;
-        gap: $size-20;
-
-        .loading-spinner {
-            width: 48px;
-            height: 48px;
-            border: 4px solid $color-g-92;
-            border-top-color: #0EAEC4;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
+        gap: 16px;
 
         p {
-            font-size: $size-15;
-            color: $color-g-54;
+            color: $gray;
+            font-size: 15px;
             margin: 0;
         }
     }
 
-    // Empty State
-    &__empty {
-        text-align: center;
-        padding: $size-64 $size-32;
-
-        @include responsive(phone) {
-            padding: $size-48 $size-24;
-        }
-
-        .empty-illustration {
-            margin-bottom: $size-32;
-
-            &__circle {
-                width: 100px;
-                height: 100px;
-                background: linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%);
-                border: 3px solid #99f6e4;
-                border-radius: 50%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                margin: 0 auto $size-16;
-
-                svg {
-                    width: 44px;
-                    height: 44px;
-                    color: #0EAEC4;
-                }
-            }
-
-            &__dots {
-                display: flex;
-                justify-content: center;
-                gap: $size-8;
-
-                span {
-                    width: 8px;
-                    height: 8px;
-                    background: #0EAEC4;
-                    border-radius: 50%;
-                    opacity: 0.3;
-
-                    &:nth-child(2) {
-                        opacity: 0.5;
-                    }
-
-                    &:nth-child(3) {
-                        opacity: 0.7;
-                    }
-                }
-            }
-        }
-
-        .empty-title {
-            font-size: $size-22;
-            font-weight: $fw-bold;
-            color: $color-black;
-            margin: 0 0 $size-12 0;
-        }
-
-        .empty-description {
-            font-size: $size-15;
-            color: $color-g-54;
-            margin: 0 0 $size-28 0;
-            max-width: 300px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-
-        .empty-action {
-            display: inline-flex;
-            align-items: center;
-            gap: $size-10;
-            padding: $size-14 $size-28;
-            background: linear-gradient(135deg, #0EAEC4 0%, #0891b2 100%);
-            color: white;
-            border: none;
-            border-radius: $size-12;
-            font-size: $size-15;
-            font-weight: $fw-semi-bold;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 16px rgba(14, 174, 196, 0.3);
-
-            svg {
-                width: 20px;
-                height: 20px;
-            }
-
-            &:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 8px 24px rgba(14, 174, 196, 0.4);
-            }
-        }
-    }
-
-    // Checkup List
-    &__list {
+    // Empty Card
+    &--empty {
+        padding: 60px 24px;
         display: flex;
         flex-direction: column;
-        gap: $size-16;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
     }
 
-    // Pagination
-    &__pagination {
+    // Pagination Card
+    &--pagination {
+        padding: 16px 24px;
         display: flex;
-        justify-content: center;
         align-items: center;
-        gap: $size-24;
-        margin-top: $size-32;
-        padding-top: $size-24;
-        border-top: 2px solid $color-g-95;
-
-        @include responsive(phone) {
-            gap: $size-16;
-            margin-top: $size-24;
-        }
-
-        .pagination-btn {
-            display: flex;
-            align-items: center;
-            gap: $size-8;
-            padding: $size-12 $size-20;
-            border: 2px solid $color-g-90;
-            border-radius: $size-10;
-            background: white;
-            color: $color-black;
-            font-size: $size-14;
-            font-weight: $fw-medium;
-            cursor: pointer;
-            transition: all 0.2s ease;
-
-            @include responsive(phone) {
-                padding: $size-10 $size-16;
-            }
-
-            svg {
-                width: 18px;
-                height: 18px;
-            }
-
-            &:hover:not(:disabled) {
-                border-color: #0EAEC4;
-                color: #0EAEC4;
-                background: linear-gradient(135deg, #f0fdfa 0%, #ecfeff 100%);
-            }
-
-            &:disabled {
-                opacity: 0.4;
-                cursor: not-allowed;
-            }
-        }
-
-        .pagination-info {
-            display: flex;
-            align-items: center;
-            gap: $size-6;
-            font-size: $size-15;
-
-            .pagination-current {
-                font-weight: $fw-bold;
-                color: #0EAEC4;
-                min-width: 24px;
-                text-align: center;
-            }
-
-            .pagination-separator {
-                color: $color-g-77;
-            }
-
-            .pagination-total {
-                font-weight: $fw-medium;
-                color: $color-g-54;
-                min-width: 24px;
-                text-align: center;
-            }
-        }
+        justify-content: center;
+        gap: 16px;
     }
 }
 
-// Stat Card Component
-.stat-card {
-    background: white;
-    border: 2px solid $color-g-92;
-    border-radius: $size-16;
-    padding: $size-18;
+// Stats Grid
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+
+    @media (max-width: 900px) {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    @media (max-width: 480px) {
+        grid-template-columns: 1fr;
+    }
+}
+
+.stat-item {
     display: flex;
     align-items: center;
-    gap: $size-14;
-    transition: all 0.3s ease;
-
-    @include responsive(phone) {
-        padding: $size-14;
-        gap: $size-12;
-    }
-
-    &:hover {
-        border-color: rgba(14, 174, 196, 0.4);
-        box-shadow: 0 4px 16px rgba(14, 174, 196, 0.1);
-        transform: translateY(-2px);
-    }
+    gap: 14px;
+    padding: 16px;
+    background: $white;
+    border-radius: 14px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 
     &__icon {
         width: 48px;
@@ -1324,84 +1157,246 @@ onMounted(() => {
         justify-content: center;
         flex-shrink: 0;
 
-        @include responsive(phone) {
-            width: 40px;
-            height: 40px;
-            border-radius: 10px;
-        }
-
         svg {
             width: 24px;
             height: 24px;
-
-            @include responsive(phone) {
-                width: 20px;
-                height: 20px;
-            }
         }
 
         &--primary {
-            background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);
-
-            svg {
-                color: #0EAEC4;
-            }
+            background: linear-gradient(135deg, $sky-light 0%, lighten($sky-light, 3%) 100%);
+            svg { color: $sky-dark; }
         }
 
         &--info {
-            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
-
-            svg {
-                color: #1976d2;
-            }
+            background: linear-gradient(135deg, $violet-light 0%, lighten($violet-light, 3%) 100%);
+            svg { color: $violet; }
         }
 
         &--warning {
-            background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
-
-            svg {
-                color: #f57c00;
-            }
+            background: linear-gradient(135deg, $amber-light 0%, lighten($amber-light, 3%) 100%);
+            svg { color: $amber; }
         }
 
         &--success {
-            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
-
-            svg {
-                color: #388e3c;
-            }
+            background: linear-gradient(135deg, $emerald-light 0%, lighten($emerald-light, 3%) 100%);
+            svg { color: $emerald; }
         }
     }
 
     &__content {
         display: flex;
         flex-direction: column;
-        min-width: 0;
     }
 
     &__value {
-        font-size: $size-22;
-        font-weight: $fw-bold;
-        color: $color-black;
+        font-size: 22px;
+        font-weight: 700;
+        color: $navy;
         line-height: 1.2;
-
-        @include responsive(phone) {
-            font-size: $size-18;
-        }
     }
 
     &__label {
-        font-size: $size-12;
-        font-weight: $fw-medium;
-        color: $color-g-54;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
+        font-size: 13px;
+        color: $gray;
         margin-top: 2px;
+    }
+}
 
-        @include responsive(phone) {
-            font-size: $size-10;
+// Controls Header
+.controls-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+
+    @media (max-width: 480px) {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+
+.controls-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 18px;
+    font-weight: 600;
+    color: $navy;
+    margin: 0;
+
+    svg {
+        width: 22px;
+        height: 22px;
+        color: $sky;
+    }
+}
+
+.sort-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: $bg;
+    border-radius: 10px;
+
+    svg {
+        width: 18px;
+        height: 18px;
+        color: $gray;
+    }
+
+    select {
+        background: transparent;
+        border: none;
+        font-size: 14px;
+        font-weight: 500;
+        color: $slate;
+        cursor: pointer;
+        outline: none;
+
+        &:focus {
+            outline: none;
         }
     }
+}
+
+// Empty State
+.empty-illustration {
+    margin-bottom: 20px;
+
+    &__circle {
+        width: 80px;
+        height: 80px;
+        background: linear-gradient(135deg, $sky-light 0%, #B3E5FC 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        svg {
+            width: 40px;
+            height: 40px;
+            color: $sky-dark;
+        }
+    }
+}
+
+.empty-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: $navy;
+    margin: 0 0 8px;
+}
+
+.empty-description {
+    font-size: 15px;
+    color: $gray;
+    margin: 0 0 24px;
+    max-width: 300px;
+}
+
+.empty-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 24px;
+    background: linear-gradient(135deg, $sky 0%, $sky-dark 100%);
+    border: none;
+    border-radius: 12px;
+    color: white;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    box-shadow: 0 4px 16px rgba(79, 195, 247, 0.3);
+
+    svg {
+        width: 18px;
+        height: 18px;
+    }
+
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(79, 195, 247, 0.4);
+    }
+}
+
+// Loading Spinner
+.loading-spinner {
+    width: 48px;
+    height: 48px;
+    border: 3px solid $sky-light;
+    border-top-color: $sky;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+// Pagination
+.pagination-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: $bg;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 10px;
+    color: $slate;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.25s ease;
+
+    svg {
+        width: 16px;
+        height: 16px;
+    }
+
+    &:hover:not(:disabled) {
+        background: $sky-light;
+        border-color: $sky;
+        color: $sky-dark;
+    }
+
+    &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+}
+
+.pagination-info {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 14px;
+    color: $gray;
+}
+
+.pagination-current {
+    font-weight: 600;
+    color: $sky-dark;
+}
+
+// ============================================
+// ANIMATIONS
+// ============================================
+@keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.1); opacity: 0.8; }
+}
+
+@keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 0 40px rgba(255, 255, 255, 0.3), 0 0 80px rgba(79, 195, 247, 0.3); }
+    50% { box-shadow: 0 0 60px rgba(255, 255, 255, 0.4), 0 0 100px rgba(79, 195, 247, 0.4); }
+}
+
+@keyframes spin-slow {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
 }
 
 // Checkup Card
@@ -1413,13 +1408,13 @@ onMounted(() => {
     transition: all 0.3s ease;
 
     &:hover {
-        border-color: rgba(14, 174, 196, 0.4);
-        box-shadow: 0 8px 32px rgba(14, 174, 196, 0.1);
+        border-color: rgba(79, 195, 247, 0.4);
+        box-shadow: 0 8px 32px rgba(79, 195, 247, 0.1);
 
         .checkup-card__body {
             .action-arrow {
                 transform: translateX(4px);
-                color: #0EAEC4;
+                color: #4FC3F7;
             }
         }
     }
@@ -1463,7 +1458,7 @@ onMounted(() => {
             svg {
                 width: 18px;
                 height: 18px;
-                color: #0EAEC4;
+                color: #4FC3F7;
             }
         }
 
@@ -1508,7 +1503,7 @@ onMounted(() => {
         }
 
         &:hover {
-            background: linear-gradient(135deg, #f0fdfa 0%, #ecfeff 100%);
+            background: linear-gradient(135deg, #E1F5FE 0%, #B3E5FC 100%);
         }
     }
 
@@ -1572,13 +1567,13 @@ onMounted(() => {
         .action-text {
             font-size: $size-14;
             font-weight: $fw-semi-bold;
-            color: #0EAEC4;
+            color: #4FC3F7;
         }
 
         .action-arrow {
             width: 20px;
             height: 20px;
-            color: $color-g-77;
+            color: $gray;
             transition: all 0.3s ease;
         }
     }

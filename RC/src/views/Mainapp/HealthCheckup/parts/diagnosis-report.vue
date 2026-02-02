@@ -92,7 +92,7 @@
                                         name="md-localhospital-round"
                                         width="156"
                                         height="156"
-                                        :fill="triageConfig ? triageConfig.color : (conditions.length ? '#D12A05' : '#0EAEC4')"
+                                        :fill="triageConfig ? triageConfig.color : (conditions.length ? '#D12A05' : '#4FC3F7')"
                                     />
                                 </div>
                                 <div class="recommendation-body-content__info">
@@ -1721,7 +1721,7 @@ const downloadPDF = async () => {
 					}
 
 					.pdf-section-icon.results { background: linear-gradient(135deg, #C41E3A 0%, #8B0000 100%); }
-					.pdf-section-icon.ai { background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%); }
+					.pdf-section-icon.ai { background: linear-gradient(135deg, #4FC3F7 0%, #0288D1 100%); }
 					.pdf-section-icon.qa { background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); }
 
 					.pdf-section-title {
@@ -1878,7 +1878,7 @@ const downloadPDF = async () => {
 					.pdf-ai-block h4 {
 						font-size: 9pt;
 						font-weight: 600;
-						color: #0e7490;
+						color: #0288D1;
 						margin: 0 0 6pt 0;
 						display: flex;
 						align-items: center;
@@ -1889,7 +1889,7 @@ const downloadPDF = async () => {
 						content: '';
 						width: 3pt;
 						height: 12pt;
-						background: #0891b2;
+						background: #4FC3F7;
 						border-radius: 2pt;
 					}
 
@@ -1916,7 +1916,7 @@ const downloadPDF = async () => {
 
 					.pdf-ai-block li::before {
 						content: '•';
-						color: #0891b2;
+						color: #4FC3F7;
 						font-weight: bold;
 						position: absolute;
 						left: -10pt;
@@ -2626,14 +2626,14 @@ const shareReport = async () => {
         .diagnoses-collapse-btn {
             background: none;
             border: none;
-            color: #0EAEC4;
+            color: #4FC3F7;
             font-size: $size-12;
             cursor: pointer;
             padding: $size-4 $size-8;
             border-radius: $size-4;
-            
+
             &:hover {
-                background-color: rgba(14, 174, 196, 0.1);
+                background-color: rgba(79, 195, 247, 0.1);
             }
         }
     }
@@ -2663,7 +2663,7 @@ const shareReport = async () => {
             
             .condition-probability {
                 font-weight: $fw-medium;
-                color: #0EAEC4;
+                color: #4FC3F7;
                 font-size: $size-12;
             }
         }
@@ -2677,17 +2677,17 @@ const shareReport = async () => {
         
         .show-more-btn {
             background: none;
-            border: 1px solid #0EAEC4;
-            color: #0EAEC4;
+            border: 1px solid #4FC3F7;
+            color: #4FC3F7;
             padding: $size-8 $size-16;
             border-radius: $size-4;
             font-size: $size-14;
             cursor: pointer;
             transition: all 0.2s ease;
             font-weight: $fw-medium;
-            
+
             &:hover:not(:disabled) {
-                background-color: #0EAEC4;
+                background-color: #4FC3F7;
                 color: white;
             }
             
@@ -2762,7 +2762,7 @@ const shareReport = async () => {
     outline: none !important;
     
     &:hover {
-        color: #0EAEC4 !important;
+        color: #4FC3F7 !important;
         text-decoration: underline !important;
     }
     
