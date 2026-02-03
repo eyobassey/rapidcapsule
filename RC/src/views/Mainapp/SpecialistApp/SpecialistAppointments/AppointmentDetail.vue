@@ -408,14 +408,35 @@
             <div class="accordion-header" @click="isPatientNotesExpanded = !isPatientNotesExpanded">
               <h3 class="card-title">Patient's Notes & Files</h3>
               <div class="accordion-meta">
-                <span v-if="appointmentData.patient_notes || sharedDocuments.length" class="has-content-badge">
-                  {{ sharedDocuments.length }} file{{ sharedDocuments.length !== 1 ? 's' : '' }}
+                <span v-if="appointmentData.health_checkup_id" class="has-content-badge ai-badge">
+                  <v-icon name="hi-sparkles" scale="0.6" /> AI Checkup
+                </span>
+                <span v-if="appointmentData.patient_notes" class="has-content-badge">
+                  1 Note
+                </span>
+                <span v-if="sharedDocuments.length" class="has-content-badge">
+                  {{ sharedDocuments.length }} File{{ sharedDocuments.length !== 1 ? 's' : '' }}
+                </span>
+                <span v-if="!appointmentData.health_checkup_id && !appointmentData.patient_notes && !sharedDocuments.length" class="no-content-badge">
+                  Empty
                 </span>
                 <v-icon :name="isPatientNotesExpanded ? 'hi-chevron-up' : 'hi-chevron-down'" scale="0.9" />
               </div>
             </div>
             <transition name="accordion">
               <div v-show="isPatientNotesExpanded" class="accordion-content">
+                <!-- Health Checkup Link Banner -->
+                <div v-if="appointmentData.health_checkup_id" class="health-checkup-link-banner" @click="viewLinkedCheckup">
+                  <div class="hc-link-icon">
+                    <v-icon name="hi-sparkles" scale="0.9" />
+                  </div>
+                  <div class="hc-link-content">
+                    <span class="hc-link-title">Booked from AI Health Checkup</span>
+                    <span class="hc-link-desc">This appointment was triggered by an AI health assessment. Click to view details.</span>
+                  </div>
+                  <v-icon name="hi-arrow-right" scale="0.9" class="hc-link-arrow" />
+                </div>
+
                 <div v-if="appointmentData.patient_notes" class="patient-note-box">
                   <div class="note-header">
                     <v-icon name="hi-annotation" scale="0.9" />
@@ -879,9 +900,26 @@
         <div class="mobile-accordion" :class="{ expanded: mobileAccordions.patientNotes }">
           <button class="accordion-trigger" @click="toggleMobileAccordion('patientNotes')">
             <h3>Patient's Notes & Files</h3>
+            <div class="mobile-accordion-badges">
+              <span v-if="appointmentData.health_checkup_id" class="mobile-badge ai-badge">
+                <v-icon name="hi-sparkles" scale="0.5" /> AI
+              </span>
+              <span v-if="appointmentData.patient_notes" class="mobile-badge">1 Note</span>
+              <span v-if="sharedDocuments.length" class="mobile-badge">{{ sharedDocuments.length }} File{{ sharedDocuments.length !== 1 ? 's' : '' }}</span>
+            </div>
             <v-icon :name="mobileAccordions.patientNotes ? 'hi-chevron-up' : 'hi-chevron-down'" scale="0.9" />
           </button>
           <div v-show="mobileAccordions.patientNotes" class="accordion-body">
+            <!-- Health Checkup Link Banner (Mobile) -->
+            <div v-if="appointmentData.health_checkup_id" class="mobile-hc-link-banner" @click="viewLinkedCheckup">
+              <v-icon name="hi-sparkles" scale="0.9" />
+              <div>
+                <p class="hc-link-title">Booked from AI Health Checkup</p>
+                <p class="hc-link-desc">Tap to view the health assessment</p>
+              </div>
+              <v-icon name="hi-chevron-right" scale="0.8" />
+            </div>
+
             <div v-if="appointmentData.patient_notes" class="mobile-patient-note">
               <v-icon name="hi-annotation" scale="0.9" />
               <div>
@@ -1701,9 +1739,14 @@ function getBmiClass(status) {
 
 // Checkup helpers
 function getCheckupSymptoms(checkup) {
-  const symptoms = checkup.request?.symptoms || checkup.request?.evidence || [];
-  if (!symptoms.length) return 'General checkup';
-  const names = symptoms.filter(s => s.choice_id === 'present' || s.source === 'initial').slice(0, 2).map(s => s.name || s.common_name || 'Symptom');
+  // Symptoms are stored in request.evidence with 'label' as the name field
+  // Symptom IDs start with 's_' (vs risk factors which start with 'p_')
+  const evidence = checkup.request?.evidence || [];
+  if (!evidence.length) return 'General checkup';
+  const names = evidence
+    .filter(s => s.choice_id === 'present' && s.id?.startsWith('s_'))
+    .slice(0, 2)
+    .map(s => s.label || s.common_name || s.name);
   return names.join(', ') || 'Health assessment';
 }
 
@@ -1809,6 +1852,16 @@ function viewCheckupDetails(checkup) {
     params: { appointmentId: route.params.id, checkupId: checkup._id },
     query: { patientName: patientInfo.value.fullName, patientGender: patientInfo.value.gender, patientAge: patientInfo.value.age },
   });
+}
+
+function viewLinkedCheckup() {
+  if (appointmentData.value.health_checkup_id) {
+    router.push({
+      name: 'SpecialistPatientCheckupDetail',
+      params: { appointmentId: route.params.id, checkupId: appointmentData.value.health_checkup_id },
+      query: { patientName: patientInfo.value.fullName, patientGender: patientInfo.value.gender, patientAge: patientInfo.value.age, linked: 'true' },
+    });
+  }
 }
 
 async function handleReschedule(data) {
@@ -2840,6 +2893,23 @@ $transition: 0.2s ease;
     color: $sky;
     border-radius: 50px;
     font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+
+    &.ai-badge {
+      background: linear-gradient(135deg, #E8F5E9, #C8E6C9);
+      color: #2E7D32;
+    }
+  }
+
+  .no-content-badge {
+    font-size: 0.6875rem;
+    padding: 0.125rem 0.5rem;
+    background: #f1f5f9;
+    color: #94a3b8;
+    border-radius: 50px;
+    font-weight: 500;
   }
 
   .accordion-content {
@@ -2954,6 +3024,61 @@ $transition: 0.2s ease;
     border-color: $sky;
     color: $sky;
     background: $sky-light;
+  }
+}
+
+// Health Checkup Link Banner
+.health-checkup-link-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  background: linear-gradient(135deg, #FEF3C7, #FDE68A);
+  border: 1px solid #F59E0B;
+  border-radius: $radius-sm;
+  margin-bottom: 1rem;
+  cursor: pointer;
+  transition: all $transition;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(#F59E0B, 0.3);
+  }
+
+  .hc-link-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #F59E0B, #D97706);
+    color: $white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .hc-link-content {
+    flex: 1;
+    min-width: 0;
+
+    .hc-link-title {
+      display: block;
+      font-weight: 700;
+      font-size: 0.875rem;
+      color: #92400E;
+      margin-bottom: 0.125rem;
+    }
+
+    .hc-link-desc {
+      display: block;
+      font-size: 0.75rem;
+      color: #B45309;
+    }
+  }
+
+  .hc-link-arrow {
+    color: #D97706;
+    flex-shrink: 0;
   }
 }
 
@@ -3913,6 +4038,32 @@ $transition: 0.2s ease;
     font-weight: 700;
   }
 
+  .mobile-accordion-badges {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    margin-left: auto;
+    margin-right: 0.5rem;
+  }
+
+  .mobile-badge {
+    font-size: 0.625rem;
+    padding: 0.125rem 0.375rem;
+    background: $sky-light;
+    color: $sky;
+    border-radius: 50px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.125rem;
+    white-space: nowrap;
+
+    &.ai-badge {
+      background: linear-gradient(135deg, #E8F5E9, #C8E6C9);
+      color: #2E7D32;
+    }
+  }
+
   &.with-icon {
     .trigger-left {
       display: flex;
@@ -4293,6 +4444,47 @@ $transition: 0.2s ease;
     color: $gray-700;
     line-height: 1.5;
     margin: 0;
+  }
+}
+
+// Mobile Health Checkup Link Banner
+.mobile-hc-link-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: linear-gradient(135deg, #FEF3C7, #FDE68A);
+  border: 1px solid #F59E0B;
+  border-radius: $radius-sm;
+  margin-bottom: 0.75rem;
+  cursor: pointer;
+
+  > svg:first-child {
+    color: #D97706;
+    flex-shrink: 0;
+  }
+
+  > div {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .hc-link-title {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: #92400E;
+    margin: 0 0 0.125rem;
+  }
+
+  .hc-link-desc {
+    font-size: 0.6875rem;
+    color: #B45309;
+    margin: 0;
+  }
+
+  > svg:last-child {
+    color: #D97706;
+    flex-shrink: 0;
   }
 }
 

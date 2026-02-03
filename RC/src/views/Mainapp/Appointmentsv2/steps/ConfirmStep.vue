@@ -73,11 +73,138 @@
           </div>
         </section>
 
+        <!-- Health Check Summary Card (shown when booking from health check) -->
+        <section v-if="booking.hasHealthCheckData" class="health-check-summary">
+          <div class="hc-header">
+            <div class="hc-icon">
+              <v-icon name="hi-sparkles" scale="1" />
+            </div>
+            <div class="hc-header-text">
+              <h3 class="hc-title">AI Health Assessment Summary</h3>
+              <span class="hc-date">{{ formatAssessmentDate }}</span>
+            </div>
+            <span :class="['triage-badge', triageBadgeClass]">{{ booking.triageLevelLabel }}</span>
+          </div>
+
+          <div class="hc-body">
+            <!-- Symptoms -->
+            <div class="hc-row" v-if="booking.healthCheckData.symptoms.length > 0">
+              <span class="hc-label">Symptoms Reported:</span>
+              <div class="symptom-tags">
+                <span
+                  v-for="(symptom, idx) in booking.healthCheckData.symptoms.slice(0, 5)"
+                  :key="idx"
+                  class="symptom-tag"
+                >
+                  {{ symptom }}
+                </span>
+                <span v-if="booking.healthCheckData.symptoms.length > 5" class="symptom-more">
+                  +{{ booking.healthCheckData.symptoms.length - 5 }} more
+                </span>
+              </div>
+            </div>
+
+            <!-- Top Condition -->
+            <div class="hc-row" v-if="booking.topCondition">
+              <span class="hc-label">Possible Condition:</span>
+              <span class="condition-name">{{ booking.topCondition.name }}</span>
+              <span class="condition-probability">({{ Math.round(booking.topCondition.probability * 100) }}% match)</span>
+            </div>
+          </div>
+
+          <div class="hc-footer">
+            <v-icon name="hi-information-circle" scale="0.75" />
+            <span>This summary has been auto-added to your notes below for the doctor to review.</span>
+            <button class="unlink-btn" @click="handleUnlinkCheckup" title="Remove linked assessment">
+              <v-icon name="hi-x" scale="0.7" />
+              Unlink
+            </button>
+          </div>
+        </section>
+
+        <!-- Link Health Assessment Section (shown when NOT booking from health check) -->
+        <section v-else class="link-health-section">
+          <div class="link-header">
+            <div class="link-icon">
+              <v-icon name="hi-sparkles" scale="0.9" />
+            </div>
+            <div class="link-header-text">
+              <h3 class="link-title">Link AI Health Assessment</h3>
+              <p class="link-subtitle">Optionally share a previous health checkup with your doctor</p>
+            </div>
+          </div>
+
+          <!-- Loading State -->
+          <div v-if="isLoadingCheckups" class="checkups-loading">
+            <div class="loading-spinner"></div>
+            <span>Loading your assessments...</span>
+          </div>
+
+          <!-- No Checkups -->
+          <div v-else-if="recentCheckups.length === 0" class="no-checkups">
+            <v-icon name="hi-clipboard-check" scale="1.2" class="no-checkups-icon" />
+            <p class="no-checkups-text">No previous health assessments found</p>
+            <router-link to="/app/health-checkup" class="start-checkup-btn">
+              <v-icon name="hi-plus" scale="0.8" />
+              Start AI Health Check
+            </router-link>
+          </div>
+
+          <!-- Checkup List -->
+          <div v-else class="checkups-list">
+            <label
+              v-for="checkup in recentCheckups"
+              :key="checkup._id"
+              class="checkup-card"
+              :class="{ selected: selectedCheckupId === checkup._id }"
+            >
+              <input
+                type="radio"
+                name="healthCheckup"
+                :value="checkup._id"
+                v-model="selectedCheckupId"
+                @change="handleCheckupSelect(checkup)"
+                class="checkup-radio"
+              />
+              <div class="checkup-content">
+                <div class="checkup-top">
+                  <span class="checkup-date">{{ formatCheckupDate(checkup.created_at) }}</span>
+                  <span :class="['checkup-triage', getTriageClass(checkup)]">
+                    {{ getTriageLabel(checkup) }}
+                  </span>
+                </div>
+                <div class="checkup-symptoms">
+                  <v-icon name="hi-clipboard-list" scale="0.7" />
+                  <span>{{ getCheckupSymptoms(checkup) }}</span>
+                </div>
+                <div class="checkup-condition" v-if="getTopConditionFromCheckup(checkup)">
+                  <v-icon name="hi-lightning-bolt" scale="0.7" />
+                  <span>{{ getTopConditionFromCheckup(checkup) }}</span>
+                </div>
+              </div>
+              <div class="checkup-check" v-if="selectedCheckupId === checkup._id">
+                <v-icon name="hi-check-circle" scale="1" />
+              </div>
+            </label>
+
+            <!-- Clear Selection -->
+            <button
+              v-if="selectedCheckupId"
+              class="clear-selection-btn"
+              @click="handleClearSelection"
+            >
+              <v-icon name="hi-x" scale="0.7" />
+              Clear Selection
+            </button>
+          </div>
+        </section>
+
         <!-- Pre-Visit Notes -->
         <section class="notes-section">
           <h2 class="section-title">
             <v-icon name="hi-clipboard-list" scale="0.9" />
             Add Symptoms or Notes
+            <span v-if="booking.hasHealthCheckData" class="auto-filled-badge">Auto-Filled</span>
           </h2>
           <div class="notes-input-wrapper">
             <textarea
@@ -261,7 +388,7 @@
 </template>
 
 <script setup>
-import { ref, computed, inject, onMounted, isRef, defineEmits } from 'vue';
+import { ref, computed, inject, onMounted, isRef, defineEmits, watch } from 'vue';
 import { format } from 'date-fns';
 import Loader from '@/components/Loader/main-loader.vue';
 
@@ -277,6 +404,11 @@ const handleEdit = () => {
 const walletBalance = ref(0);
 const isLoadingPayment = ref(false);
 const fileInput = ref(null);
+
+// Health checkup linking state
+const recentCheckups = ref([]);
+const selectedCheckupId = ref('');
+const isLoadingCheckups = ref(false);
 
 // Local state for notes and attachments (synced with booking state)
 const localNotes = ref('');
@@ -433,8 +565,22 @@ const formatCurrency = (amount) => {
   }).format(amount || 0);
 };
 
-onMounted(() => {
-  fetchPaymentData();
+// Health Check Summary
+const formatAssessmentDate = computed(() => {
+  if (!booking.healthCheckData?.assessment_date) return '';
+  try {
+    const date = new Date(booking.healthCheckData.assessment_date);
+    return format(date, "MMM d, yyyy 'at' h:mm a");
+  } catch {
+    return '';
+  }
+});
+
+const triageBadgeClass = computed(() => {
+  const triage = booking.healthCheckData?.triage_level?.toLowerCase();
+  if (['emergency', 'emergency_ambulance'].includes(triage)) return 'triage-emergency';
+  if (['consultation_24', 'consultation'].includes(triage)) return 'triage-urgent';
+  return 'triage-normal';
 });
 
 const fetchPaymentData = async () => {
@@ -451,6 +597,131 @@ const fetchPaymentData = async () => {
     isLoadingPayment.value = false;
   }
 };
+
+// Fetch recent health checkups for linking
+const fetchRecentCheckups = async () => {
+  // Skip if already has health check data linked
+  if (booking.hasHealthCheckData) return;
+
+  isLoadingCheckups.value = true;
+  try {
+    const response = await $http.$_getHealthCheckupHistory();
+    // API returns { data: { checkups: [...], pagination: {...} } }
+    const checkups = response?.data?.data?.checkups || response?.data?.checkups || [];
+    // Get only recent checkups (last 30 days) that have completed responses
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    recentCheckups.value = checkups
+      .filter(c => {
+        const hasResponse = c.response?.data?.conditions?.length > 0 || c.response?.data?.triage_level;
+        const isRecent = new Date(c.created_at) >= thirtyDaysAgo;
+        return hasResponse && isRecent;
+      })
+      .slice(0, 5); // Limit to 5 most recent
+
+    console.log('[ConfirmStep] Loaded recent checkups:', recentCheckups.value.length);
+  } catch (error) {
+    console.error('Error fetching health checkups:', error);
+    recentCheckups.value = [];
+  } finally {
+    isLoadingCheckups.value = false;
+  }
+};
+
+// Handle checkup selection
+const handleCheckupSelect = (checkup) => {
+  if (!checkup) return;
+
+  // Use booking state method to link the checkup
+  const success = booking.setHealthCheckFromExisting(checkup);
+  if (success) {
+    selectedCheckupId.value = checkup._id;
+    // Re-init notes to show the auto-generated summary
+    initNotesAndAttachments();
+    console.log('[ConfirmStep] Linked health checkup:', checkup._id);
+  }
+};
+
+// Clear checkup selection
+const handleClearSelection = () => {
+  selectedCheckupId.value = '';
+  booking.unlinkHealthCheck();
+  console.log('[ConfirmStep] Cleared health checkup selection');
+};
+
+// Unlink health checkup (from summary card)
+const handleUnlinkCheckup = () => {
+  selectedCheckupId.value = '';
+  booking.unlinkHealthCheck();
+  // Fetch checkups again to show the link section
+  fetchRecentCheckups();
+};
+
+// Helper functions for displaying checkup data
+const formatCheckupDate = (dateStr) => {
+  if (!dateStr) return '';
+  try {
+    return format(new Date(dateStr), 'MMM d, yyyy');
+  } catch {
+    return dateStr;
+  }
+};
+
+const getTriageClass = (checkup) => {
+  const triage = checkup.response?.data?.triage_level?.toLowerCase();
+  if (['emergency', 'emergency_ambulance'].includes(triage)) return 'triage-emergency';
+  if (['consultation_24', 'consultation'].includes(triage)) return 'triage-urgent';
+  return 'triage-normal';
+};
+
+const getTriageLabel = (checkup) => {
+  const triage = checkup.response?.data?.triage_level?.toLowerCase();
+  const labels = {
+    'emergency': 'Emergency',
+    'emergency_ambulance': 'Emergency',
+    'consultation_24': 'Urgent',
+    'consultation': 'Consult',
+    'self_care': 'Self-Care',
+  };
+  return labels[triage] || 'Completed';
+};
+
+const getCheckupSymptoms = (checkup) => {
+  // Symptoms are stored in request.evidence with 'label' as the name
+  const evidence = checkup.request?.evidence || [];
+  const symptoms = evidence
+    .filter(s => s.choice_id === 'present' && s.id?.startsWith('s_'))
+    .map(s => s.label || s.common_name || s.name)
+    .slice(0, 3);
+
+  if (symptoms.length === 0) return 'No symptoms recorded';
+  const totalSymptoms = evidence.filter(s => s.choice_id === 'present' && s.id?.startsWith('s_')).length;
+  return symptoms.join(', ') + (totalSymptoms > 3 ? '...' : '');
+};
+
+const getTopConditionFromCheckup = (checkup) => {
+  const conditions = checkup.response?.data?.conditions || [];
+  if (conditions.length === 0) return null;
+  const top = conditions[0];
+  const probability = Math.round((top.probability || 0) * 100);
+  return `${top.common_name || top.name} (${probability}%)`;
+};
+
+// Watch for hasHealthCheckData changes to sync selectedCheckupId
+watch(() => booking.hasHealthCheckData, (hasData) => {
+  if (hasData && booking.healthCheckData.checkup_id) {
+    selectedCheckupId.value = booking.healthCheckData.checkup_id;
+  } else if (!hasData) {
+    selectedCheckupId.value = '';
+  }
+}, { immediate: true });
+
+// Fetch checkups on mount (if not already linked)
+onMounted(() => {
+  fetchPaymentData();
+  fetchRecentCheckups();
+});
 </script>
 
 <style scoped lang="scss">
@@ -1159,9 +1430,452 @@ $v2-error: #EF4444;
   }
 }
 
+// ==========================================
+// HEALTH CHECK SUMMARY CARD
+// ==========================================
+.health-check-summary {
+  background: linear-gradient(135deg, rgba($v2-sky-light, 0.4), rgba($v2-sky-light, 0.2));
+  border: 1px solid rgba($v2-sky, 0.3);
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.hc-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  background: rgba(white, 0.5);
+  border-bottom: 1px solid rgba($v2-sky, 0.1);
+}
+
+.hc-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, $v2-sky, $v2-sky-dark);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.hc-header-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.hc-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: $v2-navy;
+  margin: 0 0 2px;
+}
+
+.hc-date {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.triage-badge {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 700;
+  flex-shrink: 0;
+
+  &.triage-emergency {
+    background: #FEE2E2;
+    color: #DC2626;
+  }
+
+  &.triage-urgent {
+    background: #FEF3C7;
+    color: #D97706;
+  }
+
+  &.triage-normal {
+    background: $v2-sky-light;
+    color: $v2-sky-dark;
+  }
+}
+
+.hc-body {
+  padding: 16px 20px;
+}
+
+.hc-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.hc-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.symptom-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.symptom-tag {
+  padding: 4px 10px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 20px;
+  font-size: 11px;
+  color: $v2-navy;
+}
+
+.symptom-more {
+  padding: 4px 10px;
+  background: #f3f4f6;
+  border-radius: 20px;
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.condition-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: $v2-navy;
+}
+
+.condition-probability {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.hc-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: rgba(white, 0.3);
+  border-top: 1px solid rgba($v2-sky, 0.1);
+  font-size: 11px;
+  color: #6b7280;
+
+  svg {
+    color: $v2-sky-dark;
+    flex-shrink: 0;
+  }
+}
+
+.auto-filled-badge {
+  margin-left: 8px;
+  padding: 2px 8px;
+  background: linear-gradient(135deg, $v2-sky, $v2-sky-dark);
+  color: white;
+  font-size: 9px;
+  font-weight: 700;
+  border-radius: 10px;
+  text-transform: uppercase;
+}
+
+.unlink-btn {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: white;
+  border: 1px solid rgba($v2-error, 0.3);
+  border-radius: 6px;
+  color: $v2-error;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: rgba($v2-error, 0.1);
+    border-color: $v2-error;
+  }
+}
+
+// ==========================================
+// LINK HEALTH ASSESSMENT SECTION
+// ==========================================
+.link-health-section {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+}
+
+.link-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, rgba($v2-sky-light, 0.5), rgba($v2-sky-light, 0.3));
+  border-bottom: 1px solid rgba($v2-sky, 0.15);
+}
+
+.link-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, $v2-sky, $v2-sky-dark);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.link-header-text {
+  flex: 1;
+}
+
+.link-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: $v2-navy;
+  margin: 0 0 2px;
+}
+
+.link-subtitle {
+  font-size: 12px;
+  color: #6b7280;
+  margin: 0;
+}
+
+.checkups-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 30px 20px;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.loading-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba($v2-sky, 0.2);
+  border-top-color: $v2-sky;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.no-checkups {
+  padding: 30px 20px;
+  text-align: center;
+}
+
+.no-checkups-icon {
+  color: #d1d5db;
+  margin-bottom: 12px;
+}
+
+.no-checkups-text {
+  font-size: 13px;
+  color: #6b7280;
+  margin: 0 0 16px;
+}
+
+.start-checkup-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 18px;
+  background: linear-gradient(135deg, $v2-sky, $v2-sky-dark);
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: all 0.2s;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba($v2-sky, 0.3);
+  }
+}
+
+.checkups-list {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.checkup-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  background: #f9fafb;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: $v2-sky;
+    background: rgba($v2-sky-light, 0.3);
+  }
+
+  &.selected {
+    border-color: $v2-sky;
+    background: rgba($v2-sky-light, 0.4);
+    box-shadow: 0 2px 8px rgba($v2-sky, 0.15);
+  }
+}
+
+.checkup-radio {
+  display: none;
+}
+
+.checkup-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.checkup-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.checkup-date {
+  font-size: 13px;
+  font-weight: 700;
+  color: $v2-navy;
+}
+
+.checkup-triage {
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 700;
+
+  &.triage-emergency {
+    background: #FEE2E2;
+    color: #DC2626;
+  }
+
+  &.triage-urgent {
+    background: #FEF3C7;
+    color: #D97706;
+  }
+
+  &.triage-normal {
+    background: $v2-sky-light;
+    color: $v2-sky-dark;
+  }
+}
+
+.checkup-symptoms,
+.checkup-condition {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #6b7280;
+  margin-bottom: 4px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  svg {
+    color: #9ca3af;
+    flex-shrink: 0;
+  }
+}
+
+.checkup-condition {
+  color: $v2-navy;
+  font-weight: 500;
+
+  svg {
+    color: $v2-orange;
+  }
+}
+
+.checkup-check {
+  color: $v2-sky-dark;
+  flex-shrink: 0;
+}
+
+.clear-selection-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px;
+  background: none;
+  border: 1px dashed #d1d5db;
+  border-radius: 8px;
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: $v2-error;
+    color: $v2-error;
+    background: rgba($v2-error, 0.05);
+  }
+}
+
 @media (max-width: 600px) {
   .confirm-step {
     padding: 12px 12px 140px;
+  }
+
+  .health-check-summary {
+    margin-bottom: 16px;
+  }
+
+  .hc-header {
+    flex-wrap: wrap;
+    padding: 14px 16px;
+  }
+
+  .triage-badge {
+    margin-top: 8px;
+    width: 100%;
+    text-align: center;
+  }
+
+  .hc-body {
+    padding: 14px 16px;
+  }
+
+  .hc-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .hc-footer {
+    padding: 10px 16px;
+    flex-direction: column;
+    text-align: center;
+    gap: 6px;
   }
 
   .datetime-grid {
@@ -1307,6 +2021,66 @@ $v2-error: #EF4444;
     a {
       display: inline;
     }
+  }
+
+  // Link Health Section Mobile
+  .link-health-section {
+    margin-bottom: 16px;
+  }
+
+  .link-header {
+    padding: 14px 16px;
+    flex-direction: column;
+    text-align: center;
+    gap: 10px;
+  }
+
+  .link-icon {
+    margin: 0 auto;
+  }
+
+  .link-header-text {
+    text-align: center;
+  }
+
+  .link-title {
+    font-size: 13px;
+  }
+
+  .link-subtitle {
+    font-size: 11px;
+  }
+
+  .checkups-list {
+    padding: 14px 16px;
+    gap: 8px;
+  }
+
+  .checkup-card {
+    padding: 12px 14px;
+  }
+
+  .checkup-top {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .checkup-date {
+    font-size: 12px;
+  }
+
+  .checkup-symptoms,
+  .checkup-condition {
+    font-size: 11px;
+  }
+
+  .unlink-btn {
+    margin: 8px auto 0;
+  }
+
+  .hc-footer {
+    flex-wrap: wrap;
   }
 }
 </style>

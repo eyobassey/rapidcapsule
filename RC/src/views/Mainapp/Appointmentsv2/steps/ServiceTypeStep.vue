@@ -1,18 +1,58 @@
 <template>
   <div class="service-type-step">
-    <!-- AI Recommendation Banner (Mobile Only) -->
-    <div class="ai-banner mobile-only">
+    <!-- AI Recommendation Banner (Mobile Only) - Shows when coming from health check -->
+    <div v-if="booking.hasHealthCheckData" class="ai-banner mobile-only">
       <div class="ai-icon">
         <v-icon name="hi-sparkles" scale="0.9" />
       </div>
       <div class="ai-content">
         <h4 class="ai-title">AI Recommendation</h4>
         <p class="ai-text">
-          Based on your <strong>mild fever</strong>, we suggest a
-          <span class="highlight">Video Consultation</span>.
+          Based on your <strong>{{ formatSymptomDisplay }}</strong>, we suggest
+          <span class="highlight">{{ recommendedMethodLabel }}</span>
+          <span v-if="booking.recommendedUrgency === 'urgent'" class="urgency-hint"> with urgent care</span>.
         </p>
         <button class="ai-btn" @click="applySuggestion">Apply Suggestion</button>
       </div>
+    </div>
+
+    <!-- Recent Health Checkup Banner - Shows when user has recent checkups but NOT coming from health check -->
+    <div v-if="!booking.hasHealthCheckData && hasRecentCheckups && !selectedCheckup" class="recent-checkup-banner">
+      <div class="rcb-icon">
+        <v-icon name="hi-sparkles" scale="0.9" />
+      </div>
+      <div class="rcb-content">
+        <h4 class="rcb-title">Recent AI Health Assessment Found</h4>
+        <p class="rcb-text">
+          You completed a health checkup <strong>{{ getRecentCheckupAge }}</strong>.
+          Would you like to share it with your doctor?
+        </p>
+        <div class="rcb-actions">
+          <button class="rcb-btn rcb-btn--primary" @click="linkRecentCheckup">
+            <v-icon name="hi-link" scale="0.7" />
+            Link Assessment
+          </button>
+          <button class="rcb-btn rcb-btn--secondary" @click="dismissBanner">
+            Not Now
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Linked Checkup Confirmation -->
+    <div v-if="selectedCheckup" class="linked-checkup-banner">
+      <div class="lcb-icon">
+        <v-icon name="hi-check-circle" scale="1" />
+      </div>
+      <div class="lcb-content">
+        <h4 class="lcb-title">Health Assessment Linked</h4>
+        <p class="lcb-text">
+          Your assessment from <strong>{{ formatCheckupDate(selectedCheckup.created_at) }}</strong> will be shared with your doctor.
+        </p>
+      </div>
+      <button class="lcb-remove" @click="unlinkCheckup" title="Remove link">
+        <v-icon name="hi-x" scale="0.8" />
+      </button>
     </div>
 
     <!-- Appointment Type Selection -->
@@ -169,7 +209,8 @@
 </template>
 
 <script setup>
-import { inject, ref, onMounted } from 'vue';
+import { inject, ref, computed, onMounted } from 'vue';
+import { format, formatDistanceToNow } from 'date-fns';
 
 const booking = inject('bookingStateV2');
 const $http = inject('$_HTTP');
@@ -177,6 +218,36 @@ const $http = inject('$_HTTP');
 // State for consultation services
 const consultationServices = ref([]);
 const isLoadingTypes = ref(true);
+
+// State for recent health checkups banner
+const recentCheckups = ref([]);
+const selectedCheckup = ref(null);
+const bannerDismissed = ref(false);
+
+// ==========================================
+// AI RECOMMENDATION (from Health Check)
+// ==========================================
+
+// Format symptom display - shows primary symptom or multiple
+const formatSymptomDisplay = computed(() => {
+  if (!booking.hasHealthCheckData) return '';
+  const symptoms = booking.healthCheckData.symptoms;
+  if (symptoms.length === 0) return 'symptoms';
+  if (symptoms.length === 1) return symptoms[0].toLowerCase();
+  if (symptoms.length === 2) return `${symptoms[0].toLowerCase()} and ${symptoms[1].toLowerCase()}`;
+  return `${symptoms[0].toLowerCase()} and ${symptoms.length - 1} other symptoms`;
+});
+
+// Get label for recommended method
+const recommendedMethodLabel = computed(() => {
+  const method = booking.recommendedMethod;
+  switch (method) {
+    case 'video': return 'Video Consultation';
+    case 'audio': return 'Audio Call';
+    case 'chat': return 'Chat Consultation';
+    default: return 'Video Consultation';
+  }
+});
 
 // Default fallback services if API fails or returns empty
 const defaultServices = [
@@ -228,12 +299,105 @@ const selectAppointmentType = (service) => {
 };
 
 const applySuggestion = () => {
-  booking.serviceType.method = 'video';
+  // Apply AI-recommended values from health check
+  if (booking.hasHealthCheckData) {
+    booking.serviceType.method = booking.recommendedMethod;
+    booking.serviceType.urgency = booking.recommendedUrgency;
+  } else {
+    // Fallback to default video
+    booking.serviceType.method = 'video';
+  }
+};
+
+// ==========================================
+// RECENT CHECKUP BANNER
+// ==========================================
+
+// Check if we have recent checkups to show banner
+const hasRecentCheckups = computed(() => {
+  return !bannerDismissed.value && recentCheckups.value.length > 0;
+});
+
+// Get age of most recent checkup for display
+const getRecentCheckupAge = computed(() => {
+  if (recentCheckups.value.length === 0) return '';
+  const checkup = recentCheckups.value[0];
+  try {
+    return formatDistanceToNow(new Date(checkup.created_at), { addSuffix: true });
+  } catch {
+    return 'recently';
+  }
+});
+
+// Format checkup date
+const formatCheckupDate = (dateStr) => {
+  if (!dateStr) return '';
+  try {
+    return format(new Date(dateStr), 'MMM d, yyyy');
+  } catch {
+    return dateStr;
+  }
+};
+
+// Fetch recent checkups for banner
+const fetchRecentCheckupsForBanner = async () => {
+  // Skip if already has health check data linked
+  if (booking.hasHealthCheckData) return;
+
+  try {
+    const response = await $http.$_getHealthCheckupHistory();
+    // API returns { data: { checkups: [...], pagination: {...} } }
+    const checkups = response?.data?.data?.checkups || response?.data?.checkups || [];
+
+    // Get only recent checkups (last 14 days) that have completed responses
+    const fourteenDaysAgo = new Date();
+    fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+
+    recentCheckups.value = checkups
+      .filter(c => {
+        const hasResponse = c.response?.data?.conditions?.length > 0 || c.response?.data?.triage_level;
+        const isRecent = new Date(c.created_at) >= fourteenDaysAgo;
+        return hasResponse && isRecent;
+      })
+      .slice(0, 3);
+
+    console.log('[ServiceTypeStep] Found recent checkups:', recentCheckups.value.length);
+  } catch (error) {
+    console.error('Error fetching recent checkups:', error);
+    recentCheckups.value = [];
+  }
+};
+
+// Link the most recent checkup
+const linkRecentCheckup = () => {
+  if (recentCheckups.value.length === 0) return;
+
+  const checkup = recentCheckups.value[0];
+  selectedCheckup.value = checkup;
+
+  // Use booking state method to link the checkup
+  const success = booking.setHealthCheckFromExisting(checkup);
+  if (success) {
+    console.log('[ServiceTypeStep] Linked health checkup:', checkup._id);
+  }
+};
+
+// Unlink the selected checkup
+const unlinkCheckup = () => {
+  selectedCheckup.value = null;
+  booking.unlinkHealthCheck();
+  console.log('[ServiceTypeStep] Unlinked health checkup');
+};
+
+// Dismiss the banner
+const dismissBanner = () => {
+  bannerDismissed.value = true;
 };
 
 // Load services on mount
 onMounted(() => {
   loadConsultationServices();
+  fetchRecentCheckupsForBanner();
 });
 </script>
 
@@ -312,6 +476,11 @@ $v2-orange-light: #FFF3E0;
     font-weight: 600;
     color: $v2-sky-dark;
   }
+
+  .urgency-hint {
+    color: #DC2626;
+    font-weight: 600;
+  }
 }
 
 .ai-btn {
@@ -329,6 +498,164 @@ $v2-orange-light: #FFF3E0;
   &:active {
     background: $v2-sky;
     color: white;
+  }
+}
+
+// ==========================================
+// RECENT CHECKUP BANNER
+// ==========================================
+.recent-checkup-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 18px;
+  background: linear-gradient(135deg, rgba(#10B981, 0.08), rgba(#10B981, 0.04));
+  border: 1px solid rgba(#10B981, 0.25);
+  border-radius: 14px;
+  margin-bottom: 24px;
+}
+
+.rcb-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #10B981, #059669);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.rcb-content {
+  flex: 1;
+}
+
+.rcb-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #065F46;
+  margin: 0 0 4px;
+}
+
+.rcb-text {
+  font-size: 12px;
+  color: #6B7280;
+  line-height: 1.5;
+  margin: 0 0 12px;
+
+  strong {
+    color: #1E293B;
+  }
+}
+
+.rcb-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.rcb-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+
+  &--primary {
+    background: linear-gradient(135deg, #10B981, #059669);
+    color: white;
+    box-shadow: 0 2px 8px rgba(#10B981, 0.25);
+
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(#10B981, 0.35);
+    }
+  }
+
+  &--secondary {
+    background: white;
+    color: #6B7280;
+    border: 1px solid #E5E7EB;
+
+    &:hover {
+      background: #F9FAFB;
+      color: #374151;
+    }
+  }
+}
+
+// ==========================================
+// LINKED CHECKUP BANNER
+// ==========================================
+.linked-checkup-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  background: linear-gradient(135deg, rgba($v2-sky-light, 0.6), rgba($v2-sky-light, 0.3));
+  border: 1px solid rgba($v2-sky, 0.3);
+  border-radius: 14px;
+  margin-bottom: 24px;
+}
+
+.lcb-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, $v2-sky, $v2-sky-dark);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.lcb-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.lcb-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: $v2-sky-dark;
+  margin: 0 0 2px;
+}
+
+.lcb-text {
+  font-size: 12px;
+  color: #6B7280;
+  margin: 0;
+
+  strong {
+    color: #1E293B;
+  }
+}
+
+.lcb-remove {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  border: 1px solid #E5E7EB;
+  border-radius: 6px;
+  color: #9CA3AF;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: #FEE2E2;
+    border-color: #FECACA;
+    color: #EF4444;
   }
 }
 

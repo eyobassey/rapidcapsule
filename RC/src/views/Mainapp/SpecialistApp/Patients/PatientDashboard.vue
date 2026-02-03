@@ -1923,15 +1923,28 @@ function formatTriageLevel(level) {
 }
 
 // Helper functions for health checkups display
+// Symptoms are stored in request.evidence with 'label' as the name field
+// Symptom IDs start with 's_' (vs risk factors which start with 'p_')
 function getCheckupSymptoms(checkup) {
 	// Handle both flattened format (from getPatientFullHealthRecords) and raw format
-	const symptoms = checkup.symptoms || checkup.request?.symptoms || checkup.request?.evidence || [];
-	if (symptoms.length === 0) return 'General checkup';
+	const symptoms = checkup.symptoms || [];
+	const evidence = checkup.request?.evidence || [];
 
-	const symptomNames = symptoms
-		.filter(s => s.source === 'initial' || !s.source || s.choice_id === 'present')
+	// Use flattened symptoms if available, otherwise extract from evidence
+	if (symptoms.length > 0) {
+		const symptomNames = symptoms
+			.slice(0, 3)
+			.map(s => s.label || s.name || s.common_name)
+			.join(', ');
+		return symptomNames || 'Health assessment';
+	}
+
+	if (evidence.length === 0) return 'General checkup';
+
+	const symptomNames = evidence
+		.filter(s => s.choice_id === 'present' && s.id?.startsWith('s_'))
 		.slice(0, 3)
-		.map(s => s.name || s.common_name)
+		.map(s => s.label || s.common_name || s.name)
 		.join(', ');
 
 	return symptomNames || 'Health assessment';

@@ -207,16 +207,29 @@ export function usePatientProfile() {
     try {
       const response = await $http.$_getHealthCheckupResults(patientId);
       if (response.data?.data) {
-        healthCheckups.list = (response.data.data || []).map(checkup => ({
-          id: checkup._id,
-          date: checkup.created_at,
-          triageLevel: checkup.response?.data?.triage_level || 'unknown',
-          hasEmergency: checkup.response?.data?.has_emergency_evidence || false,
-          symptoms: checkup.request?.symptoms || [],
-          conditions: checkup.response?.data?.conditions || [],
-          specialistRecommendations: checkup.response?.data?.specialist_recommendations || [],
-          patientInfo: checkup.patient_info,
-        }));
+        healthCheckups.list = (response.data.data || []).map(checkup => {
+          // Symptoms are stored in request.evidence with 'label' as the name field
+          // Symptom IDs start with 's_' (vs risk factors which start with 'p_')
+          const evidence = checkup.request?.evidence || [];
+          const symptoms = evidence
+            .filter(s => s.choice_id === 'present' && s.id?.startsWith('s_'))
+            .map(s => ({
+              id: s.id,
+              name: s.label || s.common_name || s.name,
+              choice_id: s.choice_id,
+            }));
+
+          return {
+            id: checkup._id,
+            date: checkup.created_at,
+            triageLevel: checkup.response?.data?.triage_level || 'unknown',
+            hasEmergency: checkup.response?.data?.has_emergency_evidence || false,
+            symptoms,
+            conditions: checkup.response?.data?.conditions || [],
+            specialistRecommendations: checkup.response?.data?.specialist_recommendations || [],
+            patientInfo: checkup.patient_info,
+          };
+        });
         healthCheckups.total = healthCheckups.list.length;
       }
     } catch (error) {

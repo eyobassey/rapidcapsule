@@ -1146,14 +1146,16 @@ const getScoreLabel = (score) => {
 }
 
 // Helper functions for health checkups display
+// Symptoms are stored in request.evidence with 'label' as the name field
+// Symptom IDs start with 's_' (vs risk factors which start with 'p_')
 const getCheckupSymptoms = (checkup) => {
-	const symptoms = checkup.request?.symptoms || checkup.request?.evidence || [];
-	if (symptoms.length === 0) return 'General checkup';
+	const evidence = checkup.request?.evidence || [];
+	if (evidence.length === 0) return 'General checkup';
 
-	const symptomNames = symptoms
-		.filter(s => s.choice_id === 'present' || s.source === 'initial')
+	const symptomNames = evidence
+		.filter(s => s.choice_id === 'present' && s.id?.startsWith('s_'))
 		.slice(0, 2)
-		.map(s => s.name || s.common_name || 'Symptom')
+		.map(s => s.label || s.common_name || s.name)
 		.join(', ');
 
 	return symptomNames || 'Health assessment';

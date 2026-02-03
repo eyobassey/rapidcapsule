@@ -163,9 +163,19 @@
                             </span>
                         </div>
                     </div>
-                    <div class="checkup-card__action">
-                        <span class="action-text">View Details</span>
-                        <v-icon name="hi-arrow-right" class="action-arrow" />
+                    <div class="checkup-card__actions-row">
+                        <div class="checkup-card__action" @click.stop="viewCheckupDetails(checkup)">
+                            <span class="action-text">View Details</span>
+                            <v-icon name="hi-arrow-right" class="action-arrow" />
+                        </div>
+                        <button
+                            v-if="hasCompletedDiagnosis(checkup)"
+                            class="book-appointment-btn"
+                            @click.stop="bookAppointmentFromCheckup(checkup)"
+                        >
+                            <v-icon name="hi-calendar" scale="0.85" />
+                            <span>Book Appointment</span>
+                        </button>
                     </div>
                 </div>
 
@@ -403,8 +413,10 @@
 <script setup>
 import { ref, inject, onMounted } from "vue";
 import { useToast } from 'vue-toast-notification';
+import { useRouter } from 'vue-router';
 
 const $toast = useToast();
+const router = useRouter();
 const $http = inject("$http");
 const { navigator, useNavigator } = inject('$_NAVIGATOR');
 const diagnosisInject = inject('$_DIAGNOSIS', null);
@@ -811,6 +823,96 @@ const viewCheckupDetails = (checkup) => {
     } else {
         $toast.warning('This checkup has no diagnosis data', { duration: 3000 });
     }
+};
+
+// Book appointment from a specific health checkup
+const bookAppointmentFromCheckup = (checkup) => {
+    if (!checkup || !checkup.response?.data) {
+        $toast.error('Unable to link checkup data', { duration: 3000 });
+        return;
+    }
+
+    // Prepare health checkup data for booking
+    // Symptoms are stored in request.evidence with 'label' as the name field
+    const symptoms = (checkup.request?.evidence || [])
+        .filter(s => s.choice_id === 'present' && s.id?.startsWith('s_'))
+        .map(s => s.label || s.common_name || s.name);
+
+    const conditions = (checkup.response.data.conditions || []).map(c => ({
+        name: c.common_name || c.name,
+        probability: c.probability || 0,
+        triage_level: c.triage_level,
+    }));
+
+    // Generate patient note
+    const patientNote = generatePatientNoteForBooking(checkup);
+
+    // Store in sessionStorage for booking wizard
+    const bookingData = {
+        checkup_id: checkup._id,
+        conditions: conditions,
+        triage_level: checkup.response.data.triage_level || '',
+        symptoms: symptoms,
+        interview_summary: [],
+        assessment_date: checkup.created_at,
+        patient_note: patientNote,
+    };
+
+    sessionStorage.setItem('healthCheckForBooking', JSON.stringify(bookingData));
+
+    // Navigate to booking wizard with flag
+    router.push({
+        path: '/app/book-appointment-v2',
+        query: { from_health_check: 'true' }
+    });
+
+    $toast.success('Health checkup linked! Complete your booking.', { duration: 3000 });
+};
+
+// Generate patient note from checkup for booking
+const generatePatientNoteForBooking = (checkup) => {
+    const parts = [];
+    const response = checkup.response?.data || {};
+
+    // Add assessment date
+    if (checkup.created_at) {
+        const date = new Date(checkup.created_at);
+        const dateStr = date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+        parts.push(`AI Health Assessment completed on ${dateStr}.`);
+    }
+
+    // Add symptoms (stored in request.evidence with 'label' as the name field)
+    const symptoms = (checkup.request?.evidence || [])
+        .filter(s => s.choice_id === 'present' && s.id?.startsWith('s_'))
+        .map(s => s.label || s.common_name || s.name)
+        .slice(0, 5);
+    if (symptoms.length > 0) {
+        parts.push(`Reported symptoms: ${symptoms.join(', ')}.`);
+    }
+
+    // Add top conditions
+    const conditions = response.conditions || [];
+    if (conditions.length > 0) {
+        const topConditions = conditions.slice(0, 3).map(c => {
+            const probability = Math.round((c.probability || 0) * 100);
+            return `${c.common_name || c.name} (${probability}%)`;
+        });
+        parts.push(`Possible conditions: ${topConditions.join(', ')}.`);
+    }
+
+    // Add triage level
+    if (response.triage_level) {
+        const triageLabels = {
+            'emergency': 'Emergency care recommended',
+            'emergency_ambulance': 'Emergency - Ambulance recommended',
+            'consultation_24': 'Doctor visit within 24 hours recommended',
+            'consultation': 'Medical consultation recommended',
+            'self_care': 'Self-care may be appropriate',
+        };
+        parts.push(triageLabels[response.triage_level.toLowerCase()] || `Triage: ${response.triage_level}`);
+    }
+
+    return parts.join('\n\n');
 };
 
 onMounted(() => {
@@ -1551,17 +1653,38 @@ $rose: #F43F5E;
         }
     }
 
+    &__actions-row {
+        display: flex;
+        align-items: center;
+        gap: $size-16;
+        flex-shrink: 0;
+
+        @include responsive(phone) {
+            width: 100%;
+            flex-direction: column;
+            align-items: stretch;
+            padding-top: $size-12;
+            border-top: 1px dashed $color-g-90;
+            gap: $size-12;
+        }
+    }
+
     &__action {
         display: flex;
         align-items: center;
         gap: $size-10;
         flex-shrink: 0;
+        cursor: pointer;
+        padding: $size-8 $size-12;
+        border-radius: 8px;
+        transition: background 0.2s ease;
+
+        &:hover {
+            background: rgba(79, 195, 247, 0.1);
+        }
 
         @include responsive(phone) {
-            width: 100%;
-            justify-content: flex-end;
-            padding-top: $size-12;
-            border-top: 1px dashed $color-g-90;
+            justify-content: center;
         }
 
         .action-text {
@@ -1575,6 +1698,42 @@ $rose: #F43F5E;
             height: 20px;
             color: $gray;
             transition: all 0.3s ease;
+        }
+    }
+
+    .book-appointment-btn {
+        display: flex;
+        align-items: center;
+        gap: $size-8;
+        padding: $size-10 $size-18;
+        background: linear-gradient(135deg, $sky 0%, $sky-dark 100%);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-size: $size-13;
+        font-weight: $fw-semi-bold;
+        cursor: pointer;
+        transition: all 0.25s ease;
+        box-shadow: 0 4px 12px rgba(79, 195, 247, 0.3);
+
+        svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        &:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(79, 195, 247, 0.4);
+        }
+
+        &:active {
+            transform: translateY(0);
+        }
+
+        @include responsive(phone) {
+            width: 100%;
+            justify-content: center;
+            padding: $size-12 $size-20;
         }
     }
 
