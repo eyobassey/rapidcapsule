@@ -91,15 +91,12 @@ export class FileUploadHelper {
     // Data URIs pass through
     if (profileImage.startsWith('data:')) return profileImage;
 
-    // Already a presigned S3 URL (has signature params)
-    if (profileImage.includes('amazonaws.com') && profileImage.includes('X-Amz-Signature')) {
-      return profileImage;
-    }
-
-    // Full S3 URL (needs presigning)
+    // S3 URL (with or without existing signature) - always regenerate fresh presigned URL
     if (profileImage.includes('s3') && profileImage.includes('amazonaws.com')) {
       try {
-        return await this.getPresignedUrl(profileImage);
+        // Strip any existing query parameters (old signatures) before regenerating
+        const baseUrl = profileImage.split('?')[0];
+        return await this.getPresignedUrl(baseUrl);
       } catch {
         return null;
       }

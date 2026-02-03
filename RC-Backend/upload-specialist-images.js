@@ -2,15 +2,20 @@ const mongoose = require('mongoose');
 const AWS = require('aws-sdk');
 const https = require('https');
 const http = require('http');
+const path = require('path');
 
-// S3 Configuration
+// Load credentials from ecosystem.config.js
+const ecosystemConfig = require(path.resolve(__dirname, '../ecosystem.config.js'));
+const backendEnv = ecosystemConfig.apps.find(app => app.name === 'RC-Backend')?.env || {};
+
+// S3 Configuration - credentials loaded from ecosystem.config.js
 const s3 = new AWS.S3({
-  accessKeyId: 'AKIA3GDI2LDWTFKPPMFS',
-  secretAccessKey: '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',
+  accessKeyId: backendEnv.AWS_ACCESS_KEY,
+  secretAccessKey: backendEnv.AWS_ACCESS_SECRET_KEY,
   region: 'us-east-2'
 });
 
-const BUCKET_NAME = 'rapidcapsules';
+const BUCKET_NAME = backendEnv.AWS_BUCKET_NAME || 'rapidcapsules';
 
 // Stock doctor images from public sources (Unsplash - free to use)
 const stockImages = {
