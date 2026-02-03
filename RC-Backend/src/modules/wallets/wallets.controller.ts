@@ -12,6 +12,7 @@ import { sendSuccessResponse } from '../../core/responses/success.responses';
 import { Messages } from '../../core/messages/messages';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { WithdrawFundDto } from './dto/withdraw-wallet-fund.dto';
+import { FundWalletDto, VerifyFundingDto } from './dto/fund-wallet.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('wallets')
@@ -48,5 +49,24 @@ export class WalletsController {
       req.user.sub,
     );
     return sendSuccessResponse(Messages.WITHDRAW_SUCCESSFUL, result);
+  }
+
+  @Post('fund')
+  async initializeFunding(@Body() fundWalletDto: FundWalletDto, @Request() req) {
+    const result = await this.walletsService.initializeFunding(
+      req.user.sub,
+      req.user.email,
+      fundWalletDto,
+    );
+    return sendSuccessResponse(Messages.TRANSACTION_INITIALIZED, result);
+  }
+
+  @Post('fund/verify')
+  async verifyFunding(@Body() verifyFundingDto: VerifyFundingDto, @Request() req) {
+    const result = await this.walletsService.verifyFunding(
+      req.user.sub,
+      verifyFundingDto.reference,
+    );
+    return sendSuccessResponse(Messages.TRANSACTION_VERIFIED, result);
   }
 }

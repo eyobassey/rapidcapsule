@@ -12,7 +12,10 @@ import VerifyEmail from "../views/User-verification/Verify-email.vue";
 import EmailVerified from "../views/User-verification/Email-verified.vue";
 import Patient from "../views/Profile-setup/patient.vue";
 import PatientApp from "../views/Mainapp/patient-app.vue";
-import PatientDashboard from "../views/Mainapp/patient-dashboard.vue";
+// Legacy dashboard kept for rollback - will be removed in future version
+import PatientDashboardLegacy from "../views/Mainapp/patient-dashboard.vue";
+// New v2 dashboard is now the main dashboard
+import PatientDashboard from "../views/Mainapp/patient-dashboard-v2.vue";
 import HealthCheckup from "../views/Mainapp/HealthCheckup/HealthCheckup";
 import Vitals from "../views/Mainapp/Health-monitor/Vitals.vue";
 import CycleTracker from "../views/Mainapp/CycleTracker.vue";
@@ -99,6 +102,12 @@ const routes = [
         component: PatientDashboard,
       },
       {
+        // Legacy dashboard - kept for rollback, will be removed in future version
+        path: "dashboard-legacy",
+        name: "Patient Dashboard Legacy",
+        component: PatientDashboardLegacy,
+      },
+      {
         path: "health-monitor/vitals",
         name: "Vitals",
         component: Vitals,
@@ -123,6 +132,11 @@ const routes = [
         name: "HealthCheckupResult",
         component: () =>
           import("@/views/Mainapp/HealthCheckup/DiagnosisReport"),
+      },
+      {
+        path: "health-tips",
+        name: "HealthTips",
+        component: () => import("@/views/Mainapp/HealthTips/index.vue"),
       },
       // V1 Appointments - Redirect to V2
       {

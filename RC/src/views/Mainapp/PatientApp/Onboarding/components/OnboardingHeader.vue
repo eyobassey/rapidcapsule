@@ -1,111 +1,194 @@
 <template>
-  <header class="onboarding-header">
-    <div class="header-content">
-      <!-- Logo / Brand -->
-      <div class="brand">
-        <img src="/RapidCapsule_Logo.png" alt="Rapid Capsule" class="logo" />
-        <span class="brand-text">Health Profile Setup</span>
-      </div>
+  <div class="onboarding-header-wrapper">
+    <!-- Mobile Header -->
+    <header class="mobile-header">
+      <button class="menu-toggle" @click="openDrawer">
+        <v-icon name="fa-bars" scale="1" />
+      </button>
 
-      <!-- Progress indicator (desktop) -->
-      <div class="progress-indicator">
-        <div class="progress-bar">
-          <div class="progress-fill" :style="{ width: `${progressPercent}%` }" />
+      <div class="logo-section mobile-logo">
+        <div class="logo-img">
+          <img src="/RapidCapsule_Logo.png" alt="Rapid Capsule" />
         </div>
-        <span class="progress-text">{{ progressPercent }}% complete</span>
+        <div class="logo-text">
+          <span class="logo-title">Rapid Capsule</span>
+          <span class="logo-subtitle">Health Profile</span>
+        </div>
       </div>
 
-      <!-- Actions -->
-      <div class="header-actions">
-        <button class="save-draft-btn" @click="saveDraft">
-          <v-icon name="hi-save" scale="0.8" />
-          <span>Save Draft</span>
-        </button>
-        <button class="menu-btn" @click="toggleMobileMenu">
-          <v-icon name="hi-menu" scale="1" />
-        </button>
+      <div class="mobile-avatar" @click="goToProfile">
+        <img
+          v-if="profileImage"
+          :src="profileImage"
+          :alt="userName"
+        />
+        <div v-else class="avatar-placeholder">
+          <v-icon name="hi-user" scale="0.7" />
+        </div>
       </div>
-    </div>
+    </header>
 
-    <!-- Mobile Menu Drawer -->
-    <transition name="slide-down">
-      <div v-if="showMobileMenu" class="mobile-menu">
-        <div class="mobile-progress">
-          <ProgressRing
-            :percent="progressPercent"
-            :size="80"
-            :stroke-width="8"
-            :progress-color="progressColor"
-          >
-            <div class="progress-center">
-              <span class="progress-value">{{ progressPercent }}%</span>
-            </div>
-          </ProgressRing>
-          <div class="mobile-progress-text">
-            <h4>Profile Setup Progress</h4>
-            <p>{{ onboardingStatus.description }}</p>
+    <!-- Desktop Header -->
+    <header class="desktop-header">
+      <div class="header-content">
+        <!-- Logo / Brand -->
+        <div class="brand">
+          <img src="/RapidCapsule_Logo.png" alt="Rapid Capsule" class="logo" />
+          <span class="brand-text">Health Profile Setup</span>
+        </div>
+
+        <!-- Progress indicator (desktop) -->
+        <div class="progress-indicator">
+          <div class="progress-bar">
+            <div class="progress-fill" :style="{ width: `${progressPercent}%` }" />
           </div>
+          <span class="progress-text">{{ progressPercent }}% complete</span>
         </div>
 
-        <!-- Timeline Steps -->
-        <div class="steps-timeline">
-          <h3 class="timeline-title">Setup Steps</h3>
-          <div class="steps-list">
-            <div
-              v-for="(step, index) in navSteps"
-              :key="step.key"
-              class="step-item"
-              :class="{
-                completed: stepCompletion[step.key],
-                current: isCurrentStep(step.key),
-              }"
-              @click="navigateToStep(step.stepNumber)"
-            >
-              <!-- Connecting line (not for last item) -->
-              <div v-if="index < navSteps.length - 1" class="step-line" :class="{ completed: stepCompletion[step.key] }" />
-
-              <!-- Step indicator circle -->
-              <div class="step-indicator">
-                <v-icon v-if="stepCompletion[step.key]" name="fa-check" scale="0.5" />
-                <template v-else-if="isCurrentStep(step.key)">
-                  <div class="current-dot" />
-                </template>
-                <span v-else class="step-number">{{ index + 1 }}</span>
-              </div>
-
-              <!-- Step content -->
-              <div class="step-content">
-                <span class="step-label">{{ step.name }}</span>
-                <span v-if="isStepRequired(step.key)" class="step-badge required">Required</span>
-                <span v-else class="step-badge optional">Optional</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="mobile-menu-footer">
-          <button class="exit-btn" @click="exitSetup">
-            <v-icon name="hi-x" scale="0.8" />
-            <span>Exit Setup</span>
+        <!-- Actions -->
+        <div class="header-actions">
+          <button class="save-draft-btn" @click="saveDraft">
+            <v-icon name="hi-save" scale="0.8" />
+            <span>Save Draft</span>
           </button>
         </div>
       </div>
-    </transition>
+    </header>
 
-    <!-- Overlay for mobile menu -->
-    <transition name="fade">
-      <div v-if="showMobileMenu" class="mobile-overlay" @click="toggleMobileMenu" />
-    </transition>
-  </header>
+    <!-- Mobile Drawer Overlay -->
+    <div
+      class="drawer-overlay"
+      :class="{ open: drawerOpen }"
+      @click="closeDrawer"
+    />
+
+    <!-- Mobile Drawer -->
+    <aside class="mobile-drawer" :class="{ open: drawerOpen }">
+      <div class="drawer-header">
+        <div class="logo-section">
+          <div class="logo-img small">
+            <img src="/RapidCapsule_Logo.png" alt="Rapid Capsule" />
+          </div>
+          <span class="drawer-title">Menu</span>
+        </div>
+        <button class="close-btn" @click="closeDrawer">
+          <v-icon name="hi-x" scale="1.1" />
+        </button>
+      </div>
+
+      <!-- User Info Card -->
+      <div class="drawer-user">
+        <div class="drawer-avatar">
+          <img
+            v-if="profileImage"
+            :src="profileImage"
+            :alt="userName"
+          />
+          <v-icon v-else name="hi-user" scale="1" />
+        </div>
+        <div class="drawer-user-info">
+          <div class="drawer-user-name">{{ userName }}</div>
+          <div class="drawer-user-status">
+            <span class="status-badge" :class="onboardingStatus.colorClass">{{ onboardingStatus.label }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Progress Section -->
+      <div class="drawer-progress">
+        <div class="progress-header">
+          <span>Setup Progress</span>
+          <span class="progress-value">{{ progressPercent }}%</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" :style="{ width: `${progressPercent}%` }" />
+        </div>
+        <p class="progress-description">{{ onboardingStatus.description }}</p>
+      </div>
+
+      <!-- Main Menu -->
+      <div class="drawer-section">
+        <h3 class="section-label">Main Menu</h3>
+        <nav class="drawer-nav">
+          <a
+            href="#"
+            class="nav-item"
+            :class="{ active: isOnDashboard }"
+            @click.prevent="goToDashboard"
+          >
+            <v-icon name="fa-rocket" scale="0.9" />
+            <span>Setup Dashboard</span>
+          </a>
+          <a href="#" class="nav-item disabled">
+            <v-icon name="ri-calendar-check-line" scale="0.9" />
+            <span>Appointments</span>
+          </a>
+          <a href="#" class="nav-item disabled">
+            <v-icon name="hi-heart" scale="0.9" />
+            <span>Health Monitor</span>
+          </a>
+          <a href="#" class="nav-item disabled">
+            <v-icon name="hi-document-text" scale="0.9" />
+            <span>My Records</span>
+          </a>
+        </nav>
+      </div>
+
+      <!-- Setup Steps -->
+      <div class="drawer-section">
+        <h3 class="section-label">Setup Steps</h3>
+        <div class="steps-list">
+          <div
+            v-for="(step, index) in navSteps"
+            :key="step.key"
+            class="step-item"
+            :class="{
+              completed: stepCompletion[step.key],
+              current: isCurrentStep(step.key),
+            }"
+            @click="navigateToStep(step.stepNumber)"
+          >
+            <div class="step-indicator">
+              <v-icon v-if="stepCompletion[step.key]" name="fa-check" scale="0.5" />
+              <template v-else-if="isCurrentStep(step.key)">
+                <div class="current-dot" />
+              </template>
+              <span v-else>{{ index + 1 }}</span>
+            </div>
+            <div class="step-content">
+              <span class="step-label">{{ step.name }}</span>
+              <span v-if="isStepRequired(step.key)" class="step-badge required">Required</span>
+              <span v-else class="step-badge optional">Optional</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer Actions -->
+      <div class="drawer-footer">
+        <button class="save-btn" @click="saveDraftFromDrawer">
+          <v-icon name="hi-save" scale="0.9" />
+          Save Draft
+        </button>
+        <button class="exit-btn" @click="exitSetup">
+          <v-icon name="hi-x" scale="0.8" />
+          <span>Exit Setup</span>
+        </button>
+      </div>
+    </aside>
+  </div>
 </template>
 
 <script setup>
 import { ref, computed } from 'vue';
-import { useRouter } from 'vue-router';
+import { useStore } from 'vuex';
+import { useRouter, useRoute } from 'vue-router';
 import { usePatientOnboardingState } from '../composables/usePatientOnboardingState';
-import ProgressRing from './ProgressRing.vue';
 
 const router = useRouter();
+const route = useRoute();
+const store = useStore();
+
 const {
   progressPercent,
   stepCompletion,
@@ -116,7 +199,27 @@ const {
   saveProgress,
 } = usePatientOnboardingState();
 
-const showMobileMenu = ref(false);
+// Drawer state
+const drawerOpen = ref(false);
+
+const userProfile = computed(() => store.getters['userprofile']);
+
+const profileImage = computed(() => {
+  const profile = userProfile.value?.profile;
+  return profile?.profile_image || profile?.profile_photo || null;
+});
+
+const userName = computed(() => {
+  const profile = userProfile.value?.profile;
+  if (profile?.first_name) {
+    return profile.first_name;
+  }
+  return 'New Patient';
+});
+
+const isOnDashboard = computed(() => {
+  return route.path.includes('/onboarding/dashboard');
+});
 
 const navSteps = [
   { key: 'personalDetails', name: 'Personal Details', icon: 'hi-user', stepNumber: 2 },
@@ -128,12 +231,6 @@ const navSteps = [
   { key: 'deviceIntegration', name: 'Devices & Apps', icon: 'hi-device-mobile', stepNumber: 8 },
 ];
 
-const progressColor = computed(() => {
-  if (progressPercent.value >= 80) return '#10B981';
-  if (progressPercent.value >= 50) return '#4FC3F7';
-  return '#F59E0B';
-});
-
 // Check if step is the current (first incomplete) step
 const isCurrentStep = (key) => {
   for (const step of navSteps) {
@@ -144,13 +241,20 @@ const isCurrentStep = (key) => {
   return false;
 };
 
-const toggleMobileMenu = () => {
-  showMobileMenu.value = !showMobileMenu.value;
+// Drawer methods
+const openDrawer = () => {
+  drawerOpen.value = true;
+  document.body.style.overflow = 'hidden';
+};
+
+const closeDrawer = () => {
+  drawerOpen.value = false;
+  document.body.style.overflow = '';
 };
 
 const navigateToStep = (stepNumber) => {
+  closeDrawer();
   goToStep(stepNumber);
-  showMobileMenu.value = false;
 };
 
 const emit = defineEmits(['draft-saved']);
@@ -160,18 +264,118 @@ const saveDraft = () => {
   emit('draft-saved');
 };
 
+const saveDraftFromDrawer = () => {
+  closeDrawer();
+  saveDraft();
+};
+
+const goToDashboard = () => {
+  closeDrawer();
+  router.push('/app/patient/onboarding/dashboard');
+};
+
+const goToProfile = () => {
+  router.push('/app/patient/profile');
+};
+
 const exitSetup = () => {
   saveProgress();
+  closeDrawer();
   router.push({ name: 'Patient Dashboard' });
 };
 </script>
 
 <style scoped lang="scss">
-.onboarding-header {
+.onboarding-header-wrapper {
+  position: relative;
+  z-index: 100;
+}
+
+/* Mobile Header */
+.mobile-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1rem;
+  height: 64px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid #F1F5F9;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+
+  @media (min-width: 1024px) {
+    display: none;
+  }
+}
+
+.menu-toggle {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: #1A365D;
+  cursor: pointer;
+  border-radius: 0.5rem;
+  transition: background 0.2s;
+
+  &:hover {
+    background: #F1F5F9;
+  }
+}
+
+.mobile-logo {
+  .logo-title {
+    font-size: 1rem;
+    line-height: 1;
+  }
+
+  .logo-subtitle {
+    font-size: 0.5rem;
+  }
+}
+
+.mobile-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #E2E8F0;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .avatar-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #94A3B8;
+  }
+}
+
+/* Desktop Header */
+.desktop-header {
+  display: none;
   background: white;
   border-bottom: 1px solid #E2E8F0;
   position: relative;
   z-index: 100;
+
+  @media (min-width: 1024px) {
+    display: block;
+  }
 }
 
 .header-content {
@@ -198,10 +402,6 @@ const exitSetup = () => {
   font-size: 0.9375rem;
   font-weight: 600;
   color: #1A365D;
-
-  @media (max-width: 768px) {
-    display: none;
-  }
 }
 
 .progress-indicator {
@@ -211,10 +411,6 @@ const exitSetup = () => {
   flex: 1;
   max-width: 400px;
   margin: 0 2rem;
-
-  @media (max-width: 1024px) {
-    display: none;
-  }
 }
 
 .progress-bar {
@@ -263,108 +459,298 @@ const exitSetup = () => {
     background: #E2E8F0;
     color: #1A365D;
   }
-
-  @media (max-width: 768px) {
-    span {
-      display: none;
-    }
-    padding: 0.5rem;
-  }
 }
 
-.menu-btn {
-  display: none;
-  padding: 0.5rem;
-  background: transparent;
-  border: none;
-  color: #64748B;
-  cursor: pointer;
-
-  @media (max-width: 1024px) {
-    display: flex;
-  }
-}
-
-// Mobile Menu
-.mobile-menu {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  background: white;
-  border-bottom: 1px solid #E2E8F0;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
-  max-height: calc(100vh - 60px);
-  overflow-y: auto;
-  z-index: 200;
-}
-
-.mobile-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.3);
-  z-index: 99;
-}
-
-.mobile-progress {
+/* Logo Section */
+.logo-section {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  padding: 1.5rem;
-  background: linear-gradient(135deg, #4FC3F7 0%, #0288D1 100%);
-  color: white;
+  gap: 0.75rem;
 }
 
-.progress-center {
+.logo-img {
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  &.small {
+    width: 28px;
+    height: 28px;
+  }
+}
+
+.logo-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.logo-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #1A365D;
+  font-family: 'Poppins', system-ui, sans-serif;
+  letter-spacing: -0.025em;
+  line-height: 1;
+}
+
+.logo-subtitle {
+  font-size: 0.625rem;
+  font-weight: 500;
+  color: #64748B;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+/* Drawer Overlay */
+.drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  z-index: 45;
+
+  &.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  @media (min-width: 1024px) {
+    display: none;
+  }
+}
+
+/* Mobile Drawer */
+.mobile-drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 288px;
+  max-width: 85vw;
+  height: 100%;
+  background: white;
+  transform: translateX(-100%);
+  transition: transform 0.3s ease;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+
+  &.open {
+    transform: translateX(0);
+  }
+
+  @media (min-width: 1024px) {
+    display: none;
+  }
+}
+
+.drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  border-bottom: 1px solid #F1F5F9;
+}
+
+.drawer-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #1A365D;
+  font-family: 'Poppins', system-ui, sans-serif;
+}
+
+.close-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: #94A3B8;
+  cursor: pointer;
+  border-radius: 0.5rem;
+  transition: all 0.2s;
+
+  &:hover {
+    background: #F1F5F9;
+    color: #64748B;
+  }
+}
+
+.drawer-user {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: linear-gradient(135deg, rgba(79, 195, 247, 0.1) 0%, rgba(2, 136, 209, 0.1) 100%);
+  margin: 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(79, 195, 247, 0.2);
+}
+
+.drawer-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #E2E8F0;
+  border: 2px solid white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94A3B8;
+  flex-shrink: 0;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.drawer-user-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.drawer-user-name {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #1A365D;
+}
+
+.status-badge {
+  display: inline-block;
+  font-size: 0.5625rem;
+  font-weight: 600;
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+  margin-top: 0.25rem;
+  background: #FFF3E0;
+  color: #F57C00;
+
+  &.in-progress {
+    background: #FFF3E0;
+    color: #F57C00;
+  }
+
+  &.ready {
+    background: #E3F2FD;
+    color: #1976D2;
+  }
+
+  &.complete {
+    background: #E8F5E9;
+    color: #4CAF50;
+  }
+
+  &.pending {
+    background: #FFFDE7;
+    color: #F9A825;
+  }
+}
+
+.drawer-progress {
+  padding: 0 1rem;
+  margin-bottom: 1rem;
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.75rem;
+  color: #64748B;
+  margin-bottom: 0.5rem;
 }
 
 .progress-value {
-  font-size: 1rem;
   font-weight: 700;
-  color: white;
+  color: #0288D1;
 }
 
-.mobile-progress-text h4 {
-  font-size: 0.9375rem;
-  font-weight: 700;
-  margin: 0 0 0.25rem 0;
+.progress-description {
+  font-size: 0.6875rem;
+  color: #94A3B8;
+  margin: 0.5rem 0 0 0;
 }
 
-.mobile-progress-text p {
-  font-size: 0.8125rem;
-  opacity: 0.9;
-  margin: 0;
+.drawer-section {
+  padding: 0 1rem;
+  margin-bottom: 1.5rem;
 }
 
-// Timeline Steps
-.steps-timeline {
-  padding: 1rem 1.5rem;
-}
-
-.timeline-title {
+.section-label {
   font-size: 0.625rem;
   font-weight: 700;
   color: #94A3B8;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  margin: 0 0 1rem 0.5rem;
+  margin: 0 0 0.75rem 0.5rem;
+}
+
+.drawer-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  color: #64748B;
+  text-decoration: none;
+  transition: all 0.2s;
+
+  &:hover:not(.disabled) {
+    background: #F8FAFC;
+    color: #1A365D;
+  }
+
+  &.active {
+    background: rgba(79, 195, 247, 0.1);
+    color: #0288D1;
+    font-weight: 700;
+    border: 1px solid rgba(79, 195, 247, 0.2);
+  }
+
+  &.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  svg {
+    flex-shrink: 0;
+  }
 }
 
 .steps-list {
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 0.5rem;
 }
 
 .step-item {
-  position: relative;
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.75rem 0.5rem;
+  padding: 0.5rem;
   cursor: pointer;
   transition: all 0.2s;
   border-radius: 0.5rem;
@@ -377,73 +763,47 @@ const exitSetup = () => {
     }
   }
 
-  // Completed state
-  &.completed {
-    .step-indicator {
-      background: #10B981;
-      border-color: #10B981;
-      color: white;
-    }
-
-    .step-label {
-      color: #94A3B8;
-      text-decoration: line-through;
-    }
-  }
-
-  // Current state
-  &.current {
-    .step-indicator {
-      background: white;
-      border-color: #4FC3F7;
-      box-shadow: 0 0 0 4px rgba(79, 195, 247, 0.2);
-    }
-
-    .step-label {
-      font-weight: 700;
-      color: #1A365D;
-    }
-  }
-}
-
-// Connecting line between steps
-.step-line {
-  position: absolute;
-  left: calc(0.5rem + 12px);
-  top: calc(0.75rem + 28px);
-  width: 2px;
-  height: calc(100% - 4px);
-  background: #E2E8F0;
-  transition: background 0.3s ease;
-
-  &.completed {
+  &.completed .step-indicator {
     background: #10B981;
+    border-color: #10B981;
+    color: white;
+  }
+
+  &.completed .step-label {
+    color: #94A3B8;
+    text-decoration: line-through;
+  }
+
+  &.current .step-indicator {
+    background: white;
+    border-color: #4FC3F7;
+    box-shadow: 0 0 0 4px rgba(79, 195, 247, 0.2);
+  }
+
+  &.current .step-label {
+    font-weight: 700;
+    color: #1A365D;
   }
 }
 
 .step-indicator {
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   background: #F1F5F9;
   border: 2px solid #E2E8F0;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
-  transition: all 0.2s ease;
-  z-index: 1;
-}
-
-.step-number {
-  font-size: 0.6875rem;
+  font-size: 0.625rem;
   font-weight: 700;
   color: #94A3B8;
+  flex-shrink: 0;
 }
 
 .current-dot {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
   background: #4FC3F7;
   border-radius: 50%;
   animation: pulse 2s infinite;
@@ -468,7 +828,7 @@ const exitSetup = () => {
 }
 
 .step-label {
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   color: #64748B;
   transition: color 0.2s;
 }
@@ -488,9 +848,35 @@ const exitSetup = () => {
   }
 }
 
-.mobile-menu-footer {
+.drawer-footer {
+  margin-top: auto;
   padding: 1rem;
-  border-top: 1px solid #E2E8F0;
+  border-top: 1px solid #F1F5F9;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.save-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: linear-gradient(135deg, #4FC3F7 0%, #0288D1 100%);
+  border: none;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(79, 195, 247, 0.3);
+
+  &:hover {
+    box-shadow: 0 6px 16px rgba(79, 195, 247, 0.4);
+  }
 }
 
 .exit-btn {
@@ -512,27 +898,5 @@ const exitSetup = () => {
   &:hover {
     background: #FECACA;
   }
-}
-
-// Transitions
-.slide-down-enter-active,
-.slide-down-leave-active {
-  transition: all 0.3s ease;
-}
-
-.slide-down-enter-from,
-.slide-down-leave-to {
-  opacity: 0;
-  transform: translateY(-10px);
-}
-
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.3s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
 }
 </style>

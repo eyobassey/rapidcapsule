@@ -155,6 +155,62 @@
       </div>
     </div>
 
+    <!-- Health Check Banner (when coming from health checkup) -->
+    <div v-if="hasHealthCheckData" class="health-check-section">
+      <div class="health-check-banner">
+        <div class="health-check-icon">
+          <v-icon name="hi-clipboard-check" scale="1.2" />
+        </div>
+        <div class="health-check-info">
+          <h4>Health Assessment Linked</h4>
+          <p>Your recent health checkup results will be shared with the specialist</p>
+        </div>
+        <a
+          v-if="booking.healthCheckData.checkup_id"
+          :href="`/app/patient/health-checkup/report/${booking.healthCheckData.checkup_id}`"
+          target="_blank"
+          class="view-results-link"
+        >
+          <v-icon name="hi-external-link" scale="0.85" />
+          View Results
+        </a>
+      </div>
+
+      <!-- Patient Notes Section -->
+      <div class="patient-notes">
+        <label class="notes-label">
+          <v-icon name="hi-annotation" scale="0.9" />
+          <span>Notes for the Specialist</span>
+        </label>
+        <textarea
+          v-model="booking.patientNotes"
+          class="notes-textarea"
+          placeholder="Describe your symptoms or any additional information you'd like the specialist to know..."
+          rows="5"
+        ></textarea>
+        <p class="notes-hint">
+          <v-icon name="hi-information-circle" scale="0.8" />
+          This note will be visible to the specialist before your appointment
+        </p>
+      </div>
+    </div>
+
+    <!-- Simple Notes Section (when not from health check) -->
+    <div v-else-if="booking.mode !== 'reschedule'" class="simple-notes-section">
+      <div class="patient-notes">
+        <label class="notes-label">
+          <v-icon name="hi-annotation" scale="0.9" />
+          <span>Notes for the Specialist (Optional)</span>
+        </label>
+        <textarea
+          v-model="booking.patientNotes"
+          class="notes-textarea"
+          placeholder="Describe your symptoms or reason for this appointment..."
+          rows="4"
+        ></textarea>
+      </div>
+    </div>
+
     <!-- Terms Checkbox -->
     <div class="terms-section" v-if="booking.mode !== 'reschedule'">
       <label class="terms-checkbox">
@@ -183,6 +239,10 @@ const cards = ref([]);
 const walletBalance = ref(0);
 const paymentMethod = ref('wallet');
 const isLoadingPayment = ref(false);
+
+const hasHealthCheckData = computed(() => {
+  return booking.fromHealthCheck || !!booking.healthCheckData?.checkup_id;
+});
 
 const formattedDate = computed(() => {
   if (!booking.schedule.date) return '';
@@ -633,6 +693,143 @@ const addPaymentCard = async () => {
     &:hover {
       text-decoration: underline;
     }
+  }
+}
+
+// Health Check Section
+.health-check-section,
+.simple-notes-section {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+}
+
+.health-check-banner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: linear-gradient(135deg, #e0f2fe 0%, #e1f5fe 100%);
+  border: 1px solid #7dd3fc;
+  border-radius: 12px;
+  margin-bottom: 20px;
+
+  @media (max-width: 600px) {
+    flex-direction: column;
+    text-align: center;
+    gap: 12px;
+  }
+}
+
+.health-check-icon {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #4FC3F7 0%, #0288D1 100%);
+  border-radius: 12px;
+  color: white;
+  flex-shrink: 0;
+}
+
+.health-check-info {
+  flex: 1;
+
+  h4 {
+    font-size: 15px;
+    font-weight: 600;
+    color: #0c4a6e;
+    margin: 0 0 4px;
+  }
+
+  p {
+    font-size: 13px;
+    color: #0369a1;
+    margin: 0;
+  }
+}
+
+.view-results-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  background: white;
+  border: 1px solid #7dd3fc;
+  border-radius: 10px;
+  color: #0284c7;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.2s;
+  white-space: nowrap;
+
+  &:hover {
+    background: #f0f9ff;
+    border-color: #0284c7;
+  }
+
+  @media (max-width: 600px) {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+.patient-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.notes-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+
+  svg {
+    color: #0EAEC4;
+  }
+}
+
+.notes-textarea {
+  width: 100%;
+  padding: 14px 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #1f2937;
+  resize: vertical;
+  transition: border-color 0.2s;
+
+  &:focus {
+    outline: none;
+    border-color: #0EAEC4;
+  }
+
+  &::placeholder {
+    color: #9ca3af;
+  }
+}
+
+.notes-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #9ca3af;
+  margin: 0;
+
+  svg {
+    flex-shrink: 0;
   }
 }
 </style>

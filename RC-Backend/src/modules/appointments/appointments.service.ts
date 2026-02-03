@@ -135,7 +135,7 @@ export class AppointmentsService {
     const subscription = await this.subscriptionsService.getActiveSubscription(
       currentUser.sub,
     );
-    const { date, time, meeting_channel, paymentMethod, patient_notes, shared_documents, timezone } = createAppointmentDto;
+    const { date, time, meeting_channel, paymentMethod, patient_notes, shared_documents, timezone, health_checkup_id } = createAppointmentDto;
 
     // Parse the date and time with proper timezone handling
     // If timezone is provided (e.g., "UTC + 1 (West African Time)"),
@@ -282,9 +282,10 @@ export class AppointmentsService {
         throw new BadRequestException('Payment failed. Please try again or use a different payment method.');
       }
     } else if (paymentMethod === 'card') {
-      // For card payments, we'll need to handle Paystack redirect
-      // The payment will be verified via webhook, so set status to pending
+      // For card payments, initialize Paystack transaction
+      // Payment will be verified when user completes checkout
       paymentStatus = Status.PENDING;
+      paymentReference = this.generalHelpers.genTxReference();
     }
 
     // Create the appointment with all details
@@ -297,6 +298,8 @@ export class AppointmentsService {
       appointment_fee: appointmentFee,
       payment_status: paymentStatus,
       patient_notes: patient_notes || '',
+      // Link to health checkup if provided (appointment booked from health checkup result)
+      ...(health_checkup_id ? { health_checkup_id: new Types.ObjectId(health_checkup_id) } : {}),
       shared_documents: shared_documents?.map(doc => ({
         ...doc,
         shared_by: 'patient',
@@ -305,14 +308,15 @@ export class AppointmentsService {
     });
 
     // Handle meeting channel-specific logic
+    let scheduledAppointment = appointment;
     if (appointment.meeting_channel === 'zoom') {
-      return await this.scheduleZoomMeeting(appointment);
+      scheduledAppointment = await this.scheduleZoomMeeting(appointment);
     } else if (appointment.meeting_channel === 'whatsapp') {
-      return await this.scheduleWhatsAppMeeting(appointment);
+      scheduledAppointment = await this.scheduleWhatsAppMeeting(appointment);
     } else if (appointment.meeting_channel === 'google_meet') {
-      return await this.scheduleGoogleMeet(appointment);
+      scheduledAppointment = await this.scheduleGoogleMeet(appointment);
     } else if (appointment.meeting_channel === 'microsoft_teams') {
-      return await this.scheduleTeamsMeeting(appointment);
+      scheduledAppointment = await this.scheduleTeamsMeeting(appointment);
     }
 
     // For phone and in_person, no meeting link needed but update payment status
@@ -324,7 +328,45 @@ export class AppointmentsService {
       );
     }
 
-    return appointment;
+    // If card payment, initialize Paystack and return authorization URL
+    if (paymentMethod === 'card' && paymentReference) {
+      const patient = await this.usersService.findById(new Types.ObjectId(currentUser.sub));
+      const patientEmail = (patient as any).email || currentUser.email;
+      const callbackUrl = `https://rapidcapsule.com/app/patient/appointmentsv2?payment=appointment&appointmentId=${appointment._id}`;
+
+      const paymentResponse = await this.paymentHandler.initializeTransaction(
+        patientEmail,
+        appointmentFee, // Amount in Naira (Paystack provider converts to kobo)
+        paymentReference,
+        {
+          type: 'appointment_payment',
+          appointment_id: appointment._id.toString(),
+          patient_id: currentUser.sub,
+          callback_url: callbackUrl,
+        },
+      );
+
+      // Update appointment with payment reference
+      await updateOne(
+        this.appointmentModel,
+        { _id: appointment._id },
+        { payment_reference: paymentReference },
+      );
+
+      // Handle both Mongoose documents and plain objects
+      const appointmentObj = typeof scheduledAppointment.toObject === 'function'
+        ? scheduledAppointment.toObject()
+        : scheduledAppointment;
+
+      return {
+        ...appointmentObj,
+        payment_required: true,
+        authorization_url: paymentResponse.data?.data?.authorization_url,
+        payment_reference: paymentReference,
+      };
+    }
+
+    return scheduledAppointment;
   }
 
   /**
@@ -1409,6 +1451,13 @@ export class AppointmentsService {
           const appointmentId = response.data.metadata.appointment_id;
           const appointment = await this.findOneAppointment(appointmentId);
           await this.scheduleZoomMeeting(appointment);
+          // Update appointment payment_status to SUCCESSFUL
+          await this.updateAppointment(
+            { _id: appointmentId },
+            {
+              payment_status: Status.SUCCESSFUL,
+            },
+          );
           await this.paymentService.updatePayment(reference, {
             status: Status.SUCCESSFUL,
             metadata: {
@@ -3295,6 +3344,8 @@ export class AppointmentsService {
           recording: appointment.recording,
           transcript: appointment.transcript,
           meeting_summary: appointment.meeting_summary,
+          // Link to health checkup if appointment was booked from one
+          health_checkup_id: appointment.health_checkup_id || null,
         },
         patient: {
           _id: appointment.patient._id,

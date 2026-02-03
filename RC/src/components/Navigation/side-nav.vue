@@ -177,14 +177,14 @@ export default {
       ],
       secondaryNav: [
         {
+          link: "/app/patient/onboarding",
+          label: "Health Profile",
+          icon: "monitor-magnifier",
+        },
+        {
           link: "/app/patient/referals-and-rewards",
           label: "Referals & Rewards",
           icon: "gift-box",
-        },
-        {
-          link: "/app/patient/onboarding",
-          label: "Health Profile",
-          icon: "user-circle",
         },
         { link: "/app/patient/account", label: "Account", icon: "user" },
         {

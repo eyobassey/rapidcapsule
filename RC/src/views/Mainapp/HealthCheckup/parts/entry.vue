@@ -218,7 +218,7 @@ const dependants = { ...userprofile.value.dependants };
 const isFetching = ref(false);
 
 const profilePhoto = computed(() => {
-  return userprofile.value?.profile?.profile_photo;
+  return userprofile.value?.profile?.profile_image || userprofile.value?.profile?.profile_photo;
 });
 
 const dependantsList = computed(() => {

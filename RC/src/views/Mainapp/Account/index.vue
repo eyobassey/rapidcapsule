@@ -1811,10 +1811,17 @@ export default {
       if (!this.topUpAmount || this.topUpAmount < 100) return;
       this.topUpLoading = true;
       try {
-        const res = await http.post("wallets/fund", { amount: this.topUpAmount });
+        // Set callback URL to return to this page after payment
+        const callbackUrl = `${window.location.origin}/app/patient/account?payment=wallet-topup`;
+        const res = await http.post("wallets/fund", {
+          amount: this.topUpAmount,
+          callback_url: callbackUrl
+        });
         if (res.status === 200 || res.status === 201) {
           const data = res.data?.data || res.data?.result || res.data;
           if (data.authorization_url || data.paymentUrl) {
+            // Store reference for verification after redirect
+            localStorage.setItem('wallet_topup_reference', data.reference);
             window.location.href = data.authorization_url || data.paymentUrl;
           } else {
             await this.fetchWalletBalance();
@@ -1828,6 +1835,35 @@ export default {
         alert(e.response?.data?.message || "Failed to initiate payment");
       }
       this.topUpLoading = false;
+    },
+
+    async checkPaymentReturn() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlReference = urlParams.get('reference') || urlParams.get('trxref');
+      const storedReference = localStorage.getItem('wallet_topup_reference');
+
+      // Check if returning from Paystack payment (has reference in URL or stored reference)
+      const reference = urlReference || storedReference;
+
+      if (reference && (urlReference || storedReference)) {
+        try {
+          this.$toast.info('Verifying payment...');
+          const res = await http.post('wallets/fund/verify', { reference });
+          if (res.data?.data?.success || res.data?.success) {
+            this.$toast.success('Wallet funded successfully!');
+            localStorage.removeItem('wallet_topup_reference');
+          }
+        } catch (e) {
+          console.error('Payment verification error:', e);
+          // Don't show error if already processed
+          if (!e.response?.data?.message?.includes('already processed')) {
+            this.$toast.error(e.response?.data?.message || 'Payment verification failed');
+          }
+        }
+        // Clean up URL and stored reference
+        localStorage.removeItem('wallet_topup_reference');
+        this.$router.replace({ path: this.$route.path, query: { tab: 'wallet' } });
+      }
     },
 
     scrollToTransactions() {
@@ -2403,6 +2439,9 @@ export default {
       script.src = "https://js.paystack.co/v1/inline.js";
       document.head.appendChild(script);
     }
+
+    // Check for wallet top-up payment return from Paystack
+    await this.checkPaymentReturn();
 
     // Fetch wallet data
     await Promise.all([

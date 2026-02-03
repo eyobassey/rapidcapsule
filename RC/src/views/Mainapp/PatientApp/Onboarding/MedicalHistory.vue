@@ -3,12 +3,14 @@
     <div class="step-scroll">
       <div class="step-content">
         <div class="step-header">
-          <button class="back-btn" @click="goBack">
-            <v-icon name="hi-arrow-left" scale="0.9" />
-            <span>Back</span>
-          </button>
-          <div class="step-info">
+          <div class="step-header-row">
+            <button class="back-btn" @click="goBack">
+              <v-icon name="hi-arrow-left" scale="0.9" />
+              <span>Back</span>
+            </button>
             <span class="step-badge optional">Step 7 of 9 - Optional</span>
+          </div>
+          <div class="step-info">
             <h1 class="step-title">Medical History</h1>
             <p class="step-description">
               Share your medical background to help specialists provide better care.
@@ -718,6 +720,74 @@ const saveAndContinue = async () => {
 
   @media (max-width: 640px) {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Mobile Styles */
+@media (max-width: 768px) {
+  .chip-selector {
+    gap: 0.375rem;
+  }
+
+  .chip {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8125rem;
+  }
+
+  .medication-card {
+    padding: 0.875rem;
+  }
+
+  .medication-header {
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+  }
+
+  .medication-number {
+    font-size: 0.75rem;
+  }
+
+  .field-row {
+    flex-direction: column;
+    gap: 0.75rem;
+
+    .form-group {
+      &.flex-1, &.flex-2 {
+        flex: none;
+        width: 100%;
+      }
+    }
+
+    .remove-btn {
+      align-self: flex-end;
+    }
+  }
+
+  .form-label {
+    font-size: 0.6875rem;
+  }
+
+  .form-input, .form-select {
+    padding: 0.75rem;
+    font-size: 1rem;
+  }
+
+  .item-card {
+    padding: 0.875rem;
+
+    &.compact {
+      padding: 0.75rem;
+    }
+  }
+
+  .condition-name {
+    font-size: 0.875rem;
+  }
+
+  .add-btn {
+    width: 100%;
+    justify-content: center;
+    padding: 1rem;
   }
 }
 </style>

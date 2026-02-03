@@ -592,7 +592,7 @@
                       placeholder="Custom"
                       min="15"
                       max="180"
-                      @input="schedule.duration = schedule.customDuration"
+                      @input="handleCustomDuration"
                     />
                     <span>min</span>
                   </div>
@@ -3915,6 +3915,16 @@ function calculateEndTime(timeStr, duration) {
   return `${displayHour}:${String(endMinutes).padStart(2, '0')} ${ampm}`;
 }
 
+function handleCustomDuration() {
+  const value = schedule.customDuration;
+  if (value && typeof value === 'number' && value >= 15 && value <= 180) {
+    schedule.duration = value;
+  } else if (!value || value === '' || isNaN(value)) {
+    // If cleared or invalid, reset to default
+    schedule.duration = 30;
+  }
+}
+
 function formatConsentDateTime(dateTimeStr) {
   if (!dateTimeStr) return 'Not recorded';
   const date = new Date(dateTimeStr);
@@ -4006,7 +4016,7 @@ async function submitAppointment() {
       category: appointmentDetails.specialty || 'general',
       appointment_date: schedule.date,
       start_time: schedule.time,
-      duration_minutes: schedule.duration,
+      duration_minutes: (typeof schedule.duration === 'number' && schedule.duration > 0) ? schedule.duration : 30,
       timezone: schedule.timezone,
       appointment_type: appointmentDetails.visitReason,
       appointment_type_name: getVisitReasonLabel(appointmentDetails.visitReason),

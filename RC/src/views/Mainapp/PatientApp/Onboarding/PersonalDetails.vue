@@ -4,12 +4,14 @@
       <div class="step-content">
         <!-- Step Header -->
         <div class="step-header">
-          <button class="back-btn" @click="goBack">
-            <v-icon name="hi-arrow-left" scale="0.9" />
-            <span>Back</span>
-          </button>
-          <div class="step-info">
+          <div class="step-header-row">
+            <button class="back-btn" @click="goBack">
+              <v-icon name="hi-arrow-left" scale="0.9" />
+              <span>Back</span>
+            </button>
             <span class="step-badge required">Step 2 of 9 - Required</span>
+          </div>
+          <div class="step-info">
             <h1 class="step-title">Personal Details</h1>
             <p class="step-description">
               Tell us about yourself. This information helps us provide personalized healthcare.
@@ -335,11 +337,16 @@ const saveToBackend = async () => {
       },
     };
 
-    // Upload photo if changed
-    if (personalDetails.profile_image) {
-      const formData = new FormData();
-      formData.append('file', personalDetails.profile_image);
-      // TODO: Upload photo and get URL
+    // Upload photo if a new image was selected (File object)
+    if (personalDetails.profile_image instanceof File) {
+      // Convert file to base64 data URL
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(personalDetails.profile_image);
+      });
+      payload.profile.profile_photo = base64;
     }
 
     await $http.$_updateUser(payload);
@@ -378,6 +385,13 @@ const saveToBackend = async () => {
   margin-bottom: 2rem;
 }
 
+.step-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+
 .back-btn {
   display: inline-flex;
   align-items: center;
@@ -389,7 +403,6 @@ const saveToBackend = async () => {
   font-size: 0.875rem;
   color: #64748B;
   cursor: pointer;
-  margin-bottom: 1.5rem;
   transition: all 0.2s;
 
   &:hover {
@@ -403,14 +416,14 @@ const saveToBackend = async () => {
 }
 
 .step-badge {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
   font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.025em;
   padding: 0.25rem 0.75rem;
   border-radius: 9999px;
-  margin-bottom: 0.75rem;
 
   &.required {
     background: #FEE2E2;
@@ -716,17 +729,167 @@ const saveToBackend = async () => {
   }
 }
 
-@media (max-width: 640px) {
+/* Mobile Responsive Styles */
+@media (max-width: 768px) {
   .step-scroll {
     padding: 1rem;
   }
 
+  .step-content {
+    max-width: 100%;
+  }
+
+  .step-header {
+    margin-bottom: 1.25rem;
+  }
+
+  .step-header-row {
+    margin-bottom: 1rem;
+  }
+
+  .back-btn {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8125rem;
+
+    span {
+      display: none;
+    }
+  }
+
+  .step-badge {
+    font-size: 0.625rem;
+    padding: 0.25rem 0.5rem;
+  }
+
   .step-title {
-    font-size: 1.5rem;
+    font-size: 1.375rem;
+    line-height: 1.3;
+  }
+
+  .step-description {
+    font-size: 0.875rem;
+  }
+
+  .form-sections {
+    gap: 1.25rem;
   }
 
   .form-section {
     padding: 1.25rem;
+    border-radius: 0.75rem;
+  }
+
+  .section-title {
+    font-size: 0.9375rem;
+  }
+
+  .section-description {
+    font-size: 0.8125rem;
+    margin-bottom: 1rem;
+  }
+
+  /* Photo Upload - Mobile Optimized */
+  .photo-upload-area {
+    padding: 1.25rem;
+  }
+
+  .photo-preview {
+    width: 100px;
+    height: 100px;
+  }
+
+  .photo-actions {
+    flex-direction: column;
+    width: 100%;
+    gap: 0.5rem;
+  }
+
+  .upload-btn, .remove-btn {
+    width: 100%;
+    justify-content: center;
+    padding: 0.75rem 1rem;
+  }
+
+  /* Form Grid - Single Column */
+  .form-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .form-group.full-width {
+    grid-column: span 1;
+  }
+
+  .form-label {
+    font-size: 0.8125rem;
+  }
+
+  .form-input, .form-select {
+    padding: 0.875rem 1rem;
+    font-size: 1rem; /* Prevent iOS zoom */
+  }
+
+  /* Phone Input - Stack on very small screens */
+  .phone-input-group {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .country-code-select {
+    width: 100%;
+    padding: 0.875rem;
+    font-size: 1rem;
+  }
+
+  /* Radio Buttons - Better Touch Targets */
+  .radio-group {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .radio-option {
+    padding: 1rem;
+    justify-content: flex-start;
+  }
+
+  /* Footer - Full Width Buttons */
+  .step-footer {
+    flex-direction: column-reverse;
+    gap: 1rem;
+    padding-top: 1.25rem;
+    margin-top: 1.5rem;
+  }
+
+  .footer-info {
+    font-size: 0.75rem;
+    text-align: center;
+  }
+
+  .footer-actions {
+    width: 100%;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .btn-secondary, .btn-primary {
+    width: 100%;
+    justify-content: center;
+    padding: 1rem 1.5rem;
+  }
+}
+
+/* Extra small screens */
+@media (max-width: 380px) {
+  .step-scroll {
+    padding: 0.75rem;
+  }
+
+  .form-section {
+    padding: 1rem;
+  }
+
+  .step-title {
+    font-size: 1.25rem;
   }
 }
 </style>

@@ -373,10 +373,14 @@ export function usePatientOnboardingState() {
       personalDetails.last_name = profile.last_name || '';
       personalDetails.date_of_birth = profile.date_of_birth || '';
       personalDetails.gender = profile.gender || '';
-      personalDetails.phone_number = profile.phone_number || '';
+      // Phone number is stored in profile.contact.phone
+      personalDetails.phone_country_code = profile.contact?.phone?.country_code || '+234';
+      personalDetails.phone_number = profile.contact?.phone?.number || '';
       personalDetails.blood_type = profile.blood_type || '';
       personalDetails.genotype = profile.genotype || '';
-      personalDetails.profile_image_preview = profile.profile_image || '';
+      personalDetails.marital_status = profile.marital_status || '';
+      personalDetails.occupation = profile.occupation || '';
+      personalDetails.profile_image_preview = profile.profile_image || profile.profile_photo || '';
     }
 
     // Address & Emergency Contact: Check if emergency contacts exist

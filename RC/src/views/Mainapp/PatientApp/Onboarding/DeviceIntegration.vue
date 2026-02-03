@@ -3,12 +3,14 @@
     <div class="step-scroll">
       <div class="step-content">
         <div class="step-header">
-          <button class="back-btn" @click="goBack">
-            <v-icon name="hi-arrow-left" scale="0.9" />
-            <span>Back</span>
-          </button>
-          <div class="step-info">
+          <div class="step-header-row">
+            <button class="back-btn" @click="goBack">
+              <v-icon name="hi-arrow-left" scale="0.9" />
+              <span>Back</span>
+            </button>
             <span class="step-badge optional">Step 8 of 9 - Optional</span>
+          </div>
+          <div class="step-info">
             <h1 class="step-title">Devices & Health Apps</h1>
             <p class="step-description">
               Connect your health devices and apps to automatically sync your health data.
@@ -342,6 +344,64 @@ const saveAndContinue = async () => {
 
     &::before {
       transform: translateX(24px);
+    }
+  }
+}
+
+/* Mobile Styles */
+@media (max-width: 768px) {
+  .app-card {
+    padding: 0.875rem;
+    gap: 0.75rem;
+  }
+
+  .app-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 0.625rem;
+  }
+
+  .app-info {
+    h4 {
+      font-size: 0.875rem;
+    }
+
+    p {
+      font-size: 0.6875rem;
+    }
+  }
+
+  .app-status {
+    font-size: 0.8125rem;
+  }
+
+  .toggle-item {
+    padding: 0.875rem;
+    gap: 0.75rem;
+  }
+
+  .toggle-info {
+    h4 {
+      font-size: 0.875rem;
+    }
+
+    p {
+      font-size: 0.75rem;
+    }
+  }
+
+  .toggle-input {
+    width: 44px;
+    height: 22px;
+    flex-shrink: 0;
+
+    &::before {
+      width: 18px;
+      height: 18px;
+    }
+
+    &:checked::before {
+      transform: translateX(22px);
     }
   }
 }

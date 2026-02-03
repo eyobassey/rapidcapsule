@@ -4,12 +4,14 @@
       <div class="step-content">
         <!-- Step Header -->
         <div class="step-header">
-          <button class="back-btn" @click="goBack">
-            <v-icon name="hi-arrow-left" scale="0.9" />
-            <span>Back</span>
-          </button>
-          <div class="step-info">
+          <div class="step-header-row">
+            <button class="back-btn" @click="goBack">
+              <v-icon name="hi-arrow-left" scale="0.9" />
+              <span>Back</span>
+            </button>
             <span class="step-badge required">Step 3 of 9 - Required</span>
+          </div>
+          <div class="step-info">
             <h1 class="step-title">Address & Emergency Contact</h1>
             <p class="step-description">
               Add your address and emergency contacts who can be reached on your behalf.
@@ -1052,5 +1054,83 @@ const saveToBackend = async () => {
   padding: 1rem 1.5rem;
   border-top: 1px solid #E2E8F0;
   background: #F8FAFC;
+}
+
+/* Mobile Styles */
+@media (max-width: 768px) {
+  .contact-card {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .contact-avatar {
+    width: 36px;
+    height: 36px;
+  }
+
+  .contact-info {
+    flex: 1 1 calc(100% - 100px);
+    min-width: 0;
+
+    h4 {
+      font-size: 0.875rem;
+    }
+
+    p {
+      font-size: 0.75rem;
+    }
+  }
+
+  .edit-btn, .remove-btn {
+    padding: 0.625rem;
+  }
+
+  .add-contact-btn {
+    padding: 1rem;
+  }
+
+  .contact-modal {
+    max-height: 95vh;
+    margin: 0.5rem;
+  }
+
+  .modal-header {
+    padding: 1rem;
+
+    h3 {
+      font-size: 1rem;
+    }
+  }
+
+  .modal-body {
+    padding: 1rem;
+
+    .phone-input-group {
+      flex-direction: column;
+      gap: 0.75rem;
+
+      .country-code-select {
+        width: 100%;
+      }
+    }
+  }
+
+  .modal-footer {
+    padding: 1rem;
+    flex-direction: column;
+
+    .btn-secondary, .btn-primary {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+
+  .checkbox-label {
+    padding: 0.625rem 0.875rem;
+
+    .checkbox-text {
+      font-size: 0.8125rem;
+    }
+  }
 }
 </style>

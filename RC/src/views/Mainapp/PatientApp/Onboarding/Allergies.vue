@@ -3,12 +3,14 @@
     <div class="step-scroll">
       <div class="step-content">
         <div class="step-header">
-          <button class="back-btn" @click="goBack">
-            <v-icon name="hi-arrow-left" scale="0.9" />
-            <span>Back</span>
-          </button>
-          <div class="step-info">
+          <div class="step-header-row">
+            <button class="back-btn" @click="goBack">
+              <v-icon name="hi-arrow-left" scale="0.9" />
+              <span>Back</span>
+            </button>
             <span class="step-badge optional">Step 6 of 9 - Recommended</span>
+          </div>
+          <div class="step-info">
             <h1 class="step-title">Allergies & Drug Reactions</h1>
             <p class="step-description">
               Document any allergies to help specialists prescribe safe medications.
@@ -366,6 +368,54 @@ const saveAndContinue = async () => {
   &:hover {
     border-color: #4FC3F7;
     color: #0288D1;
+  }
+}
+
+/* Mobile Styles */
+@media (max-width: 768px) {
+  .choice-btn {
+    padding: 1.5rem;
+    font-size: 0.9375rem;
+  }
+
+  .success-state {
+    padding: 2rem 1.5rem;
+
+    .success-icon {
+      width: 64px;
+      height: 64px;
+    }
+
+    h3 {
+      font-size: 1.125rem;
+    }
+
+    p {
+      font-size: 0.875rem;
+    }
+  }
+
+  .allergy-item {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .allergy-fields {
+    grid-template-columns: 1fr;
+
+    .form-input, .form-select {
+      font-size: 1rem;
+    }
+  }
+
+  .remove-btn {
+    align-self: flex-end;
+  }
+
+  .add-btn {
+    width: 100%;
+    justify-content: center;
+    padding: 1rem;
   }
 }
 </style>

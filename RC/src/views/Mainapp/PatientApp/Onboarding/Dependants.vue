@@ -3,12 +3,14 @@
     <div class="step-scroll">
       <div class="step-content">
         <div class="step-header">
-          <button class="back-btn" @click="goBack">
-            <v-icon name="hi-arrow-left" scale="0.9" />
-            <span>Back</span>
-          </button>
-          <div class="step-info">
+          <div class="step-header-row">
+            <button class="back-btn" @click="goBack">
+              <v-icon name="hi-arrow-left" scale="0.9" />
+              <span>Back</span>
+            </button>
             <span class="step-badge optional">Step 4 of 9 - Optional</span>
+          </div>
+          <div class="step-info">
             <h1 class="step-title">Dependants & Family Members</h1>
             <p class="step-description">
               Add family members whose health you manage. You can book appointments and track health records for them.
@@ -611,5 +613,79 @@ const saveAndContinue = async () => {
   padding: 1rem 1.5rem;
   border-top: 1px solid #E2E8F0;
   background: #F8FAFC;
+}
+
+/* Mobile Styles */
+@media (max-width: 768px) {
+  .empty-state {
+    padding: 2rem 1.5rem;
+
+    .empty-icon {
+      width: 64px;
+      height: 64px;
+    }
+
+    h3 {
+      font-size: 1rem;
+    }
+
+    p {
+      font-size: 0.875rem;
+    }
+  }
+
+  .dependant-card {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .dependant-avatar {
+    width: 40px;
+    height: 40px;
+  }
+
+  .dependant-info {
+    flex: 1 1 calc(100% - 120px);
+    min-width: 0;
+
+    h4 {
+      font-size: 0.875rem;
+    }
+
+    p {
+      font-size: 0.75rem;
+    }
+  }
+
+  .add-another-btn {
+    padding: 1rem;
+  }
+
+  .dependant-modal {
+    max-height: 95vh;
+    margin: 0.5rem;
+  }
+
+  .modal-header {
+    padding: 1rem;
+
+    h3 {
+      font-size: 1rem;
+    }
+  }
+
+  .modal-body {
+    padding: 1rem;
+  }
+
+  .modal-footer {
+    padding: 1rem;
+    flex-direction: column;
+
+    .btn-secondary, .btn-primary {
+      width: 100%;
+      justify-content: center;
+    }
+  }
 }
 </style>

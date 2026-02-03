@@ -629,15 +629,19 @@
 
 <script setup>
 import { ref, computed, inject, onMounted, watch, nextTick, defineEmits, watchEffect } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import { format, parseISO, isToday, isTomorrow, isYesterday, differenceInDays } from 'date-fns';
 import { useToast } from 'vue-toast-notification';
 import Loader from '@/components/Loader/main-loader.vue';
 import AppointmentCard from './components/AppointmentCard.vue';
 
 const router = useRouter();
+const route = useRoute();
 const $http = inject('$_HTTP');
 const $toast = useToast();
+
+// Payment verification state
+const isVerifyingPayment = ref(false);
 
 // Emit for parent component to open side nav
 const emit = defineEmits(['open-side-nav']);
@@ -1439,8 +1443,54 @@ const fetchAppointments = async () => {
   }
 };
 
-onMounted(() => {
-  fetchAppointments();
+// Check for payment verification on return from Paystack
+const checkPaymentReturn = async () => {
+  const paymentType = route.query.payment;
+  const reference = route.query.reference || route.query.trxref;
+  const appointmentId = route.query.appointmentId;
+
+  // Check if returning from Paystack for appointment payment
+  if (paymentType === 'appointment' && reference && appointmentId) {
+    isVerifyingPayment.value = true;
+    $toast.info('Verifying payment...');
+
+    try {
+      const { data } = await $http.$_verifyAppointmentTransaction({ reference });
+      const appointment = data?.data || data?.result || data;
+
+      if (appointment && (appointment.payment_status === 'SUCCESSFUL' || appointment.payment_status === 'Successful')) {
+        $toast.success('Payment verified successfully!');
+        // Clean up localStorage
+        localStorage.removeItem('pending_appointment_id');
+        localStorage.removeItem('pending_appointment_reference');
+        // Redirect to confirmation page
+        router.replace({
+          path: `/app/patient/appointmentsv2/confirmation/${appointmentId}`,
+        });
+      } else {
+        $toast.error('Payment verification failed. Please contact support.');
+        // Still redirect to appointments page without query params
+        router.replace({ path: '/app/patient/appointmentsv2' });
+      }
+    } catch (error) {
+      console.error('Payment verification error:', error);
+      $toast.error('Payment verification failed. Please try again.');
+      router.replace({ path: '/app/patient/appointmentsv2' });
+    } finally {
+      isVerifyingPayment.value = false;
+    }
+    return true; // Payment was being verified
+  }
+  return false; // No payment verification needed
+};
+
+onMounted(async () => {
+  // Check if returning from Paystack payment
+  const isVerifying = await checkPaymentReturn();
+  // Only fetch appointments if not in the middle of payment verification
+  if (!isVerifying) {
+    fetchAppointments();
+  }
 });
 </script>
 
@@ -1461,53 +1511,27 @@ $v2-error: #EF4444;
 $v2-warning: #FFC107;
 
 .appointmentsv2-page {
-  position: relative;
-  min-height: 100vh;
-  background: $v2-gray-bg;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
   font-family: 'Inter', system-ui, sans-serif;
-  overflow-x: hidden; // Prevent horizontal scroll from negative margins
+  overflow-x: hidden;
 }
 
+// Hide decorative background
 .bg-decoration {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 400px;
-  pointer-events: none;
-  z-index: 0;
-
-  .gradient-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 100%;
-    background: linear-gradient(to bottom, rgba($v2-sky-light, 0.3), transparent);
-  }
-
-  .blur-circle {
-    position: absolute;
-    right: 0;
-    top: 80px;
-    width: 256px;
-    height: 256px;
-    background: rgba($v2-sky, 0.05);
-    border-radius: 50%;
-    filter: blur(60px);
-  }
+  display: none;
 }
 
 .page-content {
+  flex: 1;
   position: relative;
   z-index: 1;
-  max-width: 1200px;
+  width: 100%;
+  max-width: 1400px;
   margin: 0 auto;
-  padding: 32px 32px 48px;
-
-  @media (max-width: 768px) {
-    padding: 20px 16px 32px;
-  }
+  padding: 2rem 2rem 100px;
 }
 
 // Hero Banner
@@ -2636,7 +2660,7 @@ $v2-warning: #FFC107;
 @media (max-width: 768px) {
   // Page content adjustments
   .page-content {
-    padding: 12px 12px 140px;
+    padding: 20px 16px 100px;
   }
 
   // Hero banner mobile
@@ -2843,7 +2867,7 @@ $v2-warning: #FFC107;
 // Extra small screens (iPhone SE, etc.)
 @media (max-width: 375px) {
   .page-content {
-    padding: 8px 8px 140px;
+    padding: 16px 12px 100px;
   }
 
   .hero-banner {

@@ -52,6 +52,7 @@ export default {
 		height: 100%;
 		min-width: 10%;
 		overflow-x: hidden;
+		overflow-y: auto;
 
 		@include responsive(phone) {
 			border-right: none;

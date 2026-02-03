@@ -56,6 +56,10 @@ export class CreateAppointmentDto {
   patient_notes?: string;
 
   @IsOptional()
+  @IsString()
+  health_checkup_id?: string;
+
+  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => SharedDocumentDto)

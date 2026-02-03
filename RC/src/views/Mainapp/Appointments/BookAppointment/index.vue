@@ -81,6 +81,11 @@ const nextButtonLabel = computed(() => {
 });
 
 onMounted(async () => {
+  // If coming from health check, load the stored data
+  if (state.fromHealthCheck || route.query.from_health_check === 'true') {
+    state.loadHealthCheckFromSession();
+  }
+
   // If followup or reschedule mode, pre-fetch specialist info
   if ((state.mode === 'followup' || state.mode === 'reschedule') && route.query.specialistId) {
     try {

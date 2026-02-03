@@ -136,15 +136,30 @@ export class VitalsService {
       { selectFields: vitalToSelect },
     );
 
-    const startDate =
-      start_date || moment().subtract(6, 'months').format('YYYY-MM-DD');
-    const endDate = end_date || moment().format('YYYY-MM-DD');
+    // Default to 6 months back, use start of day
+    const startDate = start_date
+      ? moment(start_date).startOf('day')
+      : moment().subtract(6, 'months').startOf('day');
+
+    // Default to today, use end of day to include all data from today
+    const endDate = end_date
+      ? moment(end_date).endOf('day')
+      : moment().endOf('day');
 
     const selectedVital = vital?.[vitalToSelect];
+
+    if (!selectedVital || !Array.isArray(selectedVital)) {
+      return [];
+    }
 
     const data = selectedVital.filter((d) =>
       moment(d.updatedAt).isBetween(startDate, endDate, undefined, '[]'),
     );
-    return this.generalHelpers.groupByDate(data, 'updatedAt');
+
+    // Group by date and sort chronologically
+    const groupedData = this.generalHelpers.groupByDate(data, 'updatedAt');
+    return groupedData.sort((a, b) =>
+      moment(a.date).valueOf() - moment(b.date).valueOf()
+    );
   }
 }

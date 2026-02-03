@@ -409,7 +409,23 @@ const submitBooking = async () => {
       }
     }
 
+    // Check if payment is required (card payment via Paystack)
+    if (appointmentData.payment_required && appointmentData.authorization_url) {
+      $toast.info('Redirecting to payment...');
+      // Store appointment data for after payment
+      localStorage.setItem('pending_appointment_id', appointmentId);
+      localStorage.setItem('pending_appointment_reference', appointmentData.payment_reference || '');
+      // Redirect to Paystack
+      window.location.href = appointmentData.authorization_url;
+      return;
+    }
+
     $toast.success('Appointment booked successfully!');
+
+    // Clear health check session data if present
+    if (state.hasHealthCheckData) {
+      state.clearHealthCheckSession();
+    }
 
     // Navigate to confirmation page with appointment data
     router.push({
@@ -512,8 +528,8 @@ const calculateAgo = (date) => {
 onMounted(() => {
   fetchVitals();
 
-  // Initialize from route query params (for "Book Again" flow)
-  if (route.query.specialistId || route.query.category) {
+  // Initialize from route query params (for "Book Again" flow or health check)
+  if (route.query.specialistId || route.query.category || route.query.from_health_check) {
     state.initFromRoute(route.query);
   }
 });

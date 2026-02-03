@@ -27,7 +27,13 @@ export class DoesUserHaveCard implements CanActivate {
       return true;
     }
 
-    // Otherwise, check for saved cards
+    // If card/paystack payment is selected, allow direct Paystack checkout
+    // (user will pay via Paystack redirect, no saved card required)
+    if (paymentMethod === 'card' || paymentMethod === 'paystack') {
+      return true;
+    }
+
+    // For other payment methods, check for saved cards
     const cards = await this.cardService.getUserCards(request.user.sub);
     if (!cards?.length) {
       throw new ForbiddenException(Messages.NO_CARD_SAVED);

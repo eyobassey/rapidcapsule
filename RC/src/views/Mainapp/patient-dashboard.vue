@@ -1,3 +1,9 @@
+<!--
+  @deprecated This dashboard is deprecated as of February 2026.
+  Use patient-dashboard-v2.vue instead.
+  This file is kept at /app/patient/dashboard-legacy for rollback purposes only.
+  Will be removed in a future release.
+-->
 <template>
 	<div class="dashboard">
 		<TopBar type="avatar" @open-side-nav="$emit('openSideNav')" />

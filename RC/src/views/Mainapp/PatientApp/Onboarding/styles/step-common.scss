@@ -25,6 +25,13 @@
   margin-bottom: 2rem;
 }
 
+.step-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+
 .back-btn {
   display: inline-flex;
   align-items: center;
@@ -36,7 +43,6 @@
   font-size: 0.875rem;
   color: #64748B;
   cursor: pointer;
-  margin-bottom: 1.5rem;
   transition: all 0.2s;
 
   &:hover {
@@ -50,14 +56,14 @@
 }
 
 .step-badge {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
   font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.025em;
   padding: 0.25rem 0.75rem;
   border-radius: 9999px;
-  margin-bottom: 0.75rem;
 
   &.required {
     background: #FEE2E2;
@@ -275,16 +281,130 @@
   }
 }
 
-@media (max-width: 640px) {
+/* Mobile Responsive Styles */
+@media (max-width: 768px) {
   .step-scroll {
     padding: 1rem;
   }
 
+  .step-content {
+    max-width: 100%;
+  }
+
+  .step-header {
+    margin-bottom: 1.25rem;
+  }
+
+  .step-header-row {
+    margin-bottom: 1rem;
+  }
+
+  .back-btn {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8125rem;
+
+    span {
+      display: none;
+    }
+  }
+
+  .step-badge {
+    font-size: 0.625rem;
+    padding: 0.25rem 0.5rem;
+  }
+
   .step-title {
-    font-size: 1.5rem;
+    font-size: 1.375rem;
+    line-height: 1.3;
+  }
+
+  .step-description {
+    font-size: 0.875rem;
+  }
+
+  .form-sections {
+    gap: 1.25rem;
   }
 
   .form-section {
     padding: 1.25rem;
+    border-radius: 0.75rem;
+  }
+
+  .section-title {
+    font-size: 0.9375rem;
+  }
+
+  .section-description {
+    font-size: 0.8125rem;
+    margin-bottom: 1rem;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .form-group.full-width {
+    grid-column: span 1;
+  }
+
+  .form-label {
+    font-size: 0.8125rem;
+  }
+
+  .form-input, .form-select {
+    padding: 0.875rem 1rem;
+    font-size: 1rem; /* Prevent iOS zoom */
+  }
+
+  .phone-input-group {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .country-code-select {
+    width: 100%;
+    padding: 0.875rem;
+    font-size: 1rem;
+  }
+
+  .step-footer {
+    flex-direction: column-reverse;
+    gap: 1rem;
+    padding-top: 1.25rem;
+    margin-top: 1.5rem;
+  }
+
+  .footer-info {
+    font-size: 0.75rem;
+    text-align: center;
+  }
+
+  .footer-actions {
+    width: 100%;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .btn-secondary, .btn-primary, .btn-skip {
+    width: 100%;
+    justify-content: center;
+    padding: 1rem 1.5rem;
+  }
+}
+
+/* Extra small screens */
+@media (max-width: 380px) {
+  .step-scroll {
+    padding: 0.75rem;
+  }
+
+  .form-section {
+    padding: 1rem;
+  }
+
+  .step-title {
+    font-size: 1.25rem;
   }
 }

@@ -271,13 +271,14 @@ export class AdvancedHealthScoreService {
     }
 
     const creditStatus = await this.claudeCreditsService.canGenerateSummary(userId);
+    const fullCreditStatus = await this.claudeCreditsService.getCreditStatus(userId);
 
-    // Check if user has enough credits
-    const creditsAvailable =
-      creditStatus.credits_remaining === 'unlimited'
+    // Check if user has enough credits - use total_available for display
+    const totalCreditsAvailable =
+      fullCreditStatus.total_available === 'unlimited'
         ? 999
-        : creditStatus.credits_remaining;
-    const hasEnoughCredits = creditsAvailable >= settings.credit_cost;
+        : fullCreditStatus.total_available as number;
+    const hasEnoughCredits = totalCreditsAvailable >= settings.credit_cost;
 
     // Get previous assessment answers (within last 6 months)
     let previousAnswers: Record<string, any> | null = null;
@@ -313,7 +314,7 @@ export class AdvancedHealthScoreService {
       can_start: creditStatus.can_generate && hasEnoughCredits,
       reason: hasEnoughCredits ? null : 'Insufficient credits',
       credits_required: settings.credit_cost,
-      credits_available: creditStatus.credits_remaining,
+      credits_available: fullCreditStatus.total_available,
       credit_source: creditStatus.source,
       max_documents: settings.max_documents,
       allowed_file_types: settings.allowed_file_types,

@@ -273,6 +273,12 @@ const apiFactory = {
   $_getWalletBalance() {
     return http.get("/wallets/balance");
   },
+  $_fundWallet(payload) {
+    return http.post("/wallets/fund", payload);
+  },
+  $_verifyWalletFunding(payload) {
+    return http.post("/wallets/fund/verify", payload);
+  },
   $_getClaudeSummaryTransactions(params = {}) {
     return http.get("/claude-summary/transactions", { params });
   },
@@ -1022,6 +1028,14 @@ const apiFactory = {
     return http.post('/appointments/specialist/process-payment', payload);
   },
 
+  /**
+   * Verify appointment payment transaction (Paystack)
+   * @param {Object} payload - { reference }
+   */
+  $_verifyAppointmentTransaction(payload) {
+    return http.post('/appointments/transactions/verify', payload);
+  },
+
   // Note: $_getPatientWalletBalance is already defined above at line 529
   // using endpoint: /specialist/prescriptions/patient/${patientId}/wallet-balance
 
@@ -1030,6 +1044,72 @@ const apiFactory = {
    */
   $_getSpecialistWallet() {
     return http.get('/specialist/wallet');
+  },
+
+  // ========================================
+  // Health Tips APIs
+  // ========================================
+
+  /**
+   * Get featured health tips for dashboard display
+   * @param {Object} params - { limit }
+   */
+  $_getFeaturedHealthTips(params = {}) {
+    return http.get('/health-tips/featured', { params });
+  },
+
+  /**
+   * Get all health tips with filtering
+   * @param {Object} params - { category, priority, limit, include_dismissed }
+   */
+  $_getHealthTips(params = {}) {
+    return http.get('/health-tips', { params });
+  },
+
+  /**
+   * Get health tips summary by category and priority
+   */
+  $_getHealthTipsSummary() {
+    return http.get('/health-tips/summary');
+  },
+
+  /**
+   * Dismiss a health tip
+   * @param {string} tipId - The tip ID
+   */
+  $_dismissHealthTip(tipId) {
+    return http.post(`/health-tips/${tipId}/dismiss`);
+  },
+
+  /**
+   * Mark a health tip as acted upon
+   * @param {string} tipId - The tip ID
+   */
+  $_markHealthTipActed(tipId) {
+    return http.post(`/health-tips/${tipId}/acted`);
+  },
+
+  /**
+   * Track that a health tip was viewed
+   * @param {string} tipId - The tip ID
+   */
+  $_trackHealthTipView(tipId) {
+    return http.post(`/health-tips/${tipId}/viewed`);
+  },
+
+  /**
+   * Manually trigger health tips generation
+   */
+  $_generateHealthTips() {
+    return http.post('/health-tips/generate');
+  },
+
+  /**
+   * Get health tips history
+   * @param {Object} params - { page, limit }
+   */
+  $_getHealthTipsHistory(params = {}) {
+    return http.get('/health-tips/history', { params });
   },
 };
 export default apiFactory;

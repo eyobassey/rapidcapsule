@@ -153,6 +153,18 @@ onUnmounted(() => {
                   </VListItemSubtitle>
                 </VListItem>
 
+                <VListItem v-else-if="batch.category === 'WALLET_TOPUP'">
+                  <template #prepend>
+                    <VIcon icon="mdi-bank" class="me-2" color="success" />
+                  </template>
+                  <VListItemTitle>From</VListItemTitle>
+                  <VListItemSubtitle>
+                    <VChip color="success" size="small" label>
+                      Paystack Payment Gateway
+                    </VChip>
+                  </VListItemSubtitle>
+                </VListItem>
+
                 <VListItem v-if="batch.to_user">
                   <template #prepend>
                     <VIcon icon="mdi-account-arrow-left" class="me-2" />

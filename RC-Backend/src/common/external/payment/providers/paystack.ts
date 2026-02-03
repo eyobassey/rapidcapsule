@@ -56,15 +56,20 @@ export class Paystack implements IPaymentInterface {
     metadata?: any,
   ) {
     const url = `${this.baseUrl}${this.initializeTransactionUrl}`;
-    const data = {
+    const data: any = {
       email,
       amount: (+amount * 100).toString(),
       reference,
       metadata,
       channels: ['card'],
     };
+    // Add callback_url if provided in metadata
+    if (metadata?.callback_url) {
+      data.callback_url = metadata.callback_url;
+    }
+    this.logger.log(`Initializing transaction for ${email} with callback: ${data.callback_url || 'none'}`);
+    this.logger.log(`Request data: ${JSON.stringify(data)}`);
     const response = await post(url, data, { headers: this.headers });
-    this.logger.log(`Initializing transaction for ${email}`);
     return response;
   }
 

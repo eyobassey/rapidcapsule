@@ -12,6 +12,7 @@ import { create, find, findOne, updateOne } from 'src/common/crud/crud';
 import { GeneralHelpers } from '../../common/helpers/general.helpers';
 import { Messages } from '../../core/messages/messages';
 import { WithdrawFundDto } from './dto/withdraw-wallet-fund.dto';
+import { FundWalletDto } from './dto/fund-wallet.dto';
 import {
   TransactionType,
   WalletTransaction,
@@ -553,5 +554,83 @@ export class WalletsService {
     }
 
     return { newBalance, transaction };
+  }
+
+  /**
+   * Initialize wallet funding via Paystack
+   */
+  async initializeFunding(
+    userId: Types.ObjectId,
+    email: string,
+    dto: FundWalletDto,
+  ) {
+    const reference = this.generalHelpers.genTxReference();
+
+    // Initialize payment with Paystack
+    // Note: Paystack provider already converts to kobo, so pass amount in Naira
+    const paymentResponse = await this.paymentHandler.initializeTransaction(
+      email,
+      dto.amount,
+      reference,
+      {
+        type: 'patient_wallet_topup',
+        user_id: userId.toString(),
+        callback_url: dto.callback_url,
+      },
+    );
+
+    this.logger.log(`Paystack response: ${JSON.stringify(paymentResponse)}`);
+
+    return {
+      authorization_url: paymentResponse.data?.data?.authorization_url,
+      reference,
+      amount: dto.amount,
+    };
+  }
+
+  /**
+   * Verify wallet funding and credit wallet
+   */
+  async verifyFunding(userId: Types.ObjectId, reference: string) {
+    // Check if already processed
+    const existingTxn = await this.walletTxnModel.findOne({
+      reference,
+      userId,
+      type: TransactionType.CREDIT,
+    });
+
+    if (existingTxn) {
+      const wallet = await findOne(this.walletModel, { userId });
+      return {
+        success: true,
+        message: 'Payment already processed',
+        transaction: existingTxn,
+        new_balance: wallet?.available_balance || 0,
+      };
+    }
+
+    // Verify with Paystack
+    const verification = await this.paymentHandler.verifyTransaction(reference);
+
+    if (verification.data?.status !== 'success') {
+      throw new BadRequestException('Payment verification failed');
+    }
+
+    const amount = verification.data.amount / 100; // Convert from kobo
+
+    // Credit wallet using existing method
+    const { newBalance, transaction } = await this.creditWallet(
+      userId,
+      amount,
+      reference,
+      'Wallet top-up via Paystack',
+    );
+
+    return {
+      success: true,
+      message: 'Wallet credited successfully',
+      transaction,
+      new_balance: newBalance,
+    };
   }
 }

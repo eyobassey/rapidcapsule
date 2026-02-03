@@ -3,12 +3,14 @@
     <div class="step-scroll">
       <div class="step-content">
         <div class="step-header">
-          <button class="back-btn" @click="goBack">
-            <v-icon name="hi-arrow-left" scale="0.9" />
-            <span>Back</span>
-          </button>
-          <div class="step-info">
+          <div class="step-header-row">
+            <button class="back-btn" @click="goBack">
+              <v-icon name="hi-arrow-left" scale="0.9" />
+              <span>Back</span>
+            </button>
             <span class="step-badge optional">Step 5 of 9 - Optional</span>
+          </div>
+          <div class="step-info">
             <h1 class="step-title">Vitals & Health Metrics</h1>
             <p class="step-description">
               Record your basic health metrics for accurate health assessments.
@@ -539,5 +541,53 @@ const saveAndContinue = async () => {
   margin-top: 0.5rem;
   font-size: 0.75rem;
   font-weight: 600;
+}
+
+/* Mobile Styles */
+@media (max-width: 768px) {
+  .input-with-unit {
+    .form-input {
+      font-size: 1rem;
+    }
+  }
+
+  .unit-select, .unit-label {
+    font-size: 0.8125rem;
+    padding: 0.625rem;
+  }
+
+  .bmi-display {
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1.25rem;
+    text-align: center;
+  }
+
+  .bmi-value .bmi-number {
+    font-size: 1.75rem;
+  }
+
+  .bmi-category {
+    font-size: 1rem;
+  }
+
+  .vital-status-display {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    padding: 1rem;
+  }
+
+  .vital-status-icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .vital-status-reading {
+    font-size: 1.125rem;
+  }
+
+  .vital-status-label {
+    font-size: 0.8125rem;
+  }
 }
 </style>

@@ -365,6 +365,9 @@ export class Appointment {
   @Prop({ type: String })
   patient_notes: string;
 
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'HealthCheckup' })
+  health_checkup_id: Types.ObjectId;
+
   @Prop({ type: String })
   private_notes: string;
 

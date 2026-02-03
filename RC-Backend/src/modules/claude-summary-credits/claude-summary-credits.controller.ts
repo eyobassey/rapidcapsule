@@ -6,6 +6,7 @@ import {
   Query,
   Request,
   UseGuards,
+  Header,
 } from '@nestjs/common';
 import { ClaudeSummaryCreditsService } from './claude-summary-credits.service';
 import { sendSuccessResponse } from '../../core/responses/success.responses';
@@ -23,6 +24,8 @@ export class ClaudeSummaryCreditsController {
    * GET /claude-summary/credits
    */
   @Get('credits')
+  @Header('Cache-Control', 'no-store, no-cache, must-revalidate')
+  @Header('Pragma', 'no-cache')
   async getCreditStatus(@Request() req) {
     const result = await this.claudeSummaryCreditsService.getCreditStatus(req.user.sub);
     return sendSuccessResponse('Credit status retrieved', result);
@@ -43,6 +46,8 @@ export class ClaudeSummaryCreditsController {
    * GET /claude-summary/can-generate
    */
   @Get('can-generate')
+  @Header('Cache-Control', 'no-store, no-cache, must-revalidate')
+  @Header('Pragma', 'no-cache')
   async canGenerateSummary(@Request() req) {
     const result = await this.claudeSummaryCreditsService.canGenerateSummary(req.user.sub);
     return sendSuccessResponse('Availability checked', result);

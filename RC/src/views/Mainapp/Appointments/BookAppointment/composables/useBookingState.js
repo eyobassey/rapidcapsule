@@ -3,6 +3,7 @@ import { ref, computed, reactive } from 'vue';
 export function useBookingState(route) {
   const mode = ref(route?.query?.mode || 'new');
   const currentStep = ref(parseInt(route?.query?.step) || 1);
+  const fromHealthCheck = ref(route?.query?.from_health_check === 'true');
 
   const specialty = reactive({
     professional_category: route?.query?.category || '',
@@ -35,6 +36,19 @@ export function useBookingState(route) {
   const rescheduleData = reactive({
     appointmentId: route?.query?.appointmentId || '',
   });
+
+  // Health check data for prefilling patient notes
+  const healthCheckData = reactive({
+    checkup_id: route?.query?.checkup_id || '',
+    conditions: [],
+    symptoms: [],
+    triage_level: '',
+    patient_note: '',
+    assessment_date: '',
+  });
+
+  // Patient notes for the appointment
+  const patientNotes = ref('');
 
   // Minimum step based on mode
   const minStep = computed(() => {
@@ -75,6 +89,8 @@ export function useBookingState(route) {
     meeting_channel: schedule.meeting_channel,
     paymentMethod: payment.paymentMethod,
     ...(payment.paymentMethod === 'card' && payment.selectedCard ? { cardId: payment.selectedCard } : {}),
+    ...(patientNotes.value ? { patient_notes: patientNotes.value } : {}),
+    ...(healthCheckData.checkup_id ? { health_checkup_id: healthCheckData.checkup_id } : {}),
   }));
 
   // Payload for rescheduling
@@ -129,10 +145,46 @@ export function useBookingState(route) {
     specialty.specialist_category = data.specialist_category || '';
   }
 
+  // Set health check data from session storage
+  function setHealthCheckData(data) {
+    healthCheckData.checkup_id = data.checkup_id || '';
+    healthCheckData.conditions = data.conditions || [];
+    healthCheckData.symptoms = data.symptoms || [];
+    healthCheckData.triage_level = data.triage_level || '';
+    healthCheckData.patient_note = data.patient_note || '';
+    healthCheckData.assessment_date = data.assessment_date || '';
+
+    // Pre-fill patient notes if available
+    if (data.patient_note) {
+      patientNotes.value = data.patient_note;
+    }
+  }
+
+  // Load health check data from session storage
+  function loadHealthCheckFromSession() {
+    try {
+      const stored = sessionStorage.getItem('healthCheckForBooking');
+      if (stored) {
+        const data = JSON.parse(stored);
+        setHealthCheckData(data);
+        return true;
+      }
+    } catch (e) {
+      console.error('Error loading health check data:', e);
+    }
+    return false;
+  }
+
+  // Clear health check session data
+  function clearHealthCheckSession() {
+    sessionStorage.removeItem('healthCheckForBooking');
+  }
+
   // Reset state
   function reset() {
     mode.value = 'new';
     currentStep.value = 1;
+    fromHealthCheck.value = false;
     specialty.professional_category = '';
     specialty.specialist_category = '';
     specialist.id = '';
@@ -149,16 +201,26 @@ export function useBookingState(route) {
     payment.selectedCard = null;
     payment.termsAccepted = false;
     rescheduleData.appointmentId = '';
+    healthCheckData.checkup_id = '';
+    healthCheckData.conditions = [];
+    healthCheckData.symptoms = [];
+    healthCheckData.triage_level = '';
+    healthCheckData.patient_note = '';
+    healthCheckData.assessment_date = '';
+    patientNotes.value = '';
   }
 
   return {
     mode,
     currentStep,
+    fromHealthCheck,
     specialty,
     specialist,
     schedule,
     payment,
     rescheduleData,
+    healthCheckData,
+    patientNotes,
     minStep,
     totalSteps,
     canProceed,
@@ -170,6 +232,9 @@ export function useBookingState(route) {
     goToStep,
     setSpecialist,
     setSpecialty,
+    setHealthCheckData,
+    loadHealthCheckFromSession,
+    clearHealthCheckSession,
     reset,
   };
 }

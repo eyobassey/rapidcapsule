@@ -680,13 +680,17 @@ export class UsersService {
     // Generate presigned URL for profile photo if it exists
     if (user.profile?.profile_photo) {
       try {
-        const presignedUrl = await this.fileUpload.getPresignedUrl(
+        const presignedUrl = await this.fileUpload.resolveProfileImage(
           user.profile.profile_photo,
-          604800, // 7 days expiration
         );
-        user.profile.profile_photo = presignedUrl;
+        // Only update if we got a valid URL back
+        if (presignedUrl) {
+          user.profile.profile_photo = presignedUrl;
+        }
       } catch (e) {
         this.logger.error(`Error generating presigned URL for profile photo: ${e}`);
+        // Clear the photo if presigning fails so frontend shows fallback avatar
+        (user.profile as any).profile_photo = undefined;
       }
     }
 
@@ -955,16 +959,29 @@ export class UsersService {
       let buffer: Buffer;
       let extension = 'jpg';
 
+      // Log input for debugging (first 100 chars to avoid huge logs)
+      this.logger.log(`Profile photo input length: ${base64?.length || 0}, preview: ${base64?.substring(0, 100)}...`);
+
       // Check if it's a data URL (e.g., data:image/jpeg;base64,...)
-      const matches = base64.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+      // Use [\s\S]+ instead of .+ to match any character including newlines
+      const matches = base64.match(/^data:([A-Za-z0-9-+\/]+);base64,([\s\S]+)$/);
       if (matches?.length === 3) {
         // Extract the base64 part and determine extension
-        buffer = Buffer.from(matches[2], 'base64');
+        const base64Data = matches[2].replace(/\s/g, ''); // Remove any whitespace
+        buffer = Buffer.from(base64Data, 'base64');
         const mimeExt = mime.extension(matches[1]);
         if (mimeExt) extension = mimeExt;
+        this.logger.log(`Parsed data URL: mime=${matches[1]}, extension=${extension}, buffer size=${buffer.length}`);
       } else {
         // Assume it's pure base64
+        this.logger.warn(`Profile photo does not match data URL format, treating as raw base64`);
         buffer = Buffer.from(base64, 'base64');
+      }
+
+      // Validate buffer has reasonable size (at least 1KB for a real image)
+      if (buffer.length < 1024) {
+        this.logger.error(`Profile photo buffer too small (${buffer.length} bytes), likely corrupted input`);
+        throw new Error(`Invalid image data: buffer size ${buffer.length} bytes is too small`);
       }
 
       this.logger.log('Uploading profile photo to S3 bucket');

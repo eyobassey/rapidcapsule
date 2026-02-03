@@ -34,7 +34,7 @@
 </template>
 
 <script setup>
-import { ref, provide } from "vue";
+import { ref, provide, watch, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import Loader from "@/components/Loader/main-loader.vue";
 import { mapGetters } from "@/utilities/utilityStore";
@@ -76,6 +76,43 @@ provide('$_PATIENT_INFO', { patientInfo, usePatientInfo });
 provide('$_NAVIGATOR', { navigator, useNavigator });
 provide('$_DIAGNOSIS', { diagnosis, useDiagnosis });
 provide('$_RECOMMENDATION', { recommendation, useRecommendation });
+
+// Scroll to top when navigating between steps
+watch(() => navigator.value.current, () => {
+  nextTick(() => {
+    // Scroll all possible containers to top
+    // 1. Window
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    // 2. Document elements
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+
+    // 3. The .content container (patient-app.vue desktop layout)
+    const contentContainer = document.querySelector('.content');
+    if (contentContainer) {
+      contentContainer.scrollTop = 0;
+    }
+
+    // 4. The health checkup page itself
+    const healthCheckupPage = document.querySelector('.health-checkup-page');
+    if (healthCheckupPage) {
+      healthCheckupPage.scrollTop = 0;
+    }
+
+    // 5. The page-content wrapper
+    const pageContent = document.querySelector('.page-content');
+    if (pageContent) {
+      pageContent.scrollTop = 0;
+    }
+
+    // 6. Main wrapper if it exists
+    const mainWrapper = document.querySelector('.main-wrapper');
+    if (mainWrapper) {
+      mainWrapper.scrollTop = 0;
+    }
+  });
+});
 </script>
 
 <style scoped lang="scss">
@@ -165,7 +202,7 @@ $rose: #F43F5E;
 .page-content {
   flex: 1;
   width: 100%;
-  max-width: 1200px;
+  max-width: 1500px;
   margin: 0 auto;
   padding: 32px 48px 120px;
   overflow-x: hidden;

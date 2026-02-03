@@ -9,6 +9,7 @@ import {
   UseGuards,
   UseInterceptors,
   UploadedFile,
+  Header,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { AdvancedHealthScoreService } from './advanced-health-score.service';
@@ -28,6 +29,8 @@ export class AdvancedHealthScoreController {
    * GET /advanced-health-score/can-start
    */
   @Get('can-start')
+  @Header('Cache-Control', 'no-store, no-cache, must-revalidate')
+  @Header('Pragma', 'no-cache')
   async canStartAssessment(@Request() req) {
     const result = await this.advancedHealthScoreService.canStartAssessment(
       req.user.sub,

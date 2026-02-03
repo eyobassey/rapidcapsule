@@ -188,12 +188,34 @@ const fetchTimeSlots = async (date) => {
     const result = data?.result || data?.data || data || {};
 
     // Extract times array for the selected date
+    // Backend returns { "YYYY-MM-DD": { available: [...], booked: [...] } }
     let timesArray = [];
     if (Array.isArray(result)) {
       timesArray = result;
     } else if (typeof result === 'object' && result !== null) {
-      // Result is keyed by date like { "2026-01-28": ["09:00", "09:30", ...] }
-      timesArray = result[formattedDate] || Object.values(result).flat() || [];
+      const dateResult = result[formattedDate];
+      if (dateResult) {
+        // New format: { available: [...], booked: [...] }
+        if (dateResult.available && Array.isArray(dateResult.available)) {
+          timesArray = dateResult.available;
+        } else if (Array.isArray(dateResult)) {
+          // Old format: direct array of times
+          timesArray = dateResult;
+        }
+      } else {
+        // Try to get from first available date
+        const firstDate = Object.keys(result)[0];
+        if (firstDate && result[firstDate]) {
+          const firstResult = result[firstDate];
+          timesArray = firstResult.available || (Array.isArray(firstResult) ? firstResult : []);
+        }
+      }
+    }
+
+    // Ensure timesArray is always an array
+    if (!Array.isArray(timesArray)) {
+      console.warn('timesArray is not an array, using empty array. Result:', result);
+      timesArray = [];
     }
 
     timeSlots.value = timesArray.map((slot) => {

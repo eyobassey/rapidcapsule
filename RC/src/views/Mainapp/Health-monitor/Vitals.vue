@@ -1,39 +1,49 @@
 <template>
   <div class="vitals-page">
-    <TopBar
-      type="title-only"
-      title="Vitals"
-      :show-search-bar="false"
-      @open-side-nav="$emit('openSideNav')"
-    />
-
-    <div class="vitals-page__content">
-      <!-- Hero Banner -->
-      <div class="vitals-hero">
-        <div class="vitals-hero__content">
-          <div class="vitals-hero__icon">
-            <v-icon name="hi-heart" />
-          </div>
-          <h1 class="vitals-hero__title">Health Vitals</h1>
-          <p class="vitals-hero__subtitle">Track and monitor your health metrics over time</p>
-        </div>
-        <div class="vitals-hero__decoration">
-          <div class="decoration-circle decoration-circle--1"></div>
-          <div class="decoration-circle decoration-circle--2"></div>
-        </div>
+    <!-- Mobile Header -->
+    <header class="mobile-header">
+      <button class="menu-btn" @click="$emit('openSideNav')">
+        <v-icon name="hi-menu-alt-2" scale="1.2" />
+      </button>
+      <div class="header-logo">
+        <img src="/RapidCapsule_Logo.png" alt="Rapid Capsule" />
       </div>
+      <button class="notification-btn" @click="goToNotifications">
+        <v-icon name="hi-bell" scale="1.1" />
+      </button>
+    </header>
+
+    <!-- Page Content -->
+    <div class="page-content">
+      <!-- Page Header -->
+      <header class="page-header">
+        <div class="header-content">
+          <div class="header-text">
+            <h1>Health Vitals</h1>
+            <p>Track and monitor your health metrics over time</p>
+          </div>
+          <button v-if="vitalList.length < 5" class="add-vital-btn" @click="openAddModal">
+            <v-icon name="hi-plus" />
+            <span>Log Vital</span>
+          </button>
+        </div>
+      </header>
 
       <!-- Empty State -->
-      <div v-if="!vitalList.length" class="vitals-empty">
-        <div class="vitals-empty__illustration">
-          <div class="illustration-circle">
-            <v-icon name="hi-chart-bar" />
+      <div v-if="!vitalList.length" class="empty-state">
+        <div class="empty-illustration">
+          <div class="illustration-rings">
+            <div class="ring ring-1"></div>
+            <div class="ring ring-2"></div>
+            <div class="ring ring-3"></div>
           </div>
-          <div class="illustration-pulse"></div>
+          <div class="illustration-icon">
+            <v-icon name="hi-heart" scale="2" />
+          </div>
         </div>
-        <h3 class="vitals-empty__title">Start Tracking Your Health</h3>
-        <p class="vitals-empty__desc">Add your first vital to begin monitoring your health metrics</p>
-        <button class="vitals-empty__btn" @click="openAddModal">
+        <h2>Start Tracking Your Health</h2>
+        <p>Add your first vital sign to begin monitoring your health metrics and see trends over time.</p>
+        <button class="empty-cta" @click="openAddModal">
           <v-icon name="hi-plus" />
           Add Your First Vital
         </button>
@@ -41,67 +51,79 @@
 
       <!-- Main Content -->
       <template v-if="vitalList.length">
-        <!-- Quick Stats -->
-        <div class="quick-stats">
+        <!-- Vitals Overview Grid -->
+        <section class="vitals-grid">
           <div
             v-for="(vital, index) in recentvitalarray"
             :key="index"
-            class="stat-card"
+            class="vital-card"
             :class="getVitalColorClass(vital.name)"
           >
-            <div class="stat-card__icon">
-              <v-icon :name="getVitalIcon(vital.name)" />
+            <div class="vital-card__header">
+              <div class="vital-icon">
+                <v-icon :name="getVitalIcon(vital.name)" scale="1.1" />
+              </div>
+              <button class="edit-btn" @click="updateVital(vital)" title="Update">
+                <v-icon name="hi-pencil" scale="0.75" />
+              </button>
             </div>
-            <div class="stat-card__content">
-              <span class="stat-card__label">{{ vital.name }}</span>
-              <div class="stat-card__value">
+            <div class="vital-card__body">
+              <span class="vital-label">{{ vital.name }}</span>
+              <div class="vital-value">
                 <span class="value">{{ vital.value }}</span>
                 <span class="unit">{{ vital.unit }}</span>
               </div>
             </div>
-            <button class="stat-card__edit" @click="updateVital(vital)">
-              <v-icon name="hi-pencil" />
-            </button>
-          </div>
-          <!-- BMI Card (calculated from weight + height) -->
-          <div
-            v-if="bmiData"
-            class="stat-card vital--bmi"
-          >
-            <div class="stat-card__icon">
-              <v-icon name="hi-chart-bar" />
-            </div>
-            <div class="stat-card__content">
-              <span class="stat-card__label">BMI</span>
-              <div class="stat-card__value">
-                <span class="value">{{ bmiData.value }}</span>
+            <div class="vital-card__footer">
+              <div class="status-indicator" :class="getVitalStatusClass(vital)">
+                <v-icon :name="getStatusIcon(vital)" scale="0.7" />
+                <span>{{ getStatusText(vital) }}</span>
               </div>
             </div>
-            <div class="stat-card__badge" :class="bmiData.status">
-              {{ bmiData.category }}
+          </div>
+
+          <!-- BMI Card -->
+          <div v-if="bmiData" class="vital-card vital-card--bmi">
+            <div class="vital-card__header">
+              <div class="vital-icon">
+                <v-icon name="hi-scale" scale="1.1" />
+              </div>
+              <span class="bmi-badge" :class="bmiData.status">{{ bmiData.category }}</span>
+            </div>
+            <div class="vital-card__body">
+              <span class="vital-label">Body Mass Index</span>
+              <div class="vital-value">
+                <span class="value">{{ bmiData.value }}</span>
+                <span class="unit">kg/m²</span>
+              </div>
+            </div>
+            <div class="vital-card__footer">
+              <span class="bmi-note">Calculated from weight & height</span>
             </div>
           </div>
+
+          <!-- Add Vital Card -->
           <button
             v-if="vitalList.length < 5"
-            class="stat-card stat-card--add"
+            class="vital-card vital-card--add"
             @click="openAddModal"
           >
-            <div class="stat-card__icon">
-              <v-icon name="hi-plus" />
+            <div class="add-icon">
+              <v-icon name="hi-plus" scale="1.2" />
             </div>
-            <span class="stat-card__label">Add Vital</span>
+            <span>Add New Vital</span>
           </button>
-        </div>
+        </section>
 
         <!-- Chart Section -->
-        <div class="chart-section">
-          <div class="chart-section__header">
-            <div class="header-left">
-              <h2 class="section-title">Vital Trends</h2>
-              <p class="section-subtitle">View your health data over time</p>
+        <section class="chart-section glass-card">
+          <div class="section-header">
+            <div class="section-title-group">
+              <h2>Vital Trends</h2>
+              <p>View your health data patterns over time</p>
             </div>
-            <div class="header-right">
-              <div class="vital-selector">
+            <div class="chart-controls">
+              <div class="vital-tabs">
                 <button
                   v-for="vital in vitalList"
                   :key="vital"
@@ -109,286 +131,277 @@
                   :class="{ active: activeVitalChart === vital }"
                   @click="selectedVitalHandler(vital)"
                 >
-                  <v-icon :name="getVitalIcon(vital)" />
+                  <v-icon :name="getVitalIcon(vital)" scale="0.85" />
                   <span>{{ getShortName(vital) }}</span>
                 </button>
               </div>
               <div class="chart-actions">
-                <button class="action-btn" @click="downloadChart" title="Download">
-                  <v-icon name="hi-download" />
+                <button class="action-btn" @click="downloadChart" title="Download chart">
+                  <v-icon name="hi-download" scale="0.9" />
                 </button>
-                <button class="action-btn" @click="handleShareChartURL" title="Share">
-                  <v-icon name="hi-share" />
+                <button class="action-btn" @click="handleShareChartURL" title="Share chart">
+                  <v-icon name="hi-share" scale="0.9" />
                 </button>
               </div>
             </div>
           </div>
-          <div class="chart-section__body">
+          <div class="chart-container">
             <Chart
               ref="chartComponent"
               :chartData="data"
               :chartType="chart_type"
-              :selectedVital="selectedVital"
+              :selectedVital="activeVitalChart"
               :patientName="patientFullName"
             />
           </div>
-        </div>
+          <div class="chart-legend" v-if="activeVitalChart === 'Blood Pressure'">
+            <div class="legend-item">
+              <span class="legend-dot systolic"></span>
+              <span>Systolic</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-dot diastolic"></span>
+              <span>Diastolic</span>
+            </div>
+          </div>
+        </section>
 
-        <!-- History Section -->
-        <div class="history-section">
-          <div class="history-section__header">
-            <h2 class="section-title">Recent Readings</h2>
-            <p class="section-subtitle">Your latest vital measurements</p>
+        <!-- Quick Reference -->
+        <section class="reference-section glass-card">
+          <div class="section-header">
+            <div class="section-title-group">
+              <h2>Normal Ranges</h2>
+              <p>Reference values for healthy adults</p>
+            </div>
           </div>
-          <div class="history-grid">
-            <div
-              v-for="(vital, index) in recentvitalarray"
-              :key="index"
-              class="history-card"
-              :class="getVitalColorClass(vital.name)"
-            >
-              <div class="history-card__header">
-                <div class="history-card__icon">
-                  <v-icon :name="getVitalIcon(vital.name)" />
-                </div>
-                <div class="history-card__title">{{ vital.name }}</div>
+          <div class="reference-grid">
+            <div class="reference-item">
+              <div class="ref-icon vital--temp">
+                <v-icon name="fa-thermometer-half" scale="0.9" />
               </div>
-              <div class="history-card__value">
-                <span class="value">{{ vital.value }}</span>
-                <span class="unit">{{ vital.unit }}</span>
-              </div>
-              <div class="history-card__status" :class="getVitalStatus(vital)">
-                <v-icon :name="getStatusIcon(vital)" />
-                <span>{{ getStatusText(vital) }}</span>
-              </div>
-              <div class="history-card__footer">
-                <button class="update-btn" @click="updateVital(vital)">
-                  <v-icon name="hi-pencil" />
-                  Update
-                </button>
+              <div class="ref-info">
+                <span class="ref-name">Temperature</span>
+                <span class="ref-range">36.1 - 37.2°C</span>
               </div>
             </div>
-            <!-- BMI History Card -->
-            <div
-              v-if="bmiData"
-              class="history-card vital--bmi"
-            >
-              <div class="history-card__header">
-                <div class="history-card__icon">
-                  <v-icon name="hi-chart-bar" />
-                </div>
-                <div class="history-card__title">BMI</div>
+            <div class="reference-item">
+              <div class="ref-icon vital--pulse">
+                <v-icon name="hi-heart" scale="0.9" />
               </div>
-              <div class="history-card__value">
-                <span class="value">{{ bmiData.value }}</span>
-                <span class="unit">kg/m²</span>
+              <div class="ref-info">
+                <span class="ref-name">Pulse Rate</span>
+                <span class="ref-range">60 - 100 bpm</span>
               </div>
-              <div class="history-card__status" :class="bmiData.status">
-                <v-icon :name="bmiData.status === 'status--normal' ? 'hi-check-circle' : 'hi-exclamation-circle'" />
-                <span>{{ bmiData.category }}</span>
+            </div>
+            <div class="reference-item">
+              <div class="ref-icon vital--pressure">
+                <v-icon name="fa-heartbeat" scale="0.9" />
               </div>
-              <div class="history-card__footer">
-                <span class="bmi-note">Calculated from weight & height</span>
+              <div class="ref-info">
+                <span class="ref-name">Blood Pressure</span>
+                <span class="ref-range">90-120 / 60-80 mmHg</span>
+              </div>
+            </div>
+            <div class="reference-item">
+              <div class="ref-icon vital--sugar">
+                <v-icon name="bi-droplet-fill" scale="0.9" />
+              </div>
+              <div class="ref-info">
+                <span class="ref-name">Blood Sugar</span>
+                <span class="ref-range">70 - 100 mg/dL</span>
               </div>
             </div>
           </div>
-        </div>
+        </section>
       </template>
     </div>
 
-    <!-- Elegant Add/Update Vital Modal -->
-    <div v-if="openModal" class="vital-modal-overlay" @click.self="close">
-      <div class="vital-modal">
-        <!-- Header -->
-        <div class="vital-modal__header">
-          <div class="header-content">
-            <div class="header-icon">
-              <v-icon name="hi-heart" />
+    <!-- Add/Update Vital Modal -->
+    <Teleport to="body">
+      <div v-if="openModal" class="modal-overlay" @click.self="close">
+        <div class="modal-container">
+          <!-- Modal Header -->
+          <div class="modal-header">
+            <div class="modal-header__content">
+              <div class="modal-icon">
+                <v-icon name="hi-heart" scale="1.1" />
+              </div>
+              <div class="modal-title">
+                <h3>{{ modalType === 'add' ? 'Log New Vital' : 'Update Vital' }}</h3>
+                <p>{{ modalType === 'add' ? 'Select a vital type and enter your reading' : 'Update your measurement' }}</p>
+              </div>
             </div>
-            <div class="header-text">
-              <h3>{{ modalType === 'add' ? 'Log New Vital' : 'Update Vital' }}</h3>
-              <p>{{ modalType === 'add' ? 'Select a vital type and enter your reading' : 'Update your measurement' }}</p>
-            </div>
+            <button class="modal-close" @click="close">
+              <v-icon name="hi-x" scale="1" />
+            </button>
           </div>
-          <button @click="close" class="close-btn">
-            <v-icon name="hi-x" />
-          </button>
-        </div>
 
-        <div class="vital-modal__body">
-          <!-- Vital Type Selection (only for add mode) -->
-          <div v-if="modalType === 'add'" class="vital-selection">
-            <label class="selection-label">Select Vital Type</label>
-            <div class="vital-types">
-              <button
-                v-for="vitalType in vitalDropList"
-                :key="vitalType"
-                class="vital-type-card"
-                :class="[
-                  getVitalColorClass(vitalType),
-                  { selected: selectedVital === vitalType }
-                ]"
-                @click="selectedVital = vitalType"
-              >
-                <div class="vital-type-card__icon">
-                  <v-icon :name="getVitalIcon(vitalType)" />
+          <!-- Modal Body -->
+          <div class="modal-body">
+            <!-- Vital Type Selection (Add Mode) -->
+            <div v-if="modalType === 'add'" class="vital-selection">
+              <label class="field-label">Select Vital Type</label>
+              <div class="vital-options">
+                <button
+                  v-for="vitalType in vitalDropList"
+                  :key="vitalType"
+                  class="vital-option"
+                  :class="[getVitalColorClass(vitalType), { selected: selectedVital === vitalType }]"
+                  @click="selectedVital = vitalType"
+                >
+                  <div class="option-icon">
+                    <v-icon :name="getVitalIcon(vitalType)" scale="1" />
+                  </div>
+                  <div class="option-info">
+                    <span class="option-name">{{ vitalType }}</span>
+                    <span class="option-range">{{ getNormalRange(vitalType) }}</span>
+                  </div>
+                  <div v-if="selectedVital === vitalType" class="option-check">
+                    <v-icon name="hi-check" scale="0.8" />
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            <!-- Selected Vital Display (Update Mode) -->
+            <div v-else class="selected-vital">
+              <div class="selected-vital__card" :class="getVitalColorClass(selectedVital)">
+                <div class="selected-icon">
+                  <v-icon :name="getVitalIcon(selectedVital)" scale="1.1" />
                 </div>
-                <span class="vital-type-card__name">{{ vitalType }}</span>
-                <span class="vital-type-card__range">{{ getNormalRange(vitalType) }}</span>
-                <div v-if="selectedVital === vitalType" class="vital-type-card__check">
-                  <v-icon name="hi-check" />
+                <div class="selected-info">
+                  <span class="selected-name">{{ selectedVital }}</span>
+                  <span class="selected-range">Normal: {{ getNormalRange(selectedVital) }}</span>
                 </div>
-              </button>
-            </div>
-          </div>
-
-          <!-- Selected Vital Display (for update mode) -->
-          <div v-else class="selected-vital-display">
-            <div class="selected-vital-card" :class="getVitalColorClass(selectedVital)">
-              <div class="selected-vital-card__icon">
-                <v-icon :name="getVitalIcon(selectedVital)" />
-              </div>
-              <div class="selected-vital-card__info">
-                <span class="name">{{ selectedVital }}</span>
-                <span class="range">Normal: {{ getNormalRange(selectedVital) }}</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Input Section -->
-          <div class="input-section" v-if="selectedVital">
-            <label class="input-label">Enter Your Reading</label>
-
-            <!-- Single Value Input -->
-            <div v-if="selectedVital !== 'Blood Pressure'" class="single-input">
-              <div class="input-group">
-                <input
-                  type="number"
-                  v-model="vital.input1.value"
-                  :placeholder="getPlaceholder(selectedVital)"
-                  class="vital-input"
-                  step="0.1"
-                />
-                <select v-model="vital.input1.unit" class="unit-select">
-                  <option v-for="unit in getUnitOptions(selectedVital)" :key="unit" :value="unit">
-                    {{ unit }}
-                  </option>
-                </select>
-              </div>
-              <div class="input-hint">
-                <v-icon name="hi-information-circle" />
-                <span>{{ getInputHint(selectedVital) }}</span>
               </div>
             </div>
 
-            <!-- Blood Pressure Input (Two Values) -->
-            <div v-else class="bp-input">
-              <div class="bp-input__group">
-                <label>Systolic (Top Number)</label>
+            <!-- Input Section -->
+            <div v-if="selectedVital" class="input-section">
+              <label class="field-label">Enter Your Reading</label>
+
+              <!-- Single Value Input -->
+              <div v-if="selectedVital !== 'Blood Pressure'" class="input-row">
                 <div class="input-group">
                   <input
                     type="number"
                     v-model="vital.input1.value"
-                    placeholder="120"
-                    class="vital-input"
+                    :placeholder="getPlaceholder(selectedVital)"
+                    class="value-input"
+                    step="0.1"
                   />
-                  <span class="unit-display">mmHg</span>
+                  <select v-model="vital.input1.unit" class="unit-select">
+                    <option v-for="unit in getUnitOptions(selectedVital)" :key="unit" :value="unit">
+                      {{ unit }}
+                    </option>
+                  </select>
                 </div>
+                <p class="input-hint">
+                  <v-icon name="hi-information-circle" scale="0.75" />
+                  {{ getInputHint(selectedVital) }}
+                </p>
               </div>
-              <div class="bp-divider">
-                <span>/</span>
-              </div>
-              <div class="bp-input__group">
-                <label>Diastolic (Bottom Number)</label>
-                <div class="input-group">
-                  <input
-                    type="number"
-                    v-model="vital.input2.value"
-                    placeholder="80"
-                    class="vital-input"
-                  />
-                  <span class="unit-display">mmHg</span>
-                </div>
-              </div>
-            </div>
 
-            <!-- Visual Indicator -->
-            <div v-if="vital.input1.value" class="reading-indicator" :class="getReadingStatus()">
-              <div class="indicator-bar">
-                <div class="indicator-fill" :style="{ width: getIndicatorWidth() }"></div>
-                <div class="indicator-marker" :style="{ left: getIndicatorPosition() }"></div>
-              </div>
-              <div class="indicator-labels">
-                <span>Low</span>
-                <span>Normal</span>
-                <span>High</span>
-              </div>
-              <div class="indicator-status">
-                <v-icon :name="getReadingStatusIcon()" />
-                <span>{{ getReadingStatusText() }}</span>
-              </div>
-            </div>
-
-            <!-- Date & Time Section -->
-            <div class="datetime-section">
-              <label class="input-label">When was this reading taken?</label>
-              <div class="datetime-inputs">
-                <div class="datetime-group">
-                  <label>Date <span class="required">*</span></label>
-                  <div class="input-wrapper">
-                    <v-icon name="hi-calendar" />
+              <!-- Blood Pressure Input (Two Values) -->
+              <div v-else class="bp-inputs">
+                <div class="bp-field">
+                  <label>Systolic <span class="label-hint">(Top Number)</span></label>
+                  <div class="input-group">
                     <input
-                      type="date"
-                      v-model="vital.date"
-                      class="datetime-input"
-                      :max="new Date().toISOString().split('T')[0]"
-                      required
+                      type="number"
+                      v-model="vital.input1.value"
+                      placeholder="120"
+                      class="value-input"
                     />
+                    <span class="unit-display">mmHg</span>
                   </div>
                 </div>
-                <div class="datetime-group">
-                  <label>Time <span class="optional">(Optional)</span></label>
-                  <div class="input-wrapper">
-                    <v-icon name="hi-clock" />
+                <div class="bp-separator">/</div>
+                <div class="bp-field">
+                  <label>Diastolic <span class="label-hint">(Bottom Number)</span></label>
+                  <div class="input-group">
                     <input
-                      type="time"
-                      v-model="vital.time"
-                      class="datetime-input"
+                      type="number"
+                      v-model="vital.input2.value"
+                      placeholder="80"
+                      class="value-input"
                     />
+                    <span class="unit-display">mmHg</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Visual Indicator -->
+              <div v-if="vital.input1.value" class="reading-indicator" :class="getReadingStatus()">
+                <div class="indicator-track">
+                  <div class="indicator-fill"></div>
+                  <div class="indicator-marker" :style="{ left: getIndicatorPosition() }"></div>
+                </div>
+                <div class="indicator-labels">
+                  <span>Low</span>
+                  <span>Normal</span>
+                  <span>High</span>
+                </div>
+                <div class="indicator-result">
+                  <v-icon :name="getReadingStatusIcon()" scale="0.9" />
+                  <span>{{ getReadingStatusText() }}</span>
+                </div>
+              </div>
+
+              <!-- Date & Time -->
+              <div class="datetime-section">
+                <label class="field-label">When was this reading taken?</label>
+                <div class="datetime-row">
+                  <div class="datetime-field">
+                    <label>Date <span class="required">*</span></label>
+                    <div class="datetime-input-wrapper">
+                      <v-icon name="hi-calendar" scale="0.85" />
+                      <input
+                        type="date"
+                        v-model="vital.date"
+                        :max="new Date().toISOString().split('T')[0]"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div class="datetime-field">
+                    <label>Time <span class="optional">(Optional)</span></label>
+                    <div class="datetime-input-wrapper">
+                      <v-icon name="hi-clock" scale="0.85" />
+                      <input type="time" v-model="vital.time" />
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <!-- Footer -->
-        <div class="vital-modal__footer">
-          <button class="cancel-btn" @click="close">Cancel</button>
-          <button
-            class="save-btn"
-            :class="{ loading: loading }"
-            :disabled="!canSave || loading"
-            @click="addVitals(selectedVital, true)"
-          >
-            <span v-if="!loading">
-              <v-icon name="hi-check" />
-              {{ modalType === 'add' ? 'Save Vital' : 'Update Vital' }}
-            </span>
-            <span v-else class="loading-state">
-              <span class="spinner"></span>
-              Saving...
-            </span>
-          </button>
+          <!-- Modal Footer -->
+          <div class="modal-footer">
+            <button class="btn-cancel" @click="close">Cancel</button>
+            <button
+              class="btn-save"
+              :disabled="!canSave || loading"
+              @click="addVitals(selectedVital, true)"
+            >
+              <template v-if="!loading">
+                <v-icon name="hi-check" scale="0.9" />
+                {{ modalType === 'add' ? 'Save Vital' : 'Update Vital' }}
+              </template>
+              <template v-else>
+                <span class="spinner"></span>
+                Saving...
+              </template>
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </Teleport>
   </div>
 </template>
 
 <script>
 import { mapGetters, mapActions } from "vuex";
-import TopBar from "@/components/Navigation/top-bar.vue";
 import Chart from "@/components/Charts/chart-vitals.vue";
 import { handleImageUploadToCloudinary } from "./functions";
 
@@ -398,7 +411,6 @@ export default {
   emits: ["openSideNav"],
 
   components: {
-    TopBar,
     Chart,
   },
 
@@ -431,7 +443,6 @@ export default {
 
       isFetchingUrl: false,
 
-      // Normal ranges for vitals
       normalRanges: {
         "Body Temperature": { min: 36.1, max: 37.2, unit: "°C" },
         "Body Weight": { min: 18.5, max: 24.9, unit: "BMI" },
@@ -482,7 +493,6 @@ export default {
       return this.vital.input1.value && this.vital.input1.unit;
     },
 
-    // Patient full name for downloads
     patientFullName() {
       const profile = this.userProfile?.profile;
       if (!profile) return '';
@@ -491,7 +501,6 @@ export default {
       return `${firstName} ${lastName}`.trim();
     },
 
-    // BMI Calculation
     userHeight() {
       const height = this.userProfile?.profile?.basic_health_info?.height;
       if (!height || !height.value) return null;
@@ -502,7 +511,6 @@ export default {
     },
 
     bmiData() {
-      // Get weight from vitals
       const weightVital = this.recentVitals?.body_weight;
       if (!weightVital || !weightVital.value) return null;
       if (!this.userHeight) return null;
@@ -510,12 +518,10 @@ export default {
       let weightKg = parseFloat(weightVital.value);
       let heightM = this.userHeight.value;
 
-      // Convert weight to kg if in lb
       if (weightVital.unit === 'lb') {
         weightKg = weightKg * 0.453592;
       }
 
-      // Convert height to meters
       if (this.userHeight.unit === 'cm') {
         heightM = heightM / 100;
       } else if (this.userHeight.unit === 'ft' || this.userHeight.unit === 'feet') {
@@ -524,7 +530,6 @@ export default {
         heightM = heightM * 0.0254;
       }
 
-      // Calculate BMI: weight (kg) / height (m)²
       const bmi = weightKg / (heightM * heightM);
 
       return {
@@ -542,6 +547,10 @@ export default {
       updateVitals: "vitalsManagement/updateVitals",
     }),
 
+    goToNotifications() {
+      this.$router.push('/app/patient/notifications');
+    },
+
     getVitalIcon(name) {
       const icons = {
         "Body Temperature": "fa-thermometer-half",
@@ -549,7 +558,7 @@ export default {
         "Pulse Rate": "hi-heart",
         "Blood Sugar Level": "bi-droplet-fill",
         "Blood Pressure": "fa-heartbeat",
-        "BMI": "hi-chart-bar",
+        "BMI": "hi-scale",
       };
       return icons[name] || "hi-heart";
     },
@@ -631,17 +640,39 @@ export default {
       return hints[name] || "";
     },
 
-    getVitalStatus(vital) {
-      // Simplified status check
+    getVitalStatusClass(vital) {
+      const value = parseFloat(vital.value);
+      const range = this.normalRanges[vital.name];
+
+      if (!range || !range.min) return "status--normal";
+
+      if (vital.name === "Blood Pressure") {
+        const [sys, dia] = vital.value.split("/").map(Number);
+        const sysRange = range.systolic;
+        const diaRange = range.diastolic;
+
+        if (sys < sysRange.min || dia < diaRange.min) return "status--low";
+        if (sys > sysRange.max || dia > diaRange.max) return "status--high";
+        return "status--normal";
+      }
+
+      if (value < range.min) return "status--low";
+      if (value > range.max) return "status--high";
       return "status--normal";
     },
 
     getStatusIcon(vital) {
-      return "hi-check-circle";
+      const status = this.getVitalStatusClass(vital);
+      if (status === "status--normal") return "hi-check-circle";
+      if (status === "status--low") return "hi-arrow-down";
+      return "hi-arrow-up";
     },
 
     getStatusText(vital) {
-      return "Within normal range";
+      const status = this.getVitalStatusClass(vital);
+      if (status === "status--normal") return "Normal";
+      if (status === "status--low") return "Below normal";
+      return "Above normal";
     },
 
     getReadingStatus() {
@@ -670,10 +701,6 @@ export default {
       return "Above normal range";
     },
 
-    getIndicatorWidth() {
-      return "100%";
-    },
-
     getIndicatorPosition() {
       if (!this.vital.input1.value || !this.selectedVital) return "50%";
       const value = parseFloat(this.vital.input1.value);
@@ -692,7 +719,6 @@ export default {
       this.modalType = "add";
       this.selectedVital = this.vitalDropList[0] || null;
 
-      // Set default date to today and current time
       const now = new Date();
       const today = now.toISOString().split('T')[0];
       const currentTime = now.toTimeString().slice(0, 5);
@@ -704,7 +730,6 @@ export default {
         time: currentTime,
       };
 
-      // Set default unit
       if (this.selectedVital) {
         const units = this.getUnitOptions(this.selectedVital);
         if (units.length) this.vital.input1.unit = units[0];
@@ -717,7 +742,6 @@ export default {
       this.modalType = "update";
       this.selectedVital = val.name;
 
-      // Set default date to today and current time for update
       const now = new Date();
       const today = now.toISOString().split('T')[0];
       const currentTime = now.toTimeString().slice(0, 5);
@@ -749,7 +773,6 @@ export default {
 
       this.loading = true;
 
-      // Combine date and time into a timestamp
       let recordedAt = this.vital.date;
       if (this.vital.time) {
         recordedAt = `${this.vital.date}T${this.vital.time}:00`;
@@ -840,57 +863,159 @@ export default {
 
     cleanData(dataObj, type) {
       const chartdata = dataObj;
+      if (!chartdata || !chartdata.length) {
+        this.data = { labels: [], datasets: [] };
+        return;
+      }
+
       const xAxis = chartdata.map((row) =>
         new Date(row.date).toLocaleDateString("en", { day: "2-digit", month: "short" })
       );
 
       let valueSet = [];
-      let originalArray = chartdata.map((row) =>
-        row.data.map((item) => parseFloat(item.value))
-      );
 
-      if (["body_temp", "blood_sugar_level", "pulse_rate"].includes(this.query1)) {
-        const min_maxArray = [];
-        for (let i = 0; i < originalArray.length; i++) {
-          min_maxArray.push([Math.min(...originalArray[i]), Math.max(...originalArray[i])]);
-        }
-        valueSet.push({
-          data: min_maxArray,
-          backgroundColor: "#0EAEC4",
-          borderWidth: 0,
-          borderRadius: Number.MAX_VALUE,
-          borderSkipped: false,
-          maxBarThickness: 18,
+      // Blood Pressure - Dual line chart for Systolic and Diastolic
+      if (this.query1 === "blood_pressure") {
+        const systolicData = [];
+        const diastolicData = [];
+
+        chartdata.forEach((row) => {
+          const validSysValues = [];
+          const validDiaValues = [];
+
+          row.data.forEach((item) => {
+            const val = item.value;
+            if (val && typeof val === 'string' && val.includes('/')) {
+              const parts = val.split('/');
+              const sys = parseInt(parts[0], 10);
+              const dia = parseInt(parts[1], 10);
+
+              if (!isNaN(sys)) validSysValues.push(sys);
+              if (!isNaN(dia)) validDiaValues.push(dia);
+            } else if (val && typeof val === 'number') {
+              validSysValues.push(val);
+            }
+          });
+
+          const sysAvg = validSysValues.length > 0
+            ? Math.round(validSysValues.reduce((a, b) => a + b, 0) / validSysValues.length)
+            : null;
+          const diaAvg = validDiaValues.length > 0
+            ? Math.round(validDiaValues.reduce((a, b) => a + b, 0) / validDiaValues.length)
+            : null;
+
+          systolicData.push(sysAvg);
+          diastolicData.push(diaAvg);
         });
-      } else if (this.query1 === "blood_pressure") {
-        const diastolicArray = chartdata.map((row) => row.data.map((item) => item.value.split("/")[0]));
-        const systolicArray = chartdata.map((row) => row.data.map((item) => item.value.split("/")[1]));
 
         valueSet = [
           {
             label: "Systolic",
-            data: diastolicArray.map((arr) => [Math.min(...arr), Math.max(...arr)]),
-            backgroundColor: "#0EAEC4",
-            borderColor: "#0EAEC4",
-            borderWidth: 3,
+            data: systolicData,
+            backgroundColor: "rgba(79, 195, 247, 0.1)",
+            borderColor: "#4FC3F7",
+            pointBackgroundColor: "#fff",
+            pointBorderColor: "#0288D1",
+            fill: false,
           },
           {
             label: "Diastolic",
-            data: systolicArray.map((arr) => [Math.min(...arr), Math.max(...arr)]),
-            backgroundColor: "#ec4899",
-            borderColor: "#ec4899",
-            borderWidth: 3,
+            data: diastolicData,
+            backgroundColor: "rgba(244, 63, 94, 0.1)",
+            borderColor: "#F43F5E",
+            pointBackgroundColor: "#fff",
+            pointBorderColor: "#E11D48",
+            fill: false,
           },
         ];
-      } else {
-        const transposeArray = originalArray[0]?.map((_, i) => originalArray.map((row) => row[i])) || [];
-        transposeArray.forEach((arr) => {
-          valueSet.push({
-            data: arr,
-            backgroundColor: "#0EAEC4",
-            borderColor: "#0EAEC4",
-            borderWidth: 4,
-          });
+      }
+      // Body Temperature - Bar chart with orange color
+      else if (this.query1 === "body_temp") {
+        const tempData = chartdata.map((row) => {
+          const values = row.data.map((item) => parseFloat(item.value));
+          if (values.length === 1) return values[0];
+          // Show range if multiple readings
+          return [Math.min(...values), Math.max(...values)];
+        });
+
+        valueSet.push({
+          label: "Temperature",
+          data: tempData,
+          backgroundColor: "rgba(249, 115, 22, 0.75)",
+          borderColor: "#F97316",
+          borderWidth: 0,
+          borderRadius: 6,
+          borderSkipped: false,
+          maxBarThickness: 24,
+        });
+      }
+      // Pulse Rate - Line chart with area fill
+      else if (this.query1 === "pulse_rate") {
+        const pulseData = chartdata.map((row) => {
+          const values = row.data.map((item) => parseInt(item.value));
+          return Math.round(values.reduce((a, b) => a + b, 0) / values.length);
+        });
+
+        valueSet.push({
+          label: "Pulse Rate",
+          data: pulseData,
+          backgroundColor: "rgba(79, 195, 247, 0.15)",
+          borderColor: "#4FC3F7",
+          pointBackgroundColor: "#fff",
+          pointBorderColor: "#0288D1",
+          fill: true,
+        });
+      }
+      // Blood Sugar Level - Bar chart with blue color
+      else if (this.query1 === "blood_sugar_level") {
+        const sugarData = chartdata.map((row) => {
+          const values = row.data.map((item) => parseFloat(item.value));
+          if (values.length === 1) return values[0];
+          return [Math.min(...values), Math.max(...values)];
+        });
+
+        valueSet.push({
+          label: "Blood Sugar",
+          data: sugarData,
+          backgroundColor: "rgba(14, 165, 233, 0.75)",
+          borderColor: "#0EA5E9",
+          borderWidth: 0,
+          borderRadius: 6,
+          borderSkipped: false,
+          maxBarThickness: 24,
+        });
+      }
+      // Body Weight - Line chart with purple color and trend
+      else if (this.query1 === "body_weight") {
+        const weightData = chartdata.map((row) => {
+          const values = row.data.map((item) => parseFloat(item.value));
+          return values.reduce((a, b) => a + b, 0) / values.length;
+        });
+
+        valueSet.push({
+          label: "Weight",
+          data: weightData,
+          backgroundColor: "rgba(139, 92, 246, 0.15)",
+          borderColor: "#8B5CF6",
+          pointBackgroundColor: "#fff",
+          pointBorderColor: "#7C3AED",
+          fill: true,
+        });
+      }
+      // Default fallback
+      else {
+        const originalArray = chartdata.map((row) =>
+          row.data.map((item) => parseFloat(item.value))
+        );
+        const avgData = originalArray.map(arr =>
+          arr.reduce((a, b) => a + b, 0) / arr.length
+        );
+
+        valueSet.push({
+          data: avgData,
+          backgroundColor: "#4FC3F7",
+          borderColor: "#4FC3F7",
+          borderWidth: 3,
         });
       }
 
@@ -948,659 +1073,891 @@ export default {
 </script>
 
 <style scoped lang="scss">
+// Design Tokens
+$sky: #4FC3F7;
+$sky-light: #E1F5FE;
+$sky-dark: #0288D1;
+$sky-darker: #01579B;
+$navy: #0F172A;
+$slate: #334155;
+$gray: #64748B;
+$light-gray: #94A3B8;
+$bg: #F8FAFC;
+$card-bg: #FFFFFF;
+$emerald: #10B981;
+$emerald-light: #D1FAE5;
+$amber: #F59E0B;
+$amber-light: #FEF3C7;
+$rose: #F43F5E;
+$rose-light: #FFE4E6;
+$violet: #8B5CF6;
+$violet-light: #EDE9FE;
+
+// Mixins
+@mixin glass-card {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.04),
+    0 1px 2px rgba(0, 0, 0, 0.02);
+  border-radius: 20px;
+}
+
+// Page Layout
 .vitals-page {
   display: flex;
   flex-direction: column;
   flex-grow: 1;
-  max-width: 82.67rem;
-  height: 100vh;
-
-  &__content {
-    display: flex;
-    flex-direction: column;
-    gap: $size-32;
-    overflow-y: auto;
-    padding: $size-24 $size-48 $size-48;
-
-    @include scrollBar(normal);
-
-    @include responsive(tab-landscape) {
-      padding: $size-20 $size-32 $size-32;
-    }
-
-    @include responsive(phone) {
-      padding: $size-16 $size-16 $size-32;
-      gap: $size-24;
-    }
-  }
+  background: $bg;
+  min-height: 100vh;
+  overflow-x: hidden;
+  width: 100%;
 }
 
-// Hero Banner
-.vitals-hero {
-  position: relative;
-  background: linear-gradient(135deg, #0EAEC4 0%, #0891b2 50%, #0e7490 100%);
-  border-radius: $size-24;
-  padding: 40px 32px;
-  text-align: center;
-  box-shadow: 0 10px 40px rgba(14, 174, 196, 0.3);
-  overflow: hidden;
-  flex-shrink: 0;
-  min-height: 180px;
+// Mobile Header
+.mobile-header {
+  display: none;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(20px);
+  padding: 1rem 1rem;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 
-  @include responsive(phone) {
-    padding: 32px 24px;
-    border-radius: $size-16;
-    min-height: 160px;
+  @media (max-width: 768px) {
+    display: flex;
   }
 
-  &__content {
-    position: relative;
-    z-index: 2;
-  }
-
-  &__icon {
-    width: 72px;
-    height: 72px;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 20px;
+  .menu-btn,
+  .notification-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    border: none;
+    background: rgba(0, 0, 0, 0.04);
     display: flex;
     align-items: center;
     justify-content: center;
-    margin: 0 auto $size-16;
+    cursor: pointer;
+    color: $slate;
+    transition: all 0.2s;
+    flex-shrink: 0;
 
-    @include responsive(phone) {
-      width: 60px;
-      height: 60px;
+    &:hover {
+      background: rgba(0, 0, 0, 0.08);
     }
 
-    svg {
-      width: 36px;
-      height: 36px;
-      color: white;
-
-      @include responsive(phone) {
-        width: 28px;
-        height: 28px;
-      }
+    &:active {
+      transform: scale(0.95);
     }
   }
 
-  &__title {
-    font-size: $size-28;
-    font-weight: $fw-bold;
-    color: white;
-    margin: 0 0 $size-8 0;
+  .notification-btn {
+    position: relative;
 
-    @include responsive(phone) {
-      font-size: $size-22;
+    .notification-badge {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      width: 8px;
+      height: 8px;
+      background: $rose;
+      border-radius: 50%;
     }
   }
 
-  &__subtitle {
-    font-size: $size-15;
-    color: rgba(255, 255, 255, 0.9);
-    margin: 0;
-
-    @include responsive(phone) {
-      font-size: $size-14;
+  .header-logo {
+    img {
+      height: 32px;
+      width: auto;
     }
-  }
-
-  &__decoration {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    pointer-events: none;
   }
 }
 
-.decoration-circle {
-  position: absolute;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
+.page-content {
+  flex: 1;
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 2rem 2rem 100px;
+  overflow-x: hidden;
+  box-sizing: border-box;
 
-  &--1 {
-    width: 200px;
-    height: 200px;
-    top: -60px;
-    right: -40px;
+  @media (max-width: 768px) {
+    padding: 1.25rem 1rem 100px;
   }
 
-  &--2 {
-    width: 150px;
-    height: 150px;
-    bottom: -40px;
-    left: -30px;
+  @media (max-width: 375px) {
+    padding: 1rem 0.75rem 100px;
+  }
+}
+
+// Page Header
+.page-header {
+  margin-bottom: 2rem;
+
+  .header-content {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+
+    @media (max-width: 640px) {
+      flex-direction: column;
+    }
+  }
+
+  .header-text {
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: $navy;
+      margin: 0 0 0.25rem;
+
+      @media (max-width: 640px) {
+        font-size: 1.5rem;
+      }
+    }
+
+    p {
+      font-size: 0.9375rem;
+      color: $gray;
+      margin: 0;
+    }
+  }
+
+  .add-vital-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    background: linear-gradient(135deg, $sky, $sky-dark);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba($sky, 0.35);
+    }
+
+    &:active {
+      transform: scale(0.98);
+    }
+
+    svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    @media (max-width: 640px) {
+      width: 100%;
+      justify-content: center;
+    }
   }
 }
 
 // Empty State
-.vitals-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: $size-64 $size-24;
+.empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
   background: white;
-  border-radius: $size-20;
-  border: 2px solid $color-g-92;
+  border-radius: 24px;
+  border: 1px solid rgba(0, 0, 0, 0.04);
 
-  &__illustration {
+  .empty-illustration {
     position: relative;
-    margin-bottom: $size-24;
+    width: 140px;
+    height: 140px;
+    margin: 0 auto 1.5rem;
 
-    .illustration-circle {
-      width: 100px;
-      height: 100px;
-      background: linear-gradient(135deg, #ecfeff 0%, #cffafe 100%);
+    .illustration-rings {
+      position: absolute;
+      inset: 0;
+
+      .ring {
+        position: absolute;
+        border-radius: 50%;
+        border: 2px solid $sky-light;
+        animation: pulse-ring 2s ease-in-out infinite;
+
+        &.ring-1 {
+          inset: 0;
+          animation-delay: 0s;
+        }
+
+        &.ring-2 {
+          inset: 15px;
+          animation-delay: 0.3s;
+        }
+
+        &.ring-3 {
+          inset: 30px;
+          animation-delay: 0.6s;
+        }
+      }
+    }
+
+    .illustration-icon {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 64px;
+      height: 64px;
+      background: linear-gradient(135deg, $sky-light, white);
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-
-      svg {
-        width: 48px;
-        height: 48px;
-        color: #0EAEC4;
-      }
+      color: $sky;
     }
   }
 
-  &__title {
-    font-size: $size-20;
-    font-weight: $fw-bold;
-    color: $color-black;
-    margin: 0 0 $size-8 0;
+  h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: $navy;
+    margin: 0 0 0.5rem;
   }
 
-  &__desc {
-    font-size: $size-14;
-    color: $color-g-54;
-    margin: 0 0 $size-24 0;
-    text-align: center;
-    max-width: 300px;
+  p {
+    font-size: 0.9375rem;
+    color: $gray;
+    max-width: 320px;
+    margin: 0 auto 1.5rem;
+    line-height: 1.5;
   }
 
-  &__btn {
-    display: flex;
+  .empty-cta {
+    display: inline-flex;
     align-items: center;
-    gap: $size-8;
-    padding: $size-14 $size-28;
-    background: linear-gradient(135deg, #0EAEC4 0%, #0891b2 100%);
+    gap: 0.5rem;
+    padding: 0.875rem 1.75rem;
+    background: linear-gradient(135deg, $sky, $sky-dark);
     color: white;
     border: none;
-    border-radius: $size-12;
-    font-size: $size-15;
-    font-weight: $fw-semi-bold;
+    border-radius: 12px;
+    font-size: 0.9375rem;
+    font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.2s;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba($sky, 0.35);
+    }
 
     svg {
       width: 20px;
       height: 20px;
     }
-
-    &:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(14, 174, 196, 0.4);
-    }
   }
 }
 
-// Quick Stats
-.quick-stats {
+@keyframes pulse-ring {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.2;
+  }
+}
+
+// Vitals Grid
+.vitals-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: $size-16;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  width: 100%;
+  box-sizing: border-box;
 
-  @include responsive(phone) {
+  @media (max-width: 640px) {
     grid-template-columns: repeat(2, 1fr);
-    gap: $size-12;
-  }
-}
-
-.stat-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: $size-12;
-  padding: $size-20;
-  background: white;
-  border: 2px solid $color-g-92;
-  border-radius: $size-16;
-  position: relative;
-  transition: all 0.3s ease;
-
-  &:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-
-    .stat-card__edit {
-      opacity: 1;
-    }
+    gap: 0.75rem;
   }
 
-  &__icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 14px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    svg {
-      width: 24px;
-      height: 24px;
-      color: white;
-    }
-  }
-
-  &__content {
-    text-align: center;
-  }
-
-  &__label {
-    font-size: $size-12;
-    color: $color-g-54;
-    display: block;
-    margin-bottom: $size-4;
-  }
-
-  &__value {
-    .value {
-      font-size: $size-24;
-      font-weight: $fw-bold;
-      color: $color-black;
-    }
-
-    .unit {
-      font-size: $size-12;
-      color: $color-g-54;
-      margin-left: 2px;
-    }
-  }
-
-  &__edit {
-    position: absolute;
-    top: $size-12;
-    right: $size-12;
-    background: $color-g-95;
-    border: none;
-    padding: $size-6;
-    border-radius: 6px;
-    cursor: pointer;
-    opacity: 0;
-    transition: all 0.2s ease;
-
-    svg {
-      width: 14px;
-      height: 14px;
-      color: $color-g-54;
-    }
-
-    &:hover {
-      background: $color-g-90;
-    }
-  }
-
-  &--add {
-    border-style: dashed;
-    cursor: pointer;
-
-    .stat-card__icon {
-      background: $color-g-95;
-
-      svg {
-        color: $color-g-54;
-      }
-    }
-
-    .stat-card__label {
-      font-weight: $fw-medium;
-    }
-
-    &:hover {
-      border-color: #0EAEC4;
-      background: #ecfeff;
-
-      .stat-card__icon {
-        background: #0EAEC4;
-
-        svg {
-          color: white;
-        }
-      }
-    }
-  }
-
-  // Color variants
-  &.vital--temp .stat-card__icon { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); }
-  &.vital--weight .stat-card__icon { background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); }
-  &.vital--pulse .stat-card__icon { background: linear-gradient(135deg, #0EAEC4 0%, #0891b2 100%); }
-  &.vital--sugar .stat-card__icon { background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); }
-  &.vital--pressure .stat-card__icon { background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); }
-  &.vital--bmi .stat-card__icon { background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); }
-
-  // BMI Badge
-  &__badge {
-    position: absolute;
-    top: $size-12;
-    right: $size-12;
-    padding: $size-4 $size-10;
-    border-radius: $size-6;
-    font-size: $size-10;
-    font-weight: $fw-semi-bold;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-
-    &.status--normal {
-      background: #dcfce7;
-      color: #15803d;
-    }
-
-    &.status--high {
-      background: #fee2e2;
-      color: #dc2626;
-    }
-
-    &.status--low {
-      background: #fef3c7;
-      color: #a16207;
-    }
-  }
-}
-
-// Chart Section
-.chart-section {
-  background: white;
-  border-radius: $size-20;
-  padding: $size-24;
-  border: 2px solid $color-g-92;
-
-  &__header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: $size-24;
-    flex-wrap: wrap;
-    gap: $size-16;
-
-    .header-left {
-      .section-title {
-        font-size: $size-20;
-        font-weight: $fw-bold;
-        color: $color-black;
-        margin: 0 0 $size-4 0;
-      }
-
-      .section-subtitle {
-        font-size: $size-13;
-        color: $color-g-54;
-        margin: 0;
-      }
-    }
-
-    .header-right {
-      display: flex;
-      align-items: center;
-      gap: $size-16;
-      flex-wrap: wrap;
-    }
-  }
-
-  &__body {
-    min-height: 300px;
-  }
-}
-
-.vital-selector {
-  display: flex;
-  gap: $size-8;
-  flex-wrap: wrap;
-}
-
-.vital-tab {
-  display: flex;
-  align-items: center;
-  gap: $size-6;
-  padding: $size-8 $size-14;
-  background: $color-g-97;
-  border: 2px solid transparent;
-  border-radius: $size-8;
-  font-size: $size-12;
-  font-weight: $fw-medium;
-  color: $color-g-54;
-  cursor: pointer;
-  transition: all 0.2s ease;
-
-  svg {
-    width: 14px;
-    height: 14px;
-  }
-
-  &:hover {
-    background: $color-g-95;
-  }
-
-  &.active {
-    background: #ecfeff;
-    border-color: #0EAEC4;
-    color: #0891b2;
-  }
-}
-
-.chart-actions {
-  display: flex;
-  gap: $size-8;
-}
-
-.action-btn {
-  width: 36px;
-  height: 36px;
-  background: $color-g-97;
-  border: none;
-  border-radius: $size-8;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-
-  svg {
-    width: 18px;
-    height: 18px;
-    color: $color-g-54;
-  }
-
-  &:hover {
-    background: #0EAEC4;
-
-    svg {
-      color: white;
-    }
-  }
-}
-
-// History Section
-.history-section {
-  &__header {
-    margin-bottom: $size-20;
-
-    .section-title {
-      font-size: $size-20;
-      font-weight: $fw-bold;
-      color: $color-black;
-      margin: 0 0 $size-4 0;
-    }
-
-    .section-subtitle {
-      font-size: $size-13;
-      color: $color-g-54;
-      margin: 0;
-    }
-  }
-}
-
-.history-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: $size-16;
-
-  @include responsive(phone) {
+  @media (max-width: 375px) {
     grid-template-columns: 1fr;
   }
 }
 
-.history-card {
-  background: white;
-  border: 2px solid $color-g-92;
-  border-radius: $size-16;
-  padding: $size-20;
-  transition: all 0.3s ease;
+.vital-card {
+  @include glass-card;
+  padding: 1.25rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  box-sizing: border-box;
+  min-width: 0;
+
+  @media (max-width: 640px) {
+    padding: 1rem;
+
+    .edit-btn {
+      opacity: 1;
+    }
+  }
 
   &:hover {
     transform: translateY(-4px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
+
+    .edit-btn {
+      opacity: 1;
+    }
   }
 
   &__header {
     display: flex;
-    align-items: center;
-    gap: $size-12;
-    margin-bottom: $size-16;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+
+    @media (max-width: 640px) {
+      margin-bottom: 0.75rem;
+    }
   }
 
-  &__icon {
+  .vital-icon {
     width: 44px;
     height: 44px;
     border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
+    color: white;
+    flex-shrink: 0;
 
-    svg {
-      width: 22px;
-      height: 22px;
-      color: white;
+    @media (max-width: 640px) {
+      width: 40px;
+      height: 40px;
     }
   }
 
-  &__title {
-    font-size: $size-14;
-    font-weight: $fw-semi-bold;
-    color: $color-black;
-  }
-
-  &__value {
-    margin-bottom: $size-12;
-
-    .value {
-      font-size: $size-32;
-      font-weight: $fw-bold;
-      color: $color-black;
-    }
-
-    .unit {
-      font-size: $size-14;
-      color: $color-g-54;
-      margin-left: $size-4;
-    }
-  }
-
-  &__status {
+  .edit-btn {
+    width: 28px;
+    height: 28px;
+    background: rgba(0, 0, 0, 0.04);
+    border: none;
+    border-radius: 8px;
     display: flex;
     align-items: center;
-    gap: $size-6;
-    padding: $size-8 $size-12;
-    border-radius: $size-8;
-    font-size: $size-12;
-    font-weight: $fw-medium;
-    margin-bottom: $size-16;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: all 0.2s;
+    color: $gray;
+    flex-shrink: 0;
 
-    svg {
-      width: 14px;
-      height: 14px;
+    &:hover {
+      background: rgba(0, 0, 0, 0.08);
+      color: $slate;
+    }
+  }
+
+  &__body {
+    margin-bottom: 0.75rem;
+    overflow: hidden;
+
+    .vital-label {
+      display: block;
+      font-size: 0.75rem;
+      color: $gray;
+      margin-bottom: 0.25rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+
+      @media (max-width: 640px) {
+        font-size: 0.6875rem;
+      }
     }
 
-    &.status--normal {
-      background: #f0fdf4;
-      color: #15803d;
-    }
+    .vital-value {
+      display: flex;
+      align-items: baseline;
+      gap: 0.25rem;
+      flex-wrap: wrap;
 
-    &.status--high {
-      background: #fef2f2;
-      color: #dc2626;
-    }
+      .value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: $navy;
+        line-height: 1;
 
-    &.status--low {
-      background: #fefce8;
-      color: #a16207;
+        @media (max-width: 640px) {
+          font-size: 1.25rem;
+        }
+      }
+
+      .unit {
+        font-size: 0.75rem;
+        color: $gray;
+      }
     }
   }
 
   &__footer {
-    .update-btn {
-      width: 100%;
-      display: flex;
+    .status-indicator {
+      display: inline-flex;
       align-items: center;
-      justify-content: center;
-      gap: $size-6;
-      padding: $size-10 $size-16;
-      background: $color-g-97;
-      border: none;
-      border-radius: $size-8;
-      font-size: $size-13;
-      font-weight: $fw-medium;
-      color: $color-g-44;
-      cursor: pointer;
-      transition: all 0.2s ease;
+      gap: 0.25rem;
+      padding: 0.25rem 0.5rem;
+      border-radius: 6px;
+      font-size: 0.625rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      white-space: nowrap;
 
-      svg {
-        width: 14px;
-        height: 14px;
+      @media (max-width: 640px) {
+        font-size: 0.5625rem;
+        padding: 0.2rem 0.4rem;
       }
 
-      &:hover {
-        background: $color-g-95;
+      &.status--normal {
+        background: $emerald-light;
+        color: darken($emerald, 10%);
       }
-    }
 
-    .bmi-note {
-      display: block;
-      text-align: center;
-      font-size: $size-11;
-      color: $color-g-54;
-      font-style: italic;
+      &.status--high {
+        background: $rose-light;
+        color: $rose;
+      }
+
+      &.status--low {
+        background: $amber-light;
+        color: darken($amber, 10%);
+      }
     }
   }
 
   // Color variants
-  &.vital--temp .history-card__icon { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); }
-  &.vital--weight .history-card__icon { background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); }
-  &.vital--pulse .history-card__icon { background: linear-gradient(135deg, #0EAEC4 0%, #0891b2 100%); }
-  &.vital--sugar .history-card__icon { background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); }
-  &.vital--pressure .history-card__icon { background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); }
-  &.vital--bmi .history-card__icon { background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); }
+  &.vital--temp .vital-icon { background: linear-gradient(135deg, #f97316, #ea580c); }
+  &.vital--weight .vital-icon { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+  &.vital--pulse .vital-icon { background: linear-gradient(135deg, $sky, $sky-dark); }
+  &.vital--sugar .vital-icon { background: linear-gradient(135deg, #0ea5e9, #0284c7); }
+  &.vital--pressure .vital-icon { background: linear-gradient(135deg, #ec4899, #db2777); }
+
+  // BMI Card
+  &--bmi {
+    .vital-icon {
+      background: linear-gradient(135deg, #14b8a6, #0d9488);
+    }
+
+    .bmi-badge {
+      padding: 0.25rem 0.5rem;
+      border-radius: 6px;
+      font-size: 0.625rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+
+      &.status--normal {
+        background: $emerald-light;
+        color: darken($emerald, 10%);
+      }
+
+      &.status--high {
+        background: $rose-light;
+        color: $rose;
+      }
+
+      &.status--low {
+        background: $amber-light;
+        color: darken($amber, 10%);
+      }
+    }
+
+    .bmi-note {
+      font-size: 0.6875rem;
+      color: $light-gray;
+      font-style: italic;
+    }
+  }
+
+  // Add Card
+  &--add {
+    border: 2px dashed rgba(0, 0, 0, 0.1);
+    background: rgba(255, 255, 255, 0.5);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    min-height: 160px;
+    cursor: pointer;
+
+    &:hover {
+      border-color: $sky;
+      background: $sky-light;
+
+      .add-icon {
+        background: $sky;
+        color: white;
+      }
+    }
+
+    .add-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      background: rgba(0, 0, 0, 0.04);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: $gray;
+      transition: all 0.2s;
+    }
+
+    span {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: $gray;
+    }
+  }
+}
+
+// Glass Card
+.glass-card {
+  @include glass-card;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  overflow: hidden;
+  box-sizing: border-box;
+  width: 100%;
+
+  @media (max-width: 640px) {
+    padding: 1rem;
+    border-radius: 16px;
+  }
+}
+
+// Section Header
+.section-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+
+  @media (max-width: 640px) {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .section-title-group {
+    min-width: 0;
+
+    h2 {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: $navy;
+      margin: 0 0 0.125rem;
+
+      @media (max-width: 640px) {
+        font-size: 1rem;
+      }
+    }
+
+    p {
+      font-size: 0.8125rem;
+      color: $gray;
+      margin: 0;
+
+      @media (max-width: 640px) {
+        font-size: 0.75rem;
+      }
+    }
+  }
+}
+
+// Chart Section
+.chart-section {
+  overflow: hidden;
+
+  .chart-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+
+    @media (max-width: 768px) {
+      width: 100%;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.75rem;
+    }
+  }
+
+  .vital-tabs {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    padding-bottom: 2px;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+
+    @media (max-width: 640px) {
+      flex-wrap: nowrap;
+      width: 100%;
+    }
+  }
+
+  .vital-tab {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.5rem 0.75rem;
+    background: $bg;
+    border: 2px solid transparent;
+    border-radius: 10px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: $gray;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    flex-shrink: 0;
+
+    &:hover {
+      background: white;
+      border-color: rgba(0, 0, 0, 0.06);
+    }
+
+    &.active {
+      background: $sky-light;
+      border-color: $sky;
+      color: $sky-dark;
+    }
+
+    @media (max-width: 640px) {
+      padding: 0.4rem 0.6rem;
+      font-size: 0.6875rem;
+    }
+  }
+
+  .chart-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-shrink: 0;
+
+    @media (max-width: 768px) {
+      align-self: flex-end;
+    }
+  }
+
+  .action-btn {
+    width: 36px;
+    height: 36px;
+    background: $bg;
+    border: none;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: $gray;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+
+    &:hover {
+      background: $sky;
+      color: white;
+    }
+
+    @media (max-width: 640px) {
+      width: 32px;
+      height: 32px;
+    }
+  }
+
+  .chart-container {
+    background: $bg;
+    border-radius: 12px;
+    overflow: hidden;
+    min-height: 250px;
+    width: 100%;
+
+    @media (max-width: 640px) {
+      min-height: 200px;
+      border-radius: 8px;
+    }
+  }
+
+  .chart-legend {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    margin-top: 1rem;
+
+    @media (max-width: 640px) {
+      gap: 1rem;
+      margin-top: 0.75rem;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.8125rem;
+      color: $slate;
+
+      @media (max-width: 640px) {
+        font-size: 0.75rem;
+        gap: 0.375rem;
+      }
+
+      .legend-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        flex-shrink: 0;
+
+        @media (max-width: 640px) {
+          width: 10px;
+          height: 10px;
+        }
+
+        &.systolic {
+          background: $sky;
+        }
+
+        &.diastolic {
+          background: $rose;
+        }
+      }
+    }
+  }
+}
+
+// Reference Section
+.reference-section {
+  .reference-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 0.75rem;
+
+    @media (max-width: 640px) {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.5rem;
+    }
+
+    @media (max-width: 375px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .reference-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background: $bg;
+    border-radius: 12px;
+    min-width: 0;
+
+    @media (max-width: 640px) {
+      gap: 0.5rem;
+      padding: 0.625rem;
+    }
+
+    .ref-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      flex-shrink: 0;
+
+      @media (max-width: 640px) {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+      }
+
+      &.vital--temp { background: linear-gradient(135deg, #f97316, #ea580c); }
+      &.vital--pulse { background: linear-gradient(135deg, $sky, $sky-dark); }
+      &.vital--pressure { background: linear-gradient(135deg, #ec4899, #db2777); }
+      &.vital--sugar { background: linear-gradient(135deg, #0ea5e9, #0284c7); }
+    }
+
+    .ref-info {
+      display: flex;
+      flex-direction: column;
+      gap: 0.125rem;
+      min-width: 0;
+      overflow: hidden;
+
+      .ref-name {
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: $slate;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+
+        @media (max-width: 640px) {
+          font-size: 0.6875rem;
+        }
+      }
+
+      .ref-range {
+        font-size: 0.6875rem;
+        color: $gray;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+
+        @media (max-width: 640px) {
+          font-size: 0.625rem;
+        }
+      }
+    }
+  }
 }
 
 // Modal Styles
-.vital-modal-overlay {
+.modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  padding: $size-16;
+  padding: 1rem;
+
+  @media (max-width: 640px) {
+    padding: 0.5rem;
+    align-items: flex-end;
+  }
 }
 
-.vital-modal {
+.modal-container {
   background: white;
   border-radius: 20px;
   width: 100%;
@@ -1609,146 +1966,181 @@ export default {
   overflow-y: auto;
   box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
 
-  &__header {
-    background: linear-gradient(135deg, #0EAEC4 0%, #0891b2 100%);
-    padding: $size-24;
+  @media (max-width: 640px) {
+    max-height: 95vh;
     border-radius: 20px 20px 0 0;
-    position: relative;
+  }
+}
 
-    .header-content {
-      display: flex;
-      align-items: center;
-      gap: $size-16;
-    }
+.modal-header {
+  background: linear-gradient(135deg, $sky, $sky-dark);
+  padding: 1.5rem;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  border-radius: 20px 20px 0 0;
 
-    .header-icon {
-      width: 48px;
-      height: 48px;
-      background: rgba(255, 255, 255, 0.2);
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-
-      svg {
-        width: 24px;
-        height: 24px;
-        color: white;
-      }
-    }
-
-    .header-text {
-      flex: 1;
-
-      h3 {
-        margin: 0;
-        font-size: $size-18;
-        font-weight: $fw-bold;
-        color: white;
-      }
-
-      p {
-        margin: 4px 0 0;
-        font-size: $size-13;
-        color: rgba(255, 255, 255, 0.85);
-      }
-    }
-
-    .close-btn {
-      position: absolute;
-      top: $size-16;
-      right: $size-16;
-      background: rgba(255, 255, 255, 0.15);
-      border: none;
-      padding: $size-8;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-
-      &:hover {
-        background: rgba(255, 255, 255, 0.25);
-      }
-
-      svg {
-        width: 20px;
-        height: 20px;
-        color: white;
-      }
-    }
+  @media (max-width: 640px) {
+    padding: 1.25rem 1rem;
   }
 
-  &__body {
-    padding: $size-24;
-  }
-
-  &__footer {
+  &__content {
     display: flex;
-    gap: $size-12;
-    padding: $size-20 $size-24;
-    border-top: 1px solid $color-g-92;
+    align-items: center;
+    gap: 1rem;
+    min-width: 0;
 
-    .cancel-btn {
-      flex: 1;
-      padding: $size-14;
-      background: $color-g-97;
-      border: none;
-      border-radius: $size-12;
-      font-size: $size-14;
-      font-weight: $fw-semi-bold;
-      color: $color-g-44;
-      cursor: pointer;
-      transition: all 0.2s ease;
+    @media (max-width: 640px) {
+      gap: 0.75rem;
+    }
+  }
 
-      &:hover {
-        background: $color-g-95;
+  .modal-icon {
+    width: 48px;
+    height: 48px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    flex-shrink: 0;
+
+    @media (max-width: 640px) {
+      width: 40px;
+      height: 40px;
+    }
+  }
+
+  .modal-title {
+    min-width: 0;
+
+    h3 {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: white;
+      margin: 0 0 0.25rem;
+
+      @media (max-width: 640px) {
+        font-size: 1rem;
       }
     }
 
-    .save-btn {
-      flex: 2;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: $size-8;
-      padding: $size-14;
-      background: linear-gradient(135deg, #0EAEC4 0%, #0891b2 100%);
-      border: none;
-      border-radius: $size-12;
-      font-size: $size-14;
-      font-weight: $fw-semi-bold;
-      color: white;
-      cursor: pointer;
-      transition: all 0.2s ease;
+    p {
+      font-size: 0.8125rem;
+      color: rgba(255, 255, 255, 0.85);
+      margin: 0;
 
-      svg {
-        width: 18px;
-        height: 18px;
+      @media (max-width: 640px) {
+        font-size: 0.75rem;
       }
+    }
+  }
 
-      &:hover:not(:disabled) {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(14, 174, 196, 0.4);
-      }
+  .modal-close {
+    width: 36px;
+    height: 36px;
+    background: rgba(255, 255, 255, 0.15);
+    border: none;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
 
-      &:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-      }
+    &:hover {
+      background: rgba(255, 255, 255, 0.25);
+    }
 
-      .loading-state {
-        display: flex;
-        align-items: center;
-        gap: $size-8;
+    @media (max-width: 640px) {
+      width: 32px;
+      height: 32px;
+    }
+  }
+}
 
-        .spinner {
-          width: 18px;
-          height: 18px;
-          border: 2px solid rgba(255, 255, 255, 0.3);
-          border-top-color: white;
-          border-radius: 50%;
-          animation: spin 0.8s linear infinite;
-        }
-      }
+.modal-body {
+  padding: 1.5rem;
+
+  @media (max-width: 640px) {
+    padding: 1rem;
+  }
+}
+
+.modal-footer {
+  display: flex;
+  gap: 0.75rem;
+  padding: 1.25rem 1.5rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+
+  @media (max-width: 640px) {
+    padding: 1rem;
+    gap: 0.5rem;
+  }
+
+  .btn-cancel {
+    flex: 1;
+    padding: 0.875rem;
+    background: $bg;
+    border: none;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: $gray;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    @media (max-width: 640px) {
+      padding: 0.75rem;
+      font-size: 0.8125rem;
+    }
+
+    &:hover {
+      background: darken($bg, 3%);
+    }
+  }
+
+  .btn-save {
+    flex: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.875rem;
+    background: linear-gradient(135deg, $sky, $sky-dark);
+    border: none;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    @media (max-width: 640px) {
+      padding: 0.75rem;
+      font-size: 0.8125rem;
+    }
+
+    &:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba($sky, 0.35);
+    }
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
     }
   }
 }
@@ -1757,292 +2149,277 @@ export default {
   to { transform: rotate(360deg); }
 }
 
-// Vital Selection
-.vital-selection {
-  margin-bottom: $size-24;
-
-  .selection-label {
-    display: block;
-    font-size: $size-13;
-    font-weight: $fw-semi-bold;
-    color: $color-g-44;
-    margin-bottom: $size-12;
-  }
+// Field Styles
+.field-label {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: $slate;
+  margin-bottom: 0.75rem;
 }
 
-.vital-types {
+// Vital Selection
+.vital-selection {
+  margin-bottom: 1.5rem;
+}
+
+.vital-options {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: $size-12;
+  gap: 0.75rem;
 
-  @include responsive(phone) {
+  @media (max-width: 480px) {
     grid-template-columns: 1fr;
   }
 }
 
-.vital-type-card {
+.vital-option {
   position: relative;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: $size-8;
-  padding: $size-16;
-  background: $color-g-97;
+  gap: 0.75rem;
+  padding: 0.875rem;
+  background: $bg;
   border: 2px solid transparent;
-  border-radius: $size-12;
+  border-radius: 12px;
   cursor: pointer;
-  transition: all 0.2s ease;
-  text-align: center;
+  transition: all 0.2s;
+  text-align: left;
 
   &:hover {
     background: white;
-    border-color: $color-g-90;
+    border-color: rgba(0, 0, 0, 0.06);
   }
 
   &.selected {
     background: white;
-    border-color: #0EAEC4;
-    box-shadow: 0 4px 12px rgba(14, 174, 196, 0.15);
+    border-color: $sky;
+    box-shadow: 0 4px 12px rgba($sky, 0.15);
   }
 
-  &__icon {
+  .option-icon {
     width: 40px;
     height: 40px;
     border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
+    color: white;
+    flex-shrink: 0;
+  }
 
-    svg {
-      width: 20px;
-      height: 20px;
-      color: white;
+  .option-info {
+    flex: 1;
+    min-width: 0;
+
+    .option-name {
+      display: block;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: $navy;
+      margin-bottom: 0.125rem;
+    }
+
+    .option-range {
+      font-size: 0.6875rem;
+      color: $gray;
     }
   }
 
-  &__name {
-    font-size: $size-13;
-    font-weight: $fw-semi-bold;
-    color: $color-black;
-  }
-
-  &__range {
-    font-size: $size-11;
-    color: $color-g-54;
-  }
-
-  &__check {
+  .option-check {
     position: absolute;
-    top: $size-8;
-    right: $size-8;
+    top: 0.5rem;
+    right: 0.5rem;
     width: 20px;
     height: 20px;
-    background: #0EAEC4;
+    background: $sky;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-
-    svg {
-      width: 12px;
-      height: 12px;
-      color: white;
-    }
+    color: white;
   }
 
-  // Color variants
-  &.vital--temp .vital-type-card__icon { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); }
-  &.vital--weight .vital-type-card__icon { background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); }
-  &.vital--pulse .vital-type-card__icon { background: linear-gradient(135deg, #0EAEC4 0%, #0891b2 100%); }
-  &.vital--sugar .vital-type-card__icon { background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); }
-  &.vital--pressure .vital-type-card__icon { background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); }
+  &.vital--temp .option-icon { background: linear-gradient(135deg, #f97316, #ea580c); }
+  &.vital--weight .option-icon { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+  &.vital--pulse .option-icon { background: linear-gradient(135deg, $sky, $sky-dark); }
+  &.vital--sugar .option-icon { background: linear-gradient(135deg, #0ea5e9, #0284c7); }
+  &.vital--pressure .option-icon { background: linear-gradient(135deg, #ec4899, #db2777); }
 }
 
-// Selected Vital Display
-.selected-vital-display {
-  margin-bottom: $size-24;
-}
+// Selected Vital
+.selected-vital {
+  margin-bottom: 1.5rem;
 
-.selected-vital-card {
-  display: flex;
-  align-items: center;
-  gap: $size-16;
-  padding: $size-16;
-  background: $color-g-97;
-  border-radius: $size-12;
-
-  &__icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 12px;
+  &__card {
     display: flex;
     align-items: center;
-    justify-content: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: $bg;
+    border-radius: 12px;
 
-    svg {
-      width: 24px;
-      height: 24px;
+    .selected-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       color: white;
     }
-  }
 
-  &__info {
-    .name {
-      display: block;
-      font-size: $size-15;
-      font-weight: $fw-semi-bold;
-      color: $color-black;
+    .selected-info {
+      .selected-name {
+        display: block;
+        font-size: 0.9375rem;
+        font-weight: 600;
+        color: $navy;
+        margin-bottom: 0.125rem;
+      }
+
+      .selected-range {
+        font-size: 0.75rem;
+        color: $gray;
+      }
     }
 
-    .range {
-      font-size: $size-12;
-      color: $color-g-54;
-    }
+    &.vital--temp .selected-icon { background: linear-gradient(135deg, #f97316, #ea580c); }
+    &.vital--weight .selected-icon { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+    &.vital--pulse .selected-icon { background: linear-gradient(135deg, $sky, $sky-dark); }
+    &.vital--sugar .selected-icon { background: linear-gradient(135deg, #0ea5e9, #0284c7); }
+    &.vital--pressure .selected-icon { background: linear-gradient(135deg, #ec4899, #db2777); }
   }
-
-  &.vital--temp .selected-vital-card__icon { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); }
-  &.vital--weight .selected-vital-card__icon { background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); }
-  &.vital--pulse .selected-vital-card__icon { background: linear-gradient(135deg, #0EAEC4 0%, #0891b2 100%); }
-  &.vital--sugar .selected-vital-card__icon { background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); }
-  &.vital--pressure .selected-vital-card__icon { background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); }
 }
 
 // Input Section
 .input-section {
-  .input-label {
-    display: block;
-    font-size: $size-13;
-    font-weight: $fw-semi-bold;
-    color: $color-g-44;
-    margin-bottom: $size-12;
+  .input-row {
+    margin-bottom: 1rem;
   }
-}
 
-.single-input {
   .input-group {
     display: flex;
-    gap: $size-12;
-    margin-bottom: $size-12;
+    gap: 0.75rem;
   }
 
-  .vital-input {
+  .value-input {
     flex: 1;
-    padding: $size-14 $size-16;
-    border: 2px solid $color-g-90;
-    border-radius: $size-10;
-    font-size: $size-18;
-    font-weight: $fw-semi-bold;
-    color: $color-black;
-    transition: all 0.2s ease;
+    padding: 0.875rem 1rem;
+    border: 2px solid rgba(0, 0, 0, 0.08);
+    border-radius: 12px;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: $navy;
+    transition: all 0.2s;
 
     &:focus {
       outline: none;
-      border-color: #0EAEC4;
+      border-color: $sky;
     }
 
     &::placeholder {
-      color: $color-g-77;
-      font-weight: $fw-regular;
+      color: $light-gray;
+      font-weight: 400;
     }
   }
 
   .unit-select {
-    width: 100px;
-    padding: $size-14 $size-12;
-    border: 2px solid $color-g-90;
-    border-radius: $size-10;
-    font-size: $size-14;
-    font-weight: $fw-medium;
-    color: $color-black;
+    width: 90px;
+    padding: 0.875rem 0.75rem;
+    border: 2px solid rgba(0, 0, 0, 0.08);
+    border-radius: 12px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: $navy;
     background: white;
     cursor: pointer;
 
     &:focus {
       outline: none;
-      border-color: #0EAEC4;
+      border-color: $sky;
     }
   }
 
   .input-hint {
     display: flex;
     align-items: center;
-    gap: $size-6;
-    font-size: $size-12;
-    color: $color-g-54;
+    gap: 0.375rem;
+    margin-top: 0.5rem;
+    font-size: 0.75rem;
+    color: $gray;
 
     svg {
-      width: 14px;
-      height: 14px;
-      color: #0ea5e9;
+      color: $sky;
     }
   }
 }
 
-.bp-input {
+// Blood Pressure Inputs
+.bp-inputs {
   display: flex;
   align-items: flex-end;
-  gap: $size-12;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
 
-  @include responsive(phone) {
+  @media (max-width: 480px) {
     flex-direction: column;
     align-items: stretch;
   }
 
-  &__group {
+  .bp-field {
     flex: 1;
 
     label {
       display: block;
-      font-size: $size-12;
-      color: $color-g-54;
-      margin-bottom: $size-8;
+      font-size: 0.75rem;
+      color: $gray;
+      margin-bottom: 0.5rem;
+
+      .label-hint {
+        color: $light-gray;
+      }
     }
 
     .input-group {
       display: flex;
-      gap: $size-8;
+      gap: 0.5rem;
     }
 
-    .vital-input {
+    .value-input {
       flex: 1;
-      padding: $size-14 $size-16;
-      border: 2px solid $color-g-90;
-      border-radius: $size-10;
-      font-size: $size-18;
-      font-weight: $fw-semi-bold;
-      color: $color-black;
+      padding: 0.875rem 1rem;
+      border: 2px solid rgba(0, 0, 0, 0.08);
+      border-radius: 12px;
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: $navy;
 
       &:focus {
         outline: none;
-        border-color: #0EAEC4;
+        border-color: $sky;
       }
     }
 
     .unit-display {
       display: flex;
       align-items: center;
-      padding: 0 $size-12;
-      background: $color-g-97;
-      border-radius: $size-10;
-      font-size: $size-13;
-      font-weight: $fw-medium;
-      color: $color-g-54;
+      padding: 0 0.75rem;
+      background: $bg;
+      border-radius: 12px;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: $gray;
     }
   }
 
-  .bp-divider {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding-bottom: $size-12;
+  .bp-separator {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: $light-gray;
+    padding-bottom: 0.75rem;
 
-    span {
-      font-size: $size-24;
-      font-weight: $fw-bold;
-      color: $color-g-77;
-    }
-
-    @include responsive(phone) {
+    @media (max-width: 480px) {
       display: none;
     }
   }
@@ -2050,17 +2427,17 @@ export default {
 
 // Reading Indicator
 .reading-indicator {
-  margin-top: $size-20;
-  padding: $size-16;
-  background: $color-g-97;
-  border-radius: $size-12;
+  padding: 1rem;
+  background: $bg;
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
 
-  .indicator-bar {
+  .indicator-track {
     position: relative;
     height: 8px;
-    background: linear-gradient(90deg, #fbbf24, #22c55e, #22c55e, #ef4444);
+    background: linear-gradient(90deg, $amber, $emerald, $emerald, $rose);
     border-radius: 4px;
-    margin-bottom: $size-8;
+    margin-bottom: 0.5rem;
   }
 
   .indicator-marker {
@@ -2069,127 +2446,102 @@ export default {
     width: 16px;
     height: 16px;
     background: white;
-    border: 3px solid $color-black;
+    border: 3px solid $navy;
     border-radius: 50%;
     transform: translateX(-50%);
     transition: left 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
   }
 
   .indicator-labels {
     display: flex;
     justify-content: space-between;
-    font-size: $size-11;
-    color: $color-g-54;
-    margin-bottom: $size-12;
+    font-size: 0.6875rem;
+    color: $gray;
+    margin-bottom: 0.75rem;
   }
 
-  .indicator-status {
+  .indicator-result {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: $size-6;
-    font-size: $size-13;
-    font-weight: $fw-semi-bold;
-
-    svg {
-      width: 16px;
-      height: 16px;
-    }
+    gap: 0.375rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
   }
 
-  &.status--normal .indicator-status {
-    color: #15803d;
+  &.status--normal .indicator-result {
+    color: darken($emerald, 5%);
   }
 
-  &.status--high .indicator-status {
-    color: #dc2626;
+  &.status--high .indicator-result {
+    color: $rose;
   }
 
-  &.status--low .indicator-status {
-    color: #a16207;
+  &.status--low .indicator-result {
+    color: darken($amber, 10%);
   }
 }
 
 // Date & Time Section
 .datetime-section {
-  margin-top: $size-24;
-  padding-top: $size-20;
-  border-top: 1px solid $color-g-92;
-
-  .input-label {
-    display: block;
-    font-size: $size-13;
-    font-weight: $fw-semi-bold;
-    color: $color-g-44;
-    margin-bottom: $size-12;
-  }
+  padding-top: 1.25rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
 }
 
-.datetime-inputs {
+.datetime-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: $size-16;
+  gap: 1rem;
 
-  @include responsive(phone) {
+  @media (max-width: 480px) {
     grid-template-columns: 1fr;
-    gap: $size-12;
+    gap: 0.75rem;
   }
 }
 
-.datetime-group {
+.datetime-field {
   label {
     display: block;
-    font-size: $size-12;
-    color: $color-g-54;
-    margin-bottom: $size-8;
+    font-size: 0.75rem;
+    color: $gray;
+    margin-bottom: 0.5rem;
 
     .required {
-      color: #ef4444;
+      color: $rose;
     }
 
     .optional {
-      color: $color-g-77;
-      font-weight: $fw-regular;
+      color: $light-gray;
+      font-weight: 400;
     }
   }
 
-  .input-wrapper {
+  .datetime-input-wrapper {
     position: relative;
-    display: flex;
-    align-items: center;
 
     svg {
       position: absolute;
-      left: $size-12;
-      width: 18px;
-      height: 18px;
-      color: $color-g-54;
+      left: 0.875rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: $gray;
       pointer-events: none;
     }
 
-    .datetime-input {
+    input {
       width: 100%;
-      padding: $size-12 $size-12 $size-12 $size-40;
-      border: 2px solid $color-g-90;
-      border-radius: $size-10;
-      font-size: $size-14;
-      font-weight: $fw-medium;
-      color: $color-black;
+      padding: 0.75rem 0.875rem 0.75rem 2.5rem;
+      border: 2px solid rgba(0, 0, 0, 0.08);
+      border-radius: 12px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: $navy;
       background: white;
-      transition: all 0.2s ease;
 
       &:focus {
         outline: none;
-        border-color: #0EAEC4;
-      }
-
-      &::-webkit-calendar-picker-indicator {
-        cursor: pointer;
-        opacity: 0.6;
-
-        &:hover {
-          opacity: 1;
-        }
+        border-color: $sky;
       }
     }
   }

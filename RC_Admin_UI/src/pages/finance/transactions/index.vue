@@ -230,6 +230,12 @@ onMounted(() => {
               <span v-if="txn.from_user" class="text-caption">
                 {{ getUserName(txn.from_user) }}
               </span>
+              <span v-else-if="txn.category === 'WALLET_TOPUP'" class="text-caption">
+                <VChip color="success" size="x-small" label>
+                  <VIcon icon="mdi-bank" size="12" class="me-1" />
+                  Paystack
+                </VChip>
+              </span>
               <span v-else class="text-medium-emphasis">-</span>
             </td>
             <td>
