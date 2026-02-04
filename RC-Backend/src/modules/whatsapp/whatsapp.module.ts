@@ -38,6 +38,7 @@ import { PharmacyModule } from '../pharmacy/pharmacy.module';
 import { UsersModule } from '../users/users.module';
 import { WalletsModule } from '../wallets/wallets.module';
 import { AdminSettingsModule } from '../admin-settings/admin-settings.module';
+import { WebhooksModule } from '../webhooks/webhooks.module';
 
 // Payment
 import { PaymentHandler } from '../../common/external/payment/payment.handler';
@@ -89,6 +90,7 @@ import { WhatsAppPaymentWebhookController } from './controllers/whatsapp-payment
     forwardRef(() => PharmacyModule),
     forwardRef(() => UsersModule),
     forwardRef(() => WalletsModule),
+    forwardRef(() => WebhooksModule),
     AdminSettingsModule,
   ],
   controllers: [

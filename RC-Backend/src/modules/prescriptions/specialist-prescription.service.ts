@@ -42,6 +42,9 @@ import {
 } from './dto/specialist-prescription.dto';
 import { SpecialistWalletService } from '../wallets/specialist-wallet.service';
 import { WalletsService } from '../wallets/wallets.service';
+import { PaymentsService } from '../payments/payments.service';
+import { PaymentFor } from '../payments/entities/payment.entity';
+import { AccountingService } from '../accounting/services/accounting.service';
 import { SpecialistTransactionReference } from '../wallets/entities/specialist-wallet-transaction.entity';
 import { GeneralHelpers } from '../../common/helpers/general.helpers';
 import { PaymentHandler } from '../../common/external/payment/payment.handler';
@@ -92,6 +95,8 @@ export class SpecialistPrescriptionService {
     private readonly prescriptionNumberHelper: PrescriptionNumberHelper,
     private readonly prescriptionPdfService: PrescriptionPdfService,
     private readonly fileUploadHelper: FileUploadHelper,
+    private readonly paymentsService: PaymentsService,
+    private readonly accountingService: AccountingService,
   ) {}
 
   // ============ EMAIL NOTIFICATIONS ============
@@ -2209,7 +2214,7 @@ export class SpecialistPrescriptionService {
     // Initialize Paystack payment
     const paymentResponse = await this.paymentHandler.initializeTransaction(
       patient.profile.contact.email,
-      prescription.total_amount * 100, // Convert to kobo
+      prescription.total_amount, // Amount in Naira (Paystack provider converts to kobo)
       reference,
       {
         type: 'prescription_payment',
@@ -2239,12 +2244,12 @@ export class SpecialistPrescriptionService {
     );
 
     // TODO: Send email to patient with payment link
-    // await this.emailService.sendPrescriptionPaymentEmail(patient, prescription, paymentResponse.data.authorization_url);
+    // await this.emailService.sendPrescriptionPaymentEmail(patient, prescription, paymentResponse.data?.data?.authorization_url);
 
     return {
       success: true,
       prescription_id: prescriptionId.toString(),
-      payment_url: paymentResponse.data?.authorization_url,
+      payment_url: paymentResponse.data?.data?.authorization_url,
       reference,
       message: 'Payment link generated. Email sent to patient.',
     };
@@ -3551,16 +3556,26 @@ export class SpecialistPrescriptionService {
     // Generate payment reference
     const reference = this.generalHelpers.genTxReference();
 
+    // Create payment record for webhook processing
+    await this.paymentsService.create(
+      patientId,
+      reference,
+      new_total,
+      PaymentFor.PRESCRIPTION,
+    );
+
     // Initialize Paystack payment
+    const callbackUrl = `https://rapidcapsule.com/app/patient/prescriptions/details/${prescriptionId}?payment=success&reference=${reference}`;
     const paymentResponse = await this.paymentHandler.initializeTransaction(
       patient.profile.contact.email,
-      new_total * 100, // Convert to kobo
+      new_total, // Amount in Naira (Paystack provider converts to kobo)
       reference,
       {
         type: 'prescription_self_payment',
         prescription_id: prescriptionId.toString(),
         prescription_number: prescription.prescription_number,
         patient_id: patientId.toString(),
+        callback_url: callbackUrl,
       },
     );
 
@@ -3577,7 +3592,7 @@ export class SpecialistPrescriptionService {
     return {
       success: true,
       prescription_id: prescriptionId.toString(),
-      authorization_url: paymentResponse.data?.authorization_url,
+      authorization_url: paymentResponse.data?.data?.authorization_url,
       reference,
       amount: new_total,
       message: 'Payment initialized. Redirect to authorization URL.',
@@ -3592,7 +3607,7 @@ export class SpecialistPrescriptionService {
     patientId: Types.ObjectId,
     reference: string,
   ) {
-    const prescription = await this.prescriptionModel.findOne({
+    let prescription = await this.prescriptionModel.findOne({
       _id: prescriptionId,
       patient_id: patientId,
     });
@@ -3602,22 +3617,79 @@ export class SpecialistPrescriptionService {
     }
 
     if (prescription.payment_status === PrescriptionPaymentStatus.PAID) {
+      // Return updated prescription so frontend can update UI
       return {
         success: true,
         message: 'Payment already processed',
         prescription_id: prescriptionId.toString(),
+        payment_status: PrescriptionPaymentStatus.PAID,
+        status: prescription.status,
+        prescription: await this.getPrescription(prescriptionId),
       };
     }
 
     // Verify with Paystack
     const verification = await this.paymentHandler.verifyTransaction(reference);
 
-    if (verification.data?.status !== 'success') {
-      await this.prescriptionModel.updateOne(
-        { _id: prescriptionId },
-        { payment_status: PrescriptionPaymentStatus.FAILED },
-      );
-      throw new BadRequestException('Payment verification failed');
+    this.logger.log(`Paystack verify response: ${JSON.stringify(verification)}`);
+
+    // Check Paystack response - handle various response structures
+    // Success response: { status: true, data: { status: 'success', amount: ... } }
+    // Error response: AxiosError object or { status: false, message: '...' }
+    const paystackData = verification?.data;
+    const paystackStatus = paystackData?.status;
+
+    this.logger.log(`Paystack status: ${paystackStatus}, type: ${typeof paystackStatus}`);
+
+    // If verification is an error or transaction not found, return pending with current prescription state
+    if (verification?.isAxiosError || verification?.response?.status >= 400 || !paystackData) {
+      this.logger.log('Paystack verification returned error or no data, returning pending');
+      // Re-fetch prescription in case webhook has updated it
+      prescription = await this.prescriptionModel.findOne({ _id: prescriptionId });
+      return {
+        success: prescription?.payment_status === PrescriptionPaymentStatus.PAID,
+        status: prescription?.payment_status === PrescriptionPaymentStatus.PAID ? 'success' : 'pending',
+        message: 'Payment is being processed. Please wait a moment.',
+        prescription_id: prescriptionId.toString(),
+        payment_status: prescription?.payment_status || PrescriptionPaymentStatus.PENDING,
+        prescription: await this.getPrescription(prescriptionId),
+      };
+    }
+
+    if (paystackStatus !== 'success') {
+      // If payment is pending/abandoned, don't fail - let webhook handle it
+      if (paystackStatus === 'abandoned' || paystackStatus === 'pending' || !paystackStatus) {
+        // Re-fetch prescription in case webhook has updated it
+        prescription = await this.prescriptionModel.findOne({ _id: prescriptionId });
+        return {
+          success: prescription?.payment_status === PrescriptionPaymentStatus.PAID,
+          status: prescription?.payment_status === PrescriptionPaymentStatus.PAID ? 'success' : 'pending',
+          message: 'Payment is still being processed. Please wait a moment.',
+          prescription_id: prescriptionId.toString(),
+          payment_status: prescription?.payment_status || PrescriptionPaymentStatus.PENDING,
+          prescription: await this.getPrescription(prescriptionId),
+        };
+      }
+      // Only mark as failed if explicitly failed
+      if (paystackStatus === 'failed') {
+        await this.prescriptionModel.updateOne(
+          { _id: prescriptionId },
+          { payment_status: PrescriptionPaymentStatus.FAILED },
+        );
+        throw new BadRequestException('Payment failed');
+      }
+      // Unknown status - return pending and let webhook handle
+      this.logger.log(`Unknown Paystack status: ${paystackStatus}, returning pending`);
+      // Re-fetch prescription in case webhook has updated it
+      prescription = await this.prescriptionModel.findOne({ _id: prescriptionId });
+      return {
+        success: prescription?.payment_status === PrescriptionPaymentStatus.PAID,
+        status: prescription?.payment_status === PrescriptionPaymentStatus.PAID ? 'success' : 'pending',
+        message: 'Payment verification in progress.',
+        prescription_id: prescriptionId.toString(),
+        payment_status: prescription?.payment_status || PrescriptionPaymentStatus.PENDING,
+        prescription: await this.getPrescription(prescriptionId),
+      };
     }
 
     const amountPaid = verification.data.amount / 100; // Convert from kobo
@@ -3648,8 +3720,27 @@ export class SpecialistPrescriptionService {
     // Confirm stock reservations
     await this.confirmReservations(prescriptionId);
 
+    // Record in chart of accounts
+    try {
+      await this.accountingService.recordPrescriptionCardPayment({
+        prescriptionId,
+        prescriptionNumber: prescription.prescription_number,
+        patientId,
+        amount: amountPaid,
+        paymentMethod: 'card',
+        paymentReference: reference,
+      });
+      this.logger.log(`Accounting entry created for prescription ${prescription.prescription_number}`);
+    } catch (err) {
+      this.logger.error(`Failed to record accounting entry: ${err.message}`);
+      // Don't throw - prescription is already marked as paid
+    }
+
     // Notify specialist
     await this.sendPatientPaidEmail(prescription, patientId, amountPaid, 'card');
+
+    // Return updated prescription so frontend can update UI (like appointments do)
+    const updatedPrescription = await this.getPrescription(prescriptionId);
 
     return {
       success: true,
@@ -3657,6 +3748,9 @@ export class SpecialistPrescriptionService {
       payment_reference: reference,
       amount_paid: amountPaid,
       message: 'Payment verified successfully',
+      payment_status: PrescriptionPaymentStatus.PAID,
+      status: SpecialistPrescriptionStatus.PAID,
+      prescription: updatedPrescription,
     };
   }
 
@@ -3766,8 +3860,71 @@ export class SpecialistPrescriptionService {
       }));
     }
 
+    // Fetch drug details (images, manufacturer, dosage_form, route) for all items
+    const drugIds = (prescription.items || [])
+      .map((item: any) => item.drug_id)
+      .filter(Boolean);
+
+    const DrugCollection = this.connection.collection('drugentities');
+    const drugs = drugIds.length > 0
+      ? await DrugCollection.find({ _id: { $in: drugIds } }).project({
+          _id: 1, images: 1, manufacturer: 1, brand_name: 1, dosage_form: 1, route: 1, pharmacist_counseling_points: 1
+        }).toArray()
+      : [];
+
+    // Collect dosage_form and route ObjectIds to resolve
+    const dosageFormIds = drugs.map(d => d.dosage_form).filter(Boolean);
+    const routeIds = drugs.map(d => d.route).filter(Boolean);
+
+    // Resolve dosage_form and route names from lookup collections
+    const DosageFormCollection = this.connection.collection('dosageformentities');
+    const RouteCollection = this.connection.collection('drugrouteentities');
+
+    const [dosageForms, routes] = await Promise.all([
+      dosageFormIds.length > 0
+        ? DosageFormCollection.find({ _id: { $in: dosageFormIds } }).project({ _id: 1, name: 1 }).toArray()
+        : [],
+      routeIds.length > 0
+        ? RouteCollection.find({ _id: { $in: routeIds } }).project({ _id: 1, name: 1 }).toArray()
+        : [],
+    ]);
+
+    const dosageFormMap = new Map<string, string>(dosageForms.map((df: any) => [df._id.toString(), df.name] as [string, string]));
+    const routeMap = new Map<string, string>(routes.map((r: any) => [r._id.toString(), r.name] as [string, string]));
+
+    // Create maps for drug_id to various properties
+    const drugDataMap = new Map<string, any>();
+    for (const drug of drugs) {
+      const primaryImage = drug.images?.find((img: any) => img.is_primary);
+      const imageUrl = primaryImage?.url || drug.images?.[0]?.url || null;
+      const resolvedUrl = imageUrl ? await this.fileUploadHelper.resolveProfileImage(imageUrl) : null;
+
+      drugDataMap.set(drug._id.toString(), {
+        drug_image: resolvedUrl,
+        manufacturer: drug.manufacturer || drug.brand_name || null,
+        dosage_form: drug.dosage_form ? dosageFormMap.get(drug.dosage_form.toString()) || null : null,
+        route: drug.route ? routeMap.get(drug.route.toString()) || null : null,
+        counseling_points: drug.pharmacist_counseling_points || null,
+      });
+    }
+
+    // Add enriched data to each item
+    const itemsWithImages = (prescription.items || []).map((item: any) => {
+      const drugData = drugDataMap.get(item.drug_id?.toString()) || {};
+      return {
+        ...item,
+        drug_image: drugData.drug_image || null,
+        manufacturer: item.manufacturer || drugData.manufacturer || null,
+        dosage_form: item.dosage_form || drugData.dosage_form || null,
+        route: item.route || drugData.route || null,
+        // Use specialist instructions if available, otherwise show drug counseling points
+        instructions: item.instructions || drugData.counseling_points || null,
+      };
+    });
+
     return {
       ...prescription,
+      items: itemsWithImages,
       related_appointments: relatedAppointments,
       prescribed_by: prescribedBy,
       specialist: specialist

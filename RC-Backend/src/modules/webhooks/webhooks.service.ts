@@ -17,6 +17,13 @@ import { WalletsService } from '../wallets/wallets.service';
 import { WebhookEvents } from './events/webhook.events';
 import { Subject } from 'rxjs';
 import { WebsocketGateway } from '../../core/websocket/websocket.gateway';
+import {
+  SpecialistPrescription,
+  SpecialistPrescriptionDocument,
+  SpecialistPrescriptionStatus,
+  PrescriptionPaymentStatus,
+} from '../prescriptions/entities/specialist-prescription.entity';
+import { AccountingService } from '../accounting/services/accounting.service';
 
 @Injectable()
 export class WebhooksService {
@@ -24,11 +31,13 @@ export class WebhooksService {
   private events = new Subject();
   constructor(
     @InjectModel(Webhook.name) private webhookModel: Model<WebhookDocument>,
+    @InjectModel(SpecialistPrescription.name) private prescriptionModel: Model<SpecialistPrescriptionDocument>,
     private readonly taskCron: TaskScheduler,
     private readonly paymentService: PaymentsService,
     private readonly cardService: CardsService,
     private readonly walletsService: WalletsService,
     private readonly websocketGateway: WebsocketGateway,
+    private readonly accountingService: AccountingService,
   ) {}
   async createWebhook(body: PaystackWebhookData) {
     this.logger.log(`Received webhook ${body.event} from Paystack`);
@@ -85,9 +94,11 @@ export class WebhooksService {
         );
       }
 
-      // Credit wallet if this is a wallet top-up
+      // Handle based on payment type
+      const amount = Number(webhook.data.amount) / 100; // Paystack returns amount in kobo
+
       if (payment.payment_for === PaymentFor.WALLET_TOPUP) {
-        const amount = Number(webhook.data.amount) / 100; // Paystack returns amount in kobo
+        // Credit wallet for wallet top-up
         await this.walletsService.creditWallet(
           new Types.ObjectId(payment.userId),
           amount,
@@ -95,6 +106,9 @@ export class WebhooksService {
           `Wallet top-up via Paystack`,
         );
         this.logger.log(`Credited wallet for user ${payment.userId} with ₦${amount}`);
+      } else if (payment.payment_for === PaymentFor.PRESCRIPTION) {
+        // Handle prescription payment
+        await this.handlePrescriptionPayment(webhook, payment, amount);
       }
 
       await this.deleteWebhook(webhook._id);
@@ -102,6 +116,64 @@ export class WebhooksService {
     } catch (e) {
       this.logger.error(e?.message, e);
       throw new InternalServerErrorException(e);
+    }
+  }
+
+  /**
+   * Handle prescription payment from Paystack webhook
+   */
+  private async handlePrescriptionPayment(webhook: WebhookDocument, payment: any, amount: number) {
+    const prescriptionId = webhook.data.metadata?.prescription_id;
+
+    if (!prescriptionId) {
+      this.logger.error('No prescription_id in webhook metadata');
+      return;
+    }
+
+    // Find and update prescription
+    const prescription = await this.prescriptionModel.findOne({
+      _id: new Types.ObjectId(prescriptionId),
+      payment_reference: webhook.data.reference,
+    });
+
+    if (!prescription) {
+      this.logger.error(`Prescription not found for reference ${webhook.data.reference}`);
+      return;
+    }
+
+    // Update prescription status to paid/ready for dispensing
+    await this.prescriptionModel.updateOne(
+      { _id: prescription._id },
+      {
+        status: SpecialistPrescriptionStatus.PAID,
+        payment_status: PrescriptionPaymentStatus.PAID,
+        paid_at: new Date(),
+        $push: {
+          status_history: {
+            status: SpecialistPrescriptionStatus.PAID,
+            changed_at: new Date(),
+            notes: `Payment of ₦${amount.toLocaleString()} received via Paystack card payment`,
+          },
+        },
+      },
+    );
+
+    this.logger.log(`Prescription ${prescription.prescription_number} marked as paid - ₦${amount}`);
+
+    // Record in chart of accounts
+    try {
+      await this.accountingService.recordPrescriptionCardPayment({
+        prescriptionId: prescription._id,
+        prescriptionNumber: prescription.prescription_number,
+        patientId: new Types.ObjectId(payment.userId),
+        amount,
+        paymentMethod: 'card',
+        paymentReference: webhook.data.reference,
+      });
+      this.logger.log(`Accounting entry created for prescription ${prescription.prescription_number}`);
+    } catch (err) {
+      this.logger.error(`Failed to record accounting entry: ${err.message}`);
+      // Don't throw - prescription is already marked as paid
     }
   }
 

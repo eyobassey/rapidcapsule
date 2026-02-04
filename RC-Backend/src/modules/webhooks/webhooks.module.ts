@@ -10,6 +10,10 @@ import {
   Appointment,
   AppointmentSchema,
 } from '../appointments/entities/appointment.entity';
+import {
+  SpecialistPrescription,
+  SpecialistPrescriptionSchema,
+} from '../prescriptions/entities/specialist-prescription.entity';
 import { PaymentsModule } from '../payments/payments.module';
 import { CardsModule } from '../cards/cards.module';
 import { WalletsModule } from '../wallets/wallets.module';
@@ -25,6 +29,7 @@ import { Zoom } from '../../common/external/zoom/zoom';
       { name: Webhook.name, schema: WebhookSchema },
       { name: ZoomWebhook.name, schema: ZoomWebhookSchema },
       { name: Appointment.name, schema: AppointmentSchema },
+      { name: SpecialistPrescription.name, schema: SpecialistPrescriptionSchema },
     ]),
     PaymentsModule,
     CardsModule,
@@ -40,5 +45,6 @@ import { Zoom } from '../../common/external/zoom/zoom';
     WebsocketGateway,
     Zoom,
   ],
+  exports: [WebhooksService],
 })
 export class WebhooksModule {}

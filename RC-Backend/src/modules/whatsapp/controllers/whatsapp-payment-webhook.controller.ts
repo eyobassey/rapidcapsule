@@ -15,6 +15,7 @@ import {
   PharmacyOrderDocument,
 } from '../../pharmacy/entities/pharmacy-order.entity';
 import { GupshupService } from '../../../common/external/gupshup/gupshup.service';
+import { WebhooksService } from '../../webhooks/webhooks.service';
 
 /**
  * Paystack webhook event types
@@ -38,6 +39,7 @@ export class WhatsAppPaymentWebhookController {
     private readonly orderModel: Model<PharmacyOrderDocument>,
     @InjectConnection() private readonly connection: Connection,
     private readonly gupshupService: GupshupService,
+    private readonly webhooksService: WebhooksService,
   ) {}
 
   /**
@@ -62,7 +64,7 @@ export class WhatsAppPaymentWebhookController {
     try {
       switch (event) {
         case PaystackEvent.CHARGE_SUCCESS:
-          await this.handleChargeSuccess(data);
+          await this.handleChargeSuccess(data, payload);
           break;
         case PaystackEvent.CHARGE_FAILED:
           await this.handleChargeFailed(data);
@@ -100,14 +102,16 @@ export class WhatsAppPaymentWebhookController {
   /**
    * Handle successful charge/payment
    */
-  private async handleChargeSuccess(data: any) {
+  private async handleChargeSuccess(data: any, fullPayload: any) {
     const { reference, metadata, amount, customer } = data;
 
     this.logger.log(`Payment successful: ${reference}`);
 
     // Check if this is a WhatsApp order payment
     if (!metadata?.source || metadata.source !== 'WHATSAPP') {
-      this.logger.log(`Payment ${reference} is not from WhatsApp, skipping`);
+      // Forward to general webhook service for wallet top-ups, prescriptions, etc.
+      this.logger.log(`Payment ${reference} is not from WhatsApp, forwarding to general webhook handler`);
+      await this.webhooksService.createWebhook(fullPayload);
       return;
     }
 
