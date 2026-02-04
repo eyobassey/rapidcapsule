@@ -101,6 +101,9 @@ export class Appointment {
   meeting_id: string;
 
   @Prop({ type: String })
+  meeting_password: string;
+
+  @Prop({ type: String })
   meeting_class: string;
 
   @Prop({

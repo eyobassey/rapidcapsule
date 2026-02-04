@@ -166,6 +166,11 @@ const routes = [
         component: () => import("@/views/Mainapp/Appointmentsv2/BookingConfirmation.vue"),
       },
       {
+        path: "appointmentsv2/appointment/:id",
+        name: "Appointmentsv2Detail",
+        component: () => import("@/views/Mainapp/Appointmentsv2/AppointmentDetail.vue"),
+      },
+      {
         name: "Orders",
         path: "orders",
         component: () => import("@/views/Mainapp/Orders"),

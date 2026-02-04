@@ -71,6 +71,16 @@
                         <p class="triage-desc">{{ triageConfig.description }}</p>
                     </div>
                     <button
+                        v-if="hasActiveLinkedAppointment"
+                        class="triage-action"
+                        :style="{ backgroundColor: '#10b981', color: 'white' }"
+                        @click="viewLinkedAppointment"
+                    >
+                        <v-icon name="hi-video-camera" scale="1" />
+                        <span>View Consultation</span>
+                    </button>
+                    <button
+                        v-else
                         class="triage-action"
                         :style="{ backgroundColor: triageConfig.color, color: 'white' }"
                         @click="goToBookAppointment"
@@ -351,7 +361,20 @@
                             <v-icon name="hi-refresh" scale="1" />
                             <span>New Assessment</span>
                         </button>
-                        <button class="action-btn action-btn--primary" @click="goToBookAppointment">
+                        <button
+                            v-if="hasActiveLinkedAppointment"
+                            class="action-btn action-btn--primary"
+                            style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);"
+                            @click="viewLinkedAppointment"
+                        >
+                            <v-icon name="hi-video-camera" scale="1" />
+                            <span>View Consultation</span>
+                        </button>
+                        <button
+                            v-else
+                            class="action-btn action-btn--primary"
+                            @click="goToBookAppointment"
+                        >
                             <span>Book Consultation</span>
                             <v-icon name="hi-arrow-right" scale="1" />
                         </button>
@@ -480,6 +503,39 @@ const { navigator, useNavigator } = inject('$_NAVIGATOR');
 const { diagnosis, useDiagnosis } = inject('$_DIAGNOSIS');
 const { patientInfo, usePatientInfo } = inject('$_PATIENT_INFO');
 const { recommendation, useRecommendation } = inject('$_RECOMMENDATION');
+const linkedCheckupInject = inject('$_LINKED_CHECKUP', null);
+
+// Linked appointment info - check both URL params (from appointment detail) and recommendation data (from history)
+const linkedAppointment = computed(() => {
+    // First check recommendation (from history view)
+    if (recommendation.value?.linked_appointment) {
+        return recommendation.value.linked_appointment;
+    }
+    // Fallback to URL param (from appointment detail page)
+    if (linkedCheckupInject?.linkedAppointmentId?.value) {
+        return { _id: linkedCheckupInject.linkedAppointmentId.value };
+    }
+    return null;
+});
+
+// Check if linked appointment is active (not completed/cancelled/missed)
+const hasActiveLinkedAppointment = computed(() => {
+    if (!linkedAppointment.value) return false;
+
+    const appointment = linkedAppointment.value;
+    const status = appointment.status?.toUpperCase();
+
+    // Show "View Consultation" for OPEN/ONGOING appointments
+    if (status === 'OPEN' || status === 'ONGOING' || !status) {
+        // If no status (just ID from URL param), assume it's active
+        if (appointment.start_time) {
+            return new Date(appointment.start_time) > new Date();
+        }
+        return true;
+    }
+
+    return false;
+});
 const { userprofile } = mapGetters();
 
 const router = useRouter();
@@ -595,6 +651,16 @@ const goToBookAppointment = () => {
             checkup_id: healthData.checkup_id
         }
     });
+};
+
+// Navigate to the linked appointment
+const viewLinkedAppointment = () => {
+    if (linkedAppointment.value?._id) {
+        router.push({
+            name: 'Appointmentsv2Detail',
+            params: { id: linkedAppointment.value._id }
+        });
+    }
 };
 
 const duration = computed(() => {

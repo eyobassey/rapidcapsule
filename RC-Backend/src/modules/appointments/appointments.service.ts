@@ -307,6 +307,11 @@ export class AppointmentsService {
       })) || [],
     });
 
+    // Link health checkup to this appointment (for bidirectional reference)
+    if (health_checkup_id) {
+      await this.healthCheckupService.linkAppointment(health_checkup_id, appointment._id.toString());
+    }
+
     // Handle meeting channel-specific logic
     let scheduledAppointment = appointment;
     if (appointment.meeting_channel === 'zoom') {
@@ -1006,12 +1011,13 @@ export class AppointmentsService {
     });
 
     if (response.status === SUCCESS) {
-      const { join_url, start_url, id } = response.data;
+      const { join_url, start_url, id, password } = response.data;
       await updateOne(
         this.appointmentModel,
         { _id: appointment._id },
         {
           meeting_id: id,
+          meeting_password: password,
           join_url,
           start_url,
           payment_status: Status.SUCCESSFUL,
@@ -1050,6 +1056,7 @@ export class AppointmentsService {
       return {
         ...appointment.toObject(),
         meeting_id: id,
+        meeting_password: password,
         join_url,
         start_url,
         payment_status: Status.SUCCESSFUL,
@@ -1880,12 +1887,63 @@ export class AppointmentsService {
   }
 
   async getOneAppointment(appointmentId: string) {
-    const appointment = await findById(
-      this.appointmentModel,
-      <Types.ObjectId>(<unknown>appointmentId),
-    );
+    const appointment = await this.appointmentModel
+      .findById(appointmentId)
+      .populate('specialist', 'profile email professional_practice')
+      .populate('patient', 'profile email')
+      .exec();
     if (!appointment) throw new NotFoundException(Messages.NOT_FOUND);
-    return appointment;
+
+    // Convert to plain object to allow modifications
+    const appointmentObj: any = appointment.toObject();
+
+    // Presign specialist profile photo if it exists
+    if (appointmentObj.specialist?.profile) {
+      try {
+        // Try profile_photo first, then profile_image
+        if (appointmentObj.specialist.profile.profile_photo) {
+          appointmentObj.specialist.profile.profile_photo =
+            await this.fileUploadHelper.resolveProfileImage(appointmentObj.specialist.profile.profile_photo);
+        }
+        if (appointmentObj.specialist.profile.profile_image) {
+          appointmentObj.specialist.profile.profile_image =
+            await this.fileUploadHelper.resolveProfileImage(appointmentObj.specialist.profile.profile_image);
+        }
+      } catch (e) {
+        this.logger.error(`Error presigning specialist profile photo: ${e.message}`);
+      }
+    }
+
+    // Presign patient profile photo if it exists
+    if (appointmentObj.patient?.profile) {
+      try {
+        if (appointmentObj.patient.profile.profile_photo) {
+          appointmentObj.patient.profile.profile_photo =
+            await this.fileUploadHelper.resolveProfileImage(appointmentObj.patient.profile.profile_photo);
+        }
+        if (appointmentObj.patient.profile.profile_image) {
+          appointmentObj.patient.profile.profile_image =
+            await this.fileUploadHelper.resolveProfileImage(appointmentObj.patient.profile.profile_image);
+        }
+      } catch (e) {
+        this.logger.error(`Error presigning patient profile photo: ${e.message}`);
+      }
+    }
+
+    // Presign attached documents if they exist
+    if (appointmentObj.attached_documents?.length) {
+      for (const doc of appointmentObj.attached_documents) {
+        if (doc.url && (doc.url.includes('amazonaws.com') || doc.url.includes('s3.'))) {
+          try {
+            doc.url = await this.fileUploadHelper.getPresignedUrl(doc.url, 3600);
+          } catch (e) {
+            this.logger.error(`Error presigning document: ${e.message}`);
+          }
+        }
+      }
+    }
+
+    return appointmentObj;
   }
 
   async referPatientToSpecialist(

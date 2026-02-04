@@ -130,6 +130,7 @@
           @book-again="bookAgain"
           @complete-payment="completePayment"
           @open-action-sheet="openActionSheet"
+          @view-details="viewAppointmentDetails"
         />
 
         <!-- Recent History Section (shown when viewing upcoming) -->
@@ -149,6 +150,7 @@
             @view-receipt="viewReceipt"
             @book-again="bookAgain"
             @open-action-sheet="openActionSheet"
+            @view-details="viewAppointmentDetails"
           />
         </template>
       </div>
@@ -1023,6 +1025,15 @@ const joinMeeting = (apt) => {
       },
     });
   }
+};
+
+// Navigate to appointment details page
+const viewAppointmentDetails = (apt) => {
+  const appointmentId = apt._id || apt.id;
+  router.push({
+    name: 'Appointmentsv2Detail',
+    params: { id: appointmentId },
+  });
 };
 
 const rescheduleAppointment = (apt) => {

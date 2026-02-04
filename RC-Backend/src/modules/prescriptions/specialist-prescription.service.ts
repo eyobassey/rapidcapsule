@@ -1360,7 +1360,7 @@ export class SpecialistPrescriptionService {
 
   /**
    * Get prescriptions explicitly linked to a specific appointment for the patient
-   * Uses linked_appointments and linked_clinical_notes references
+   * Uses appointment_id, linked_appointments and linked_clinical_notes references
    */
   async getPatientPrescriptionsForAppointment(
     patientId: Types.ObjectId,
@@ -1369,6 +1369,7 @@ export class SpecialistPrescriptionService {
     const prescriptions = await this.prescriptionModel.find({
       patient_id: patientId,
       $or: [
+        { appointment_id: appointmentId },
         { linked_appointments: appointmentId },
         { 'linked_clinical_notes.appointment_id': appointmentId },
       ],

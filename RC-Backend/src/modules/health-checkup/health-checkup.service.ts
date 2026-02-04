@@ -480,6 +480,7 @@ export class HealthCheckupService {
     const [checkups, total] = await Promise.all([
       this.healthCheckupModel
         .find(filter)
+        .populate('linked_appointment', '_id status start_time')
         .sort(sortOptions)
         .skip(skip)
         .limit(limit)
@@ -511,6 +512,21 @@ export class HealthCheckupService {
     }
 
     return checkup;
+  }
+
+  /**
+   * Link an appointment to a health checkup (bidirectional reference)
+   * Called when an appointment is booked from a health checkup result
+   */
+  async linkAppointment(checkupId: string, appointmentId: string) {
+    try {
+      await this.healthCheckupModel.updateOne(
+        { _id: checkupId },
+        { linked_appointment: appointmentId }
+      );
+    } catch (error) {
+      console.error(`Failed to link appointment to health checkup: ${error.message}`);
+    }
   }
 
   async deleteHealthCheckup(checkupId: string, userId: string) {

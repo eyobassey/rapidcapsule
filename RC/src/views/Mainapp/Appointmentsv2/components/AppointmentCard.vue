@@ -2,6 +2,7 @@
   <div
     class="appointment-card"
     :class="[statusClass, { 'is-past': isPast }]"
+    @click="handleCardClick"
   >
     <!-- Left Accent Bar -->
     <div class="accent-bar" :class="statusClass"></div>
@@ -180,6 +181,7 @@ const emit = defineEmits([
   'book-again',
   'complete-payment',
   'open-action-sheet', // For mobile action sheet
+  'view-details', // Navigate to appointment details page
 ]);
 
 const showDropdown = ref(false);
@@ -417,6 +419,15 @@ const handleBookAgain = () => {
   emit('book-again', props.appointment);
 };
 
+const handleCardClick = (event) => {
+  // Don't navigate if clicking on buttons or interactive elements
+  const target = event.target;
+  if (target.closest('button') || target.closest('.dropdown-menu') || target.closest('.data-badge')) {
+    return;
+  }
+  emit('view-details', props.appointment);
+};
+
 // Clinical notes and prescriptions helpers
 const hasClinicalNotes = computed(() => {
   return props.appointment.clinical_notes?.length > 0;
@@ -474,9 +485,11 @@ $v2-error: #EF4444;
   box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.05);
   overflow: hidden;
   transition: all 0.3s ease;
+  cursor: pointer;
 
   &:hover {
     box-shadow: 0 4px 20px -2px rgba($v2-sky, 0.15);
+    transform: translateY(-2px);
   }
 
   &.is-past {

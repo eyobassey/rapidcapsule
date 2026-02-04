@@ -35,7 +35,7 @@
 
 <script setup>
 import { ref, provide, watch, nextTick } from "vue";
-import { useRouter } from "vue-router";
+import { useRouter, useRoute } from "vue-router";
 import Loader from "@/components/Loader/main-loader.vue";
 import { mapGetters } from "@/utilities/utilityStore";
 
@@ -53,6 +53,7 @@ import DiagnosisReport from "./parts/diagnosis-report";
 import CheckupHistory from "./parts/checkup-history";
 
 const router = useRouter();
+const route = useRoute();
 const { userprofile } = mapGetters();
 const profile = { ...userprofile.value.profile };
 const dependants = { ...userprofile.value.dependants };
@@ -61,7 +62,15 @@ const isFetching = ref(false);
 const patientInfo = ref({});
 const diagnosis = ref({});
 const recommendation = ref({});
-const navigator = ref({ from: null, to: null, current: 0 });
+// Handle query params synchronously for deep linking (e.g., from appointment detail page)
+const initialStep = route.query.step ? parseFloat(route.query.step) : 0;
+const navigator = ref({
+  from: null,
+  to: null,
+  current: !isNaN(initialStep) ? initialStep : 0
+});
+const linkedCheckupId = ref(route.query.checkup_id || null);
+const linkedAppointmentId = ref(route.query.appointment_id || null);
 
 const usePatientInfo = (payload) => (patientInfo.value = { ...patientInfo.value, ...payload });
 const useDiagnosis = (payload) => (diagnosis.value = { ...diagnosis.value, ...payload });
@@ -76,6 +85,7 @@ provide('$_PATIENT_INFO', { patientInfo, usePatientInfo });
 provide('$_NAVIGATOR', { navigator, useNavigator });
 provide('$_DIAGNOSIS', { diagnosis, useDiagnosis });
 provide('$_RECOMMENDATION', { recommendation, useRecommendation });
+provide('$_LINKED_CHECKUP', { linkedCheckupId, linkedAppointmentId });
 
 // Scroll to top when navigating between steps
 watch(() => navigator.value.current, () => {

@@ -353,44 +353,52 @@ provide('$_NAVIGATOR', { navigator, useNavigator });
 provide('$_DIAGNOSIS', { diagnosis, useDiagnosis });
 provide('$_RECOMMENDATION', { recommendation, useRecommendation });
 
-onMounted(() => {
+onMounted(async () => {
     console.log('=== DIAGNOSIS REPORT MOUNTED ===');
     console.log('parentDiagnosisInject:', parentDiagnosisInject);
     console.log('parentRecommendationInject:', parentRecommendationInject);
     console.log('Route query:', $route.query);
     console.log('userprofile:', userprofile.value);
-    
+
+    // Check if we have a direct checkup_id from query (e.g., from appointment detail page)
+    if ($route.query.checkup_id) {
+        console.log('Found checkup_id in query, fetching directly:', $route.query.checkup_id);
+        await getHealthCheckupById($route.query.checkup_id);
+        console.log('=== END DIAGNOSIS REPORT MOUNTED ===');
+        return;
+    }
+
     // Check if we have parent diagnosis data (coming from history)
     if (parentDiagnosisInject && parentDiagnosisInject.diagnosis?.value) {
         console.log('Found parent diagnosis injection');
         console.log('Parent diagnosis data:', parentDiagnosisInject.diagnosis.value);
         console.log('Evidence length:', parentDiagnosisInject.diagnosis.value.evidence?.length);
         console.log('Conditions length:', parentDiagnosisInject.diagnosis.value.conditions?.length);
-        
-        if (parentDiagnosisInject.diagnosis.value.evidence && 
+
+        if (parentDiagnosisInject.diagnosis.value.evidence &&
             parentDiagnosisInject.diagnosis.value.evidence.length > 0) {
-            
+
             console.log('Using parent diagnosis data from history');
             // Use the data provided by parent (from history)
             consideredDiagnosis.value = parentDiagnosisInject.diagnosis.value.evidence || [];
             conditions.value = parentDiagnosisInject.diagnosis.value.conditions || [];
             diagnosis.value = parentDiagnosisInject.diagnosis.value;
-            
+
             console.log('Set consideredDiagnosis:', consideredDiagnosis.value);
             console.log('Set conditions:', conditions.value);
-            
+
             // Process conditions for display
             if (conditions.value.length > 0) {
                 const sorted = conditions.value?.sort((a, b) => b.probability - a.probability);
                 sortedConditions.value = sorted.map((condition, i) => ({
-                    ...condition, 
+                    ...condition,
                     category: Math.floor(i / (sorted.length / 3))
                 }));
-                
+
                 // Reset the arrays before populating
                 moreLikelyConditions.value = [];
                 lessLikelyConditions.value = [];
-                
+
                 sortedConditions.value.forEach((condition) => {
                     if (condition.category <= 1) {
                         moreLikelyConditions.value.push(condition);
@@ -398,11 +406,11 @@ onMounted(() => {
                         lessLikelyConditions.value.push(condition);
                     }
                 });
-                
+
                 console.log('Processed conditions - more likely:', moreLikelyConditions.value.length);
                 console.log('Processed conditions - less likely:', lessLikelyConditions.value.length);
             }
-            
+
             isLoading.value = false;
             console.log('History data loading complete');
         } else {
@@ -414,7 +422,7 @@ onMounted(() => {
         // Fallback to API fetch (original flow)
         getUserHealthCheck(userprofile.value.id);
     }
-    
+
     console.log('=== END DIAGNOSIS REPORT MOUNTED ===');
 });
 
@@ -449,6 +457,59 @@ async function getUserHealthCheck(patientId) {
 
         } else $router.back();
     });
+}
+
+async function getHealthCheckupById(checkupId) {
+    isLoading.value = true;
+    try {
+        const { data } = await $http.$_getHealthCheckupById(checkupId);
+        const checkup = data.data;
+
+        if (!checkup || !checkup.response?.data) {
+            console.error('Health checkup not found or has no data');
+            $router.back();
+            return;
+        }
+
+        console.log('Loaded health checkup by ID:', checkup);
+
+        consideredDiagnosis.value = checkup.request?.evidence || [];
+        conditions.value = checkup.response.data.conditions || [];
+        diagnosis.value = {
+            conditions: conditions.value,
+            interview_token: checkup.response.data.interview_token || checkup.request?.interview_token,
+            evidence: consideredDiagnosis.value,
+            triage_level: checkup.response.data.triage_level,
+            triage: checkup.response.data.triage,
+            has_emergency_evidence: checkup.response.data.has_emergency_evidence
+        };
+
+        // Process conditions for display
+        if (conditions.value.length > 0) {
+            const sorted = conditions.value.sort((a, b) => b.probability - a.probability);
+            sortedConditions.value = sorted.map((condition, i) => ({
+                ...condition,
+                category: Math.floor(i / (sorted.length / 3))
+            }));
+
+            moreLikelyConditions.value = [];
+            lessLikelyConditions.value = [];
+
+            sortedConditions.value.forEach((condition) => {
+                if (condition.category <= 1) {
+                    moreLikelyConditions.value.push(condition);
+                } else if (condition.category > 1) {
+                    lessLikelyConditions.value.push(condition);
+                }
+            });
+        }
+
+        isLoading.value = false;
+    } catch (error) {
+        console.error('Error fetching health checkup:', error);
+        isLoading.value = false;
+        $router.back();
+    }
 }
 
 const duration = computed(() => {

@@ -169,7 +169,15 @@
                             <v-icon name="hi-arrow-right" class="action-arrow" />
                         </div>
                         <button
-                            v-if="hasCompletedDiagnosis(checkup)"
+                            v-if="hasCompletedDiagnosis(checkup) && hasActiveAppointment(checkup)"
+                            class="book-appointment-btn view-consultation-btn"
+                            @click.stop="viewAppointment(checkup)"
+                        >
+                            <v-icon name="hi-video-camera" scale="0.85" />
+                            <span>View Consultation</span>
+                        </button>
+                        <button
+                            v-else-if="hasCompletedDiagnosis(checkup)"
                             class="book-appointment-btn"
                             @click.stop="bookAppointmentFromCheckup(checkup)"
                         >
@@ -411,7 +419,7 @@
 </template>
 
 <script setup>
-import { ref, inject, onMounted } from "vue";
+import { ref, inject, onMounted, computed } from "vue";
 import { useToast } from 'vue-toast-notification';
 import { useRouter } from 'vue-router';
 
@@ -421,6 +429,11 @@ const $http = inject("$http");
 const { navigator, useNavigator } = inject('$_NAVIGATOR');
 const diagnosisInject = inject('$_DIAGNOSIS', null);
 const recommendationInject = inject('$_RECOMMENDATION', null);
+const linkedCheckupInject = inject('$_LINKED_CHECKUP', null);
+
+// Local refs for linked checkup/appointment (for reactivity in template)
+const linkedCheckupId = computed(() => linkedCheckupInject?.linkedCheckupId?.value || null);
+const linkedAppointmentId = computed(() => linkedCheckupInject?.linkedAppointmentId?.value || null);
 
 const isLoading = ref(false);
 const currentPage = ref(1);
@@ -478,6 +491,17 @@ const fetchHistory = async () => {
         };
     } finally {
         isLoading.value = false;
+
+        // Auto-view linked checkup if provided (e.g., from appointment detail page)
+        if (linkedCheckupId.value) {
+            const linkedCheckup = historyData.value.checkups?.find(c => c._id === linkedCheckupId.value);
+            if (linkedCheckup) {
+                // Small delay to ensure UI is rendered
+                setTimeout(() => {
+                    viewCheckupDetails(linkedCheckup);
+                }, 300);
+            }
+        }
     }
 };
 
@@ -811,7 +835,8 @@ const viewCheckupDetails = (checkup) => {
                         sex: checkup.request?.sex || 'Unknown',
                         health_check_for: checkup.health_check_for
                     },
-                    is_from_history: true
+                    is_from_history: true,
+                    linked_appointment: checkup.linked_appointment || null
                 });
             }
 
@@ -822,6 +847,37 @@ const viewCheckupDetails = (checkup) => {
         }
     } else {
         $toast.warning('This checkup has no diagnosis data', { duration: 3000 });
+    }
+};
+
+// Check if checkup has an active (upcoming or ongoing) linked appointment
+const hasActiveAppointment = (checkup) => {
+    if (!checkup.linked_appointment) return false;
+
+    const appointment = checkup.linked_appointment;
+    const status = appointment.status?.toUpperCase();
+
+    // Show "View Consultation" for OPEN appointments or appointments with future start_time
+    if (status === 'OPEN' || status === 'ONGOING') {
+        return true;
+    }
+
+    // Also check if appointment date is in the future
+    if (appointment.start_time) {
+        const appointmentDate = new Date(appointment.start_time);
+        return appointmentDate > new Date();
+    }
+
+    return false;
+};
+
+// Navigate to the appointment linked to this checkup
+const viewAppointment = (checkup) => {
+    if (checkup.linked_appointment?._id) {
+        router.push({
+            name: 'Appointmentsv2Detail',
+            params: { id: checkup.linked_appointment._id }
+        });
     }
 };
 
@@ -916,6 +972,10 @@ const generatePatientNoteForBooking = (checkup) => {
 };
 
 onMounted(() => {
+    console.log('checkup-history mounted, linked values:', {
+        linkedCheckupId: linkedCheckupId.value,
+        linkedAppointmentId: linkedAppointmentId.value
+    });
     fetchHistory();
     fetchCreditStatus();
 });
@@ -1734,6 +1794,15 @@ $rose: #F43F5E;
             width: 100%;
             justify-content: center;
             padding: $size-12 $size-20;
+        }
+
+        &.view-consultation-btn {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+
+            &:hover {
+                box-shadow: 0 6px 18px rgba(16, 185, 129, 0.4);
+            }
         }
     }
 

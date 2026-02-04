@@ -80,5 +80,8 @@ export class HealthCheckup {
 
   @Prop({ type: Date })
   deleted_at: Date;
+
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Appointment' })
+  linked_appointment: Types.ObjectId;
 }
 export const HealthCheckupSchema = SchemaFactory.createForClass(HealthCheckup);
