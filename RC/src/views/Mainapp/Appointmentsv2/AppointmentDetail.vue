@@ -5,7 +5,10 @@
       <button class="back-btn" @click="goBack">
         <v-icon name="hi-arrow-left" scale="1.1" />
       </button>
-      <span class="header-title">Appointment Details</span>
+      <div class="header-center">
+        <span class="header-title">Appointment</span>
+        <span class="header-status" :class="statusClass">{{ statusLabel }}</span>
+      </div>
       <button class="menu-btn" @click="showMoreOptions = !showMoreOptions">
         <v-icon name="hi-dots-vertical" scale="1.1" />
       </button>
@@ -656,6 +659,54 @@
         </div>
       </div>
     </div>
+
+    <!-- Mobile Bottom Action Bar -->
+    <div v-if="appointment" class="mobile-action-bar">
+      <!-- Upcoming/Confirmed - Join Meeting -->
+      <template v-if="canJoinMeeting">
+        <button class="mobile-action-btn primary" @click="joinMeeting">
+          <v-icon name="hi-video-camera" scale="1.1" />
+          <span>Join Meeting</span>
+        </button>
+        <button class="mobile-action-btn secondary" @click="showRescheduleModal = true">
+          <v-icon name="hi-clock" scale="1" />
+        </button>
+      </template>
+
+      <!-- Upcoming but not joinable yet -->
+      <template v-else-if="!isCompleted && !isMissed && !isCancelled">
+        <button class="mobile-action-btn" @click="showRescheduleModal = true" v-if="canReschedule">
+          <v-icon name="hi-clock" scale="1" />
+          <span>Reschedule</span>
+        </button>
+        <button class="mobile-action-btn danger" @click="showCancelModal = true" v-if="canCancel">
+          <v-icon name="hi-x-circle" scale="1" />
+          <span>Cancel</span>
+        </button>
+      </template>
+
+      <!-- Completed - Book Follow-up -->
+      <template v-else-if="isCompleted">
+        <button class="mobile-action-btn primary" @click="bookFollowUp">
+          <v-icon name="hi-plus-circle" scale="1.1" />
+          <span>Book Follow-up</span>
+        </button>
+        <button class="mobile-action-btn secondary" v-if="hasRecording" @click="playRecording">
+          <v-icon name="hi-play" scale="1" />
+        </button>
+      </template>
+
+      <!-- Missed/Cancelled - Book Again -->
+      <template v-else-if="isMissed || isCancelled">
+        <button class="mobile-action-btn primary" @click="bookAgain">
+          <v-icon name="hi-refresh" scale="1.1" />
+          <span>Book Again</span>
+        </button>
+        <button class="mobile-action-btn secondary" @click="contactSupport">
+          <v-icon name="hi-mail" scale="1" />
+        </button>
+      </template>
+    </div>
   </div>
 </template>
 
@@ -1123,9 +1174,10 @@ function contactSupport() {
 
 function viewSpecialistProfile() {
   if (specialist.value?._id) {
+    // Navigate to booking page with specialist pre-selected
     router.push({
-      name: 'SpecialistProfilePublic',
-      params: { id: specialist.value._id },
+      name: 'Appointmentsv2Book',
+      query: { specialist: specialist.value._id },
     });
   }
 }
@@ -1352,26 +1404,22 @@ $violet-light: #EDE9FE;
   margin: 0 auto;
 
   @media (max-width: 768px) {
-    padding: 16px 16px 48px;
-  }
-
-  @media (max-width: 640px) {
-    gap: 20px;
-    padding: 12px 16px 32px;
+    padding: 0 16px 32px;
+    gap: 16px;
   }
 }
 
-// Mobile Header
+// Mobile Header - Clean minimal design
 .mobile-header {
   display: none;
   position: sticky;
   top: 0;
   z-index: 100;
-  padding: 16px;
+  padding: 12px 16px;
   background: white;
-  border-bottom: 1px solid #E2E8F0;
   align-items: center;
   justify-content: space-between;
+  border-bottom: 1px solid #F1F5F9;
 
   @media (max-width: 768px) {
     display: flex;
@@ -1388,12 +1436,114 @@ $violet-light: #EDE9FE;
     align-items: center;
     justify-content: center;
     cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.2s;
+
+    &:active {
+      background: #E2E8F0;
+    }
+  }
+
+  .header-center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
   }
 
   .header-title {
     font-size: 16px;
     font-weight: 600;
     color: $navy;
+  }
+
+  .header-status {
+    display: none; // Hide status in header, show in hero badge
+  }
+}
+
+// Mobile Bottom Action Bar - Clean floating design
+.mobile-action-bar {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 16px;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(to top, white 80%, transparent);
+  z-index: 100;
+  gap: 10px;
+
+  @media (max-width: 768px) {
+    display: flex;
+  }
+
+  .mobile-action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 16px 24px;
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &.primary {
+      flex: 1;
+      background: linear-gradient(135deg, $sky 0%, $sky-dark 100%);
+      color: white;
+      box-shadow: 0 4px 16px rgba(79, 195, 247, 0.35);
+
+      &:active {
+        transform: scale(0.98);
+        box-shadow: 0 2px 8px rgba(79, 195, 247, 0.3);
+      }
+    }
+
+    &.secondary {
+      width: 56px;
+      padding: 16px;
+      background: white;
+      color: $slate;
+      border: 1px solid #E2E8F0;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+
+      span {
+        display: none;
+      }
+
+      &:active {
+        background: $bg;
+      }
+    }
+
+    &.danger {
+      flex: 1;
+      background: white;
+      color: $rose;
+      border: 1px solid $rose-light;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+
+      &:active {
+        background: $rose-light;
+      }
+    }
+
+    &:not(.primary):not(.secondary):not(.danger) {
+      flex: 1;
+      background: white;
+      color: $slate;
+      border: 1px solid #E2E8F0;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+
+      &:active {
+        background: $bg;
+      }
+    }
   }
 }
 
@@ -1497,6 +1647,11 @@ $violet-light: #EDE9FE;
   display: flex;
   flex-direction: column;
   gap: 24px;
+
+  @media (max-width: 768px) {
+    gap: 16px;
+    padding-bottom: 100px; // Space for mobile action bar
+  }
 }
 
 // ============================================
@@ -1516,12 +1671,16 @@ $violet-light: #EDE9FE;
     0 20px 60px rgba(2, 136, 209, 0.3),
     0 0 0 1px rgba(255, 255, 255, 0.1) inset;
 
+  // Mobile: Clean compact card design
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
-    padding: 32px 24px;
-    gap: 24px;
+    padding: 24px 20px;
+    gap: 0;
     text-align: center;
     min-height: auto;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(2, 136, 209, 0.2);
+    margin: 0 -4px; // Slight negative margin for edge-to-edge feel
   }
 
   .hero__content {
@@ -1544,7 +1703,8 @@ $violet-light: #EDE9FE;
     position: relative;
 
     @media (max-width: 768px) {
-      margin: 0 auto 16px;
+      margin: 0 auto 12px;
+      padding: 6px 14px;
     }
 
     .badge-pulse {
@@ -1564,6 +1724,12 @@ $violet-light: #EDE9FE;
         border-radius: 50%;
         animation: pulse-ring 2s ease-out infinite;
       }
+
+      @media (max-width: 768px) {
+        left: 10px;
+        width: 6px;
+        height: 6px;
+      }
     }
 
     svg {
@@ -1571,6 +1737,12 @@ $violet-light: #EDE9FE;
       height: 16px;
       color: white;
       margin-left: 12px;
+
+      @media (max-width: 768px) {
+        width: 14px;
+        height: 14px;
+        margin-left: 10px;
+      }
     }
 
     span {
@@ -1578,6 +1750,10 @@ $violet-light: #EDE9FE;
       font-weight: 600;
       color: white;
       letter-spacing: 0.3px;
+
+      @media (max-width: 768px) {
+        font-size: 12px;
+      }
     }
 
     // Status-specific badge colors
@@ -1629,7 +1805,10 @@ $violet-light: #EDE9FE;
     letter-spacing: -1px;
 
     @media (max-width: 768px) {
-      font-size: 36px;
+      font-size: 24px;
+      margin: 0 0 8px;
+      letter-spacing: -0.5px;
+      line-height: 1.2;
     }
 
     .hero__title-accent {
@@ -1637,6 +1816,17 @@ $violet-light: #EDE9FE;
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
+    }
+
+    @media (max-width: 768px) {
+      br {
+        display: none;
+      }
+
+      .hero__title-accent {
+        display: inline;
+        margin-left: 4px;
+      }
     }
   }
 
@@ -1649,8 +1839,10 @@ $violet-light: #EDE9FE;
     opacity: 0.95;
 
     @media (max-width: 768px) {
-      font-size: 16px;
+      font-size: 14px;
       max-width: 100%;
+      margin: 0 0 16px;
+      opacity: 0.9;
     }
   }
 
@@ -1666,9 +1858,10 @@ $violet-light: #EDE9FE;
 
     @media (max-width: 768px) {
       width: 100%;
-      justify-content: center;
+      justify-content: space-around;
       padding: 14px 16px;
-      gap: 16px;
+      gap: 0;
+      border-radius: 12px;
     }
   }
 
@@ -1712,6 +1905,11 @@ $violet-light: #EDE9FE;
 
 .hero-stat {
   text-align: center;
+  flex: 1;
+
+  @media (max-width: 768px) {
+    flex: none;
+  }
 
   &__value {
     display: block;
@@ -1720,7 +1918,7 @@ $violet-light: #EDE9FE;
     color: white;
     line-height: 1;
 
-    @media (max-width: 640px) {
+    @media (max-width: 768px) {
       font-size: 20px;
     }
   }
@@ -1732,12 +1930,21 @@ $violet-light: #EDE9FE;
     margin-top: 4px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+
+    @media (max-width: 768px) {
+      font-size: 10px;
+      letter-spacing: 0.3px;
+    }
   }
 
   &__divider {
     width: 1px;
     height: 32px;
     background: rgba(255, 255, 255, 0.2);
+
+    @media (max-width: 768px) {
+      height: 28px;
+    }
   }
 }
 
@@ -1884,11 +2091,9 @@ $violet-light: #EDE9FE;
   }
 
   @media (max-width: 768px) {
-    gap: 16px;
-  }
-
-  @media (max-width: 640px) {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
   }
 }
 
@@ -1898,10 +2103,11 @@ $violet-light: #EDE9FE;
   padding: 20px;
   grid-column: span 6;
 
-  @media (max-width: 640px) {
-    grid-column: span 1;
+  @media (max-width: 768px) {
+    grid-column: unset !important;
     padding: 16px;
     border-radius: 16px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
   }
 
   .card-header {
@@ -1910,16 +2116,24 @@ $violet-light: #EDE9FE;
     justify-content: space-between;
     margin-bottom: 16px;
 
+    @media (max-width: 768px) {
+      margin-bottom: 12px;
+    }
+
     h3 {
       font-size: 15px;
       font-weight: 600;
       color: $navy;
       margin: 0;
+
+      @media (max-width: 768px) {
+        font-size: 14px;
+      }
     }
   }
 }
 
-// Actions Card
+// Actions Card - Hidden on mobile (use bottom action bar)
 .actions-card {
   grid-column: span 12;
 
@@ -1927,8 +2141,8 @@ $violet-light: #EDE9FE;
     grid-column: span 12;
   }
 
-  @media (max-width: 640px) {
-    grid-column: span 1;
+  @media (max-width: 768px) {
+    display: none; // Hide on mobile, use bottom action bar instead
   }
 
   .actions-row {
@@ -2020,11 +2234,19 @@ $violet-light: #EDE9FE;
     &:hover {
       color: $sky-darker;
     }
+
+    @media (max-width: 768px) {
+      font-size: 12px;
+    }
   }
 
   .specialist-info {
     display: flex;
     gap: 16px;
+
+    @media (max-width: 768px) {
+      gap: 12px;
+    }
   }
 
   .specialist-avatar {
@@ -2033,6 +2255,12 @@ $violet-light: #EDE9FE;
     border-radius: 18px;
     overflow: hidden;
     flex-shrink: 0;
+
+    @media (max-width: 768px) {
+      width: 56px;
+      height: 56px;
+      border-radius: 14px;
+    }
 
     img {
       width: 100%;
@@ -2050,6 +2278,10 @@ $violet-light: #EDE9FE;
       justify-content: center;
       font-size: 24px;
       font-weight: 600;
+
+      @media (max-width: 768px) {
+        font-size: 18px;
+      }
     }
   }
 
@@ -2062,12 +2294,21 @@ $violet-light: #EDE9FE;
       font-weight: 600;
       color: $navy;
       margin: 0 0 4px;
+
+      @media (max-width: 768px) {
+        font-size: 15px;
+      }
     }
 
     .specialist-title {
       font-size: 14px;
       color: $gray;
       margin: 0 0 10px;
+
+      @media (max-width: 768px) {
+        font-size: 13px;
+        margin: 0 0 8px;
+      }
     }
 
     .specialist-meta {
@@ -2075,12 +2316,20 @@ $violet-light: #EDE9FE;
       flex-wrap: wrap;
       gap: 12px;
 
+      @media (max-width: 768px) {
+        gap: 8px;
+      }
+
       .meta-item {
         display: flex;
         align-items: center;
         gap: 4px;
         font-size: 12px;
         color: $gray;
+
+        @media (max-width: 768px) {
+          font-size: 11px;
+        }
 
         svg {
           color: $sky;
@@ -2097,8 +2346,9 @@ $violet-light: #EDE9FE;
     grid-template-columns: repeat(2, 1fr);
     gap: 12px;
 
-    @media (max-width: 480px) {
-      grid-template-columns: 1fr;
+    @media (max-width: 768px) {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
     }
   }
 
@@ -2109,6 +2359,12 @@ $violet-light: #EDE9FE;
     padding: 14px;
     background: $bg;
     border-radius: 14px;
+
+    @media (max-width: 768px) {
+      gap: 10px;
+      padding: 12px;
+      border-radius: 12px;
+    }
   }
 
   .detail-icon {
@@ -2120,6 +2376,12 @@ $violet-light: #EDE9FE;
     justify-content: center;
     flex-shrink: 0;
 
+    @media (max-width: 768px) {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+    }
+
     &.sky { background: $sky-light; color: $sky-dark; }
     &.emerald { background: $emerald-light; color: $emerald; }
     &.violet { background: $violet-light; color: $violet; }
@@ -2127,17 +2389,30 @@ $violet-light: #EDE9FE;
   }
 
   .detail-content {
+    min-width: 0;
+
     .detail-label {
       font-size: 12px;
       color: $gray;
       display: block;
       margin-bottom: 2px;
+
+      @media (max-width: 768px) {
+        font-size: 11px;
+      }
     }
 
     .detail-value {
       font-size: 14px;
       font-weight: 600;
       color: $navy;
+
+      @media (max-width: 768px) {
+        font-size: 13px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
     }
   }
 }
@@ -2150,8 +2425,8 @@ $violet-light: #EDE9FE;
     grid-column: span 6;
   }
 
-  @media (max-width: 640px) {
-    grid-column: span 1;
+  @media (max-width: 768px) {
+    grid-column: unset;
   }
 
   .meeting-platform {
@@ -2165,6 +2440,11 @@ $violet-light: #EDE9FE;
     padding: 4px 10px;
     border-radius: 20px;
 
+    @media (max-width: 768px) {
+      font-size: 11px;
+      padding: 3px 8px;
+    }
+
     svg {
       color: #2D8CFF;
     }
@@ -2176,8 +2456,10 @@ $violet-light: #EDE9FE;
     gap: 16px;
     margin-bottom: 20px;
 
-    @media (max-width: 480px) {
+    @media (max-width: 768px) {
       grid-template-columns: 1fr;
+      gap: 12px;
+      margin-bottom: 16px;
     }
   }
 
@@ -2321,16 +2603,28 @@ $violet-light: #EDE9FE;
   .payment-amount {
     margin-bottom: 12px;
 
+    @media (max-width: 768px) {
+      margin-bottom: 10px;
+    }
+
     .currency {
       font-size: 14px;
       color: $gray;
       margin-right: 4px;
+
+      @media (max-width: 768px) {
+        font-size: 13px;
+      }
     }
 
     .amount {
       font-size: 28px;
       font-weight: 700;
       color: $navy;
+
+      @media (max-width: 768px) {
+        font-size: 24px;
+      }
     }
   }
 
@@ -2391,8 +2685,8 @@ $violet-light: #EDE9FE;
 .notes-card {
   grid-column: span 12;
 
-  @media (max-width: 640px) {
-    grid-column: span 1;
+  @media (max-width: 768px) {
+    grid-column: unset;
   }
 
   .notes-count {
@@ -2402,6 +2696,11 @@ $violet-light: #EDE9FE;
     background: $bg;
     padding: 4px 10px;
     border-radius: 20px;
+
+    @media (max-width: 768px) {
+      font-size: 11px;
+      padding: 3px 8px;
+    }
   }
 
   .patient-note {
@@ -2409,6 +2708,12 @@ $violet-light: #EDE9FE;
     background: $sky-light;
     border-radius: 14px;
     margin-bottom: 16px;
+
+    @media (max-width: 768px) {
+      padding: 14px;
+      border-radius: 12px;
+      margin-bottom: 12px;
+    }
 
     .note-header {
       display: flex;
@@ -2426,11 +2731,19 @@ $violet-light: #EDE9FE;
         color: $sky-dark;
         text-transform: uppercase;
         letter-spacing: 0.5px;
+
+        @media (max-width: 768px) {
+          font-size: 12px;
+        }
       }
     }
 
     .note-text {
       font-size: 14px;
+
+      @media (max-width: 768px) {
+        font-size: 13px;
+      }
       color: $slate;
       margin: 0;
       line-height: 1.6;
@@ -2541,8 +2854,8 @@ $violet-light: #EDE9FE;
 .checkup-card {
   grid-column: span 12;
 
-  @media (max-width: 640px) {
-    grid-column: span 1;
+  @media (max-width: 768px) {
+    grid-column: unset;
   }
 
   padding: 0;
@@ -2557,8 +2870,18 @@ $violet-light: #EDE9FE;
     cursor: pointer;
     transition: all 0.2s;
 
+    @media (max-width: 768px) {
+      gap: 12px;
+      padding: 16px;
+      border-radius: 16px;
+    }
+
     &:hover {
       box-shadow: 0 4px 16px rgba($emerald, 0.2);
+    }
+
+    &:active {
+      transform: scale(0.99);
     }
 
     .checkup-icon {
@@ -2571,22 +2894,37 @@ $violet-light: #EDE9FE;
       justify-content: center;
       color: $emerald;
       flex-shrink: 0;
+
+      @media (max-width: 768px) {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+      }
     }
 
     .checkup-content {
       flex: 1;
+      min-width: 0;
 
       h4 {
         font-size: 15px;
         font-weight: 600;
         color: #1B5E20;
         margin: 0 0 4px;
+
+        @media (max-width: 768px) {
+          font-size: 14px;
+        }
       }
 
       p {
         font-size: 13px;
         color: #388E3C;
         margin: 0;
+
+        @media (max-width: 768px) {
+          font-size: 12px;
+        }
       }
     }
 
@@ -2603,6 +2941,11 @@ $violet-light: #EDE9FE;
     border-radius: 20px;
     font-size: 12px;
     font-weight: 600;
+
+    @media (max-width: 768px) {
+      padding: 4px 10px;
+      font-size: 11px;
+    }
 
     &.status-completed {
       background: #DCFCE7;
@@ -2626,8 +2969,9 @@ $violet-light: #EDE9FE;
     gap: 16px;
     margin-bottom: 20px;
 
-    @media (max-width: 480px) {
-      grid-template-columns: 1fr;
+    @media (max-width: 768px) {
+      gap: 10px;
+      margin-bottom: 16px;
     }
   }
 
@@ -2783,6 +3127,12 @@ $violet-light: #EDE9FE;
     min-height: 80px;
     color: #FFFFFF;
 
+    @media (max-width: 768px) {
+      padding: 20px 16px;
+      border-radius: 12px;
+      min-height: 70px;
+    }
+
     .play-overlay {
       display: flex;
       align-items: center;
@@ -2800,6 +3150,11 @@ $violet-light: #EDE9FE;
       justify-content: center;
       color: white;
       transition: all 0.2s;
+
+      @media (max-width: 768px) {
+        width: 48px;
+        height: 48px;
+      }
 
       &:hover {
         background: rgba(255, 255, 255, 0.3);
@@ -2821,11 +3176,20 @@ $violet-light: #EDE9FE;
         font-size: 14px;
         font-weight: 600;
         color: #FFFFFF;
+
+        @media (max-width: 768px) {
+          font-size: 13px;
+          gap: 4px;
+        }
       }
 
       .recording-label {
         font-size: 12px;
         color: rgba(255, 255, 255, 0.85);
+
+        @media (max-width: 768px) {
+          font-size: 11px;
+        }
       }
     }
   }
@@ -3023,11 +3387,9 @@ $violet-light: #EDE9FE;
   gap: 20px;
 
   @media (max-width: 768px) {
-    grid-template-columns: 1fr;
-  }
-
-  @media (max-width: 640px) {
-    grid-column: span 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
   }
 
   // Override child cards to not span full width
@@ -3048,6 +3410,10 @@ $violet-light: #EDE9FE;
       display: flex;
       align-items: center;
       gap: 10px;
+
+      @media (max-width: 768px) {
+        gap: 8px;
+      }
     }
 
     .rx-badge {
@@ -3059,6 +3425,12 @@ $violet-light: #EDE9FE;
       align-items: center;
       justify-content: center;
       color: $violet;
+
+      @media (max-width: 768px) {
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+      }
     }
 
     h3 {
@@ -3072,6 +3444,11 @@ $violet-light: #EDE9FE;
       font-weight: 600;
       padding: 4px 10px;
       border-radius: 20px;
+
+      @media (max-width: 768px) {
+        font-size: 11px;
+        padding: 3px 8px;
+      }
     }
   }
 
@@ -3079,6 +3456,10 @@ $violet-light: #EDE9FE;
     display: flex;
     flex-direction: column;
     gap: 16px;
+
+    @media (max-width: 768px) {
+      gap: 12px;
+    }
   }
 
   .prescription-item {
@@ -3087,6 +3468,11 @@ $violet-light: #EDE9FE;
     padding: 16px;
     border: 1px solid #E2E8F0;
     transition: all 0.2s;
+
+    @media (max-width: 768px) {
+      padding: 14px;
+      border-radius: 12px;
+    }
 
     &:hover {
       border-color: $violet-light;
@@ -3208,6 +3594,10 @@ $violet-light: #EDE9FE;
 .clinical-notes-card {
   .note-preview {
     margin-bottom: 16px;
+
+    @media (max-width: 768px) {
+      margin-bottom: 12px;
+    }
   }
 
   .note-section {
@@ -3215,6 +3605,12 @@ $violet-light: #EDE9FE;
     background: $bg;
     border-radius: 12px;
     margin-bottom: 10px;
+
+    @media (max-width: 768px) {
+      padding: 10px;
+      border-radius: 10px;
+      margin-bottom: 8px;
+    }
 
     &:last-child {
       margin-bottom: 0;
@@ -3228,6 +3624,11 @@ $violet-light: #EDE9FE;
       letter-spacing: 0.5px;
       display: block;
       margin-bottom: 6px;
+
+      @media (max-width: 768px) {
+        font-size: 10px;
+        margin-bottom: 4px;
+      }
     }
 
     p {
@@ -3235,6 +3636,10 @@ $violet-light: #EDE9FE;
       color: $slate;
       margin: 0;
       line-height: 1.5;
+
+      @media (max-width: 768px) {
+        font-size: 13px;
+      }
     }
   }
 
@@ -3254,6 +3659,12 @@ $violet-light: #EDE9FE;
     gap: 8px;
     transition: all 0.2s;
 
+    @media (max-width: 768px) {
+      padding: 10px;
+      font-size: 13px;
+      border-radius: 10px;
+    }
+
     &:hover {
       background: white;
       border-color: $sky;
@@ -3266,13 +3677,17 @@ $violet-light: #EDE9FE;
 .timeline-card {
   grid-column: span 12;
 
-  @media (max-width: 640px) {
-    grid-column: span 1;
+  @media (max-width: 768px) {
+    grid-column: unset;
   }
 
   .timeline {
     position: relative;
     padding-left: 28px;
+
+    @media (max-width: 768px) {
+      padding-left: 24px;
+    }
 
     &::before {
       content: '';
@@ -3282,6 +3697,10 @@ $violet-light: #EDE9FE;
       bottom: 8px;
       width: 2px;
       background: #E2E8F0;
+
+      @media (max-width: 768px) {
+        left: 6px;
+      }
     }
   }
 
