@@ -121,6 +121,11 @@ const medicalHistory = reactive({
   immunizations: [], // Array of { vaccine, date }
 });
 
+// Pre-existing Conditions (separate from medical_history, stored at top level of user)
+const preExistingConditions = reactive({
+  conditions: [], // Array of { name, description, start_date, end_date, is_condition_exists, file: [] }
+});
+
 // Step 8: Device & Health Data Integration
 const deviceIntegration = reactive({
   devices_connected: [],
@@ -328,6 +333,7 @@ export function usePatientOnboardingState() {
       vitalsMetrics: { ...vitalsMetrics },
       allergies: { ...allergies },
       medicalHistory: { ...medicalHistory },
+      preExistingConditions: { ...preExistingConditions },
       deviceIntegration: { ...deviceIntegration },
     };
     localStorage.setItem('patient_onboarding_state', JSON.stringify(state));
@@ -348,6 +354,7 @@ export function usePatientOnboardingState() {
         if (state.vitalsMetrics) Object.assign(vitalsMetrics, state.vitalsMetrics);
         if (state.allergies) Object.assign(allergies, state.allergies);
         if (state.medicalHistory) Object.assign(medicalHistory, state.medicalHistory);
+        if (state.preExistingConditions) Object.assign(preExistingConditions, state.preExistingConditions);
         if (state.deviceIntegration) Object.assign(deviceIntegration, state.deviceIntegration);
       } catch (e) {
         console.error('Failed to load patient onboarding state:', e);
@@ -514,6 +521,21 @@ export function usePatientOnboardingState() {
       }
     }
 
+    // Pre-existing Conditions: Check if pre_existing_conditions exist (stored at top level of user)
+    const userPreExistingConditions = userProfile?.pre_existing_conditions;
+    if (userPreExistingConditions && userPreExistingConditions.length > 0) {
+      // Mark step as complete if there are pre-existing conditions
+      stepCompletion.medicalHistory = true;
+      preExistingConditions.conditions = userPreExistingConditions.map(condition => ({
+        name: condition.name || '',
+        description: condition.description || '',
+        start_date: condition.start_date || '',
+        end_date: condition.end_date || '',
+        is_condition_exists: condition.is_condition_exists ?? true,
+        file: condition.file || [],
+      }));
+    }
+
     // Device Integration: Check if any devices or health apps are connected
     const userDeviceIntegration = userProfile?.device_integration;
     if (userDeviceIntegration?.health_apps_connected?.length > 0 || userDeviceIntegration?.devices_connected?.length > 0) {
@@ -635,6 +657,10 @@ export function usePatientOnboardingState() {
       immunizations: [],
     });
 
+    Object.assign(preExistingConditions, {
+      conditions: [],
+    });
+
     Object.assign(deviceIntegration, {
       devices_connected: [],
       health_apps_connected: [],
@@ -690,6 +716,7 @@ export function usePatientOnboardingState() {
     vitalsMetrics,
     allergies,
     medicalHistory,
+    preExistingConditions,
     deviceIntegration,
     walletCredits,
 

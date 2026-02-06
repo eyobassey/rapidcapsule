@@ -1,1030 +1,848 @@
 <template>
-  <div class="page-content">
-    <top-bar
-      type="title-with-back"
-      title="Shopping Cart"
-      @open-side-nav="$emit('openSideNav')"
-      @go-back="$router.back()"
-    />
+  <div class="cart-page">
+    <!-- Mobile Header -->
+    <header class="mobile-header">
+      <button class="back-btn" @click="$router.back()">
+        <v-icon name="hi-arrow-left" scale="1.1" />
+      </button>
+      <div class="header-logo">
+        <img src="/RapidCapsule_Logo.png" alt="Rapid Capsule" />
+      </div>
+      <button class="cart-btn" @click="$router.push('/app/patient/pharmacy')">
+        <v-icon name="hi-shopping-cart" scale="1.1" />
+        <span v-if="cartItemCount > 0" class="cart-count">{{ cartItemCount }}</span>
+      </button>
+    </header>
 
-    <div class="page-content__body">
-      <div class="cart-page">
+    <!-- Page Content -->
+    <div class="page-content">
+      <!-- Loading State -->
+      <div v-if="loading" class="loading-state">
+        <div class="loading-spinner">
+          <div class="spinner-ring"></div>
+          <v-icon name="hi-shopping-cart" scale="1.2" class="spinner-icon" />
+        </div>
+        <p>Loading your cart...</p>
+      </div>
+
+      <template v-else>
+        <!-- Breadcrumbs -->
+        <nav class="breadcrumbs">
+          <router-link to="/app/patient/dashboard" class="breadcrumb-item">
+            <v-icon name="hi-home" scale="0.8" />
+          </router-link>
+          <span class="breadcrumb-sep">/</span>
+          <router-link to="/app/patient/pharmacy" class="breadcrumb-item">Pharmacy</router-link>
+          <span class="breadcrumb-sep">/</span>
+          <span class="breadcrumb-item current">Shopping Cart</span>
+        </nav>
+
         <!-- Empty Cart State -->
-        <div v-if="!loading && cart.length === 0" class="empty-cart">
-          <div class="empty-cart-illustration">
-            <div class="cart-icon-wrapper">
-              <svg width="80" height="80" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M9 22C9.55228 22 10 21.5523 10 21C10 20.4477 9.55228 20 9 20C8.44772 20 8 20.4477 8 21C8 21.5523 8.44772 22 9 22Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M20 22C20.5523 22 21 21.5523 21 21C21 20.4477 20.5523 20 20 20C19.4477 20 19 20.4477 19 21C19 21.5523 19.4477 22 20 22Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M1 1H5L7.68 14.39C7.77144 14.8504 8.02191 15.264 8.38755 15.5583C8.75318 15.8526 9.2107 16.009 9.68 16H19.4C19.8693 16.009 20.3268 15.8526 20.6925 15.5583C21.0581 15.264 21.3086 14.8504 21.4 14.39L23 6H6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              <div class="empty-badge">0</div>
+        <div v-if="cart.length === 0" class="empty-state-card">
+          <div class="empty-orb">
+            <div class="orb-ring orb-ring--1"></div>
+            <div class="orb-ring orb-ring--2"></div>
+            <div class="orb-core">
+              <v-icon name="hi-shopping-cart" scale="2.5" />
             </div>
           </div>
-          <h3>Your cart is empty</h3>
-          <p>Discover medications, health products, and wellness essentials in our pharmacy</p>
-          <div class="empty-cart-actions">
-            <button class="browse-btn primary" @click="$router.push('/app/patient/pharmacy/otc')">
-              <span class="btn-icon">💊</span>
-              Shop OTC Products
-            </button>
-            <button class="browse-btn secondary" @click="$router.push('/app/patient/pharmacy')">
-              Browse All Categories
+          <h2>Your cart is empty</h2>
+          <p>Discover medications, health products, and wellness essentials</p>
+          <div class="empty-actions">
+            <button class="primary-btn" @click="$router.push('/app/patient/pharmacy')">
+              <v-icon name="hi-shopping-cart" scale="1" />
+              <span>Browse Pharmacy</span>
             </button>
           </div>
-          <div class="empty-cart-features">
-            <div class="feature-item">
-              <span class="feature-icon">🚚</span>
-              <span>Fast Delivery</span>
-            </div>
-            <div class="feature-item">
-              <span class="feature-icon">✓</span>
+          <div class="trust-row">
+            <div class="trust-item">
+              <v-icon name="hi-shield-check" scale="0.9" />
               <span>Licensed Pharmacy</span>
             </div>
-            <div class="feature-item">
-              <span class="feature-icon">🔒</span>
+            <div class="trust-item">
+              <v-icon name="hi-truck" scale="0.9" />
+              <span>Fast Delivery</span>
+            </div>
+            <div class="trust-item">
+              <v-icon name="hi-lock-closed" scale="0.9" />
               <span>Secure Checkout</span>
             </div>
           </div>
         </div>
 
         <!-- Cart Content -->
-        <div v-else-if="!loading" class="cart-content">
-          <!-- Free Delivery Progress Bar -->
-          <div class="free-delivery-banner" :class="{ 'achieved': hasFreeDelivery }">
-            <div class="delivery-banner-content">
-              <div class="delivery-icon">
-                <span v-if="hasFreeDelivery">🎉</span>
-                <span v-else>🚚</span>
-              </div>
-              <div class="delivery-message">
-                <span v-if="hasFreeDelivery" class="success-text">
-                  You've earned FREE delivery!
-                </span>
-                <span v-else>
-                  Add <strong>{{ formatPrice(amountToFreeDelivery) }}</strong> more for FREE delivery
-                </span>
-              </div>
-            </div>
-            <div class="delivery-progress-bar">
-              <div class="progress-track">
-                <div
-                  class="progress-fill"
-                  :style="{ width: freeDeliveryProgress + '%' }"
-                ></div>
-              </div>
-              <div class="progress-labels">
-                <span>₦0</span>
-                <span>{{ formatPrice(freeDeliveryThreshold) }}</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Drug Interaction Alert -->
-          <div v-if="drugInteractions.hasInteractions" class="drug-interaction-alert">
-            <div class="interaction-header">
-              <div class="header-icon">
-                <span>⚠️</span>
-              </div>
-              <div class="header-content">
-                <h4>Drug Interaction Warning</h4>
-                <p>{{ drugInteractions.interactions.length }} potential interaction{{ drugInteractions.interactions.length > 1 ? 's' : '' }} detected in your cart</p>
-              </div>
-              <button class="expand-btn" @click="showInteractionDetails = !showInteractionDetails">
-                {{ showInteractionDetails ? 'Hide' : 'Show' }} Details
-                <span class="arrow" :class="{ 'rotated': showInteractionDetails }">▼</span>
-              </button>
-            </div>
-
-            <Transition name="slide">
-              <div v-if="showInteractionDetails" class="interaction-details">
-                <div
-                  v-for="(interaction, index) in drugInteractions.interactions"
-                  :key="index"
-                  :class="['interaction-item', `severity-${interaction.severity}`]"
-                >
-                  <div class="severity-badge" :class="interaction.severity">
-                    <span v-if="interaction.severity === 'high'">⛔</span>
-                    <span v-else-if="interaction.severity === 'moderate'">⚠️</span>
-                    <span v-else>ℹ️</span>
-                    {{ interaction.severity }}
+        <template v-else>
+          <!-- Bento Grid -->
+          <section class="bento-grid">
+            <!-- Cart Summary Hero -->
+            <div class="bento-card summary-hero-card">
+              <div class="summary-hero">
+                <div class="hero-content">
+                  <div class="hero-badge">
+                    <div class="badge-pulse"></div>
+                    <v-icon name="hi-shopping-cart" scale="0.9" />
+                    <span>Shopping Cart</span>
                   </div>
-                  <div class="interaction-info">
-                    <div class="drug-pair">
+                  <h1 class="hero-title">{{ cartItemCount }} Item{{ cartItemCount !== 1 ? 's' : '' }}</h1>
+                  <p class="hero-subtitle">Review your items and proceed to checkout</p>
+                </div>
+                <div class="hero-stats">
+                  <div class="stat-item">
+                    <span class="stat-value">{{ formatPrice(cartTotal) }}</span>
+                    <span class="stat-label">Subtotal</span>
+                  </div>
+                  <div class="stat-divider"></div>
+                  <div class="stat-item">
+                    <span class="stat-value" :class="{ 'free': hasFreeDelivery }">
+                      {{ hasFreeDelivery ? 'FREE' : formatPrice(actualDeliveryFee) }}
+                    </span>
+                    <span class="stat-label">Delivery</span>
+                  </div>
+                </div>
+              </div>
+              <!-- Free Delivery Progress -->
+              <div v-if="!hasFreeDelivery" class="delivery-progress">
+                <div class="progress-text">
+                  <v-icon name="hi-truck" scale="0.9" />
+                  <span>Add <strong>{{ formatPrice(amountToFreeDelivery) }}</strong> more for FREE delivery</span>
+                </div>
+                <div class="progress-bar">
+                  <div class="progress-fill" :style="{ width: freeDeliveryProgress + '%' }"></div>
+                </div>
+              </div>
+              <div v-else class="free-delivery-achieved">
+                <v-icon name="hi-gift" scale="1" />
+                <span>You've earned FREE delivery!</span>
+              </div>
+            </div>
+
+            <!-- Drug Interaction Alert -->
+            <div v-if="drugInteractions.hasInteractions" class="bento-card alert-card danger">
+              <div class="alert-header">
+                <div class="alert-icon">
+                  <v-icon name="hi-exclamation-circle" scale="1.2" />
+                </div>
+                <div class="alert-content">
+                  <h3>Drug Interaction Warning</h3>
+                  <p>{{ drugInteractions.interactions.length }} potential interaction{{ drugInteractions.interactions.length > 1 ? 's' : '' }} detected</p>
+                </div>
+                <button class="alert-toggle" @click="showInteractionDetails = !showInteractionDetails">
+                  <span>{{ showInteractionDetails ? 'Hide' : 'Details' }}</span>
+                  <v-icon :name="showInteractionDetails ? 'hi-chevron-up' : 'hi-chevron-down'" scale="0.8" />
+                </button>
+              </div>
+              <Transition name="slide">
+                <div v-if="showInteractionDetails" class="alert-details">
+                  <div v-for="(interaction, idx) in drugInteractions.interactions" :key="idx"
+                       :class="['interaction-item', interaction.severity]">
+                    <span class="severity-tag">{{ interaction.severity }}</span>
+                    <div class="interaction-drugs">
                       <strong>{{ interaction.drug1 }}</strong>
-                      <span class="separator">+</span>
+                      <span class="plus">+</span>
                       <strong>{{ interaction.drug2 }}</strong>
                     </div>
-                    <p class="description">{{ interaction.description }}</p>
-                    <span class="source">Source: {{ interaction.source }}</span>
+                    <p class="interaction-desc">{{ interaction.description }}</p>
+                  </div>
+                  <div class="interaction-disclaimer">
+                    <v-icon name="hi-information-circle" scale="0.9" />
+                    <p>{{ drugInteractions.disclaimer }}</p>
                   </div>
                 </div>
-
-                <div class="interaction-disclaimer">
-                  <span class="disclaimer-icon">ℹ️</span>
-                  <p>{{ drugInteractions.disclaimer }}</p>
-                </div>
-              </div>
-            </Transition>
-          </div>
-
-          <!-- Checking Interactions Loading State -->
-          <div v-if="checkingInteractions" class="interaction-loading">
-            <div class="loading-spinner"></div>
-            <span>Checking for drug interactions...</span>
-          </div>
-
-          <!-- Cart Items Section -->
-          <div class="cart-section">
-            <div class="section-header">
-              <h3>Cart Items ({{ cartItemCount }})</h3>
+              </Transition>
             </div>
 
-            <!-- Max Quantity Warning -->
-            <div v-if="maxQtyMessage" class="max-qty-warning">
-              ⚠️ {{ maxQtyMessage }}
-            </div>
-
-            <!-- OTC Items Section -->
-            <div v-if="otcCartItems.length > 0" class="items-group otc-group">
-              <div class="group-header">
-                <span class="group-icon">💊</span>
-                <span class="group-title">Over-the-Counter ({{ otcCartItems.length }})</span>
-              </div>
-              <div class="cart-items">
-                <div
-                  v-for="item in otcCartItems"
-                  :key="item.drugId"
-                  class="cart-item"
-                >
-                <!-- Product Image -->
-                <div class="item-image">
-                  <img v-if="item.imageUrl" :src="item.imageUrl" :alt="item.name" crossorigin="anonymous" />
-                  <div v-else class="image-placeholder">💊</div>
+            <!-- Cart Items Card -->
+            <div class="bento-card items-card">
+              <div class="card-header">
+                <div class="header-icon sky">
+                  <v-icon name="hi-shopping-cart" scale="1" />
                 </div>
+                <h3>Cart Items</h3>
+                <span class="item-count">{{ cartItemCount }} item{{ cartItemCount !== 1 ? 's' : '' }}</span>
+              </div>
 
-                <!-- Product Details -->
-                <div class="item-info">
-                  <h4 class="item-name">{{ item.name }}</h4>
-                  <p class="item-meta">
-                    <span v-if="item.strength">{{ item.strength }}</span>
-                    <span v-if="item.dosageForm"> • {{ item.dosageForm }}</span>
-                    <span v-if="item.route"> • {{ item.route }}</span>
-                  </p>
-                  <p v-if="item.manufacturer" class="item-manufacturer">{{ item.manufacturer }}</p>
-                  <div class="stock-status-row">
-                    <span :class="['stock-badge', getStockStatus(item).class]">
-                      {{ getStockStatus(item).label }}
-                    </span>
-                    <span class="item-price-mobile">{{ formatPrice(item.price) }} each</span>
+              <!-- OTC Items -->
+              <div v-if="otcCartItems.length > 0" class="items-section">
+                <div class="section-label otc">
+                  <v-icon name="ri-capsule-line" scale="0.9" />
+                  <span>Over-the-Counter ({{ otcCartItems.length }})</span>
+                </div>
+                <div class="cart-items-list">
+                  <div v-for="item in otcCartItems" :key="item.drugId" class="cart-item">
+                    <div class="item-image">
+                      <img v-if="item.imageUrl" :src="item.imageUrl" :alt="item.name" referrerpolicy="no-referrer" />
+                      <div v-else class="image-placeholder">
+                        <v-icon name="ri-capsule-line" scale="1.2" />
+                      </div>
+                    </div>
+                    <div class="item-details">
+                      <h4 class="item-name">{{ item.name }}</h4>
+                      <p class="item-meta">
+                        <span v-if="item.strength">{{ item.strength }}</span>
+                        <span v-if="item.dosageForm"> &bull; {{ item.dosageForm }}</span>
+                      </p>
+                      <p v-if="item.manufacturer" class="item-manufacturer">{{ item.manufacturer }}</p>
+                      <div class="item-stock" :class="getStockStatus(item).class">
+                        <span class="stock-dot"></span>
+                        {{ getStockStatus(item).label }}
+                      </div>
+                    </div>
+                    <div class="item-quantity">
+                      <button class="qty-btn" @click="decrementQuantity(item)" :disabled="item.quantity <= 1">
+                        <v-icon name="hi-minus" scale="0.8" />
+                      </button>
+                      <span class="qty-value">{{ item.quantity }}</span>
+                      <button class="qty-btn" @click="incrementQuantity(item)" :disabled="!canIncrement(item)">
+                        <v-icon name="hi-plus" scale="0.8" />
+                      </button>
+                    </div>
+                    <div class="item-price">
+                      <span class="price-total">{{ formatPrice(item.price * item.quantity) }}</span>
+                      <span class="price-each">{{ formatPrice(item.price) }} each</span>
+                    </div>
+                    <div class="item-actions">
+                      <button class="action-btn save" @click="saveForLater(item)" title="Save for later">
+                        <v-icon name="hi-heart" scale="0.9" />
+                      </button>
+                      <button class="action-btn remove" @click="removeItem(item)" title="Remove">
+                        <v-icon name="hi-trash" scale="0.9" />
+                      </button>
+                    </div>
                   </div>
                 </div>
+              </div>
 
-                <!-- Quantity Controls -->
-                <div class="item-quantity-wrapper">
-                  <div class="item-quantity">
-                    <button class="qty-btn" @click="decrementQuantity(item)" :disabled="item.quantity <= 1">−</button>
-                    <span class="qty-value">{{ item.quantity }}</span>
-                    <button class="qty-btn" @click="incrementQuantity(item)" :disabled="!canIncrement(item)">+</button>
+              <!-- Prescription Items -->
+              <div v-if="rxCartItems.length > 0" class="items-section">
+                <div class="section-label rx">
+                  <v-icon name="hi-document-text" scale="0.9" />
+                  <span>Prescription Required ({{ rxCartItems.length }})</span>
+                </div>
+                <div class="cart-items-list">
+                  <div v-for="item in rxCartItems" :key="item.drugId" class="cart-item">
+                    <div class="item-image">
+                      <img v-if="item.imageUrl" :src="item.imageUrl" :alt="item.name" referrerpolicy="no-referrer" />
+                      <div v-else class="image-placeholder">
+                        <v-icon name="ri-capsule-line" scale="1.2" />
+                      </div>
+                      <span class="rx-badge">Rx</span>
+                    </div>
+                    <div class="item-details">
+                      <h4 class="item-name">{{ item.name }}</h4>
+                      <p class="item-meta">
+                        <span v-if="item.strength">{{ item.strength }}</span>
+                        <span v-if="item.dosageForm"> &bull; {{ item.dosageForm }}</span>
+                      </p>
+                      <p v-if="item.manufacturer" class="item-manufacturer">{{ item.manufacturer }}</p>
+                      <div class="item-stock" :class="getStockStatus(item).class">
+                        <span class="stock-dot"></span>
+                        {{ getStockStatus(item).label }}
+                      </div>
+                    </div>
+                    <div class="item-quantity">
+                      <button class="qty-btn" @click="decrementQuantity(item)" :disabled="item.quantity <= 1">
+                        <v-icon name="hi-minus" scale="0.8" />
+                      </button>
+                      <span class="qty-value">{{ item.quantity }}</span>
+                      <button class="qty-btn" @click="incrementQuantity(item)" :disabled="!canIncrement(item)">
+                        <v-icon name="hi-plus" scale="0.8" />
+                      </button>
+                    </div>
+                    <div class="item-price">
+                      <span class="price-total">{{ formatPrice(item.price * item.quantity) }}</span>
+                      <span class="price-each">{{ formatPrice(item.price) }} each</span>
+                    </div>
+                    <div class="item-actions">
+                      <button class="action-btn save" @click="saveForLater(item)" title="Save for later">
+                        <v-icon name="hi-heart" scale="0.9" />
+                      </button>
+                      <button class="action-btn remove" @click="removeItem(item)" title="Remove">
+                        <v-icon name="hi-trash" scale="0.9" />
+                      </button>
+                    </div>
                   </div>
                 </div>
-
-                <!-- Price -->
-                <div class="item-price">
-                  <span class="total-amount">{{ formatPrice(item.price * item.quantity) }}</span>
-                  <span class="unit-price">{{ formatPrice(item.price) }} each</span>
-                </div>
-
-                <!-- Item Actions -->
-                <div class="item-actions">
-                  <button class="save-later-btn" @click="saveForLater(item)" title="Save for later">♡</button>
-                  <button class="remove-btn" @click="removeItem(item)" title="Remove item">✕</button>
-                </div>
-                </div>
               </div>
             </div>
 
-            <!-- Prescription Items Section -->
-            <div v-if="rxCartItems.length > 0" class="items-group rx-group">
-              <div class="group-header">
-                <span class="group-icon rx-icon">Rx</span>
-                <span class="group-title">Prescription Required ({{ rxCartItems.length }})</span>
-                <span class="rx-notice">Valid prescription needed</span>
-              </div>
-              <div class="cart-items">
-                <div
-                  v-for="item in rxCartItems"
-                  :key="item.drugId"
-                  class="cart-item"
-                >
-                <!-- Product Image -->
-                <div class="item-image">
-                  <img v-if="item.imageUrl" :src="item.imageUrl" :alt="item.name" crossorigin="anonymous" />
-                  <div v-else class="image-placeholder">💊</div>
-                  <span v-if="item.requiresPrescription" class="rx-tag">Rx</span>
-                  <!-- Coverage indicator for RX items -->
-                  <span
-                    v-if="item.requiresPrescription && selectedPrescription"
-                    :class="['coverage-badge', isItemCovered(item) ? 'covered' : 'not-covered']"
-                    :title="isItemCovered(item) ? 'Covered by prescription' : 'Not covered - needs prescription'"
-                  >
-                    {{ isItemCovered(item) ? '✓' : '!' }}
-                  </span>
+            <!-- Delivery Method Card -->
+            <div class="bento-card delivery-card">
+              <div class="card-header">
+                <div class="header-icon violet">
+                  <v-icon name="hi-truck" scale="1" />
                 </div>
-
-                <!-- Product Details -->
-                <div class="item-info">
-                  <h4 class="item-name">{{ item.name }}</h4>
-                  <p class="item-meta">
-                    <span v-if="item.strength">{{ item.strength }}</span>
-                    <span v-if="item.dosageForm"> • {{ item.dosageForm }}</span>
-                    <span v-if="item.route"> • {{ item.route }}</span>
-                  </p>
-                  <p v-if="item.manufacturer" class="item-manufacturer">{{ item.manufacturer }}</p>
-                  <!-- Stock Status Badge -->
-                  <div class="stock-status-row">
-                    <span
-                      :class="['stock-badge', getStockStatus(item).class]"
-                    >
-                      {{ getStockStatus(item).label }}
-                    </span>
-                    <span class="item-price-mobile">{{ formatPrice(item.price) }} each</span>
+                <h3>Delivery Method</h3>
+              </div>
+              <div class="delivery-options">
+                <button :class="['delivery-option', { active: deliveryMethod === 'delivery' }]"
+                        @click="setDeliveryMethodAction('delivery')">
+                  <div class="option-icon">
+                    <v-icon name="hi-home" scale="1.2" />
                   </div>
-                </div>
-
-                <!-- Quantity Controls -->
-                <div class="item-quantity-wrapper">
-                  <div class="item-quantity">
-                    <button
-                      class="qty-btn"
-                      @click="decrementQuantity(item)"
-                      :disabled="item.quantity <= 1"
-                    >-</button>
-                    <span class="qty-value">{{ item.quantity }}</span>
-                    <button
-                      class="qty-btn"
-                      @click="incrementQuantity(item)"
-                      :disabled="!canIncrement(item)"
-                    >+</button>
+                  <div class="option-info">
+                    <strong>Home Delivery</strong>
+                    <span>Delivered to your door</span>
                   </div>
-                  <span v-if="item.maxQuantityPerOrder" class="max-qty-hint">
-                    Max: {{ item.maxQuantityPerOrder }}
-                  </span>
-                </div>
-
-                <!-- Item Total -->
-                <div class="item-total">
-                  <span class="total-amount">{{ formatPrice(item.price * item.quantity) }}</span>
-                  <span class="unit-price">{{ formatPrice(item.price) }} each</span>
-                </div>
-
-                <!-- Item Actions -->
-                <div class="item-actions">
-                  <button class="save-later-btn" @click="saveForLater(item)" title="Save for later">
-                    ♡
-                  </button>
-                  <button class="remove-btn" @click="removeItem(item)" title="Remove item">
-                    ✕
-                  </button>
-                </div>
-              </div>
-            </div>
-            </div>
-          </div>
-
-          <!-- Saved for Later Section -->
-          <div v-if="savedForLater.length > 0" class="cart-section saved-section">
-            <div class="section-header">
-              <h3>💝 Saved for Later ({{ savedForLater.length }})</h3>
-            </div>
-            <div class="saved-items">
-              <div
-                v-for="item in savedForLater"
-                :key="'saved-' + item.drugId"
-                class="saved-item"
-              >
-                <div class="saved-item-image">
-                  <img v-if="item.imageUrl" :src="item.imageUrl" :alt="item.name" crossorigin="anonymous" />
-                  <div v-else class="image-placeholder">💊</div>
-                </div>
-                <div class="saved-item-info">
-                  <h4>{{ item.name }}</h4>
-                  <p class="saved-meta">{{ item.strength }} {{ item.dosageForm }}</p>
-                  <p class="saved-price">{{ formatPrice(item.price) }}</p>
-                </div>
-                <div class="saved-item-actions">
-                  <button class="move-to-cart-btn" @click="moveToCart(item)">
-                    Add to Cart
-                  </button>
-                  <button class="remove-saved-btn" @click="removeSavedItem(item.drugId)">
-                    ✕
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Delivery Method Section -->
-          <div class="cart-section delivery-section">
-            <div class="section-header">
-              <h3>📍 How would you like to receive your order?</h3>
-            </div>
-
-            <div class="delivery-toggle">
-              <button
-                :class="['toggle-btn', { active: deliveryMethod === 'delivery' }]"
-                @click="setDeliveryMethodAction('delivery')"
-              >
-                <span class="toggle-icon">🏠</span>
-                <span class="toggle-label">Home Delivery</span>
-                <span class="toggle-desc">Delivered to your door</span>
-              </button>
-              <button
-                :class="['toggle-btn', { active: deliveryMethod === 'pickup' }]"
-                @click="setDeliveryMethodAction('pickup')"
-              >
-                <span class="toggle-icon">🏪</span>
-                <span class="toggle-label">Pickup</span>
-                <span class="toggle-desc">Collect from pharmacy</span>
-              </button>
-            </div>
-
-            <!-- Home Delivery Address Selection -->
-            <div v-if="deliveryMethod === 'delivery'" class="address-section">
-              <div v-if="addressesLoading" class="loading-state">
-                <div class="spinner"></div>
-                <span>Loading addresses...</span>
+                  <div class="option-check" v-if="deliveryMethod === 'delivery'">
+                    <v-icon name="hi-check" scale="0.9" />
+                  </div>
+                </button>
+                <button :class="['delivery-option', { active: deliveryMethod === 'pickup' }]"
+                        @click="setDeliveryMethodAction('pickup')">
+                  <div class="option-icon">
+                    <v-icon name="hi-office-building" scale="1.2" />
+                  </div>
+                  <div class="option-info">
+                    <strong>Pickup</strong>
+                    <span>Collect from pharmacy</span>
+                  </div>
+                  <div class="option-check" v-if="deliveryMethod === 'pickup'">
+                    <v-icon name="hi-check" scale="0.9" />
+                  </div>
+                </button>
               </div>
 
-              <div v-else-if="selectedDeliveryAddress" class="selected-address">
-                <div class="address-header">
-                  <div class="address-label">
-                    <span class="label-icon">📍</span>
-                    <span>{{ selectedDeliveryAddress.label || 'Delivery Address' }}</span>
-                    <span v-if="selectedDeliveryAddress.is_default" class="default-badge">Default</span>
+              <!-- Delivery Address -->
+              <div v-if="deliveryMethod === 'delivery'" class="address-section">
+                <div v-if="addressesLoading" class="loading-inline">
+                  <div class="spinner-sm"></div>
+                  <span>Loading addresses...</span>
+                </div>
+                <div v-else-if="selectedDeliveryAddress" class="selected-address">
+                  <div class="address-icon">
+                    <v-icon name="hi-location-marker" scale="1" />
+                  </div>
+                  <div class="address-info">
+                    <div class="address-label">
+                      <strong>{{ selectedDeliveryAddress.label || 'Delivery Address' }}</strong>
+                      <span v-if="selectedDeliveryAddress.is_default" class="default-tag">Default</span>
+                    </div>
+                    <p class="address-recipient">{{ selectedDeliveryAddress.recipient_name }}</p>
+                    <p class="address-text">{{ formatAddressDisplay(selectedDeliveryAddress) }}</p>
                   </div>
                   <button class="change-btn" @click="showAddressModal = true">Change</button>
                 </div>
-                <div class="address-details">
-                  <div class="recipient">{{ selectedDeliveryAddress.recipient_name }}</div>
-                  <div class="address-text">{{ formatAddressDisplay(selectedDeliveryAddress) }}</div>
-                  <div class="phone" v-if="selectedDeliveryAddress.phone">{{ selectedDeliveryAddress.phone }}</div>
+                <div v-else class="no-address">
+                  <v-icon name="hi-location-marker" scale="1.5" />
+                  <p>No delivery address selected</p>
+                  <button class="add-btn" @click="showAddAddressModal = true">
+                    <v-icon name="hi-plus" scale="0.9" />
+                    Add Address
+                  </button>
                 </div>
-                <!-- Estimated Delivery -->
-                <div class="estimated-delivery">
-                  <span class="delivery-icon">📦</span>
-                  <span class="delivery-text">
-                    Estimated delivery: <strong>{{ estimatedDeliveryDate.range }}</strong>
+                <div v-if="selectedDeliveryAddress" class="delivery-estimate">
+                  <v-icon name="hi-clock" scale="0.9" />
+                  <span>Estimated delivery: <strong>{{ estimatedDeliveryDate.range }}</strong></span>
+                </div>
+              </div>
+
+              <!-- Pickup Location -->
+              <div v-if="deliveryMethod === 'pickup'" class="pickup-section">
+                <div v-if="pickupCentersLoading" class="loading-inline">
+                  <div class="spinner-sm"></div>
+                  <span>Loading pickup centers...</span>
+                </div>
+                <div v-else-if="selectedPickupCenter" class="selected-pickup">
+                  <div class="pickup-icon">
+                    <v-icon name="hi-office-building" scale="1.2" />
+                  </div>
+                  <div class="pickup-info">
+                    <strong>{{ selectedPickupCenter.name }}</strong>
+                    <p>{{ formatPickupAddress(selectedPickupCenter) }}</p>
+                  </div>
+                  <button v-if="pickupCenters.length > 1" class="change-btn" @click="showPickupModal = true">
+                    Change
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Prescription Card (if RX items) -->
+            <div v-if="hasRxItems" class="bento-card prescription-card">
+              <div class="card-header">
+                <div class="header-icon amber">
+                  <v-icon name="hi-clipboard-list" scale="1" />
+                </div>
+                <h3>Prescription</h3>
+                <span v-if="!selectedPrescription" class="required-tag">Required</span>
+              </div>
+
+              <div v-if="!selectedPrescription" class="prescription-required">
+                <div class="rx-alert">
+                  <v-icon name="hi-exclamation-circle" scale="1.2" />
+                  <div class="alert-text">
+                    <strong>Prescription Required</strong>
+                    <p>Your cart contains prescription-only items</p>
+                  </div>
+                </div>
+                <div class="prescription-actions">
+                  <button class="action-primary" @click="showPrescriptionModal = true">
+                    <v-icon name="hi-document" scale="0.9" />
+                    Select Prescription
+                  </button>
+                  <button class="action-secondary" @click="$router.push('/app/patient/pharmacy/upload-prescription?returnTo=/app/patient/pharmacy/cart')">
+                    <v-icon name="hi-upload" scale="0.9" />
+                    Upload New
+                  </button>
+                </div>
+              </div>
+
+              <div v-else class="prescription-selected">
+                <div class="rx-success">
+                  <v-icon name="hi-check-circle" scale="1.5" />
+                  <div class="success-info">
+                    <strong>Prescription Selected</strong>
+                    <p v-if="selectedPrescription.ocr_data?.doctor_name">
+                      Dr. {{ selectedPrescription.ocr_data.doctor_name }}
+                    </p>
+                    <span class="rx-date">{{ formatDate(selectedPrescription.created_at) }}</span>
+                  </div>
+                  <button class="change-btn" @click="showPrescriptionModal = true">Change</button>
+                </div>
+                <div v-if="prescriptionCoverage.allCovered" class="coverage-status success">
+                  <v-icon name="hi-check" scale="0.9" />
+                  <span>All {{ prescriptionCoverage.covered.length }} RX items covered</span>
+                </div>
+                <div v-else-if="prescriptionCoverage.uncovered.length > 0" class="coverage-status warning">
+                  <v-icon name="hi-exclamation" scale="0.9" />
+                  <span>{{ prescriptionCoverage.uncovered.length }} item(s) not covered</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Order Summary Card -->
+            <div class="bento-card order-card">
+              <div class="card-header">
+                <div class="header-icon emerald">
+                  <v-icon name="hi-receipt-tax" scale="1" />
+                </div>
+                <h3>Order Summary</h3>
+              </div>
+
+              <!-- Promo Code -->
+              <div class="promo-section">
+                <div v-if="!promoCodeApplied" class="promo-input-row">
+                  <input type="text" v-model="promoCode" placeholder="Promo code" :disabled="applyingPromo" />
+                  <button class="apply-btn" @click="applyPromoCode" :disabled="!promoCode || applyingPromo">
+                    {{ applyingPromo ? '...' : 'Apply' }}
+                  </button>
+                </div>
+                <div v-else class="promo-applied">
+                  <div class="promo-info">
+                    <v-icon name="hi-tag" scale="0.9" />
+                    <span class="promo-code">{{ promoCodeApplied.code }}</span>
+                    <span class="promo-discount">-{{ formatPrice(promoDiscount) }}</span>
+                  </div>
+                  <button class="remove-promo" @click="removePromoCode">
+                    <v-icon name="hi-x" scale="0.8" />
+                  </button>
+                </div>
+                <p v-if="promoError" class="promo-error">{{ promoError }}</p>
+              </div>
+
+              <!-- Price Breakdown -->
+              <div class="price-breakdown">
+                <div class="price-row">
+                  <span>Subtotal</span>
+                  <span>{{ formatPrice(cartTotal) }}</span>
+                </div>
+                <div v-if="promoDiscount > 0" class="price-row discount">
+                  <span>Discount</span>
+                  <span>-{{ formatPrice(promoDiscount) }}</span>
+                </div>
+                <div class="price-row" v-if="deliveryMethod === 'delivery'">
+                  <span>Delivery</span>
+                  <span :class="{ 'free-text': hasFreeDelivery }">
+                    {{ hasFreeDelivery ? 'FREE' : formatPrice(actualDeliveryFee) }}
                   </span>
                 </div>
-              </div>
-
-              <div v-else class="no-address">
-                <div class="no-address-icon">📍</div>
-                <p>No delivery address selected</p>
-                <button class="add-address-btn" @click="showAddAddressModal = true">
-                  + Add Delivery Address
-                </button>
-              </div>
-            </div>
-
-            <!-- Pickup Location -->
-            <div v-if="deliveryMethod === 'pickup'" class="pickup-section">
-              <div v-if="pickupCentersLoading" class="loading-state">
-                <div class="spinner"></div>
-                <span>Loading pickup centers...</span>
-              </div>
-
-              <div v-else-if="selectedPickupCenter" class="selected-pickup">
-                <div class="pharmacy-icon">🏪</div>
-                <div class="pharmacy-details">
-                  <strong>{{ selectedPickupCenter.name }}</strong>
-                  <p>{{ formatPickupAddress(selectedPickupCenter) }}</p>
-                  <p class="pickup-note">Present your pickup code at the counter</p>
-                </div>
-                <button v-if="pickupCenters.length > 1" class="change-btn" @click="showPickupModal = true">
-                  Change
-                </button>
-              </div>
-
-              <div v-else-if="pickupCenters.length === 0" class="no-pickup-centers">
-                <div class="no-pickup-icon">🏪</div>
-                <p>No pickup centers available at this time</p>
-              </div>
-            </div>
-          </div>
-
-          <!-- Prescription Section (only if cart has RX items) -->
-          <div v-if="hasRxItems" class="cart-section prescription-section">
-            <div class="section-header">
-              <h3>📋 Prescription Required</h3>
-            </div>
-
-            <div v-if="!selectedPrescription" class="prescription-required">
-              <div class="rx-warning">
-                <span class="warning-icon">⚠️</span>
-                <div class="warning-text">
-                  <strong>Your cart contains prescription-only items</strong>
-                  <p>Please upload or select a valid prescription to continue with checkout.</p>
+                <div class="price-row total">
+                  <span>Total</span>
+                  <span>{{ formatPrice(totalAmount) }}</span>
                 </div>
               </div>
-              <div class="prescription-actions">
-                <button class="select-rx-btn" @click="showPrescriptionModal = true">
-                  Select Existing Prescription
-                </button>
-                <button class="upload-rx-btn" @click="$router.push('/app/patient/pharmacy/upload-prescription?returnTo=/app/patient/pharmacy/cart')">
-                  Upload New Prescription
-                </button>
-              </div>
-            </div>
 
-            <div v-else class="prescription-selected">
-              <div class="rx-success">
-                <span class="success-icon">✅</span>
-                <div class="rx-info">
-                  <strong>Prescription Selected</strong>
-                  <p v-if="selectedPrescription.ocr_data?.doctor_name">
-                    Dr. {{ selectedPrescription.ocr_data.doctor_name }}
-                  </p>
-                  <p class="rx-date">{{ formatDate(selectedPrescription.created_at) }}</p>
+              <!-- Payment Method -->
+              <div class="payment-section">
+                <h4>Payment Method</h4>
+                <div class="payment-options">
+                  <label :class="['payment-option', { selected: paymentMethod === 'card' }]">
+                    <input type="radio" v-model="paymentMethod" value="card" />
+                    <div class="option-content">
+                      <v-icon name="hi-credit-card" scale="1.1" />
+                      <div class="option-text">
+                        <strong>Card Payment</strong>
+                        <span>Pay with card</span>
+                      </div>
+                    </div>
+                  </label>
+                  <label :class="['payment-option', { selected: paymentMethod === 'wallet', disabled: walletBalance <= 0 }]">
+                    <input type="radio" v-model="paymentMethod" value="wallet" :disabled="walletBalance <= 0" />
+                    <div class="option-content">
+                      <v-icon name="bi-wallet-2" scale="1.1" />
+                      <div class="option-text">
+                        <strong>Wallet</strong>
+                        <span>{{ formatPrice(walletBalance) }} available</span>
+                      </div>
+                    </div>
+                  </label>
                 </div>
-                <button class="change-rx-btn" @click="showPrescriptionModal = true">Change</button>
               </div>
 
-              <!-- Coverage Status -->
-              <div class="coverage-status" v-if="rxCartItems.length > 0">
-                <!-- All Covered -->
-                <div v-if="prescriptionCoverage.allCovered" class="coverage-good">
-                  <span class="status-icon">✓</span>
-                  <span>All {{ prescriptionCoverage.covered.length }} RX item(s) covered</span>
-                </div>
-
-                <!-- Partial Coverage -->
-                <div v-else-if="prescriptionCoverage.uncovered.length > 0" class="coverage-warning">
-                  <div class="coverage-header">
-                    <span class="status-icon">⚠️</span>
-                    <span>{{ prescriptionCoverage.uncovered.length }} item(s) not covered</span>
+              <!-- Checkout Button -->
+              <div class="checkout-section">
+                <div v-if="checkoutBlockers.length > 0" class="blockers">
+                  <div v-for="(blocker, idx) in checkoutBlockers" :key="idx" class="blocker-item">
+                    <v-icon name="hi-exclamation-circle" scale="0.85" />
+                    <span>{{ blocker }}</span>
                   </div>
-                  <div class="uncovered-list">
-                    <span v-for="item in prescriptionCoverage.uncovered" :key="item.drugId" class="uncovered-item">
-                      {{ item.name }}
-                    </span>
+                </div>
+                <button class="checkout-btn" :disabled="!canProceedToCheckout || placingOrder" @click="placeOrder">
+                  <span v-if="placingOrder">Processing...</span>
+                  <span v-else>{{ payNowButtonLabel }}</span>
+                </button>
+              </div>
+
+              <!-- Trust Badges -->
+              <div class="trust-badges">
+                <div class="badge">
+                  <v-icon name="hi-lock-closed" scale="0.9" />
+                  <span>Secure</span>
+                </div>
+                <div class="badge">
+                  <v-icon name="hi-shield-check" scale="0.9" />
+                  <span>Licensed</span>
+                </div>
+                <div class="badge">
+                  <v-icon name="hi-refresh" scale="0.9" />
+                  <span>Returns</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Saved for Later -->
+            <div v-if="savedForLater.length > 0" class="bento-card saved-card">
+              <div class="card-header">
+                <div class="header-icon rose">
+                  <v-icon name="hi-heart" scale="1" />
+                </div>
+                <h3>Saved for Later</h3>
+                <span class="item-count">{{ savedForLater.length }}</span>
+              </div>
+              <div class="saved-items">
+                <div v-for="item in savedForLater" :key="'saved-' + item.drugId" class="saved-item">
+                  <div class="saved-image">
+                    <img v-if="item.imageUrl" :src="item.imageUrl" :alt="item.name" referrerpolicy="no-referrer" />
+                    <div v-else class="image-placeholder">
+                      <v-icon name="ri-capsule-line" scale="1" />
+                    </div>
                   </div>
-                  <div class="coverage-actions">
-                    <button class="upload-more-btn" @click="$router.push('/app/patient/pharmacy/upload-prescription?returnTo=/app/patient/pharmacy/cart')">
-                      Upload Another Prescription
+                  <div class="saved-info">
+                    <h4>{{ item.name }}</h4>
+                    <p>{{ item.strength }} {{ item.dosageForm }}</p>
+                    <span class="saved-price">{{ formatPrice(item.price) }}</span>
+                  </div>
+                  <div class="saved-actions">
+                    <button class="move-btn" @click="moveToCart(item)">
+                      <v-icon name="hi-shopping-cart" scale="0.85" />
+                      Add
+                    </button>
+                    <button class="remove-btn" @click="removeSavedItem(item.drugId)">
+                      <v-icon name="hi-x" scale="0.9" />
                     </button>
                   </div>
                 </div>
               </div>
-
-              <!-- Pharmacist Verification Notice -->
-              <div class="pharmacist-verification-notice">
-                <span class="notice-icon">👨‍⚕️</span>
-                <div class="notice-content">
-                  <strong>Pharmacist Verification</strong>
-                  <p>Your prescription may be subject to verification by our licensed pharmacist before processing. You or your prescriber may be contacted if clarification is needed.</p>
-                </div>
-              </div>
             </div>
-          </div>
+          </section>
 
-          <!-- Order Summary Section -->
-          <div class="summary-section">
-            <!-- Promo Code Section -->
-            <div class="promo-code-card">
-              <div class="promo-header">
-                <span class="promo-icon">🏷️</span>
-                <span>Have a promo code?</span>
-              </div>
-
-              <!-- Applied Promo -->
-              <div v-if="promoCodeApplied" class="promo-applied">
-                <div class="applied-info">
-                  <span class="applied-code">{{ promoCodeApplied.code }}</span>
-                  <span class="applied-desc">{{ promoCodeApplied.description }}</span>
-                </div>
-                <button class="remove-promo-btn" @click="removePromoCode">✕</button>
-              </div>
-
-              <!-- Promo Input -->
-              <div v-else class="promo-input-wrapper">
-                <input
-                  type="text"
-                  v-model="promoCode"
-                  placeholder="Enter promo code"
-                  class="promo-input"
-                  @keyup.enter="applyPromoCode"
-                  :disabled="applyingPromo"
-                />
-                <button
-                  class="apply-promo-btn"
-                  @click="applyPromoCode"
-                  :disabled="applyingPromo || !promoCode.trim()"
-                >
-                  {{ applyingPromo ? '...' : 'Apply' }}
-                </button>
-              </div>
-
-              <!-- Error Message -->
-              <div v-if="promoError" class="promo-error">
-                {{ promoError }}
-              </div>
-            </div>
-
-            <!-- Price Summary -->
-            <div class="price-summary">
-              <div class="summary-row">
-                <span>Subtotal ({{ cartItemCount }} items)</span>
-                <span>{{ formatPrice(cartTotal) }}</span>
-              </div>
-              <div class="summary-row" v-if="promoCodeApplied && promoDiscount > 0">
-                <span class="promo-label">
-                  Promo ({{ promoCodeApplied.code }})
-                </span>
-                <span class="discount">-{{ formatPrice(promoDiscount) }}</span>
-              </div>
-              <div class="summary-row" v-if="deliveryMethod === 'delivery'">
-                <span>Delivery Fee</span>
-                <span v-if="hasFreeDelivery" class="free-delivery-text">
-                  <span class="original-fee">{{ formatPrice(deliveryFee) }}</span>
-                  FREE
-                </span>
-                <span v-else>{{ formatPrice(deliveryFee) }}</span>
-              </div>
-              <!-- Show wallet deduction if wallet or split payment -->
-              <div class="summary-row" v-if="(paymentMethod === 'wallet' || paymentMethod === 'split') && walletPaymentAmount > 0">
-                <span>Wallet Payment</span>
-                <span class="discount">-{{ formatPrice(walletPaymentAmount) }}</span>
-              </div>
-              <!-- Show final amount to pay -->
-              <div class="summary-row total">
-                <span>{{ (paymentMethod === 'wallet' || paymentMethod === 'split') ? 'To Pay' : 'Total' }}</span>
-                <span>{{ formatPrice((paymentMethod === 'wallet' || paymentMethod === 'split') ? amountToPay : totalAmount) }}</span>
-              </div>
-            </div>
-
-            <!-- Payment Method Selection -->
-            <div class="payment-method-section" v-if="cart.length > 0">
-              <h4 class="section-title">Payment Method</h4>
-              <div class="payment-options">
-                <!-- Card Payment -->
-                <div
-                  :class="['payment-option', { selected: paymentMethod === 'card' }]"
-                  @click="paymentMethod = 'card'"
-                >
-                  <div class="radio-circle" :class="{ checked: paymentMethod === 'card' }"></div>
-                  <div class="option-content">
-                    <span class="option-icon">💳</span>
-                    <div class="option-info">
-                      <strong>Pay with Card</strong>
-                      <span>Debit/Credit Card via Paystack</span>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Wallet Payment (if balance sufficient) -->
-                <div
-                  v-if="walletBalance > 0"
-                  :class="['payment-option', { selected: paymentMethod === 'wallet', disabled: walletBalance < totalAmount }]"
-                  @click="walletBalance >= totalAmount && (paymentMethod = 'wallet')"
-                >
-                  <div class="radio-circle" :class="{ checked: paymentMethod === 'wallet' }"></div>
-                  <div class="option-content">
-                    <span class="option-icon">👛</span>
-                    <div class="option-info">
-                      <strong>Pay with Wallet</strong>
-                      <span>Balance: {{ formatPrice(walletBalance) }}</span>
-                      <span v-if="walletBalance < totalAmount" class="insufficient">Insufficient for full payment</span>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Split Payment (if wallet has some balance but not enough) -->
-                <div
-                  v-if="walletBalance > 0 && walletBalance < totalAmount"
-                  :class="['payment-option', { selected: paymentMethod === 'split' }]"
-                  @click="paymentMethod = 'split'"
-                >
-                  <div class="radio-circle" :class="{ checked: paymentMethod === 'split' }"></div>
-                  <div class="option-content">
-                    <span class="option-icon">✂️</span>
-                    <div class="option-info">
-                      <strong>Split Payment</strong>
-                      <span>Wallet ({{ formatPrice(walletBalance) }}) + Card ({{ formatPrice(totalAmount - walletBalance) }})</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Checkout Blockers -->
-            <div v-if="checkoutBlockers.length > 0" class="checkout-blockers">
-              <div v-for="(blocker, idx) in checkoutBlockers" :key="idx" class="blocker-item">
-                <span class="blocker-icon">⚠️</span>
-                <span>{{ blocker }}</span>
-              </div>
-            </div>
-
-            <!-- Order Error Alert -->
-            <div v-if="orderError" ref="orderErrorRef" class="order-error-alert">
-              <div class="error-header">
-                <div class="error-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="10"/>
-                    <line x1="12" y1="8" x2="12" y2="12"/>
-                    <line x1="12" y1="16" x2="12.01" y2="16"/>
-                  </svg>
-                </div>
-                <div class="error-title">{{ orderError.title }}</div>
-                <button class="error-dismiss" @click="orderError = null">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="18" y1="6" x2="6" y2="18"/>
-                    <line x1="6" y1="6" x2="18" y2="18"/>
-                  </svg>
-                </button>
-              </div>
-              <div class="error-body">
-                <p class="error-message">{{ orderError.message }}</p>
-                <div v-if="orderError.affectedItems && orderError.affectedItems.length > 0" class="affected-items">
-                  <span class="affected-label">Affected medications:</span>
-                  <div class="affected-chips">
-                    <span v-for="item in orderError.affectedItems" :key="item" class="affected-chip">{{ item }}</span>
-                  </div>
-                </div>
-                <p class="error-suggestion">{{ orderError.suggestion }}</p>
-              </div>
-              <div class="error-actions">
-                <button class="error-action-btn secondary" @click="orderError = null">
-                  Dismiss
-                </button>
-                <button v-if="orderError.type === 'purchase_limit'" class="error-action-btn primary" @click="$router.push('/app/patient/support')">
-                  Contact Support
-                </button>
-              </div>
-            </div>
-
-            <!-- Pay Now Button -->
-            <div class="checkout-actions">
-              <rc-button
-                type="primary"
-                :label="payNowButtonLabel"
-                @click="placeOrder"
-                :disabled="!canProceedToCheckout || placingOrder"
-              />
-              <rc-button
-                type="secondary"
-                label="Continue Shopping"
-                @click="$router.push('/app/patient/pharmacy/otc')"
-              />
-            </div>
-
-            <!-- Processing Overlay -->
-            <div v-if="placingOrder" class="processing-overlay">
-              <div class="processing-content">
-                <div class="spinner"></div>
-                <p>Processing your order...</p>
-              </div>
-            </div>
-
-            <!-- Trust Badges -->
-            <div class="trust-badges">
-              <div class="trust-badge">
-                <div class="badge-icon">🔒</div>
-                <div class="badge-text">
-                  <strong>Secure Checkout</strong>
-                  <span>256-bit SSL encryption</span>
-                </div>
-              </div>
-              <div class="trust-badge">
-                <div class="badge-icon">✓</div>
-                <div class="badge-text">
-                  <strong>Licensed Pharmacy</strong>
-                  <span>PCN Certified</span>
-                </div>
-              </div>
-              <div class="trust-badge">
-                <div class="badge-icon">↩️</div>
-                <div class="badge-text">
-                  <strong>Easy Returns</strong>
-                  <span>7-day return policy</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Loader -->
-        <div class="loader-container" v-if="loading">
-          <Loader :useOverlay="false" :rounded="true" />
-        </div>
-
-        <!-- Sticky Mobile Checkout Bar -->
-        <div v-if="!loading && cart.length > 0" class="mobile-checkout-bar">
-          <div class="mobile-checkout-content">
+          <!-- Mobile Checkout Bar -->
+          <div class="mobile-checkout-bar">
             <div class="mobile-total">
-              <span class="mobile-total-label">Total</span>
-              <span class="mobile-total-amount">{{ formatPrice(totalAmount) }}</span>
+              <span class="label">Total</span>
+              <span class="amount">{{ formatPrice(totalAmount) }}</span>
             </div>
-            <button
-              class="mobile-checkout-btn"
-              :disabled="!canProceedToCheckout || placingOrder"
-              @click="placeOrder"
-            >
+            <button class="mobile-checkout-btn" :disabled="!canProceedToCheckout || placingOrder" @click="placeOrder">
               {{ placingOrder ? 'Processing...' : 'Pay Now' }}
             </button>
           </div>
-        </div>
+        </template>
+      </template>
 
-        <!-- Undo Remove Toast -->
-        <Transition name="toast">
-          <div v-if="showUndoToast" class="undo-toast">
-            <div class="toast-content">
-              <span class="toast-icon">🗑️</span>
-              <span class="toast-message">
-                <strong>{{ removedItem?.name }}</strong> removed
-              </span>
+      <!-- Processing Overlay -->
+      <div v-if="placingOrder" class="processing-overlay">
+        <div class="processing-content">
+          <div class="spinner-lg"></div>
+          <p>Processing your order...</p>
+        </div>
+      </div>
+
+      <!-- Undo Toast -->
+      <Transition name="toast">
+        <div v-if="showUndoToast" class="undo-toast">
+          <div class="toast-content">
+            <v-icon name="hi-trash" scale="1" />
+            <span><strong>{{ removedItem?.name }}</strong> removed</span>
+          </div>
+          <button class="undo-btn" @click="undoRemove">
+            <v-icon name="hi-reply" scale="0.85" />
+            Undo
+          </button>
+        </div>
+      </Transition>
+    </div>
+
+    <!-- Modals -->
+    <Teleport to="body">
+      <!-- Address Selection Modal -->
+      <div v-if="showAddressModal" class="modal-overlay" @click="showAddressModal = false">
+        <div class="modal-content" @click.stop>
+          <div class="modal-header">
+            <h3>Select Delivery Address</h3>
+            <button class="close-btn" @click="showAddressModal = false">
+              <v-icon name="hi-x" scale="1" />
+            </button>
+          </div>
+          <div class="modal-body">
+            <div v-if="savedAddresses.length === 0" class="empty-modal">
+              <p>No saved addresses</p>
+              <button class="add-btn" @click="showAddressModal = false; showAddAddressModal = true">
+                <v-icon name="hi-plus" scale="0.9" />
+                Add New Address
+              </button>
             </div>
-            <div class="toast-actions">
-              <button class="undo-btn" @click="undoRemove">Undo</button>
-              <button class="dismiss-btn" @click="dismissUndoToast">✕</button>
+            <div v-else class="address-list">
+              <div v-for="address in savedAddresses" :key="address._id"
+                   :class="['address-option', { selected: selectedDeliveryAddress?._id === address._id }]"
+                   @click="selectAddress(address)">
+                <div class="radio-dot" :class="{ checked: selectedDeliveryAddress?._id === address._id }"></div>
+                <div class="address-info">
+                  <div class="label-row">
+                    <strong>{{ address.label || 'Address' }}</strong>
+                    <span v-if="address.is_default" class="default-tag">Default</span>
+                  </div>
+                  <p class="recipient">{{ address.recipient_name }}</p>
+                  <p class="address-text">{{ formatAddressDisplay(address) }}</p>
+                </div>
+              </div>
+              <button class="add-new-btn" @click="showAddressModal = false; showAddAddressModal = true">
+                <v-icon name="hi-plus" scale="0.85" />
+                Add New Address
+              </button>
             </div>
           </div>
-        </Transition>
+        </div>
+      </div>
 
-        <!-- Address Selection Modal -->
-        <div v-if="showAddressModal" class="modal-overlay" @click="showAddressModal = false">
-          <div class="modal-content" @click.stop>
-            <div class="modal-header">
-              <h3>Select Delivery Address</h3>
-              <button class="close-btn" @click="showAddressModal = false">✕</button>
+      <!-- Add Address Modal -->
+      <div v-if="showAddAddressModal" class="modal-overlay" @click="showAddAddressModal = false">
+        <div class="modal-content modal-form" @click.stop>
+          <div class="modal-header">
+            <h3>Add Delivery Address</h3>
+            <button class="close-btn" @click="showAddAddressModal = false">
+              <v-icon name="hi-x" scale="1" />
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="form-group">
+              <label>Address Label *</label>
+              <input type="text" v-model="newAddressForm.label" placeholder="e.g., Home, Office" />
             </div>
-            <div class="modal-body">
-              <div v-if="savedAddresses.length === 0" class="no-addresses-modal">
-                <p>No saved addresses</p>
-                <button class="add-new-btn" @click="showAddressModal = false; showAddAddressModal = true">
-                  + Add New Address
+            <div class="form-group">
+              <label>Recipient Name *</label>
+              <input type="text" v-model="newAddressForm.recipient_name" placeholder="Full name" />
+            </div>
+            <div class="form-group">
+              <label>Phone Number *</label>
+              <input type="tel" v-model="newAddressForm.phone" placeholder="Phone number" />
+            </div>
+            <div class="form-group">
+              <label>Street Address *</label>
+              <textarea v-model="newAddressForm.street" placeholder="House number, Street name" rows="2"></textarea>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>City *</label>
+                <input type="text" v-model="newAddressForm.city" placeholder="City" />
+              </div>
+              <div class="form-group">
+                <label>State *</label>
+                <input type="text" v-model="newAddressForm.state" placeholder="State" />
+              </div>
+            </div>
+            <label class="checkbox-label">
+              <input type="checkbox" v-model="newAddressForm.is_default" />
+              <span>Set as default address</span>
+            </label>
+          </div>
+          <div class="modal-footer">
+            <button class="cancel-btn" @click="showAddAddressModal = false">Cancel</button>
+            <button class="save-btn" @click="saveNewAddress" :disabled="savingAddress">
+              {{ savingAddress ? 'Saving...' : 'Save Address' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Prescription Modal -->
+      <div v-if="showPrescriptionModal" class="modal-overlay" @click="showPrescriptionModal = false">
+        <div class="modal-content modal-lg" @click.stop>
+          <div class="modal-header">
+            <h3>Select Prescription</h3>
+            <button class="close-btn" @click="showPrescriptionModal = false">
+              <v-icon name="hi-x" scale="1" />
+            </button>
+          </div>
+          <div class="prescription-tabs">
+            <button :class="['tab', { active: prescriptionTabType === 'uploaded' }]"
+                    @click="prescriptionTabType = 'uploaded'">
+              <v-icon name="hi-document" scale="0.9" />
+              Uploaded
+            </button>
+            <button :class="['tab', { active: prescriptionTabType === 'specialist' }]"
+                    @click="prescriptionTabType = 'specialist'">
+              <v-icon name="hi-user-circle" scale="0.9" />
+              From Specialist
+            </button>
+          </div>
+          <div class="modal-body">
+            <div v-if="prescriptionsLoading" class="loading-inline">
+              <div class="spinner-sm"></div>
+              <span>Loading prescriptions...</span>
+            </div>
+            <template v-else-if="prescriptionTabType === 'uploaded'">
+              <div v-if="approvedPrescriptions.length === 0" class="empty-modal">
+                <p>No approved prescriptions found</p>
+                <button class="add-btn" @click="$router.push('/app/patient/pharmacy/upload-prescription?returnTo=/app/patient/pharmacy/cart')">
+                  Upload Prescription
                 </button>
               </div>
-              <div v-else class="addresses-list">
-                <div
-                  v-for="address in savedAddresses"
-                  :key="address._id"
-                  :class="['address-option', { selected: selectedDeliveryAddress?._id === address._id }]"
-                  @click="selectAddress(address)"
-                >
-                  <div class="radio-circle" :class="{ checked: selectedDeliveryAddress?._id === address._id }"></div>
-                  <div class="address-info">
-                    <div class="label-row">
-                      <strong>{{ address.label || 'Address' }}</strong>
-                      <span v-if="address.is_default" class="default-tag">Default</span>
-                      <span v-if="address.is_profile_address" class="profile-tag">Profile</span>
-                    </div>
-                    <div class="recipient">{{ address.recipient_name }}</div>
-                    <div class="address-text">{{ formatAddressDisplay(address) }}</div>
+              <div v-else class="prescription-list">
+                <div v-for="rx in approvedPrescriptions" :key="rx._id"
+                     :class="['prescription-option', { selected: selectedPrescription?._id === rx._id }]"
+                     @click="selectPrescriptionOption(rx, 'uploaded')">
+                  <div class="radio-dot" :class="{ checked: selectedPrescription?._id === rx._id }"></div>
+                  <div class="rx-info">
+                    <strong v-if="rx.ocr_data?.doctor_name">Dr. {{ rx.ocr_data.doctor_name }}</strong>
+                    <span v-if="rx.ocr_data?.clinic_name">{{ rx.ocr_data.clinic_name }}</span>
+                    <span class="rx-date">{{ formatDate(rx.created_at) }}</span>
                   </div>
                 </div>
-                <button class="add-new-btn" @click="showAddressModal = false; showAddAddressModal = true">
-                  + Add New Address
-                </button>
               </div>
-            </div>
+            </template>
+            <template v-else>
+              <div v-if="specialistPrescriptions.length === 0" class="empty-modal">
+                <p>No specialist prescriptions found</p>
+                <p class="hint">Prescriptions from your doctor will appear here</p>
+              </div>
+              <div v-else class="prescription-list">
+                <div v-for="rx in specialistPrescriptions" :key="rx._id"
+                     :class="['prescription-option', { selected: isSpecialistPrescriptionSelected(rx) }]"
+                     @click="toggleSpecialistPrescription(rx)">
+                  <div class="checkbox-square" :class="{ checked: isSpecialistPrescriptionSelected(rx) }">
+                    <v-icon v-if="isSpecialistPrescriptionSelected(rx)" name="hi-check" scale="0.75" />
+                  </div>
+                  <div class="rx-info">
+                    <strong v-if="rx.specialist?.full_name">{{ rx.specialist.full_name }}</strong>
+                    <span>{{ rx.prescription_number }}</span>
+                    <span class="rx-date">{{ formatDate(rx.created_at) }}</span>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </div>
+          <div class="modal-footer">
+            <button class="cancel-btn" @click="showPrescriptionModal = false">Cancel</button>
+            <button class="save-btn" @click="confirmPrescription" :disabled="confirmingPrescription">
+              {{ confirmingPrescription ? 'Verifying...' : 'Confirm' }}
+            </button>
           </div>
         </div>
+      </div>
 
-        <!-- Add New Address Modal -->
-        <div v-if="showAddAddressModal" class="modal-overlay" @click="showAddAddressModal = false">
-          <div class="modal-content add-address-modal" @click.stop>
-            <div class="modal-header">
-              <h3>Add Delivery Address</h3>
-              <button class="close-btn" @click="showAddAddressModal = false">✕</button>
-            </div>
-            <div class="modal-body">
-              <div class="form-group">
-                <label>Address Label *</label>
-                <input type="text" v-model="newAddressForm.label" placeholder="e.g., Home, Office" />
-              </div>
-              <div class="form-group">
-                <label>Recipient Name *</label>
-                <input type="text" v-model="newAddressForm.recipient_name" placeholder="Full name" />
-              </div>
-              <div class="form-group">
-                <label>Phone Number *</label>
-                <input type="tel" v-model="newAddressForm.phone" placeholder="Phone number" />
-              </div>
-              <div class="form-group">
-                <label>Street Address *</label>
-                <textarea v-model="newAddressForm.street" placeholder="House number, Street name" rows="2"></textarea>
-              </div>
-              <div class="form-row">
-                <div class="form-group half">
-                  <label>City *</label>
-                  <input type="text" v-model="newAddressForm.city" placeholder="City" />
-                </div>
-                <div class="form-group half">
-                  <label>State *</label>
-                  <input type="text" v-model="newAddressForm.state" placeholder="State" />
-                </div>
-              </div>
-              <div class="form-group">
-                <label>Additional Info</label>
-                <textarea v-model="newAddressForm.additional_info" placeholder="Landmarks, directions, etc." rows="2"></textarea>
-              </div>
-              <label class="checkbox-label">
-                <input type="checkbox" v-model="newAddressForm.is_default" />
-                <span>Set as default address</span>
-              </label>
-            </div>
-            <div class="modal-footer">
-              <button class="cancel-btn" @click="showAddAddressModal = false">Cancel</button>
-              <button class="save-btn" @click="saveNewAddress" :disabled="savingAddress">
-                {{ savingAddress ? 'Saving...' : 'Save Address' }}
-              </button>
-            </div>
+      <!-- Pickup Modal -->
+      <div v-if="showPickupModal" class="modal-overlay" @click="showPickupModal = false">
+        <div class="modal-content" @click.stop>
+          <div class="modal-header">
+            <h3>Select Pickup Location</h3>
+            <button class="close-btn" @click="showPickupModal = false">
+              <v-icon name="hi-x" scale="1" />
+            </button>
           </div>
-        </div>
-
-        <!-- Prescription Selection Modal -->
-        <div v-if="showPrescriptionModal" class="modal-overlay" @click="showPrescriptionModal = false">
-          <div class="modal-content prescription-modal" @click.stop>
-            <div class="modal-header">
-              <h3>Select Prescription</h3>
-              <button class="close-btn" @click="showPrescriptionModal = false">✕</button>
+          <div class="modal-body">
+            <div v-if="pickupCentersLoading" class="loading-inline">
+              <div class="spinner-sm"></div>
+              <span>Loading...</span>
             </div>
-
-            <!-- Prescription Type Tabs -->
-            <div class="prescription-tabs">
-              <button
-                :class="['tab-btn', { active: prescriptionTabType === 'uploaded' }]"
-                @click="prescriptionTabType = 'uploaded'"
-              >
-                📄 Uploaded
-              </button>
-              <button
-                :class="['tab-btn', { active: prescriptionTabType === 'specialist' }]"
-                @click="prescriptionTabType = 'specialist'"
-              >
-                👨‍⚕️ From Specialist
-              </button>
-            </div>
-
-            <div class="modal-body">
-              <div v-if="prescriptionsLoading" class="loading-state">
-                <div class="spinner"></div>
-                <span>Loading prescriptions...</span>
-              </div>
-
-              <!-- Uploaded Prescriptions Tab -->
-              <template v-else-if="prescriptionTabType === 'uploaded'">
-                <div v-if="approvedPrescriptions.length === 0" class="no-prescriptions">
-                  <p>No approved prescriptions found</p>
-                  <button class="upload-btn" @click="$router.push('/app/patient/pharmacy/upload-prescription?returnTo=/app/patient/pharmacy/cart')">
-                    Upload Prescription
-                  </button>
-                </div>
-                <div v-else class="prescriptions-list">
-                  <!-- Upload new prescription button at top of list -->
-                  <div class="upload-new-section">
-                    <button class="upload-new-btn" @click="$router.push('/app/patient/pharmacy/upload-prescription?returnTo=/app/patient/pharmacy/cart')">
-                      + Upload New Prescription
-                    </button>
-                  </div>
-                  <div
-                    v-for="prescription in approvedPrescriptions"
-                    :key="prescription._id"
-                    :class="['prescription-option', { selected: selectedPrescription?._id === prescription._id }]"
-                    @click="selectPrescriptionOption(prescription, 'uploaded')"
-                  >
-                    <div class="radio-circle" :class="{ checked: selectedPrescription?._id === prescription._id }"></div>
-                    <div class="prescription-info">
-                      <strong v-if="prescription.ocr_data?.doctor_name">Dr. {{ prescription.ocr_data.doctor_name }}</strong>
-                      <span v-if="prescription.ocr_data?.clinic_name">{{ prescription.ocr_data.clinic_name }}</span>
-                      <span class="date">{{ formatDate(prescription.created_at) }}</span>
-                      <span class="meds-count" v-if="prescription.ocr_data?.medications?.length">
-                        {{ prescription.ocr_data.medications.length }} medication(s)
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </template>
-
-              <!-- Specialist Prescriptions Tab -->
-              <template v-else-if="prescriptionTabType === 'specialist'">
-                <div v-if="specialistPrescriptions.length === 0" class="no-prescriptions">
-                  <p>No specialist prescriptions found</p>
-                  <p class="hint-text">Prescriptions created by your doctor will appear here</p>
-                </div>
-                <div v-else class="prescriptions-list">
-                  <p class="multi-select-hint">Select one or more prescriptions to cover your RX items</p>
-                  <div
-                    v-for="prescription in specialistPrescriptions"
-                    :key="prescription._id"
-                    :class="[
-                      'prescription-option',
-                      { selected: isSpecialistPrescriptionSelected(prescription) },
-                      { 'has-coverage': getSpecialistPrescriptionCoverage(prescription).allCovered },
-                      { 'partial-coverage': getSpecialistPrescriptionCoverage(prescription).covered.length > 0 && !getSpecialistPrescriptionCoverage(prescription).allCovered }
-                    ]"
-                    @click="toggleSpecialistPrescription(prescription)"
-                  >
-                    <div class="checkbox-square" :class="{ checked: isSpecialistPrescriptionSelected(prescription) }">
-                      <span v-if="isSpecialistPrescriptionSelected(prescription)">✓</span>
-                    </div>
-                    <div class="prescription-info">
-                      <strong v-if="prescription.specialist?.full_name">{{ prescription.specialist.full_name }}</strong>
-                      <span class="prescription-number">{{ prescription.prescription_number }}</span>
-                      <span class="date">{{ formatDate(prescription.created_at) }}</span>
-                      <span class="meds-count" v-if="prescription.items?.length">
-                        {{ prescription.items.length }} medication(s)
-                      </span>
-                      <!-- Coverage indicator -->
-                      <div class="coverage-indicator">
-                        <span v-if="getSpecialistPrescriptionCoverage(prescription).allCovered" class="coverage-badge full">
-                          ✓ Covers all RX items
-                        </span>
-                        <span v-else-if="getSpecialistPrescriptionCoverage(prescription).covered.length > 0" class="coverage-badge partial">
-                          Covers {{ getSpecialistPrescriptionCoverage(prescription).covered.length }} of {{ rxCartItems.length }} RX items
-                        </span>
-                        <span v-else class="coverage-badge none">
-                          Does not cover cart items
-                        </span>
-                      </div>
-                      <!-- Show prescribed drugs -->
-                      <div class="prescribed-drugs" v-if="prescription.items?.length">
-                        <span v-for="item in prescription.items.slice(0, 3)" :key="item.drug_id" class="drug-chip">
-                          {{ item.drug_name }}
-                        </span>
-                        <span v-if="prescription.items.length > 3" class="more-drugs">
-                          +{{ prescription.items.length - 3 }} more
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </template>
-            </div>
-
-            <div class="modal-footer" v-if="(prescriptionTabType === 'uploaded' && approvedPrescriptions.length > 0) || (prescriptionTabType === 'specialist' && specialistPrescriptions.length > 0)">
-              <button class="cancel-btn" @click="showPrescriptionModal = false" :disabled="confirmingPrescription">Cancel</button>
-              <button
-                class="confirm-btn"
-                @click="confirmPrescription"
-                :disabled="(prescriptionTabType === 'uploaded' && !selectedPrescription) || (prescriptionTabType === 'specialist' && selectedSpecialistPrescriptions.length === 0) || confirmingPrescription"
-              >
-                <template v-if="confirmingPrescription">
-                  Verifying...
-                </template>
-                <template v-else-if="prescriptionTabType === 'specialist' && selectedSpecialistPrescriptions.length > 0">
-                  Verify {{ selectedSpecialistPrescriptions.length }} Prescription{{ selectedSpecialistPrescriptions.length > 1 ? 's' : '' }}
-                </template>
-                <template v-else>
-                  Confirm Selection
-                </template>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Pickup Center Selection Modal -->
-        <div v-if="showPickupModal" class="modal-overlay" @click="showPickupModal = false">
-          <div class="modal-content" @click.stop>
-            <div class="modal-header">
-              <h3>Select Pickup Location</h3>
-              <button class="close-btn" @click="showPickupModal = false">✕</button>
-            </div>
-            <div class="modal-body">
-              <div v-if="pickupCentersLoading" class="loading-state">
-                <div class="spinner"></div>
-                <span>Loading pickup centers...</span>
-              </div>
-              <div v-else-if="pickupCenters.length === 0" class="no-pickup-centers-modal">
-                <p>No pickup centers available at this time</p>
-              </div>
-              <div v-else class="pickup-centers-list">
-                <div
-                  v-for="center in pickupCenters"
-                  :key="center._id"
-                  :class="['pickup-option', { selected: selectedPickupCenter?._id === center._id }]"
-                  @click="selectPickupCenter(center)"
-                >
-                  <div class="radio-circle" :class="{ checked: selectedPickupCenter?._id === center._id }"></div>
-                  <div class="pickup-info">
-                    <strong>{{ center.name }}</strong>
-                    <span class="pickup-address">{{ formatPickupAddress(center) }}</span>
-                    <span v-if="center.pickup_center_details?.operating_hours" class="pickup-hours">
-                      {{ center.pickup_center_details.operating_hours }}
-                    </span>
-                  </div>
+            <div v-else class="pickup-list">
+              <div v-for="center in pickupCenters" :key="center._id"
+                   :class="['pickup-option', { selected: selectedPickupCenter?._id === center._id }]"
+                   @click="selectPickupCenter(center)">
+                <div class="radio-dot" :class="{ checked: selectedPickupCenter?._id === center._id }"></div>
+                <div class="pickup-info">
+                  <strong>{{ center.name }}</strong>
+                  <span>{{ formatPickupAddress(center) }}</span>
                 </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+
+      <!-- Wallet Confirmation Modal -->
+      <div v-if="showWalletConfirmModal" class="modal-overlay wallet-confirm-overlay" @click.self="closeWalletConfirmModal">
+        <div class="modal-content wallet-confirm-modal" @click.stop>
+          <div class="modal-header">
+            <div class="modal-title-icon">
+              <v-icon name="bi-wallet2" scale="1.1" />
+              <h3>Confirm Wallet Payment</h3>
+            </div>
+            <button class="close-btn" @click="closeWalletConfirmModal">
+              <v-icon name="hi-x" scale="1" />
+            </button>
+          </div>
+          <div class="modal-body wallet-confirm-body">
+            <div class="wallet-summary">
+              <div class="summary-icon">
+                <v-icon name="bi-wallet2" scale="2.5" />
+              </div>
+              <p class="summary-text">You are about to pay using your Rapid Wallet</p>
+            </div>
+
+            <div class="wallet-details">
+              <div class="detail-row">
+                <span class="detail-label">Current Balance</span>
+                <span class="detail-value balance">{{ formatPrice(walletBalance) }}</span>
+              </div>
+              <div class="detail-row debit">
+                <span class="detail-label">Amount to Debit</span>
+                <span class="detail-value">- {{ formatPrice(totalAmount) }}</span>
+              </div>
+              <div class="detail-divider"></div>
+              <div class="detail-row remaining">
+                <span class="detail-label">Remaining Balance</span>
+                <span class="detail-value">{{ formatPrice(walletBalance - totalAmount) }}</span>
+              </div>
+            </div>
+
+            <div class="wallet-notice">
+              <v-icon name="hi-information-circle" scale="0.9" />
+              <span>This amount will be immediately debited from your wallet.</span>
+            </div>
+          </div>
+          <div class="modal-footer wallet-confirm-footer">
+            <button class="cancel-btn" @click="closeWalletConfirmModal" :disabled="placingOrder">Cancel</button>
+            <button class="confirm-wallet-btn" @click="confirmWalletPayment" :disabled="placingOrder">
+              <v-icon v-if="placingOrder" name="hi-refresh" scale="0.9" class="spin" />
+              <v-icon v-else name="hi-check" scale="0.9" />
+              {{ placingOrder ? 'Processing...' : 'Confirm Payment' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
-
 <script>
 import { ref, computed, onMounted, watch, nextTick } from "vue";
 import { useRouter, useRoute } from "vue-router";
@@ -1081,6 +899,10 @@ export default {
     const selectedPickupCenter = ref(null);
     const showPickupModal = ref(false);
 
+    // Wallet confirmation modal state
+    const showWalletConfirmModal = ref(false);
+    const pendingOrderData = ref(null); // Store order data when showing wallet confirm modal
+
     // Drug interaction state
     const drugInteractions = ref({
       hasInteractions: false,
@@ -1135,6 +957,9 @@ export default {
       "pharmacy/createOTCOrder": createOTCOrder,
       "pharmacy/createPrescriptionOrder": createPrescriptionOrder,
       "pharmacy/payWithWallet": payWithWallet,
+      "pharmacy/processCardPayment": processCardPayment,
+      "pharmacy/processSplitPayment": processSplitPayment,
+      "pharmacy/initializePaystackPayment": initializePaystackPaymentAction,
       "pharmacy/clearCart": clearCart,
       "pharmacy/clearCheckoutState": clearCheckoutState,
     } = useMapActions();
@@ -1882,6 +1707,18 @@ export default {
     const placeOrder = async () => {
       if (!canProceedToCheckout.value || placingOrder.value) return;
 
+      // If wallet payment selected, show confirmation modal FIRST before creating order
+      if (paymentMethod.value === "wallet" && amountToPay.value === 0) {
+        showWalletConfirmModal.value = true;
+        return;
+      }
+
+      // For card/split payments, proceed with order creation
+      await createAndProcessOrder();
+    };
+
+    // Actual order creation and payment processing
+    const createAndProcessOrder = async () => {
       placingOrder.value = true;
 
       try {
@@ -2020,61 +1857,77 @@ export default {
       const orderId = order._id || order.id;
 
       if (paymentMethod.value === "wallet" && amountToPay.value === 0) {
-        // Full wallet payment
+        // Full wallet payment - process directly (modal was already shown before order creation)
         try {
           await payWithWallet({ orderId, amount: totalAmount.value });
           orderSuccess(orderId);
         } catch (error) {
           console.error("Wallet payment failed:", error);
-          alert("Wallet payment failed. Please try another payment method.");
+          const errorMsg = error?.response?.data?.message || "Wallet payment failed. Please try another payment method.";
+          alert(errorMsg);
+          // Redirect to order page so user can retry payment
+          router.push(`/app/patient/pharmacy/orders/${orderId}?status=pending`);
         }
       } else if (paymentMethod.value === "split") {
-        // Split payment - first pay with wallet
-        try {
-          await payWithWallet({ orderId, amount: walletBalance.value });
-          // Then proceed to card payment for remaining amount
-          initializePaystackPayment(orderId, amountToPay.value);
-        } catch (error) {
-          console.error("Wallet portion failed:", error);
-          alert("Split payment failed. Please try again.");
-        }
+        // Split payment - card payment first, then wallet is deducted on backend
+        initializePaystackPayment(orderId, amountToPay.value, true);
       } else {
         // Full card payment
-        initializePaystackPayment(orderId, amountToPay.value);
+        initializePaystackPayment(orderId, amountToPay.value, false);
       }
     };
 
-    const initializePaystackPayment = (orderId, amount) => {
-      // Use Paystack inline
-      const handler = window.PaystackPop.setup({
-        key: process.env.VUE_APP_PAYSTACK_PUBLIC_KEY,
-        email: contactInfo.value.email || userProfile.value?.email || "",
-        amount: amount * 100, // Convert to kobo
-        currency: "NGN",
-        ref: `RCPH-${orderId}-${Date.now()}`,
-        metadata: {
-          order_id: orderId,
-          custom_fields: [
-            {
-              display_name: "Order ID",
-              variable_name: "order_id",
-              value: orderId,
-            },
-          ],
-        },
-        callback: async (response) => {
-          // Payment successful - verify and update order
-          console.log("Payment successful:", response);
-          orderSuccess(orderId);
-        },
-        onClose: () => {
-          console.log("Payment window closed");
-          // Order is created but unpaid - redirect to orders
-          router.push(`/app/patient/pharmacy/orders/${orderId}?status=pending`);
-        },
-      });
+    // Close wallet confirmation modal
+    const closeWalletConfirmModal = () => {
+      showWalletConfirmModal.value = false;
+    };
 
-      handler.openIframe();
+    // Confirm wallet payment after user consent - creates order then processes payment
+    const confirmWalletPayment = async () => {
+      if (placingOrder.value) return;
+
+      // Close the modal first
+      showWalletConfirmModal.value = false;
+
+      // Now create the order and process wallet payment
+      await createAndProcessOrder();
+    };
+
+    // Redirect-based Paystack payment (like appointments v2)
+    const initializePaystackPayment = async (orderId, amount, isSplitPayment = false) => {
+      try {
+        // For split payments, we need to store the wallet amount for processing on return
+        if (isSplitPayment) {
+          localStorage.setItem('pending_pharmacy_split_payment', JSON.stringify({
+            orderId,
+            walletAmount: walletPaymentAmount.value,
+            cardAmount: amount,
+          }));
+        }
+
+        // Call backend to initialize Paystack payment
+        const result = await initializePaystackPaymentAction(orderId);
+
+        if (result?.authorization_url) {
+          // Store order data for verification on return
+          localStorage.setItem('pending_pharmacy_order_id', orderId);
+          localStorage.setItem('pending_pharmacy_payment_reference', result.payment_reference || '');
+          localStorage.setItem('pending_pharmacy_is_split', isSplitPayment ? 'true' : 'false');
+
+          // Clear cart before redirecting (order is already created)
+          clearCart();
+          clearCheckoutState();
+
+          // Redirect to Paystack payment page
+          window.location.href = result.authorization_url;
+        } else {
+          throw new Error('No authorization URL received');
+        }
+      } catch (error) {
+        console.error("Payment initialization failed:", error);
+        // Order is created but payment init failed - redirect to order page to retry
+        router.push(`/app/patient/pharmacy/orders/${orderId}?status=pending`);
+      }
     };
 
     const orderSuccess = (orderId) => {
@@ -2287,1796 +2140,1855 @@ export default {
       fetchPickupCenters,
       selectPickupCenter,
       formatPickupAddress,
+      // Wallet confirmation modal
+      showWalletConfirmModal,
+      closeWalletConfirmModal,
+      confirmWalletPayment,
     };
   },
 };
 </script>
 
 <style scoped lang="scss">
-.cart-page {
-  padding: $size-16;
-  padding-bottom: $size-100;
+// Design Tokens
+$sky: #4FC3F7;
+$sky-light: #E1F5FE;
+$sky-dark: #0288D1;
+$sky-darker: #01579B;
+$navy: #0F172A;
+$slate: #334155;
+$gray: #64748B;
+$light-gray: #94A3B8;
+$bg: #F8FAFC;
+$emerald: #10B981;
+$emerald-light: #D1FAE5;
+$amber: #F59E0B;
+$amber-light: #FEF3C7;
+$rose: #F43F5E;
+$rose-light: #FFE4E6;
+$violet: #8B5CF6;
+$violet-light: #EDE9FE;
 
-  // Extra padding on mobile for sticky checkout bar
+@mixin glass-card {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.cart-page {
+  width: 100%;
+  min-height: 100vh;
+  background: $bg;
+}
+
+// Mobile Header
+.mobile-header {
+  display: none;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  padding: 12px 16px;
+  background: white;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #F1F5F9;
+
   @media (max-width: 768px) {
-    padding-bottom: 120px;
+    display: flex;
   }
 
-  .empty-cart {
+  .back-btn, .cart-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    border: none;
+    background: $bg;
+    color: $slate;
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: $size-48 $size-24;
-    text-align: center;
-    background: $color-white;
-    border-radius: $size-16;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    cursor: pointer;
+    position: relative;
 
-    .empty-cart-illustration {
-      margin-bottom: $size-24;
+    &:active {
+      background: #E2E8F0;
+    }
+  }
 
-      .cart-icon-wrapper {
-        position: relative;
-        width: 120px;
-        height: 120px;
-        background: linear-gradient(135deg, rgba($color-pri, 0.1) 0%, rgba($color-pri, 0.05) 100%);
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: $color-pri;
+  .cart-count {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    min-width: 18px;
+    height: 18px;
+    background: $rose;
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
 
-        svg {
-          opacity: 0.8;
-        }
+  .header-logo img {
+    height: 28px;
+    width: auto;
+  }
+}
 
-        .empty-badge {
-          position: absolute;
-          top: 12px;
-          right: 12px;
-          width: 28px;
-          height: 28px;
-          background: $color-g-85;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: $size-12;
-          font-weight: 700;
-          color: $color-g-54;
-          border: 3px solid $color-white;
-        }
+// Page Content
+.page-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px 32px 100px;
+
+  @media (max-width: 768px) {
+    padding: 16px 16px 180px;
+  }
+}
+
+// Loading State
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 50vh;
+  gap: 16px;
+
+  .loading-spinner {
+    position: relative;
+    width: 64px;
+    height: 64px;
+
+    .spinner-ring {
+      position: absolute;
+      inset: 0;
+      border: 3px solid $sky-light;
+      border-top-color: $sky;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    .spinner-icon {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: $sky;
+    }
+  }
+
+  p {
+    color: $gray;
+    font-size: 14px;
+  }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+// Breadcrumbs
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+
+  @media (max-width: 768px) {
+    display: none;
+  }
+
+  .breadcrumb-item {
+    display: flex;
+    align-items: center;
+    font-size: 13px;
+    color: $gray;
+    text-decoration: none;
+    transition: color 0.2s;
+
+    &:hover:not(.current) {
+      color: $sky-dark;
+    }
+
+    &.current {
+      color: $slate;
+      font-weight: 500;
+    }
+  }
+
+  .breadcrumb-sep {
+    color: #CBD5E1;
+    font-size: 12px;
+  }
+}
+
+// Empty State
+.empty-state-card {
+  @include glass-card;
+  border-radius: 24px;
+  padding: 64px 32px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  .empty-orb {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    margin-bottom: 24px;
+
+    .orb-ring {
+      position: absolute;
+      border-radius: 50%;
+      border: 2px solid transparent;
+
+      &--1 {
+        inset: -8px;
+        border-top-color: rgba($sky, 0.3);
+        animation: spin 8s linear infinite;
+      }
+
+      &--2 {
+        inset: -16px;
+        border-right-color: rgba($sky, 0.2);
+        animation: spin 12s linear infinite reverse;
       }
     }
 
-    h3 {
-      font-size: $size-22;
-      font-weight: 700;
-      color: $color-g-21;
-      margin-bottom: $size-8;
-    }
-
-    p {
-      font-size: $size-14;
-      color: $color-g-54;
-      margin-bottom: $size-24;
-      max-width: 300px;
-      line-height: 1.5;
-    }
-
-    .empty-cart-actions {
-      display: flex;
-      flex-direction: column;
-      gap: $size-12;
+    .orb-core {
       width: 100%;
-      max-width: 280px;
-      margin-bottom: $size-32;
-    }
-
-    .browse-btn {
+      height: 100%;
+      background: linear-gradient(135deg, $sky-light 0%, rgba($sky, 0.2) 100%);
+      border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: $size-8;
-      border: none;
-      padding: $size-14 $size-24;
-      border-radius: $size-10;
-      font-size: $size-14;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s ease;
-
-      .btn-icon {
-        font-size: $size-16;
-      }
-
-      &.primary {
-        background: $color-pri;
-        color: white;
-
-        &:hover {
-          background: darken($color-pri, 8%);
-          transform: translateY(-1px);
-        }
-      }
-
-      &.secondary {
-        background: transparent;
-        color: $color-pri;
-        border: 1px solid $color-pri;
-
-        &:hover {
-          background: rgba($color-pri, 0.05);
-        }
-      }
-    }
-
-    .empty-cart-features {
-      display: flex;
-      gap: $size-20;
-      padding-top: $size-24;
-      border-top: 1px solid $color-g-92;
-
-      @media (max-width: 480px) {
-        flex-direction: column;
-        gap: $size-12;
-      }
-
-      .feature-item {
-        display: flex;
-        align-items: center;
-        gap: $size-6;
-        font-size: $size-12;
-        color: $color-g-54;
-
-        .feature-icon {
-          font-size: $size-14;
-        }
-      }
+      color: $sky-dark;
     }
   }
 
-  // Free Delivery Banner
-  .free-delivery-banner {
-    background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
-    border: 1px solid #fed7aa;
-    border-radius: $size-12;
-    padding: $size-16;
-    margin-bottom: $size-16;
+  h2 {
+    font-size: 24px;
+    font-weight: 700;
+    color: $navy;
+    margin: 0 0 8px;
+  }
 
-    &.achieved {
-      background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-      border-color: #86efac;
+  p {
+    font-size: 14px;
+    color: $gray;
+    margin: 0 0 24px;
+    max-width: 320px;
+  }
 
-      .progress-fill {
-        background: linear-gradient(90deg, #22c55e 0%, #16a34a 100%);
+  .empty-actions {
+    margin-bottom: 32px;
+  }
+
+  .primary-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 28px;
+    background: linear-gradient(135deg, $sky 0%, $sky-dark 100%);
+    color: white;
+    border: none;
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba($sky-dark, 0.3);
+    }
+  }
+
+  .trust-row {
+    display: flex;
+    gap: 24px;
+    padding-top: 24px;
+    border-top: 1px solid #E2E8F0;
+
+    @media (max-width: 480px) {
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .trust-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: $gray;
+
+      svg {
+        color: $sky-dark;
+      }
+    }
+  }
+}
+
+// Bento Grid
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 16px;
+
+  @media (max-width: 1024px) {
+    grid-template-columns: repeat(6, 1fr);
+  }
+
+  @media (max-width: 768px) {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+}
+
+.bento-card {
+  @include glass-card;
+  border-radius: 20px;
+  overflow: hidden;
+
+  @media (max-width: 768px) {
+    border-radius: 16px;
+  }
+}
+
+// Card Header
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 24px;
+  border-bottom: 1px solid #F1F5F9;
+
+  @media (max-width: 768px) {
+    padding: 16px;
+  }
+
+  .header-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &.sky {
+      background: $sky-light;
+      color: $sky-dark;
+    }
+
+    &.emerald {
+      background: $emerald-light;
+      color: $emerald;
+    }
+
+    &.violet {
+      background: $violet-light;
+      color: $violet;
+    }
+
+    &.amber {
+      background: $amber-light;
+      color: $amber;
+    }
+
+    &.rose {
+      background: $rose-light;
+      color: $rose;
+    }
+  }
+
+  h3 {
+    flex: 1;
+    font-size: 16px;
+    font-weight: 600;
+    color: $navy;
+    margin: 0;
+  }
+
+  .item-count, .required-tag {
+    font-size: 12px;
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: 20px;
+  }
+
+  .item-count {
+    background: $bg;
+    color: $gray;
+  }
+
+  .required-tag {
+    background: $amber-light;
+    color: $amber;
+  }
+}
+
+// Summary Hero Card
+.summary-hero-card {
+  grid-column: span 12;
+
+  @media (max-width: 1024px) {
+    grid-column: span 6;
+  }
+}
+
+.summary-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 32px;
+  background: linear-gradient(135deg, $sky 0%, $sky-dark 50%, $sky-darker 100%);
+  color: white;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 20px;
+    padding: 24px 20px;
+    text-align: center;
+  }
+
+  .hero-content {
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      margin-bottom: 12px;
+      position: relative;
+
+      .badge-pulse {
+        position: absolute;
+        left: 10px;
+        width: 6px;
+        height: 6px;
+        background: $emerald;
+        border-radius: 50%;
+        animation: pulse 2s ease-in-out infinite;
       }
 
-      .success-text {
-        color: #16a34a;
+      svg {
+        margin-left: 10px;
+        width: 14px;
+        height: 14px;
+      }
+
+      span {
+        font-size: 12px;
         font-weight: 600;
       }
     }
 
-    .delivery-banner-content {
-      display: flex;
-      align-items: center;
-      gap: $size-10;
-      margin-bottom: $size-12;
+    .hero-title {
+      font-size: 32px;
+      font-weight: 800;
+      margin: 0 0 4px;
+      letter-spacing: -0.5px;
 
-      .delivery-icon {
-        font-size: $size-24;
-      }
-
-      .delivery-message {
-        font-size: $size-14;
-        color: $color-g-21;
-
-        strong {
-          color: $color-pri;
-        }
+      @media (max-width: 768px) {
+        font-size: 24px;
       }
     }
 
-    .delivery-progress-bar {
-      .progress-track {
-        height: 8px;
-        background: rgba(255, 255, 255, 0.8);
-        border-radius: 4px;
-        overflow: hidden;
-        box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
-      }
-
-      .progress-fill {
-        height: 100%;
-        background: linear-gradient(90deg, #f97316 0%, #ea580c 100%);
-        border-radius: 4px;
-        transition: width 0.3s ease;
-      }
-
-      .progress-labels {
-        display: flex;
-        justify-content: space-between;
-        margin-top: $size-6;
-        font-size: $size-11;
-        color: $color-g-54;
-      }
+    .hero-subtitle {
+      font-size: 14px;
+      opacity: 0.9;
+      margin: 0;
     }
   }
 
-  // Drug Interaction Alert Styles
-  .drug-interaction-alert {
-    background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
-    border: 1px solid #fecaca;
-    border-radius: $size-12;
-    padding: $size-16;
-    margin-bottom: $size-16;
+  .hero-stats {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    padding: 16px 24px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
 
-    .interaction-header {
+    @media (max-width: 768px) {
+      width: 100%;
+      justify-content: center;
+    }
+
+    .stat-item {
+      text-align: center;
+
+      .stat-value {
+        display: block;
+        font-size: 20px;
+        font-weight: 700;
+
+        &.free {
+          color: $emerald-light;
+        }
+      }
+
+      .stat-label {
+        font-size: 12px;
+        opacity: 0.8;
+      }
+    }
+
+    .stat-divider {
+      width: 1px;
+      height: 32px;
+      background: rgba(255, 255, 255, 0.2);
+    }
+  }
+}
+
+.delivery-progress {
+  padding: 16px 32px 24px;
+  background: rgba($sky-light, 0.5);
+
+  @media (max-width: 768px) {
+    padding: 16px 20px 20px;
+  }
+
+  .progress-text {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: $slate;
+    margin-bottom: 10px;
+
+    svg {
+      color: $sky-dark;
+    }
+
+    strong {
+      color: $sky-dark;
+    }
+  }
+
+  .progress-bar {
+    height: 6px;
+    background: rgba($sky-dark, 0.15);
+    border-radius: 3px;
+    overflow: hidden;
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, $sky 0%, $sky-dark 100%);
+      border-radius: 3px;
+      transition: width 0.3s ease;
+    }
+  }
+}
+
+.free-delivery-achieved {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px;
+  background: $emerald-light;
+  color: $emerald;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+// Alert Card
+.alert-card {
+  grid-column: span 12;
+
+  @media (max-width: 1024px) {
+    grid-column: span 6;
+  }
+
+  &.danger {
+    background: linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%);
+    border-color: #FECACA;
+  }
+
+  .alert-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px;
+
+    .alert-icon {
+      width: 40px;
+      height: 40px;
+      background: rgba($rose, 0.1);
+      border-radius: 10px;
       display: flex;
-      align-items: flex-start;
-      gap: $size-12;
+      align-items: center;
+      justify-content: center;
+      color: $rose;
+    }
 
-      .header-icon {
-        font-size: $size-24;
+    .alert-content {
+      flex: 1;
+
+      h3 {
+        font-size: 15px;
+        font-weight: 600;
+        color: #B91C1C;
+        margin: 0 0 2px;
+      }
+
+      p {
+        font-size: 13px;
+        color: #991B1B;
+        margin: 0;
+      }
+    }
+
+    .alert-toggle {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 8px 12px;
+      background: white;
+      border: 1px solid #FCA5A5;
+      border-radius: 8px;
+      font-size: 12px;
+      color: #B91C1C;
+      cursor: pointer;
+    }
+  }
+
+  .alert-details {
+    padding: 16px 20px;
+    border-top: 1px solid #FECACA;
+
+    .interaction-item {
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.6);
+      border-radius: 10px;
+      margin-bottom: 10px;
+
+      &.high {
+        border-left: 4px solid #DC2626;
+      }
+
+      &.moderate {
+        border-left: 4px solid $amber;
+      }
+
+      &.low {
+        border-left: 4px solid #3B82F6;
+      }
+
+      .severity-tag {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        margin-bottom: 8px;
+        background: #FEF2F2;
+        color: #DC2626;
+      }
+
+      .interaction-drugs {
+        font-size: 14px;
+        margin-bottom: 4px;
+
+        .plus {
+          color: $gray;
+          margin: 0 6px;
+        }
+      }
+
+      .interaction-desc {
+        font-size: 13px;
+        color: $gray;
+        margin: 0;
+        line-height: 1.5;
+      }
+    }
+
+    .interaction-disclaimer {
+      display: flex;
+      gap: 8px;
+      padding: 12px;
+      background: white;
+      border-radius: 8px;
+      margin-top: 8px;
+
+      svg {
+        color: $gray;
         flex-shrink: 0;
       }
 
-      .header-content {
-        flex: 1;
+      p {
+        font-size: 12px;
+        color: $gray;
+        margin: 0;
+        line-height: 1.5;
+      }
+    }
+  }
+}
 
-        h4 {
-          font-size: $size-16;
-          font-weight: 600;
-          color: #b91c1c;
-          margin: 0 0 $size-4 0;
-        }
+// Slide transition
+.slide-enter-active, .slide-leave-active {
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
 
-        p {
-          font-size: $size-13;
-          color: #991b1b;
-          margin: 0;
-        }
+.slide-enter-from, .slide-leave-to {
+  opacity: 0;
+  max-height: 0;
+}
+
+.slide-enter-to, .slide-leave-from {
+  opacity: 1;
+  max-height: 1000px;
+}
+
+// Items Card
+.items-card {
+  grid-column: span 8;
+
+  @media (max-width: 1024px) {
+    grid-column: span 6;
+  }
+}
+
+.items-section {
+  padding: 20px 24px;
+
+  @media (max-width: 768px) {
+    padding: 16px;
+  }
+
+  &:not(:last-child) {
+    border-bottom: 1px solid #F1F5F9;
+  }
+
+  .section-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 16px;
+
+    &.otc {
+      background: $emerald-light;
+      color: $emerald;
+    }
+
+    &.rx {
+      background: $rose-light;
+      color: $rose;
+    }
+  }
+}
+
+.cart-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cart-item {
+  display: grid;
+  grid-template-columns: 72px 1fr auto auto auto;
+  gap: 16px;
+  align-items: center;
+  padding: 16px;
+  background: $bg;
+  border-radius: 14px;
+  transition: background 0.2s;
+
+  &:hover {
+    background: #F1F5F9;
+  }
+
+  @media (max-width: 768px) {
+    grid-template-columns: 56px 1fr;
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .item-image {
+    position: relative;
+    width: 72px;
+    height: 72px;
+    border-radius: 12px;
+    overflow: hidden;
+    background: white;
+
+    @media (max-width: 768px) {
+      width: 56px;
+      height: 56px;
+    }
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .image-placeholder {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: $light-gray;
+    }
+
+    .rx-badge {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      background: $sky-dark;
+      color: white;
+      font-size: 9px;
+      font-weight: 700;
+      padding: 2px 5px;
+      border-radius: 4px;
+    }
+  }
+
+  .item-details {
+    min-width: 0;
+
+    @media (max-width: 768px) {
+      grid-column: span 1;
+    }
+
+    .item-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: $navy;
+      margin: 0 0 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .item-meta {
+      font-size: 12px;
+      color: $gray;
+      margin: 0 0 2px;
+    }
+
+    .item-manufacturer {
+      font-size: 11px;
+      color: $light-gray;
+      margin: 0 0 6px;
+    }
+
+    .item-stock {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      font-weight: 500;
+
+      .stock-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
       }
 
-      .expand-btn {
-        display: flex;
-        align-items: center;
-        gap: $size-4;
-        padding: $size-8 $size-12;
-        background: rgba(255, 255, 255, 0.8);
-        border: 1px solid #fca5a5;
-        border-radius: $size-8;
-        font-size: $size-12;
-        color: #b91c1c;
-        cursor: pointer;
-        transition: all 0.2s ease;
+      &.in-stock {
+        color: $emerald;
+        .stock-dot { background: $emerald; }
+      }
+
+      &.low-stock {
+        color: $amber;
+        .stock-dot { background: $amber; }
+      }
+
+      &.out-of-stock {
+        color: $rose;
+        .stock-dot { background: $rose; }
+      }
+    }
+  }
+
+  .item-quantity {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: white;
+    border-radius: 10px;
+    padding: 4px;
+
+    @media (max-width: 768px) {
+      grid-column: 1;
+      grid-row: 2;
+      justify-self: start;
+    }
+
+    .qty-btn {
+      width: 32px;
+      height: 32px;
+      border: 1px solid #E2E8F0;
+      background: white;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: $slate;
+      cursor: pointer;
+      transition: all 0.2s;
+
+      &:hover:not(:disabled) {
+        background: $sky-dark;
+        border-color: $sky-dark;
+        color: white;
+      }
+
+      &:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+    }
+
+    .qty-value {
+      min-width: 32px;
+      text-align: center;
+      font-size: 14px;
+      font-weight: 600;
+      color: $navy;
+    }
+  }
+
+  .item-price {
+    text-align: right;
+    min-width: 100px;
+
+    @media (max-width: 768px) {
+      grid-column: 2;
+      grid-row: 2;
+      justify-self: end;
+    }
+
+    .price-total {
+      display: block;
+      font-size: 15px;
+      font-weight: 700;
+      color: $navy;
+    }
+
+    .price-each {
+      font-size: 11px;
+      color: $light-gray;
+    }
+  }
+
+  .item-actions {
+    display: flex;
+    gap: 6px;
+
+    @media (max-width: 768px) {
+      position: absolute;
+      right: 12px;
+      top: 12px;
+    }
+
+    .action-btn {
+      width: 36px;
+      height: 36px;
+      border: none;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+
+      &.save {
+        background: #FDF2F8;
+        color: #EC4899;
 
         &:hover {
-          background: white;
-        }
-
-        .arrow {
-          transition: transform 0.2s ease;
-          font-size: $size-10;
-
-          &.rotated {
-            transform: rotate(180deg);
-          }
-        }
-      }
-    }
-
-    .interaction-details {
-      margin-top: $size-16;
-      padding-top: $size-16;
-      border-top: 1px solid #fecaca;
-
-      .interaction-item {
-        display: flex;
-        gap: $size-12;
-        padding: $size-12;
-        background: rgba(255, 255, 255, 0.6);
-        border-radius: $size-8;
-        margin-bottom: $size-10;
-
-        &.severity-high {
-          border-left: 4px solid #dc2626;
-        }
-
-        &.severity-moderate {
-          border-left: 4px solid #f59e0b;
-        }
-
-        &.severity-low {
-          border-left: 4px solid #3b82f6;
-        }
-
-        .severity-badge {
-          display: flex;
-          align-items: center;
-          gap: $size-4;
-          padding: $size-4 $size-8;
-          border-radius: $size-6;
-          font-size: $size-11;
-          font-weight: 600;
-          text-transform: uppercase;
-          flex-shrink: 0;
-          height: fit-content;
-
-          &.high {
-            background: #fef2f2;
-            color: #dc2626;
-          }
-
-          &.moderate {
-            background: #fffbeb;
-            color: #d97706;
-          }
-
-          &.low {
-            background: #eff6ff;
-            color: #2563eb;
-          }
-        }
-
-        .interaction-info {
-          flex: 1;
-
-          .drug-pair {
-            display: flex;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: $size-6;
-            margin-bottom: $size-6;
-
-            strong {
-              font-size: $size-13;
-              color: $color-g-21;
-            }
-
-            .separator {
-              color: $color-g-54;
-              font-size: $size-12;
-            }
-          }
-
-          .description {
-            font-size: $size-12;
-            color: $color-g-44;
-            line-height: 1.5;
-            margin: 0 0 $size-6 0;
-          }
-
-          .source {
-            font-size: $size-11;
-            color: $color-g-67;
-          }
+          background: #FCE7F3;
         }
       }
 
-      .interaction-disclaimer {
-        display: flex;
-        align-items: flex-start;
-        gap: $size-8;
-        padding: $size-12;
-        background: rgba(255, 255, 255, 0.8);
-        border-radius: $size-8;
-        margin-top: $size-8;
+      &.remove {
+        background: #FEF2F2;
+        color: $rose;
 
-        .disclaimer-icon {
-          font-size: $size-16;
-          flex-shrink: 0;
-        }
-
-        p {
-          font-size: $size-12;
-          color: $color-g-44;
-          line-height: 1.5;
-          margin: 0;
+        &:hover {
+          background: #FEE2E2;
         }
       }
     }
   }
+}
 
-  // Slide transition for interaction details
-  .slide-enter-active,
-  .slide-leave-active {
-    transition: all 0.3s ease;
-    overflow: hidden;
+// Delivery Card
+.delivery-card {
+  grid-column: span 4;
+
+  @media (max-width: 1024px) {
+    grid-column: span 6;
+  }
+}
+
+.delivery-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 20px 24px;
+
+  @media (max-width: 768px) {
+    padding: 16px;
+  }
+}
+
+.delivery-option {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  background: $bg;
+  border: 2px solid transparent;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: #F1F5F9;
   }
 
-  .slide-enter-from,
-  .slide-leave-to {
-    opacity: 0;
-    max-height: 0;
-    margin-top: 0;
-    padding-top: 0;
+  &.active {
+    background: rgba($sky-dark, 0.05);
+    border-color: $sky-dark;
+
+    .option-icon {
+      background: $sky-dark;
+      color: white;
+    }
   }
 
-  .slide-enter-to,
-  .slide-leave-from {
-    opacity: 1;
-    max-height: 1000px;
-  }
-
-  // Loading state for interaction check
-  .interaction-loading {
+  .option-icon {
+    width: 44px;
+    height: 44px;
+    background: white;
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: $size-10;
-    padding: $size-12 $size-16;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: $size-8;
-    margin-bottom: $size-16;
+    color: $gray;
+    transition: all 0.2s;
+  }
 
-    .loading-spinner {
-      width: 18px;
-      height: 18px;
-      border: 2px solid #e2e8f0;
-      border-top-color: $color-pri;
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
+  .option-info {
+    flex: 1;
+
+    strong {
+      display: block;
+      font-size: 14px;
+      color: $navy;
     }
 
     span {
-      font-size: $size-13;
-      color: $color-g-44;
+      font-size: 12px;
+      color: $gray;
     }
   }
 
-  @keyframes spin {
-    to {
-      transform: rotate(360deg);
-    }
+  .option-check {
+    width: 24px;
+    height: 24px;
+    background: $sky-dark;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+  }
+}
+
+.address-section, .pickup-section {
+  padding: 0 24px 20px;
+
+  @media (max-width: 768px) {
+    padding: 0 16px 16px;
+  }
+}
+
+.selected-address, .selected-pickup {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  background: rgba($sky-dark, 0.05);
+  border: 2px solid $sky-dark;
+  border-radius: 14px;
+
+  .address-icon, .pickup-icon {
+    width: 40px;
+    height: 40px;
+    background: $sky-dark;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    flex-shrink: 0;
   }
 
-  .cart-section {
-    background: $color-white;
-    border-radius: $size-16;
-    padding: $size-20;
-    margin-bottom: $size-16;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  .address-info, .pickup-info {
+    flex: 1;
+    min-width: 0;
 
-    .section-header {
-      margin-bottom: $size-16;
-      padding-bottom: $size-12;
-      border-bottom: 1px solid $color-g-92;
-
-      h3 {
-        font-size: $size-16;
-        font-weight: 600;
-        color: $color-g-21;
-      }
-    }
-
-    .max-qty-warning {
-      background: #fff3cd;
-      border: 1px solid #ffc107;
-      border-radius: $size-8;
-      padding: $size-10 $size-14;
-      margin-bottom: $size-16;
-      font-size: $size-13;
-      color: #856404;
-    }
-
-    // Item groups (OTC & Rx separation)
-    .items-group {
-      margin-bottom: $size-16;
-
-      &:last-child {
-        margin-bottom: 0;
-      }
-
-      .group-header {
-        display: flex;
-        align-items: center;
-        gap: $size-8;
-        padding: $size-10 $size-12;
-        border-radius: $size-8;
-        margin-bottom: $size-12;
-
-        .group-icon {
-          font-size: $size-16;
-
-          &.rx-icon {
-            background: #dc2626;
-            color: white;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: $size-11;
-            font-weight: 700;
-          }
-        }
-
-        .group-title {
-          font-size: $size-14;
-          font-weight: 600;
-          color: $color-g-21;
-        }
-
-        .rx-notice {
-          margin-left: auto;
-          font-size: $size-11;
-          color: #dc2626;
-          font-weight: 500;
-        }
-      }
-
-      &.otc-group .group-header {
-        background: #f0fdf4;
-        border: 1px solid #bbf7d0;
-
-        .group-title {
-          color: #166534;
-        }
-      }
-
-      &.rx-group .group-header {
-        background: #fef2f2;
-        border: 1px solid #fecaca;
-
-        .group-title {
-          color: #991b1b;
-        }
-      }
-    }
-  }
-
-  .cart-items {
-    .cart-item {
+    .address-label {
       display: flex;
       align-items: center;
-      gap: $size-12;
-      padding: $size-14 0;
-      border-bottom: 1px solid $color-g-95;
+      gap: 8px;
+      margin-bottom: 4px;
 
-      &:last-child {
-        border-bottom: none;
+      strong {
+        font-size: 14px;
+        color: $sky-dark;
       }
 
-      .item-image {
-        position: relative;
-        width: 64px;
-        height: 64px;
-        border-radius: $size-10;
-        overflow: hidden;
-        flex-shrink: 0;
-        background: $color-g-97;
-
-        img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-        }
-
-        .image-placeholder {
-          width: 100%;
-          height: 100%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: $size-28;
-        }
-
-        .rx-tag {
-          position: absolute;
-          top: 4px;
-          right: 4px;
-          background: $color-pri;
-          color: white;
-          font-size: 9px;
-          font-weight: 700;
-          padding: 2px 5px;
-          border-radius: 4px;
-        }
-      }
-
-      .item-info {
-        flex: 1;
-        min-width: 0;
-
-        .item-name {
-          font-size: $size-14;
-          font-weight: 600;
-          color: $color-g-21;
-          margin-bottom: $size-2;
-        }
-
-        .item-meta {
-          font-size: $size-12;
-          color: $color-g-54;
-        }
-
-        .item-manufacturer {
-          font-size: $size-11;
-          color: $color-g-67;
-          margin: 0;
-        }
-
-        .stock-status-row {
-          display: flex;
-          align-items: center;
-          gap: $size-8;
-          margin-top: $size-6;
-
-          .stock-badge {
-            display: inline-flex;
-            align-items: center;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: $size-10;
-            font-weight: 600;
-
-            &.in-stock {
-              background: #dcfce7;
-              color: #16a34a;
-            }
-
-            &.low-stock {
-              background: #fef3c7;
-              color: #d97706;
-            }
-
-            &.out-of-stock {
-              background: #fee2e2;
-              color: #dc2626;
-            }
-          }
-
-          .item-price-mobile {
-            display: none;
-            font-size: $size-13;
-            color: $color-pri;
-            font-weight: 600;
-
-            @media (max-width: 600px) {
-              display: block;
-            }
-          }
-        }
-      }
-
-      .item-quantity-wrapper {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: $size-4;
-
-        .max-qty-hint {
-          font-size: $size-10;
-          color: $color-g-67;
-        }
-      }
-
-      .item-quantity {
-        display: flex;
-        align-items: center;
-        gap: $size-6;
-        background: $color-g-95;
-        border-radius: $size-8;
-        padding: $size-4;
-
-        .qty-btn {
-          width: $size-28;
-          height: $size-28;
-          border: 1px solid $color-g-85;
-          background: $color-white;
-          border-radius: $size-6;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: $size-16;
-          font-weight: 600;
-          color: $color-g-44;
-
-          &:hover:not(:disabled) {
-            background: $color-pri;
-            border-color: $color-pri;
-            color: white;
-          }
-
-          &:disabled {
-            opacity: 0.4;
-            cursor: not-allowed;
-          }
-        }
-
-        .qty-value {
-          font-size: $size-14;
-          font-weight: 600;
-          min-width: $size-24;
-          text-align: center;
-        }
-      }
-
-      .item-total {
-        text-align: right;
-        min-width: 90px;
-
-        .total-amount {
-          display: block;
-          font-size: $size-15;
-          font-weight: 700;
-          color: $color-g-21;
-        }
-
-        .unit-price {
-          font-size: $size-11;
-          color: $color-g-67;
-        }
-
-        @media (max-width: 600px) {
-          display: none;
-        }
-      }
-
-      .item-actions {
-        display: flex;
-        flex-direction: column;
-        gap: $size-6;
-
-        .save-later-btn {
-          width: $size-32;
-          height: $size-32;
-          border: 1px solid $color-g-85;
-          background: white;
-          border-radius: $size-8;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: $size-16;
-          color: $color-g-54;
-          transition: all 0.2s ease;
-
-          &:hover {
-            border-color: #ec4899;
-            color: #ec4899;
-            background: #fdf2f8;
-          }
-        }
-
-        .remove-btn {
-          width: $size-32;
-          height: $size-32;
-          border: none;
-          background: #fef2f2;
-          border-radius: $size-8;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: $size-14;
-          color: #ef4444;
-          font-weight: 600;
-
-          &:hover {
-            background: #fee2e2;
-          }
-        }
-      }
-    }
-  }
-
-  // Saved for Later Section
-  .saved-section {
-    background: #fdf2f8 !important;
-    border: 1px solid #fbcfe8;
-
-    .section-header h3 {
-      color: #be185d;
-    }
-
-    .saved-items {
-      display: flex;
-      flex-direction: column;
-      gap: $size-12;
-    }
-
-    .saved-item {
-      display: flex;
-      align-items: center;
-      gap: $size-12;
-      padding: $size-12;
-      background: white;
-      border-radius: $size-10;
-
-      .saved-item-image {
-        width: 56px;
-        height: 56px;
-        border-radius: $size-8;
-        overflow: hidden;
-        flex-shrink: 0;
-        background: $color-g-97;
-
-        img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-        }
-
-        .image-placeholder {
-          width: 100%;
-          height: 100%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: $size-24;
-        }
-      }
-
-      .saved-item-info {
-        flex: 1;
-        min-width: 0;
-
-        h4 {
-          font-size: $size-14;
-          font-weight: 600;
-          color: $color-g-21;
-          margin-bottom: $size-2;
-        }
-
-        .saved-meta {
-          font-size: $size-12;
-          color: $color-g-54;
-          margin: 0;
-        }
-
-        .saved-price {
-          font-size: $size-14;
-          font-weight: 600;
-          color: $color-pri;
-          margin: $size-4 0 0;
-        }
-      }
-
-      .saved-item-actions {
-        display: flex;
-        flex-direction: column;
-        gap: $size-6;
-        align-items: flex-end;
-
-        .move-to-cart-btn {
-          padding: $size-8 $size-14;
-          background: $color-pri;
-          color: white;
-          border: none;
-          border-radius: $size-6;
-          font-size: $size-12;
-          font-weight: 600;
-          cursor: pointer;
-          white-space: nowrap;
-          transition: all 0.2s ease;
-
-          &:hover {
-            background: darken($color-pri, 8%);
-          }
-        }
-
-        .remove-saved-btn {
-          padding: $size-4 $size-8;
-          background: transparent;
-          border: none;
-          color: $color-g-54;
-          font-size: $size-12;
-          cursor: pointer;
-
-          &:hover {
-            color: #ef4444;
-          }
-        }
-      }
-    }
-  }
-
-  // Delivery Section
-  .delivery-section {
-    .delivery-toggle {
-      display: flex;
-      gap: $size-12;
-      margin-bottom: $size-16;
-
-      .toggle-btn {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        padding: $size-16;
-        border: 2px solid $color-g-85;
-        border-radius: $size-12;
-        background: white;
-        cursor: pointer;
-        transition: all 0.2s ease;
-
-        .toggle-icon {
-          font-size: $size-24;
-          margin-bottom: $size-8;
-        }
-
-        .toggle-label {
-          font-size: $size-14;
-          font-weight: 600;
-          color: $color-g-44;
-        }
-
-        .toggle-desc {
-          font-size: $size-11;
-          color: $color-g-67;
-          margin-top: $size-4;
-        }
-
-        &.active {
-          border-color: $color-pri;
-          background: rgba($color-pri, 0.05);
-
-          .toggle-label {
-            color: $color-pri;
-          }
-        }
-
-        &:hover:not(.active) {
-          border-color: $color-g-67;
-        }
-      }
-    }
-
-    .address-section {
-      .loading-state {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: $size-10;
-        padding: $size-20;
-        color: $color-g-67;
-
-        .spinner {
-          width: $size-20;
-          height: $size-20;
-          border: 2px solid $color-g-85;
-          border-top-color: $color-pri;
-          border-radius: 50%;
-          animation: spin 1s linear infinite;
-        }
-      }
-
-      .selected-address {
-        border: 2px solid $color-pri;
-        border-radius: $size-12;
-        padding: $size-16;
-        background: rgba($color-pri, 0.03);
-
-        .address-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: $size-10;
-
-          .address-label {
-            display: flex;
-            align-items: center;
-            gap: $size-6;
-            font-weight: 600;
-            color: $color-pri;
-
-            .label-icon {
-              font-size: $size-16;
-            }
-
-            .default-badge {
-              background: $color-pri;
-              color: white;
-              font-size: 10px;
-              padding: 2px 6px;
-              border-radius: 4px;
-              font-weight: 600;
-            }
-          }
-
-          .change-btn {
-            padding: $size-6 $size-12;
-            border: 1px solid $color-pri;
-            background: white;
-            border-radius: $size-6;
-            color: $color-pri;
-            font-size: $size-12;
-            font-weight: 500;
-            cursor: pointer;
-          }
-        }
-
-        .address-details {
-          .recipient {
-            font-weight: 600;
-            color: $color-g-21;
-            margin-bottom: $size-4;
-          }
-
-          .address-text {
-            font-size: $size-13;
-            color: $color-g-44;
-            margin-bottom: $size-4;
-          }
-
-          .phone {
-            font-size: $size-12;
-            color: $color-g-67;
-          }
-        }
-
-        .estimated-delivery {
-          display: flex;
-          align-items: center;
-          gap: $size-8;
-          margin-top: $size-12;
-          padding: $size-10 $size-12;
-          background: #f0f9ff;
-          border-radius: $size-8;
-          border: 1px solid #bae6fd;
-
-          .delivery-icon {
-            font-size: $size-16;
-          }
-
-          .delivery-text {
-            font-size: $size-13;
-            color: #0369a1;
-
-            strong {
-              font-weight: 600;
-              color: #0c4a6e;
-            }
-          }
-        }
-      }
-
-      .no-address {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        padding: $size-24;
-        border: 2px dashed $color-g-85;
-        border-radius: $size-12;
-
-        .no-address-icon {
-          font-size: $size-32;
-          margin-bottom: $size-8;
-        }
-
-        p {
-          color: $color-g-67;
-          margin-bottom: $size-12;
-        }
-
-        .add-address-btn {
-          padding: $size-10 $size-20;
-          background: $color-pri;
-          color: white;
-          border: none;
-          border-radius: $size-8;
-          font-size: $size-14;
-          font-weight: 500;
-          cursor: pointer;
-        }
-      }
-    }
-
-    .pickup-section {
-      .loading-state {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: $size-10;
-        padding: $size-20;
-        color: $color-g-67;
-
-        .spinner {
-          width: $size-20;
-          height: $size-20;
-          border: 2px solid $color-g-85;
-          border-top-color: $color-pri;
-          border-radius: 50%;
-          animation: spin 1s linear infinite;
-        }
-      }
-
-      .selected-pickup {
-        display: flex;
-        gap: $size-12;
-        padding: $size-16;
-        background: #f0fdf4;
-        border-radius: $size-12;
-        border: 1px solid #86efac;
-        align-items: flex-start;
-
-        .pharmacy-icon {
-          font-size: $size-28;
-        }
-
-        .pharmacy-details {
-          flex: 1;
-
-          strong {
-            display: block;
-            color: #166534;
-            margin-bottom: $size-4;
-          }
-
-          p {
-            font-size: $size-13;
-            color: #15803d;
-            margin: 0 0 $size-4;
-          }
-
-          .pickup-note {
-            font-size: $size-12;
-            font-style: italic;
-          }
-        }
-
-        .change-btn {
-          padding: $size-6 $size-12;
-          border: 1px solid #16a34a;
-          background: white;
-          border-radius: $size-6;
-          color: #16a34a;
-          font-size: $size-12;
-          font-weight: 500;
-          cursor: pointer;
-          white-space: nowrap;
-
-          &:hover {
-            background: rgba(#16a34a, 0.05);
-          }
-        }
-      }
-
-      .no-pickup-centers {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        padding: $size-24;
-        border: 2px dashed $color-g-85;
-        border-radius: $size-12;
-
-        .no-pickup-icon {
-          font-size: $size-32;
-          margin-bottom: $size-8;
-        }
-
-        p {
-          color: $color-g-67;
-          margin: 0;
-        }
-      }
-    }
-  }
-
-  // Prescription Section
-  .prescription-section {
-    .prescription-required {
-      .rx-warning {
-        display: flex;
-        gap: $size-12;
-        padding: $size-16;
-        background: #fef2f2;
-        border: 1px solid #fecaca;
-        border-radius: $size-12;
-        margin-bottom: $size-16;
-
-        .warning-icon {
-          font-size: $size-24;
-        }
-
-        .warning-text {
-          strong {
-            display: block;
-            color: #991b1b;
-            margin-bottom: $size-4;
-          }
-
-          p {
-            font-size: $size-13;
-            color: #b91c1c;
-            margin: 0;
-          }
-        }
-      }
-
-      .prescription-actions {
-        display: flex;
-        gap: $size-10;
-
-        button {
-          flex: 1;
-          padding: $size-12;
-          border-radius: $size-8;
-          font-size: $size-13;
-          font-weight: 500;
-          cursor: pointer;
-        }
-
-        .select-rx-btn {
-          background: white;
-          border: 1px solid $color-pri;
-          color: $color-pri;
-        }
-
-        .upload-rx-btn {
-          background: $color-pri;
-          border: none;
-          color: white;
-        }
-      }
-    }
-
-    .prescription-selected {
-      .rx-success {
-        display: flex;
-        align-items: center;
-        gap: $size-12;
-        padding: $size-16;
-        background: #f0fdf4;
-        border: 1px solid #86efac;
-        border-radius: $size-12;
-
-        .success-icon {
-          font-size: $size-24;
-        }
-
-        .rx-info {
-          flex: 1;
-
-          strong {
-            display: block;
-            color: #166534;
-            margin-bottom: $size-4;
-          }
-
-          p {
-            font-size: $size-13;
-            color: #15803d;
-            margin: 0;
-          }
-
-          .rx-date {
-            font-size: $size-12;
-          }
-        }
-
-        .change-rx-btn {
-          padding: $size-6 $size-12;
-          border: 1px solid #16a34a;
-          background: white;
-          border-radius: $size-6;
-          color: #16a34a;
-          font-size: $size-12;
-          font-weight: 500;
-          cursor: pointer;
-        }
-      }
-
-      // Pharmacist Verification Notice
-      .pharmacist-verification-notice {
-        display: flex;
-        gap: $size-12;
-        margin-top: $size-16;
-        padding: $size-12 $size-16;
-        background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-        border: 1px solid #7dd3fc;
-        border-radius: $size-10;
-
-        .notice-icon {
-          font-size: $size-24;
-          flex-shrink: 0;
-        }
-
-        .notice-content {
-          flex: 1;
-
-          strong {
-            display: block;
-            font-size: $size-14;
-            color: #0369a1;
-            margin-bottom: $size-4;
-          }
-
-          p {
-            font-size: $size-12;
-            color: #0284c7;
-            line-height: 1.5;
-            margin: 0;
-          }
-        }
-      }
-    }
-  }
-
-  // Summary Section
-  .summary-section {
-    // Promo Code Card
-    .promo-code-card {
-      background: $color-white;
-      border-radius: $size-12;
-      padding: $size-16;
-      margin-bottom: $size-16;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-      border: 1px solid $color-g-92;
-
-      .promo-header {
-        display: flex;
-        align-items: center;
-        gap: $size-8;
-        margin-bottom: $size-12;
-        font-size: $size-14;
-        font-weight: 500;
-        color: $color-g-21;
-
-        .promo-icon {
-          font-size: $size-16;
-        }
-      }
-
-      .promo-input-wrapper {
-        display: flex;
-        gap: $size-8;
-
-        .promo-input {
-          flex: 1;
-          padding: $size-12;
-          border: 1px solid $color-g-85;
-          border-radius: $size-8;
-          font-size: $size-14;
-          text-transform: uppercase;
-          font-family: inherit;
-
-          &:focus {
-            outline: none;
-            border-color: $color-pri;
-          }
-
-          &::placeholder {
-            text-transform: none;
-          }
-
-          &:disabled {
-            background: $color-g-97;
-          }
-        }
-
-        .apply-promo-btn {
-          padding: $size-12 $size-20;
-          background: $color-pri;
-          color: white;
-          border: none;
-          border-radius: $size-8;
-          font-size: $size-14;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          white-space: nowrap;
-
-          &:hover:not(:disabled) {
-            background: darken($color-pri, 8%);
-          }
-
-          &:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-          }
-        }
-      }
-
-      .promo-applied {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: $size-12;
-        background: #f0fdf4;
-        border: 1px solid #86efac;
-        border-radius: $size-8;
-
-        .applied-info {
-          display: flex;
-          flex-direction: column;
-          gap: $size-2;
-
-          .applied-code {
-            font-weight: 700;
-            color: #16a34a;
-            font-size: $size-14;
-          }
-
-          .applied-desc {
-            font-size: $size-12;
-            color: #15803d;
-          }
-        }
-
-        .remove-promo-btn {
-          width: $size-28;
-          height: $size-28;
-          border: none;
-          background: #dcfce7;
-          border-radius: $size-6;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: $size-12;
-          color: #16a34a;
-          font-weight: 600;
-
-          &:hover {
-            background: #bbf7d0;
-          }
-        }
-      }
-
-      .promo-error {
-        margin-top: $size-8;
-        font-size: $size-12;
-        color: #dc2626;
-      }
-    }
-
-    .wallet-card {
-      background: linear-gradient(135deg, $color-pri 0%, darken($color-pri, 15%) 100%);
-      border-radius: $size-16;
-      padding: $size-20;
-      margin-bottom: $size-16;
-      color: white;
-
-      .wallet-header {
-        display: flex;
-        align-items: center;
-        gap: $size-12;
-        margin-bottom: $size-12;
-
-        .wallet-icon {
-          font-size: $size-28;
-        }
-
-        .wallet-info {
-          .wallet-label {
-            display: block;
-            font-size: $size-12;
-            opacity: 0.9;
-          }
-
-          .wallet-balance {
-            font-size: $size-22;
-            font-weight: 700;
-          }
-        }
-      }
-
-      .wallet-actions {
-        .use-wallet-toggle {
-          display: flex;
-          align-items: center;
-          gap: $size-10;
-          cursor: pointer;
-          padding: $size-10;
-          background: rgba(255, 255, 255, 0.15);
-          border-radius: $size-8;
-
-          input {
-            width: $size-18;
-            height: $size-18;
-          }
-
-          span {
-            font-size: $size-14;
-          }
-        }
-      }
-
-      .wallet-empty {
-        padding: $size-10;
-        background: rgba(255, 255, 255, 0.15);
-        border-radius: $size-8;
-        text-align: center;
-
-        p {
-          font-size: $size-13;
-          margin: 0 0 $size-8;
-          opacity: 0.9;
-        }
-
-        .top-up-link {
-          background: white;
-          color: $color-pri;
-          border: none;
-          padding: $size-8 $size-16;
-          border-radius: $size-6;
-          font-size: $size-13;
-          font-weight: 600;
-          cursor: pointer;
-        }
-      }
-    }
-
-    .price-summary {
-      background: $color-white;
-      border-radius: $size-16;
-      padding: $size-20;
-      margin-bottom: $size-16;
-      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-
-      .summary-row {
-        display: flex;
-        justify-content: space-between;
-        padding: $size-10 0;
-        border-bottom: 1px solid $color-g-95;
-        font-size: $size-14;
-
-        &:last-child {
-          border-bottom: none;
-        }
-
-        &.total {
-          padding-top: $size-14;
-          margin-top: $size-8;
-          border-top: 2px solid $color-g-92;
-          border-bottom: none;
-          font-size: $size-18;
-          font-weight: 700;
-
-          span:last-child {
-            color: $color-pri;
-          }
-        }
-
-        .discount {
-          color: #10b981;
-          font-weight: 600;
-        }
-
-        .free-delivery-text {
-          display: flex;
-          align-items: center;
-          gap: $size-6;
-          color: #16a34a;
-          font-weight: 600;
-
-          .original-fee {
-            text-decoration: line-through;
-            color: $color-g-67;
-            font-weight: 400;
-            font-size: $size-12;
-          }
-        }
-      }
-    }
-
-    // Payment Method Section
-    .payment-method-section {
-      margin-bottom: $size-16;
-
-      .section-title {
-        font-size: $size-14;
+      .default-tag {
+        font-size: 10px;
         font-weight: 600;
-        color: $color-g-21;
-        margin-bottom: $size-12;
-      }
-
-      .payment-options {
-        display: flex;
-        flex-direction: column;
-        gap: $size-10;
-      }
-
-      .payment-option {
-        display: flex;
-        align-items: flex-start;
-        gap: $size-12;
-        padding: $size-14;
-        background: $color-g-97;
-        border: 2px solid transparent;
-        border-radius: $size-10;
-        cursor: pointer;
-        transition: all 0.2s ease;
-
-        &:hover {
-          background: $color-g-92;
-        }
-
-        &.selected {
-          background: rgba($color-pri, 0.05);
-          border-color: $color-pri;
-        }
-
-        &.disabled {
-          opacity: 0.6;
-          cursor: not-allowed;
-
-          &:hover {
-            background: $color-g-97;
-          }
-        }
-
-        .radio-circle {
-          width: 20px;
-          height: 20px;
-          border: 2px solid $color-g-67;
-          border-radius: 50%;
-          flex-shrink: 0;
-          margin-top: 2px;
-          position: relative;
-          transition: all 0.2s ease;
-
-          &.checked {
-            border-color: $color-pri;
-
-            &::after {
-              content: '';
-              position: absolute;
-              top: 50%;
-              left: 50%;
-              transform: translate(-50%, -50%);
-              width: 10px;
-              height: 10px;
-              background: $color-pri;
-              border-radius: 50%;
-            }
-          }
-        }
-
-        .option-content {
-          display: flex;
-          align-items: flex-start;
-          gap: $size-10;
-          flex: 1;
-
-          .option-icon {
-            font-size: $size-22;
-          }
-
-          .option-info {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-
-            strong {
-              font-size: $size-14;
-              color: $color-g-21;
-            }
-
-            span {
-              font-size: $size-12;
-              color: $color-g-54;
-            }
-
-            .insufficient {
-              color: #dc2626;
-              font-size: $size-11;
-            }
-          }
-        }
+        padding: 2px 6px;
+        background: $sky-dark;
+        color: white;
+        border-radius: 4px;
       }
     }
 
-    // Processing Overlay
-    .processing-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.5);
+    .address-recipient, .address-text, p {
+      font-size: 13px;
+      color: $slate;
+      margin: 0 0 2px;
+    }
+  }
+
+  .change-btn {
+    padding: 8px 14px;
+    background: white;
+    border: 1px solid $sky-dark;
+    border-radius: 8px;
+    color: $sky-dark;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+  }
+}
+
+.delivery-estimate {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: $sky-light;
+  border-radius: 10px;
+  font-size: 13px;
+  color: $sky-darker;
+
+  strong {
+    color: $sky-dark;
+  }
+}
+
+.no-address {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px;
+  background: $bg;
+  border: 2px dashed #CBD5E1;
+  border-radius: 14px;
+  text-align: center;
+
+  svg {
+    color: $light-gray;
+    margin-bottom: 8px;
+  }
+
+  p {
+    font-size: 13px;
+    color: $gray;
+    margin: 0 0 12px;
+  }
+
+  .add-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 18px;
+    background: $sky-dark;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+  }
+}
+
+.loading-inline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 24px;
+  color: $gray;
+  font-size: 13px;
+
+  .spinner-sm {
+    width: 18px;
+    height: 18px;
+    border: 2px solid #E2E8F0;
+    border-top-color: $sky-dark;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+}
+
+// Prescription Card
+.prescription-card {
+  grid-column: span 4;
+
+  @media (max-width: 1024px) {
+    grid-column: span 6;
+  }
+}
+
+.prescription-required {
+  padding: 20px 24px;
+
+  @media (max-width: 768px) {
+    padding: 16px;
+  }
+
+  .rx-alert {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px;
+    background: $amber-light;
+    border-radius: 12px;
+    margin-bottom: 16px;
+
+    svg {
+      color: $amber;
+      flex-shrink: 0;
+    }
+
+    .alert-text {
+      strong {
+        display: block;
+        font-size: 14px;
+        color: #92400E;
+        margin-bottom: 2px;
+      }
+
+      p {
+        font-size: 13px;
+        color: #B45309;
+        margin: 0;
+      }
+    }
+  }
+
+  .prescription-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+
+    .action-primary, .action-secondary {
       display: flex;
       align-items: center;
       justify-content: center;
-      z-index: 9999;
+      gap: 8px;
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+    }
 
-      .processing-content {
-        background: white;
-        padding: $size-32;
-        border-radius: $size-16;
-        text-align: center;
-        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    .action-primary {
+      background: $sky-dark;
+      color: white;
+      border: none;
+    }
 
-        .spinner {
-          width: 40px;
-          height: 40px;
-          border: 3px solid $color-g-85;
-          border-top-color: $color-pri;
-          border-radius: 50%;
-          animation: spin 1s linear infinite;
-          margin: 0 auto $size-16;
-        }
+    .action-secondary {
+      background: white;
+      color: $sky-dark;
+      border: 1px solid $sky-dark;
+    }
+  }
+}
 
-        p {
-          font-size: $size-14;
-          color: $color-g-21;
-          margin: 0;
-        }
+.prescription-selected {
+  padding: 20px 24px;
+
+  @media (max-width: 768px) {
+    padding: 16px;
+  }
+
+  .rx-success {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px;
+    background: $emerald-light;
+    border-radius: 12px;
+    margin-bottom: 12px;
+
+    svg {
+      color: $emerald;
+      flex-shrink: 0;
+    }
+
+    .success-info {
+      flex: 1;
+
+      strong {
+        display: block;
+        font-size: 14px;
+        color: #065F46;
+        margin-bottom: 2px;
+      }
+
+      p {
+        font-size: 13px;
+        color: #047857;
+        margin: 0;
+      }
+
+      .rx-date {
+        font-size: 12px;
+        color: #059669;
       }
     }
 
-    .checkout-blockers {
-      margin-bottom: $size-16;
+    .change-btn {
+      padding: 6px 12px;
+      background: white;
+      border: 1px solid $emerald;
+      border-radius: 6px;
+      color: $emerald;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+  }
 
-      .blocker-item {
-        display: flex;
-        align-items: center;
-        gap: $size-8;
-        padding: $size-10 $size-12;
-        background: #fef3c7;
-        border-radius: $size-8;
-        margin-bottom: $size-8;
-        font-size: $size-13;
-        color: #92400e;
+  .coverage-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
 
-        .blocker-icon {
-          font-size: $size-14;
-        }
+    &.success {
+      background: $emerald-light;
+      color: $emerald;
+    }
+
+    &.warning {
+      background: $amber-light;
+      color: $amber;
+    }
+  }
+}
+
+// Order Summary Card
+.order-card {
+  grid-column: span 4;
+
+  @media (max-width: 1024px) {
+    grid-column: span 6;
+  }
+}
+
+.promo-section {
+  padding: 16px 24px;
+  border-bottom: 1px solid #F1F5F9;
+
+  @media (max-width: 768px) {
+    padding: 12px 16px;
+  }
+
+  .promo-input-row {
+    display: flex;
+    gap: 8px;
+
+    input {
+      flex: 1;
+      padding: 12px 14px;
+      border: 1px solid #E2E8F0;
+      border-radius: 10px;
+      font-size: 14px;
+      text-transform: uppercase;
+
+      &:focus {
+        outline: none;
+        border-color: $sky-dark;
       }
     }
 
-    .checkout-actions {
+    .apply-btn {
+      padding: 12px 18px;
+      background: $sky-dark;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+
+      &:disabled {
+        opacity: 0.5;
+      }
+    }
+  }
+
+  .promo-applied {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    background: $emerald-light;
+    border-radius: 10px;
+
+    .promo-info {
       display: flex;
-      flex-direction: column;
-      gap: $size-12;
+      align-items: center;
+      gap: 8px;
 
-      button {
-        width: 100%;
+      svg {
+        color: $emerald;
+      }
+
+      .promo-code {
+        font-weight: 700;
+        color: $emerald;
+      }
+
+      .promo-discount {
+        color: #059669;
       }
     }
 
-    // Trust Badges
-    .trust-badges {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: $size-10;
-      margin-top: $size-20;
-      padding-top: $size-20;
-      border-top: 1px solid $color-g-92;
+    .remove-promo {
+      width: 28px;
+      height: 28px;
+      background: rgba($emerald, 0.2);
+      border: none;
+      border-radius: 6px;
+      color: $emerald;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  }
 
-      .trust-badge {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        text-align: center;
-        padding: $size-10 $size-6;
-        background: $color-g-97;
-        border-radius: $size-8;
+  .promo-error {
+    margin-top: 8px;
+    font-size: 12px;
+    color: $rose;
+  }
+}
 
-        .badge-icon {
-          width: 32px;
-          height: 32px;
-          background: white;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: $size-14;
-          margin-bottom: $size-6;
+.price-breakdown {
+  padding: 20px 24px;
+  border-bottom: 1px solid #F1F5F9;
+
+  @media (max-width: 768px) {
+    padding: 16px;
+  }
+
+  .price-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    font-size: 14px;
+    color: $slate;
+
+    &.discount span:last-child {
+      color: $emerald;
+      font-weight: 600;
+    }
+
+    .free-text {
+      color: $emerald;
+      font-weight: 600;
+    }
+
+    &.total {
+      padding-top: 16px;
+      margin-top: 8px;
+      border-top: 2px solid #E2E8F0;
+      font-size: 18px;
+      font-weight: 700;
+      color: $navy;
+
+      span:last-child {
+        color: $sky-dark;
+      }
+    }
+  }
+}
+
+.payment-section {
+  padding: 20px 24px;
+  border-bottom: 1px solid #F1F5F9;
+
+  @media (max-width: 768px) {
+    padding: 16px;
+  }
+
+  h4 {
+    font-size: 14px;
+    font-weight: 600;
+    color: $navy;
+    margin: 0 0 12px;
+  }
+
+  .payment-options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .payment-option {
+    display: flex;
+    align-items: center;
+    padding: 14px;
+    background: $bg;
+    border: 2px solid transparent;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    input {
+      display: none;
+    }
+
+    &.selected {
+      background: rgba($sky-dark, 0.05);
+      border-color: $sky-dark;
+    }
+
+    &.disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .option-content {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+
+      svg {
+        color: $sky-dark;
+      }
+
+      .option-text {
+        strong {
+          display: block;
+          font-size: 14px;
+          color: $navy;
         }
 
-        .badge-text {
-          display: flex;
-          flex-direction: column;
-
-          strong {
-            font-size: $size-11;
-            font-weight: 600;
-            color: $color-g-21;
-            line-height: 1.2;
-          }
-
-          span {
-            font-size: $size-9;
-            color: $color-g-54;
-            line-height: 1.3;
-          }
+        span {
+          font-size: 12px;
+          color: $gray;
         }
       }
+    }
+  }
+}
+
+.checkout-section {
+  padding: 20px 24px;
+
+  @media (max-width: 768px) {
+    padding: 16px;
+  }
+
+  .blockers {
+    margin-bottom: 12px;
+
+    .blocker-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      background: $amber-light;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      font-size: 12px;
+      color: #92400E;
+    }
+  }
+
+  .checkout-btn {
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg, $sky 0%, $sky-dark 100%);
+    color: white;
+    border: none;
+    border-radius: 14px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba($sky-dark, 0.3);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+  }
+}
+
+.trust-badges {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  padding: 16px 24px;
+  border-top: 1px solid #F1F5F9;
+
+  .badge {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: $gray;
+
+    svg {
+      color: $sky-dark;
+    }
+  }
+}
+
+// Saved Card
+.saved-card {
+  grid-column: span 12;
+
+  @media (max-width: 1024px) {
+    grid-column: span 6;
+  }
+}
+
+.saved-items {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+  padding: 20px 24px;
+
+  @media (max-width: 768px) {
+    padding: 16px;
+    grid-template-columns: 1fr;
+  }
+}
+
+.saved-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: $bg;
+  border-radius: 12px;
+
+  .saved-image {
+    width: 56px;
+    height: 56px;
+    border-radius: 10px;
+    overflow: hidden;
+    background: white;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .image-placeholder {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: $light-gray;
+    }
+  }
+
+  .saved-info {
+    flex: 1;
+    min-width: 0;
+
+    h4 {
+      font-size: 13px;
+      font-weight: 600;
+      color: $navy;
+      margin: 0 0 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    p {
+      font-size: 11px;
+      color: $gray;
+      margin: 0;
+    }
+
+    .saved-price {
+      font-size: 14px;
+      font-weight: 700;
+      color: $sky-dark;
+    }
+  }
+
+  .saved-actions {
+    display: flex;
+    gap: 6px;
+
+    .move-btn {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 8px 12px;
+      background: $sky-dark;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    .remove-btn {
+      width: 32px;
+      height: 32px;
+      background: #FEF2F2;
+      border: none;
+      border-radius: 8px;
+      color: $rose;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  }
+}
+
+// Mobile Checkout Bar
+.mobile-checkout-bar {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 16px 20px;
+  background: white;
+  border-top: 1px solid #E2E8F0;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
+  z-index: 90;
+
+  @media (max-width: 768px) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .mobile-total {
+    .label {
+      display: block;
+      font-size: 12px;
+      color: $gray;
+    }
+
+    .amount {
+      font-size: 20px;
+      font-weight: 700;
+      color: $navy;
+    }
+  }
+
+  .mobile-checkout-btn {
+    flex: 1;
+    max-width: 200px;
+    padding: 14px 20px;
+    background: linear-gradient(135deg, $sky 0%, $sky-dark 100%);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+
+    &:disabled {
+      opacity: 0.5;
+    }
+  }
+}
+
+// Processing Overlay
+.processing-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+
+  .processing-content {
+    background: white;
+    padding: 40px;
+    border-radius: 20px;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+
+    .spinner-lg {
+      width: 48px;
+      height: 48px;
+      border: 3px solid $sky-light;
+      border-top-color: $sky-dark;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    p {
+      font-size: 15px;
+      color: $slate;
+      margin: 0;
     }
   }
 }
@@ -4089,943 +4001,593 @@ export default {
   transform: translateX(-50%);
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: $size-16;
-  background: #1f2937;
+  gap: 16px;
+  padding: 14px 20px;
+  background: $navy;
   color: white;
-  padding: $size-12 $size-16;
-  border-radius: $size-10;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  border-radius: 14px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
   z-index: 1000;
-  min-width: 300px;
-  max-width: calc(100vw - 32px);
 
   @media (max-width: 768px) {
     bottom: 140px;
+    left: 16px;
+    right: 16px;
+    transform: none;
   }
 
   .toast-content {
     display: flex;
     align-items: center;
-    gap: $size-10;
-
-    .toast-icon {
-      font-size: $size-18;
-    }
-
-    .toast-message {
-      font-size: $size-14;
-
-      strong {
-        font-weight: 600;
-      }
-    }
+    gap: 10px;
+    font-size: 14px;
   }
 
-  .toast-actions {
+  .undo-btn {
     display: flex;
     align-items: center;
-    gap: $size-8;
-
-    .undo-btn {
-      padding: $size-6 $size-12;
-      background: #3b82f6;
-      color: white;
-      border: none;
-      border-radius: $size-6;
-      font-size: $size-13;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.2s ease;
-
-      &:hover {
-        background: #2563eb;
-      }
-    }
-
-    .dismiss-btn {
-      padding: $size-6;
-      background: transparent;
-      border: none;
-      color: #9ca3af;
-      cursor: pointer;
-      font-size: $size-14;
-
-      &:hover {
-        color: white;
-      }
-    }
+    gap: 6px;
+    padding: 8px 14px;
+    background: $sky-dark;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
   }
 }
 
-// Toast animation
-.toast-enter-active,
-.toast-leave-active {
+.toast-enter-active, .toast-leave-active {
   transition: all 0.3s ease;
 }
 
-.toast-enter-from,
-.toast-leave-to {
+.toast-enter-from, .toast-leave-to {
   opacity: 0;
   transform: translateX(-50%) translateY(20px);
+
+  @media (max-width: 768px) {
+    transform: translateY(20px);
+  }
 }
 
 // Modals
 .modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 20px;
   z-index: 1000;
-  padding: $size-16;
 }
 
 .modal-content {
-  background: white;
-  border-radius: $size-16;
   width: 100%;
-  max-width: 500px;
-  max-height: 80vh;
+  max-width: 480px;
+  max-height: 85vh;
+  background: white;
+  border-radius: 20px;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
 
-  .modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: $size-16;
-    border-bottom: 1px solid $color-g-95;
-
-    h3 {
-      font-size: $size-18;
-      font-weight: 600;
-    }
-
-    .close-btn {
-      width: $size-32;
-      height: $size-32;
-      border-radius: 50%;
-      border: none;
-      background: $color-g-95;
-      cursor: pointer;
-      font-size: $size-16;
-    }
+  &.modal-form {
+    max-width: 520px;
   }
 
-  .modal-body {
-    flex: 1;
-    overflow-y: auto;
-    padding: $size-16;
-
-    .loading-state {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: $size-24;
-      gap: $size-12;
-
-      .spinner {
-        width: $size-32;
-        height: $size-32;
-        border: 3px solid $color-g-85;
-        border-top-color: $color-pri;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-      }
-    }
-
-    .no-addresses-modal, .no-prescriptions {
-      text-align: center;
-      padding: $size-24;
-
-      p {
-        color: $color-g-67;
-        margin-bottom: $size-16;
-      }
-    }
-
-    .addresses-list, .prescriptions-list {
-      display: flex;
-      flex-direction: column;
-      gap: $size-12;
-
-      .multi-select-hint {
-        font-size: $size-13;
-        color: $color-g-54;
-        margin: 0 0 $size-4;
-        padding: $size-8 $size-12;
-        background: #f0f9ff;
-        border-radius: $size-6;
-        border-left: 3px solid $color-pri;
-      }
-    }
-
-    .address-option, .prescription-option {
-      display: flex;
-      gap: $size-12;
-      padding: $size-14;
-      border: 2px solid $color-g-85;
-      border-radius: $size-12;
-      cursor: pointer;
-      transition: all 0.2s ease;
-
-      &:hover {
-        border-color: $color-g-67;
-      }
-
-      &.selected {
-        border-color: $color-pri;
-        background: rgba($color-pri, 0.03);
-      }
-
-      .radio-circle {
-        width: $size-20;
-        height: $size-20;
-        border: 2px solid $color-g-67;
-        border-radius: 50%;
-        flex-shrink: 0;
-        position: relative;
-
-        &.checked {
-          border-color: $color-pri;
-
-          &::after {
-            content: "";
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: $size-10;
-            height: $size-10;
-            background: $color-pri;
-            border-radius: 50%;
-          }
-        }
-      }
-
-      .checkbox-square {
-        width: $size-20;
-        height: $size-20;
-        border: 2px solid $color-g-67;
-        border-radius: 4px;
-        flex-shrink: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 12px;
-        color: white;
-        transition: all 0.2s ease;
-
-        &.checked {
-          border-color: $color-pri;
-          background: $color-pri;
-        }
-      }
-
-      .address-info, .prescription-info {
-        flex: 1;
-
-        .label-row {
-          display: flex;
-          align-items: center;
-          gap: $size-8;
-          margin-bottom: $size-4;
-
-          .default-tag, .profile-tag {
-            padding: 2px 6px;
-            font-size: 10px;
-            font-weight: 600;
-            border-radius: 4px;
-          }
-
-          .default-tag {
-            background: $color-pri;
-            color: white;
-          }
-
-          .profile-tag {
-            background: #e0f2fe;
-            color: #0369a1;
-          }
-        }
-
-        .recipient, strong {
-          font-weight: 600;
-          color: $color-g-21;
-        }
-
-        .address-text, span {
-          font-size: $size-13;
-          color: $color-g-67;
-        }
-
-        .date {
-          display: block;
-          font-size: $size-12;
-          color: $color-g-54;
-        }
-
-        .meds-count {
-          display: block;
-          font-size: $size-12;
-          color: $color-pri;
-          font-weight: 500;
-        }
-
-        .prescription-number {
-          display: block;
-          font-size: $size-12;
-          color: $color-g-54;
-          font-family: monospace;
-        }
-
-        .coverage-indicator {
-          margin-top: $size-8;
-
-          .coverage-badge {
-            display: inline-block;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 11px;
-            font-weight: 600;
-
-            &.full {
-              background: #dcfce7;
-              color: #16a34a;
-            }
-
-            &.partial {
-              background: #fef3c7;
-              color: #d97706;
-            }
-
-            &.none {
-              background: #fee2e2;
-              color: #dc2626;
-            }
-          }
-        }
-
-        .prescribed-drugs {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 4px;
-          margin-top: $size-8;
-
-          .drug-chip {
-            background: $color-g-95;
-            color: $color-g-54;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 11px;
-          }
-
-          .more-drugs {
-            color: $color-g-54;
-            font-size: 11px;
-            font-style: italic;
-          }
-        }
-      }
-
-      &.has-coverage {
-        border-color: #16a34a;
-        background: rgba(#16a34a, 0.03);
-      }
-
-      &.partial-coverage {
-        border-color: #d97706;
-        background: rgba(#d97706, 0.03);
-      }
-    }
-
-    .hint-text {
-      font-size: $size-12;
-      color: $color-g-54;
-      margin-top: $size-8;
-    }
-
-    .add-new-btn, .upload-btn {
-      width: 100%;
-      padding: $size-12;
-      border: 2px dashed $color-g-85;
-      background: transparent;
-      border-radius: $size-10;
-      color: $color-pri;
-      font-size: $size-14;
-      font-weight: 500;
-      cursor: pointer;
-      margin-top: $size-8;
-
-      &:hover {
-        border-color: $color-pri;
-        background: rgba($color-pri, 0.03);
-      }
-    }
-
-    .upload-new-section {
-      margin-bottom: $size-12;
-      padding-bottom: $size-12;
-      border-bottom: 1px solid $color-g-90;
-
-      .upload-new-btn {
-        width: 100%;
-        padding: $size-10 $size-14;
-        border: 1px dashed $color-pri;
-        background: rgba($color-pri, 0.03);
-        border-radius: $size-8;
-        color: $color-pri;
-        font-size: $size-13;
-        font-weight: 500;
-        cursor: pointer;
-        transition: all 0.2s ease;
-
-        &:hover {
-          background: rgba($color-pri, 0.08);
-          border-style: solid;
-        }
-      }
-    }
-
-    .no-pickup-centers-modal {
-      text-align: center;
-      padding: $size-24;
-
-      p {
-        color: $color-g-67;
-        margin: 0;
-      }
-    }
-
-    .pickup-centers-list {
-      display: flex;
-      flex-direction: column;
-      gap: $size-12;
-    }
-
-    .pickup-option {
-      display: flex;
-      gap: $size-12;
-      padding: $size-14;
-      border: 2px solid $color-g-85;
-      border-radius: $size-12;
-      cursor: pointer;
-      transition: all 0.2s ease;
-
-      &:hover {
-        border-color: $color-g-67;
-      }
-
-      &.selected {
-        border-color: #16a34a;
-        background: rgba(#16a34a, 0.03);
-      }
-
-      .radio-circle {
-        width: $size-20;
-        height: $size-20;
-        border: 2px solid $color-g-67;
-        border-radius: 50%;
-        flex-shrink: 0;
-        position: relative;
-
-        &.checked {
-          border-color: #16a34a;
-
-          &::after {
-            content: "";
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: $size-10;
-            height: $size-10;
-            background: #16a34a;
-            border-radius: 50%;
-          }
-        }
-      }
-
-      .pickup-info {
-        flex: 1;
-
-        strong {
-          display: block;
-          font-weight: 600;
-          color: $color-g-21;
-          margin-bottom: $size-4;
-        }
-
-        .pickup-address {
-          display: block;
-          font-size: $size-13;
-          color: $color-g-54;
-          margin-bottom: $size-4;
-        }
-
-        .pickup-hours {
-          display: block;
-          font-size: $size-12;
-          color: $color-g-67;
-        }
-      }
-    }
-  }
-
-  .modal-footer {
-    display: flex;
-    gap: $size-12;
-    padding: $size-16;
-    border-top: 1px solid $color-g-95;
-
-    button {
-      flex: 1;
-      padding: $size-12;
-      border-radius: $size-8;
-      font-size: $size-14;
-      font-weight: 500;
-      cursor: pointer;
-    }
-
-    .cancel-btn {
-      background: white;
-      border: 1px solid $color-g-85;
-      color: $color-g-44;
-    }
-
-    .save-btn, .confirm-btn {
-      background: $color-pri;
-      border: none;
-      color: white;
-
-      &:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-      }
-    }
-  }
-
-  // Prescription tabs
-  .prescription-tabs {
-    display: flex;
-    border-bottom: 1px solid $color-g-85;
-    padding: 0 $size-16;
-
-    .tab-btn {
-      flex: 1;
-      padding: $size-12;
-      background: transparent;
-      border: none;
-      border-bottom: 2px solid transparent;
-      font-size: $size-14;
-      font-weight: 500;
-      color: $color-g-54;
-      cursor: pointer;
-      transition: all 0.2s ease;
-
-      &:hover {
-        color: $color-g-21;
-      }
-
-      &.active {
-        color: $color-pri;
-        border-bottom-color: $color-pri;
-      }
-    }
-  }
-
-  &.prescription-modal {
-    max-width: 550px;
+  &.modal-lg {
+    max-width: 600px;
   }
 }
 
-// Add Address Modal specific styles
-.add-address-modal {
-  .modal-body {
-    .form-group {
-      margin-bottom: $size-16;
-
-      label {
-        display: block;
-        font-size: $size-14;
-        font-weight: 500;
-        color: $color-g-44;
-        margin-bottom: $size-6;
-      }
-
-      input, textarea {
-        width: 100%;
-        padding: $size-12;
-        border: 1px solid $color-g-85;
-        border-radius: $size-8;
-        font-size: $size-14;
-        font-family: inherit;
-        resize: none;
-
-        &:focus {
-          outline: none;
-          border-color: $color-pri;
-        }
-      }
-
-      &.half {
-        flex: 1;
-      }
-    }
-
-    .form-row {
-      display: flex;
-      gap: $size-12;
-    }
-
-    .checkbox-label {
-      display: flex;
-      align-items: center;
-      gap: $size-10;
-      cursor: pointer;
-
-      input {
-        width: $size-18;
-        height: $size-18;
-        accent-color: $color-pri;
-      }
-
-      span {
-        font-size: $size-14;
-        color: $color-g-44;
-      }
-    }
-  }
-}
-
-.loader-container {
-  display: flex;
-  justify-content: center;
-  padding: $size-48;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-// Coverage badge on cart items
-.coverage-badge {
-  position: absolute;
-  bottom: -4px;
-  right: -4px;
-  width: $size-18;
-  height: $size-18;
-  border-radius: 50%;
+.modal-header {
   display: flex;
   align-items: center;
-  justify-content: center;
-  font-size: $size-10;
-  font-weight: 700;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid #F1F5F9;
 
-  &.covered {
-    background: $color-denote-green;
-    color: white;
-  }
-
-  &.not-covered {
-    background: $color-denote-yellow;
-    color: white;
-  }
-}
-
-// Coverage status in prescription section
-.coverage-status {
-  margin-top: $size-12;
-  padding-top: $size-12;
-  border-top: 1px dashed $color-g-85;
-
-  .coverage-good {
-    display: flex;
-    align-items: center;
-    gap: $size-8;
-    padding: $size-10;
-    background: rgba($color-denote-green, 0.08);
-    border-radius: $size-8;
-    color: $color-denote-green;
-    font-size: $size-13;
-    font-weight: 500;
-
-    .status-icon {
-      font-size: $size-16;
-    }
-  }
-
-  .coverage-warning {
-    padding: $size-12;
-    background: rgba($color-denote-yellow, 0.08);
-    border-radius: $size-8;
-
-    .coverage-header {
-      display: flex;
-      align-items: center;
-      gap: $size-8;
-      color: $color-denote-yellow;
-      font-size: $size-13;
-      font-weight: 500;
-      margin-bottom: $size-8;
-
-      .status-icon {
-        font-size: $size-16;
-      }
-    }
-
-    .uncovered-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: $size-6;
-      margin-bottom: $size-10;
-
-      .uncovered-item {
-        padding: $size-4 $size-10;
-        background: rgba($color-denote-yellow, 0.15);
-        border-radius: $size-12;
-        font-size: $size-11;
-        color: darken($color-denote-yellow, 15%);
-      }
-    }
-
-    .coverage-actions {
-      .upload-more-btn {
-        width: 100%;
-        padding: $size-10;
-        background: white;
-        border: 1px solid $color-denote-yellow;
-        border-radius: $size-8;
-        color: $color-denote-yellow;
-        font-size: $size-13;
-        font-weight: 500;
-        cursor: pointer;
-        transition: all 0.2s ease;
-
-        &:hover {
-          background: rgba($color-denote-yellow, 0.05);
-        }
-      }
-    }
-  }
-}
-
-// Sticky Mobile Checkout Bar
-.mobile-checkout-bar {
-  display: none;
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: $color-white;
-  border-top: 1px solid $color-g-85;
-  padding: $size-12 $size-16;
-  z-index: 100;
-  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1);
-
-  @media (max-width: 768px) {
-    display: block;
-  }
-
-  .mobile-checkout-content {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: $size-16;
-    max-width: 600px;
-    margin: 0 auto;
-  }
-
-  .mobile-total {
-    display: flex;
-    flex-direction: column;
-
-    .mobile-total-label {
-      font-size: $size-12;
-      color: $color-g-54;
-    }
-
-    .mobile-total-amount {
-      font-size: $size-18;
-      font-weight: 700;
-      color: $color-g-21;
-    }
-  }
-
-  .mobile-checkout-btn {
-    flex: 1;
-    max-width: 200px;
-    padding: $size-14 $size-24;
-    background: $color-pri;
-    color: white;
-    border: none;
-    border-radius: $size-10;
-    font-size: $size-15;
+  h3 {
+    font-size: 18px;
     font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
+    color: $navy;
+    margin: 0;
+  }
 
-    &:hover:not(:disabled) {
-      background: darken($color-pri, 8%);
-    }
+  .close-btn {
+    width: 36px;
+    height: 36px;
+    background: $bg;
+    border: none;
+    border-radius: 10px;
+    color: $gray;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+.modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px;
+}
+
+.modal-footer {
+  display: flex;
+  gap: 12px;
+  padding: 16px 24px;
+  border-top: 1px solid #F1F5F9;
+
+  .cancel-btn {
+    flex: 1;
+    padding: 12px 20px;
+    background: $bg;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    color: $slate;
+    cursor: pointer;
+  }
+
+  .save-btn {
+    flex: 1;
+    padding: 12px 20px;
+    background: $sky-dark;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    color: white;
+    cursor: pointer;
 
     &:disabled {
       opacity: 0.5;
-      cursor: not-allowed;
     }
   }
 }
 
-// Order Error Alert
-.order-error-alert {
-  background: rgba($color-denote-red, 0.04);
-  border: 1px solid rgba($color-denote-red, 0.2);
-  border-radius: $size-12;
-  margin-bottom: $size-16;
-  overflow: hidden;
+// Modal Form
+.form-group {
+  margin-bottom: 16px;
 
-  .error-header {
+  label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: $slate;
+    margin-bottom: 6px;
+  }
+
+  input, textarea {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+    font-size: 14px;
+    font-family: inherit;
+
+    &:focus {
+      outline: none;
+      border-color: $sky-dark;
+    }
+  }
+
+  textarea {
+    resize: vertical;
+  }
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: $slate;
+  cursor: pointer;
+
+  input {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+// Address List
+.address-list, .prescription-list, .pickup-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.address-option, .prescription-option, .pickup-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px;
+  background: $bg;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: #F1F5F9;
+  }
+
+  &.selected {
+    background: rgba($sky-dark, 0.05);
+    border-color: $sky-dark;
+  }
+}
+
+.radio-dot {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #CBD5E1;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 2px;
+  position: relative;
+  transition: all 0.2s;
+
+  &.checked {
+    border-color: $sky-dark;
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 10px;
+      height: 10px;
+      background: $sky-dark;
+      border-radius: 50%;
+    }
+  }
+}
+
+.checkbox-square {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #CBD5E1;
+  border-radius: 6px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+
+  &.checked {
+    background: $sky-dark;
+    border-color: $sky-dark;
+    color: white;
+  }
+}
+
+.address-info, .rx-info, .pickup-info {
+  flex: 1;
+  min-width: 0;
+
+  .label-row {
     display: flex;
     align-items: center;
-    gap: $size-10;
-    padding: $size-14 $size-16;
-    background: rgba($color-denote-red, 0.08);
-    border-bottom: 1px solid rgba($color-denote-red, 0.1);
+    gap: 8px;
+    margin-bottom: 4px;
 
-    .error-icon {
-      flex-shrink: 0;
-      width: $size-24;
-      height: $size-24;
+    .default-tag {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 6px;
+      background: $sky-dark;
+      color: white;
+      border-radius: 4px;
+    }
+  }
 
-      svg {
-        width: 100%;
-        height: 100%;
-        color: $color-denote-red;
+  strong {
+    font-size: 14px;
+    color: $navy;
+  }
+
+  .recipient, .address-text, span {
+    display: block;
+    font-size: 13px;
+    color: $gray;
+    margin-top: 2px;
+  }
+
+  .rx-date {
+    color: $light-gray;
+    font-size: 12px;
+  }
+}
+
+.add-new-btn, .add-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px;
+  background: transparent;
+  border: 2px dashed #CBD5E1;
+  border-radius: 12px;
+  color: $sky-dark;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  margin-top: 8px;
+
+  &:hover {
+    border-color: $sky-dark;
+    background: rgba($sky-dark, 0.05);
+  }
+}
+
+.empty-modal {
+  text-align: center;
+  padding: 32px 16px;
+
+  p {
+    font-size: 14px;
+    color: $gray;
+    margin: 0 0 16px;
+
+    &.hint {
+      font-size: 12px;
+      color: $light-gray;
+    }
+  }
+}
+
+.prescription-tabs {
+  display: flex;
+  border-bottom: 1px solid #F1F5F9;
+
+  .tab {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 14px;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    font-size: 14px;
+    font-weight: 500;
+    color: $gray;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &.active {
+      color: $sky-dark;
+      border-bottom-color: $sky-dark;
+    }
+  }
+}
+
+// Pulse animation
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.1);
+  }
+}
+
+// Wallet Confirmation Modal Styles
+.wallet-confirm-overlay {
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+}
+
+.wallet-confirm-modal {
+  max-width: 420px;
+  border-radius: 24px;
+  animation: modalSlideIn 0.3s ease;
+
+  @keyframes modalSlideIn {
+    from {
+      opacity: 0;
+      transform: translateY(20px) scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  .modal-header {
+    .modal-title-icon {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: $sky-dark;
+
+      h3 {
+        font-size: 18px;
+        font-weight: 700;
+        color: $navy;
+        margin: 0;
       }
     }
+  }
 
-    .error-title {
-      flex: 1;
-      font-size: $size-15;
-      font-weight: 600;
-      color: $color-denote-red;
-    }
+  .wallet-confirm-body {
+    padding: 24px;
+  }
 
-    .error-dismiss {
-      flex-shrink: 0;
-      width: $size-28;
-      height: $size-28;
-      padding: 0;
-      border: none;
-      background: transparent;
-      cursor: pointer;
+  .wallet-summary {
+    text-align: center;
+    margin-bottom: 24px;
+
+    .summary-icon {
+      width: 80px;
+      height: 80px;
+      background: linear-gradient(135deg, $emerald-light 0%, #A7F3D0 100%);
+      border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      border-radius: 50%;
-      transition: background 0.2s ease;
+      margin: 0 auto 16px;
+      color: $emerald;
+    }
 
-      svg {
-        width: $size-16;
-        height: $size-16;
-        color: $color-g-54;
-      }
-
-      &:hover {
-        background: rgba($color-denote-red, 0.1);
-        svg { color: $color-denote-red; }
-      }
+    .summary-text {
+      color: $gray;
+      font-size: 15px;
+      margin: 0;
     }
   }
 
-  .error-body {
-    padding: $size-16;
+  .wallet-details {
+    background: $bg;
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 20px;
 
-    .error-message {
-      font-size: $size-14;
-      color: $color-g-21;
-      margin: 0 0 $size-12;
-      line-height: 1.5;
-    }
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
 
-    .affected-items {
-      margin-bottom: $size-12;
-
-      .affected-label {
-        display: block;
-        font-size: $size-12;
-        color: $color-g-54;
-        margin-bottom: $size-8;
+      .detail-label {
+        font-size: 14px;
+        color: $gray;
       }
 
-      .affected-chips {
-        display: flex;
-        flex-wrap: wrap;
-        gap: $size-8;
+      .detail-value {
+        font-size: 16px;
+        font-weight: 600;
+        color: $navy;
 
-        .affected-chip {
-          padding: $size-6 $size-12;
-          background: rgba($color-denote-red, 0.1);
-          color: $color-denote-red;
-          border-radius: $size-16;
-          font-size: $size-12;
-          font-weight: 500;
+        &.balance {
+          color: $emerald;
+        }
+      }
+
+      &.debit {
+        .detail-value {
+          color: $rose;
+        }
+      }
+
+      &.remaining {
+        .detail-label {
+          font-weight: 600;
+          color: $navy;
+        }
+
+        .detail-value {
+          font-size: 18px;
+          color: $sky-dark;
         }
       }
     }
 
-    .error-suggestion {
-      font-size: $size-13;
-      color: $color-g-54;
-      margin: 0;
-      padding: $size-12;
-      background: $color-white;
-      border-radius: $size-8;
-      border-left: 3px solid $color-pri;
+    .detail-divider {
+      height: 1px;
+      background: #E2E8F0;
+      margin: 4px 0;
     }
   }
 
-  .error-actions {
+  .wallet-notice {
     display: flex;
-    gap: $size-10;
-    padding: $size-12 $size-16 $size-16;
+    align-items: flex-start;
+    gap: 10px;
+    background: $amber-light;
+    border-radius: 12px;
+    padding: 14px 16px;
+    font-size: 13px;
+    color: #92400E;
 
-    .error-action-btn {
+    svg {
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+  }
+
+  .wallet-confirm-footer {
+    display: flex;
+    gap: 12px;
+    padding: 20px 24px;
+    border-top: 1px solid #F1F5F9;
+
+    .cancel-btn {
       flex: 1;
-      padding: $size-10 $size-16;
-      border-radius: $size-8;
-      font-size: $size-13;
+      padding: 14px 20px;
+      border: 1px solid #E2E8F0;
+      border-radius: 12px;
+      background: white;
+      color: $gray;
+      font-size: 15px;
       font-weight: 600;
       cursor: pointer;
       transition: all 0.2s ease;
-      border: none;
 
-      &.primary {
-        background: $color-pri;
-        color: white;
-
-        &:hover {
-          background: darken($color-pri, 8%);
-        }
+      &:hover:not(:disabled) {
+        background: $bg;
+        border-color: #CBD5E1;
       }
 
-      &.secondary {
-        background: $color-g-95;
-        color: $color-g-44;
+      &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+    }
 
-        &:hover {
-          background: $color-g-90;
-        }
+    .confirm-wallet-btn {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 14px 20px;
+      border: none;
+      border-radius: 12px;
+      background: linear-gradient(135deg, $emerald 0%, #059669 100%);
+      color: white;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+
+      &:hover:not(:disabled) {
+        box-shadow: 0 8px 24px rgba(16, 185, 129, 0.3);
+        transform: translateY(-1px);
+      }
+
+      &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      .spin {
+        animation: spin 1s linear infinite;
       }
     }
   }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 </style>

@@ -197,7 +197,7 @@ export class SpecialistWalletService {
     // Initialize payment with Paystack
     const paymentResponse = await this.paymentHandler.initializeTransaction(
       email,
-      dto.amount * 100, // Convert to kobo
+      dto.amount, // Amount in Naira (Paystack provider converts to kobo)
       reference,
       {
         type: 'specialist_wallet_topup',

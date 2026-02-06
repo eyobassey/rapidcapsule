@@ -124,15 +124,11 @@ export default {
           iconColor: "",
         },
         {
-          link: "",
+          link: "/app/patient/health-checkup",
           label: "Health Checkup",
-          children: [
-            {link: "/app/patient/health-checkup", label: "Standard Checkup"},
-            {link: "/app/patient/health-checkup-enhanced", label: "Enhanced Checkup"}
-          ],
+          children: [],
           icon: "stethoscope",
           iconColor: "",
-          isExpanded: false,
         },
         {
           link: "/app/patient/appointmentsv2",
@@ -142,16 +138,11 @@ export default {
           iconColor: "",
         },
         {
-          link: "",
+          link: "/app/patient/prescriptions",
           label: "Prescriptions",
-          children: [
-            { link: "/app/patient/prescriptions", label: "My Prescriptions" },
-            { link: "/app/patient/prescriptions/whatsapp", label: "WhatsApp Prescriptions" },
-            { link: "/app/patient/pharmacy/upload-prescription", label: "Upload Prescription" },
-          ],
+          children: [],
           icon: "pill",
           iconColor: "",
-          isExpanded: false,
         },
         {
           link: "/app/patient/pharmacy",
@@ -161,7 +152,7 @@ export default {
           iconColor: "#6F6F6F",
         },
         {
-          link: "/app/patient/orders",
+          link: "/app/patient/pharmacy/orders",
           label: "Orders",
           children: [],
           icon: "package",
@@ -178,15 +169,14 @@ export default {
       secondaryNav: [
         {
           link: "/app/patient/onboarding",
-          label: "Health Profile",
-          icon: "monitor-magnifier",
+          label: "Account Profile",
+          icon: "user",
         },
         {
           link: "/app/patient/referals-and-rewards",
           label: "Referals & Rewards",
           icon: "gift-box",
         },
-        { link: "/app/patient/account", label: "Account", icon: "user" },
         {
           link: "/app/patient/app-settings",
           label: "App Settings",

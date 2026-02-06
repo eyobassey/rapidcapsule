@@ -15,19 +15,62 @@
 
     <!-- Page Content -->
     <div class="page-content">
-      <!-- Page Header -->
-      <header class="page-header">
-        <div class="header-content">
-          <div class="header-text">
-            <h1>Health Vitals</h1>
-            <p>Track and monitor your health metrics over time</p>
+      <!-- Hero Section -->
+      <section class="hero">
+        <div class="hero__content">
+          <button class="back-link desktop-only" @click="$router.push('/app/patient/dashboard')">
+            <v-icon name="hi-arrow-left" scale="0.85" />
+            <span>Dashboard</span>
+          </button>
+          <div class="hero__badge">
+            <div class="badge-pulse"></div>
+            <v-icon name="hi-heart" />
+            <span>Health Monitoring</span>
           </div>
-          <button v-if="vitalList.length < 5" class="add-vital-btn" @click="openAddModal">
-            <v-icon name="hi-plus" />
-            <span>Log Vital</span>
+          <h1 class="hero__title">
+            Health<br/>
+            <span class="hero__title-accent">Vitals</span>
+          </h1>
+          <p class="hero__subtitle">
+            Track and monitor your health metrics over time for better wellness insights.
+          </p>
+          <div class="hero__stats">
+            <div class="hero-stat">
+              <span class="hero-stat__value">{{ vitalList.length }}</span>
+              <span class="hero-stat__label">Tracked</span>
+            </div>
+            <div class="hero-stat__divider"></div>
+            <div class="hero-stat">
+              <span class="hero-stat__value hero-stat__value--success">{{ normalCount }}</span>
+              <span class="hero-stat__label">Normal</span>
+            </div>
+            <div class="hero-stat__divider"></div>
+            <div class="hero-stat">
+              <span class="hero-stat__value hero-stat__value--warning">{{ alertCount }}</span>
+              <span class="hero-stat__label">Alerts</span>
+            </div>
+          </div>
+          <button class="hero-btn" @click="$router.push('/app/patient/onboarding/vitals-metrics')">
+            <v-icon name="hi-pencil-alt" scale="0.9" />
+            <span>Update Vitals</span>
           </button>
         </div>
-      </header>
+        <div class="hero__visual">
+          <div class="vitals-orb">
+            <div class="orb-ring orb-ring--1"></div>
+            <div class="orb-ring orb-ring--2"></div>
+            <div class="orb-ring orb-ring--3"></div>
+            <div class="orb-core">
+              <v-icon name="hi-heart" />
+            </div>
+          </div>
+          <div class="floating-icons">
+            <div class="float-icon float-icon--1"><v-icon name="fa-thermometer-half" /></div>
+            <div class="float-icon float-icon--2"><v-icon name="fa-heartbeat" /></div>
+            <div class="float-icon float-icon--3"><v-icon name="bi-droplet-fill" /></div>
+          </div>
+        </div>
+      </section>
 
       <!-- Empty State -->
       <div v-if="!vitalList.length" class="empty-state">
@@ -49,171 +92,161 @@
         </button>
       </div>
 
-      <!-- Main Content -->
-      <template v-if="vitalList.length">
-        <!-- Vitals Overview Grid -->
-        <section class="vitals-grid">
-          <div
-            v-for="(vital, index) in recentvitalarray"
-            :key="index"
-            class="vital-card"
-            :class="getVitalColorClass(vital.name)"
-          >
-            <div class="vital-card__header">
-              <div class="vital-icon">
-                <v-icon :name="getVitalIcon(vital.name)" scale="1.1" />
-              </div>
-              <button class="edit-btn" @click="updateVital(vital)" title="Update">
-                <v-icon name="hi-pencil" scale="0.75" />
+      <!-- Bento Grid Layout -->
+      <div v-if="vitalList.length" class="bento-grid">
+        <!-- Left Column: Vitals Cards -->
+        <div class="bento-vitals">
+          <div class="bento-card bento-card--vitals">
+            <div class="bento-card__header">
+              <h3>Your Vitals</h3>
+              <button
+                v-if="vitalList.length < 5"
+                class="add-btn"
+                @click="openAddModal"
+              >
+                <v-icon name="hi-plus" scale="0.8" />
+                <span>Add</span>
               </button>
             </div>
-            <div class="vital-card__body">
-              <span class="vital-label">{{ vital.name }}</span>
-              <div class="vital-value">
-                <span class="value">{{ vital.value }}</span>
-                <span class="unit">{{ vital.unit }}</span>
+            <div class="vitals-mini-grid">
+              <div
+                v-for="(vital, index) in recentvitalarray"
+                :key="index"
+                class="vital-mini"
+                :class="getVitalColorClass(vital.name)"
+                @click="updateVital(vital)"
+              >
+                <div class="vital-mini__icon">
+                  <v-icon :name="getVitalIcon(vital.name)" scale="0.9" />
+                </div>
+                <div class="vital-mini__info">
+                  <span class="vital-mini__label">{{ getShortName(vital.name) }}</span>
+                  <div class="vital-mini__value">
+                    <span class="value">{{ vital.value }}</span>
+                    <span class="unit">{{ vital.unit }}</span>
+                  </div>
+                </div>
+                <div class="vital-mini__status" :class="getVitalStatusClass(vital)">
+                  <v-icon :name="getStatusIcon(vital)" scale="0.6" />
+                </div>
               </div>
-            </div>
-            <div class="vital-card__footer">
-              <div class="status-indicator" :class="getVitalStatusClass(vital)">
-                <v-icon :name="getStatusIcon(vital)" scale="0.7" />
-                <span>{{ getStatusText(vital) }}</span>
+
+              <!-- BMI Mini -->
+              <div v-if="bmiData" class="vital-mini vital-mini--bmi">
+                <div class="vital-mini__icon">
+                  <v-icon name="hi-scale" scale="0.9" />
+                </div>
+                <div class="vital-mini__info">
+                  <span class="vital-mini__label">BMI</span>
+                  <div class="vital-mini__value">
+                    <span class="value">{{ bmiData.value }}</span>
+                    <span class="unit">kg/m²</span>
+                  </div>
+                </div>
+                <div class="vital-mini__status" :class="bmiData.status">
+                  <span class="bmi-cat">{{ bmiData.category }}</span>
+                </div>
               </div>
             </div>
           </div>
 
-          <!-- BMI Card -->
-          <div v-if="bmiData" class="vital-card vital-card--bmi">
-            <div class="vital-card__header">
-              <div class="vital-icon">
-                <v-icon name="hi-scale" scale="1.1" />
-              </div>
-              <span class="bmi-badge" :class="bmiData.status">{{ bmiData.category }}</span>
+          <!-- Normal Ranges Card -->
+          <div class="bento-card bento-card--reference">
+            <div class="bento-card__header">
+              <h3>Normal Ranges</h3>
             </div>
-            <div class="vital-card__body">
-              <span class="vital-label">Body Mass Index</span>
-              <div class="vital-value">
-                <span class="value">{{ bmiData.value }}</span>
-                <span class="unit">kg/m²</span>
+            <div class="reference-mini-grid">
+              <div class="ref-mini">
+                <div class="ref-mini__icon vital--temp">
+                  <v-icon name="fa-thermometer-half" scale="0.7" />
+                </div>
+                <div class="ref-mini__text">
+                  <span class="ref-mini__name">Temp</span>
+                  <span class="ref-mini__range">36.1-37.2°C</span>
+                </div>
               </div>
-            </div>
-            <div class="vital-card__footer">
-              <span class="bmi-note">Calculated from weight & height</span>
+              <div class="ref-mini">
+                <div class="ref-mini__icon vital--pulse">
+                  <v-icon name="hi-heart" scale="0.7" />
+                </div>
+                <div class="ref-mini__text">
+                  <span class="ref-mini__name">Pulse</span>
+                  <span class="ref-mini__range">60-100 bpm</span>
+                </div>
+              </div>
+              <div class="ref-mini">
+                <div class="ref-mini__icon vital--pressure">
+                  <v-icon name="fa-heartbeat" scale="0.7" />
+                </div>
+                <div class="ref-mini__text">
+                  <span class="ref-mini__name">BP</span>
+                  <span class="ref-mini__range">90-120/60-80</span>
+                </div>
+              </div>
+              <div class="ref-mini">
+                <div class="ref-mini__icon vital--sugar">
+                  <v-icon name="bi-droplet-fill" scale="0.7" />
+                </div>
+                <div class="ref-mini__text">
+                  <span class="ref-mini__name">Sugar</span>
+                  <span class="ref-mini__range">70-100 mg/dL</span>
+                </div>
+              </div>
             </div>
           </div>
+        </div>
 
-          <!-- Add Vital Card -->
-          <button
-            v-if="vitalList.length < 5"
-            class="vital-card vital-card--add"
-            @click="openAddModal"
-          >
-            <div class="add-icon">
-              <v-icon name="hi-plus" scale="1.2" />
-            </div>
-            <span>Add New Vital</span>
-          </button>
-        </section>
-
-        <!-- Chart Section -->
-        <section class="chart-section glass-card">
-          <div class="section-header">
-            <div class="section-title-group">
-              <h2>Vital Trends</h2>
-              <p>View your health data patterns over time</p>
-            </div>
-            <div class="chart-controls">
-              <div class="vital-tabs">
-                <button
-                  v-for="vital in vitalList"
-                  :key="vital"
-                  class="vital-tab"
-                  :class="{ active: activeVitalChart === vital }"
-                  @click="selectedVitalHandler(vital)"
-                >
-                  <v-icon :name="getVitalIcon(vital)" scale="0.85" />
-                  <span>{{ getShortName(vital) }}</span>
+        <!-- Right Column: Chart (Main Focus) -->
+        <div class="bento-chart">
+          <div class="bento-card bento-card--chart">
+            <div class="chart-header">
+              <div class="chart-header__title">
+                <h3>Vital Trends</h3>
+                <p>Health data patterns over time</p>
+              </div>
+              <div class="chart-header__actions">
+                <button class="icon-btn" @click="downloadChart" title="Download">
+                  <v-icon name="hi-download" scale="0.85" />
+                </button>
+                <button class="icon-btn" @click="handleShareChartURL" title="Share">
+                  <v-icon name="hi-share" scale="0.85" />
                 </button>
               </div>
-              <div class="chart-actions">
-                <button class="action-btn" @click="downloadChart" title="Download chart">
-                  <v-icon name="hi-download" scale="0.9" />
-                </button>
-                <button class="action-btn" @click="handleShareChartURL" title="Share chart">
-                  <v-icon name="hi-share" scale="0.9" />
-                </button>
+            </div>
+            <div class="chart-tabs">
+              <button
+                v-for="vital in vitalList"
+                :key="vital"
+                class="chart-tab"
+                :class="{ active: activeVitalChart === vital }"
+                @click="selectedVitalHandler(vital)"
+              >
+                <v-icon :name="getVitalIcon(vital)" scale="0.75" />
+                <span>{{ getShortName(vital) }}</span>
+              </button>
+            </div>
+            <div class="chart-area">
+              <Chart
+                ref="chartComponent"
+                :chartData="data"
+                :chartType="chart_type"
+                :selectedVital="activeVitalChart"
+                :patientName="patientFullName"
+              />
+            </div>
+            <div class="chart-legend" v-if="activeVitalChart === 'Blood Pressure'">
+              <div class="legend-item">
+                <span class="legend-dot systolic"></span>
+                <span>Systolic</span>
+              </div>
+              <div class="legend-item">
+                <span class="legend-dot diastolic"></span>
+                <span>Diastolic</span>
               </div>
             </div>
           </div>
-          <div class="chart-container">
-            <Chart
-              ref="chartComponent"
-              :chartData="data"
-              :chartType="chart_type"
-              :selectedVital="activeVitalChart"
-              :patientName="patientFullName"
-            />
-          </div>
-          <div class="chart-legend" v-if="activeVitalChart === 'Blood Pressure'">
-            <div class="legend-item">
-              <span class="legend-dot systolic"></span>
-              <span>Systolic</span>
-            </div>
-            <div class="legend-item">
-              <span class="legend-dot diastolic"></span>
-              <span>Diastolic</span>
-            </div>
-          </div>
-        </section>
-
-        <!-- Quick Reference -->
-        <section class="reference-section glass-card">
-          <div class="section-header">
-            <div class="section-title-group">
-              <h2>Normal Ranges</h2>
-              <p>Reference values for healthy adults</p>
-            </div>
-          </div>
-          <div class="reference-grid">
-            <div class="reference-item">
-              <div class="ref-icon vital--temp">
-                <v-icon name="fa-thermometer-half" scale="0.9" />
-              </div>
-              <div class="ref-info">
-                <span class="ref-name">Temperature</span>
-                <span class="ref-range">36.1 - 37.2°C</span>
-              </div>
-            </div>
-            <div class="reference-item">
-              <div class="ref-icon vital--pulse">
-                <v-icon name="hi-heart" scale="0.9" />
-              </div>
-              <div class="ref-info">
-                <span class="ref-name">Pulse Rate</span>
-                <span class="ref-range">60 - 100 bpm</span>
-              </div>
-            </div>
-            <div class="reference-item">
-              <div class="ref-icon vital--pressure">
-                <v-icon name="fa-heartbeat" scale="0.9" />
-              </div>
-              <div class="ref-info">
-                <span class="ref-name">Blood Pressure</span>
-                <span class="ref-range">90-120 / 60-80 mmHg</span>
-              </div>
-            </div>
-            <div class="reference-item">
-              <div class="ref-icon vital--sugar">
-                <v-icon name="bi-droplet-fill" scale="0.9" />
-              </div>
-              <div class="ref-info">
-                <span class="ref-name">Blood Sugar</span>
-                <span class="ref-range">70 - 100 mg/dL</span>
-              </div>
-            </div>
-          </div>
-        </section>
-      </template>
+        </div>
+      </div>
     </div>
 
     <!-- Add/Update Vital Modal -->
@@ -508,6 +541,17 @@ export default {
         value: parseFloat(height.value),
         unit: height.unit || 'cm'
       };
+    },
+
+    normalCount() {
+      return this.recentvitalarray.filter(v => this.getVitalStatusClass(v) === 'status--normal').length;
+    },
+
+    alertCount() {
+      return this.recentvitalarray.filter(v =>
+        this.getVitalStatusClass(v) === 'status--high' ||
+        this.getVitalStatusClass(v) === 'status--low'
+      ).length;
     },
 
     bmiData() {
@@ -1095,13 +1139,13 @@ $violet-light: #EDE9FE;
 
 // Mixins
 @mixin glass-card {
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.8);
   box-shadow:
     0 4px 24px rgba(0, 0, 0, 0.04),
     0 1px 2px rgba(0, 0, 0, 0.02);
-  border-radius: 20px;
+  border-radius: 16px;
 }
 
 // Page Layout
@@ -1183,102 +1227,417 @@ $violet-light: #EDE9FE;
   width: 100%;
   max-width: 1400px;
   margin: 0 auto;
-  padding: 2rem 2rem 100px;
+  padding: 1.5rem 2rem 100px;
   overflow-x: hidden;
   box-sizing: border-box;
 
   @media (max-width: 768px) {
-    padding: 1.25rem 1rem 100px;
+    padding: 1rem 1rem 100px;
   }
 
   @media (max-width: 375px) {
-    padding: 1rem 0.75rem 100px;
+    padding: 0.75rem 0.75rem 100px;
   }
 }
 
-// Page Header
-.page-header {
-  margin-bottom: 2rem;
+// ============================================
+// HERO SECTION
+// ============================================
+.hero {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 32px;
+  padding: 32px 40px;
+  background: linear-gradient(135deg, $sky 0%, $sky-dark 50%, $sky-darker 100%);
+  border-radius: 24px;
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 24px;
+  box-shadow:
+    0 20px 60px rgba(2, 136, 209, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.1) inset;
 
-  .header-content {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 1rem;
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    padding: 24px 20px;
+    gap: 0;
+    text-align: center;
+    border-radius: 20px;
+    margin-bottom: 20px;
+  }
+}
 
-    @media (max-width: 640px) {
-      flex-direction: column;
+.hero__content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  z-index: 2;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border: none;
+  border-radius: 12px;
+  padding: 10px 16px;
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  margin-bottom: 20px;
+  width: fit-content;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.25);
+  }
+}
+
+.desktop-only {
+  @media (max-width: 768px) {
+    display: none !important;
+  }
+}
+
+.hero__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border-radius: 24px;
+  width: fit-content;
+  margin-bottom: 20px;
+  position: relative;
+
+  @media (max-width: 768px) {
+    margin: 0 auto 12px;
+    padding: 6px 14px;
+  }
+
+  .badge-pulse {
+    position: absolute;
+    left: 12px;
+    width: 8px;
+    height: 8px;
+    background: $emerald;
+    border-radius: 50%;
+    animation: pulse 2s ease-in-out infinite;
+
+    &::after {
+      content: '';
+      position: absolute;
+      inset: -4px;
+      background: rgba($emerald, 0.4);
+      border-radius: 50%;
+      animation: pulse-ring-hero 2s ease-out infinite;
+    }
+
+    @media (max-width: 768px) {
+      left: 10px;
+      width: 6px;
+      height: 6px;
     }
   }
 
-  .header-text {
-    h1 {
-      font-size: 1.75rem;
-      font-weight: 700;
-      color: $navy;
-      margin: 0 0 0.25rem;
-
-      @media (max-width: 640px) {
-        font-size: 1.5rem;
-      }
-    }
-
-    p {
-      font-size: 0.9375rem;
-      color: $gray;
-      margin: 0;
-    }
-  }
-
-  .add-vital-btn {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1.25rem;
-    background: linear-gradient(135deg, $sky, $sky-dark);
+  svg {
+    width: 16px;
+    height: 16px;
     color: white;
-    border: none;
-    border-radius: 12px;
-    font-size: 0.875rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-    flex-shrink: 0;
+    margin-left: 12px;
 
-    &:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba($sky, 0.35);
-    }
-
-    &:active {
-      transform: scale(0.98);
-    }
-
-    svg {
-      width: 18px;
-      height: 18px;
-    }
-
-    @media (max-width: 640px) {
-      width: 100%;
-      justify-content: center;
+    @media (max-width: 768px) {
+      width: 14px;
+      height: 14px;
+      margin-left: 10px;
     }
   }
+
+  span {
+    font-size: 13px;
+    font-weight: 600;
+    color: white;
+    letter-spacing: 0.3px;
+
+    @media (max-width: 768px) {
+      font-size: 12px;
+    }
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.1); opacity: 0.8; }
+}
+
+@keyframes pulse-ring-hero {
+  0% { transform: scale(1); opacity: 0.8; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+
+.hero__title {
+  font-size: 48px;
+  font-weight: 800;
+  color: white;
+  line-height: 1.1;
+  margin: 0 0 16px;
+  letter-spacing: -1px;
+
+  @media (max-width: 768px) {
+    font-size: 28px;
+    margin: 0 0 8px;
+    letter-spacing: -0.5px;
+
+    br { display: none; }
+  }
+
+  .hero__title-accent {
+    background: linear-gradient(90deg, #fff 0%, rgba(255,255,255,0.7) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+
+    @media (max-width: 768px) {
+      display: inline;
+      margin-left: 6px;
+    }
+  }
+}
+
+.hero__subtitle {
+  font-size: 18px;
+  color: white;
+  line-height: 1.6;
+  margin: 0 0 24px;
+  max-width: 400px;
+  opacity: 0.95;
+
+  @media (max-width: 768px) {
+    font-size: 14px;
+    max-width: 100%;
+    margin: 0 0 16px;
+    opacity: 0.9;
+  }
+}
+
+.hero__stats {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 14px 20px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 14px;
+  width: fit-content;
+  margin-bottom: 20px;
+
+  @media (max-width: 768px) {
+    width: 100%;
+    justify-content: space-around;
+    padding: 12px 16px;
+    gap: 0;
+    border-radius: 12px;
+    margin-bottom: 16px;
+  }
+}
+
+.hero-stat {
+  text-align: center;
+
+  &__value {
+    display: block;
+    font-size: 24px;
+    font-weight: 700;
+    color: white;
+    line-height: 1;
+
+    @media (max-width: 768px) {
+      font-size: 20px;
+    }
+
+    &--warning { color: $amber-light; }
+    &--success { color: $emerald-light; }
+  }
+
+  &__label {
+    display: block;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.7);
+    margin-top: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+
+    @media (max-width: 768px) {
+      font-size: 10px;
+    }
+  }
+
+  &__divider {
+    width: 1px;
+    height: 32px;
+    background: rgba(255, 255, 255, 0.2);
+
+    @media (max-width: 768px) {
+      height: 28px;
+    }
+  }
+}
+
+.hero-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  white-space: nowrap;
+  background: white;
+  color: $sky-dark;
+  width: fit-content;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  }
+
+  @media (max-width: 768px) {
+    width: 100%;
+    padding: 12px 20px;
+  }
+}
+
+.hero__visual {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+
+  @media (max-width: 768px) {
+    display: none;
+  }
+}
+
+// Orb Animation
+.vitals-orb {
+  position: relative;
+  width: 180px;
+  height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.orb-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+
+  &--1 {
+    width: 100%;
+    height: 100%;
+    animation: spin-slow 20s linear infinite;
+  }
+
+  &--2 {
+    width: 80%;
+    height: 80%;
+    animation: spin-slow 15s linear infinite reverse;
+  }
+
+  &--3 {
+    width: 60%;
+    height: 60%;
+    animation: spin-slow 10s linear infinite;
+  }
+}
+
+.orb-core {
+  width: 80px;
+  height: 80px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(20px);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    0 0 40px rgba(255, 255, 255, 0.3),
+    0 0 80px rgba(79, 195, 247, 0.3);
+  animation: pulse-glow 3s ease-in-out infinite;
+
+  svg {
+    width: 36px;
+    height: 36px;
+    color: white;
+  }
+}
+
+.floating-icons {
+  position: absolute;
+  inset: -20px;
+  pointer-events: none;
+}
+
+.float-icon {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: float 3s ease-in-out infinite;
+
+  svg {
+    width: 18px;
+    height: 18px;
+    color: white;
+  }
+
+  &--1 { top: 0; right: 0; animation-delay: 0s; }
+  &--2 { bottom: 10%; right: -10%; animation-delay: 1s; }
+  &--3 { bottom: 0; left: 0; animation-delay: 2s; }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 40px rgba(255, 255, 255, 0.3), 0 0 80px rgba(79, 195, 247, 0.3); }
+  50% { box-shadow: 0 0 60px rgba(255, 255, 255, 0.4), 0 0 100px rgba(79, 195, 247, 0.4); }
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
 }
 
 // Empty State
 .empty-state {
   text-align: center;
-  padding: 4rem 2rem;
+  padding: 3rem 2rem;
   background: white;
-  border-radius: 24px;
+  border-radius: 16px;
   border: 1px solid rgba(0, 0, 0, 0.04);
 
   .empty-illustration {
     position: relative;
-    width: 140px;
-    height: 140px;
-    margin: 0 auto 1.5rem;
+    width: 120px;
+    height: 120px;
+    margin: 0 auto 1.25rem;
 
     .illustration-rings {
       position: absolute;
@@ -1312,8 +1671,8 @@ $violet-light: #EDE9FE;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      width: 64px;
-      height: 64px;
+      width: 56px;
+      height: 56px;
       background: linear-gradient(135deg, $sky-light, white);
       border-radius: 50%;
       display: flex;
@@ -1324,17 +1683,17 @@ $violet-light: #EDE9FE;
   }
 
   h2 {
-    font-size: 1.25rem;
+    font-size: 1.125rem;
     font-weight: 700;
     color: $navy;
     margin: 0 0 0.5rem;
   }
 
   p {
-    font-size: 0.9375rem;
+    font-size: 0.875rem;
     color: $gray;
-    max-width: 320px;
-    margin: 0 auto 1.5rem;
+    max-width: 300px;
+    margin: 0 auto 1.25rem;
     line-height: 1.5;
   }
 
@@ -1342,24 +1701,24 @@ $violet-light: #EDE9FE;
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.875rem 1.75rem;
+    padding: 0.75rem 1.5rem;
     background: linear-gradient(135deg, $sky, $sky-dark);
     color: white;
     border: none;
-    border-radius: 12px;
-    font-size: 0.9375rem;
+    border-radius: 10px;
+    font-size: 0.875rem;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
 
     &:hover {
       transform: translateY(-2px);
-      box-shadow: 0 8px 24px rgba($sky, 0.35);
+      box-shadow: 0 6px 20px rgba($sky, 0.35);
     }
 
     svg {
-      width: 20px;
-      height: 20px;
+      width: 18px;
+      height: 18px;
     }
   }
 }
@@ -1375,565 +1734,414 @@ $violet-light: #EDE9FE;
   }
 }
 
-// Vitals Grid
-.vitals-grid {
+// ============================================
+// BENTO GRID LAYOUT
+// ============================================
+.bento-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 1rem;
-  margin-bottom: 1.5rem;
+  grid-template-columns: 320px 1fr;
+  gap: 20px;
   width: 100%;
-  box-sizing: border-box;
 
-  @media (max-width: 640px) {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.75rem;
+  @media (max-width: 1024px) {
+    grid-template-columns: 280px 1fr;
+    gap: 16px;
   }
 
-  @media (max-width: 375px) {
+  @media (max-width: 768px) {
     grid-template-columns: 1fr;
+    gap: 16px;
   }
 }
 
-.vital-card {
-  @include glass-card;
-  padding: 1.25rem;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  overflow: hidden;
-  box-sizing: border-box;
+.bento-vitals {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  @media (max-width: 768px) {
+    order: 2;
+  }
+}
+
+.bento-chart {
   min-width: 0;
 
-  @media (max-width: 640px) {
-    padding: 1rem;
-
-    .edit-btn {
-      opacity: 1;
-    }
+  @media (max-width: 768px) {
+    order: 1;
   }
+}
 
-  &:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
-
-    .edit-btn {
-      opacity: 1;
-    }
-  }
+.bento-card {
+  @include glass-card;
+  padding: 16px;
+  height: fit-content;
 
   &__header {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
-    margin-bottom: 1rem;
+    margin-bottom: 12px;
 
-    @media (max-width: 640px) {
-      margin-bottom: 0.75rem;
+    h3 {
+      font-size: 14px;
+      font-weight: 600;
+      color: $navy;
+      margin: 0;
     }
   }
 
-  .vital-icon {
-    width: 44px;
-    height: 44px;
-    border-radius: 12px;
+  // Vitals Card
+  &--vitals {
+    .add-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 10px;
+      background: $sky-light;
+      border: none;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      color: $sky-dark;
+      cursor: pointer;
+      transition: all 0.2s;
+
+      &:hover {
+        background: $sky;
+        color: white;
+      }
+    }
+  }
+
+  // Reference Card
+  &--reference {
+    @media (max-width: 768px) {
+      display: none;
+    }
+  }
+
+  // Chart Card
+  &--chart {
+    padding: 20px;
+    height: 100%;
+    min-height: 450px;
+    display: flex;
+    flex-direction: column;
+
+    @media (max-width: 768px) {
+      min-height: 380px;
+      padding: 16px;
+    }
+  }
+}
+
+// Vitals Mini Grid
+.vitals-mini-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.vital-mini {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: $bg;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: darken($bg, 2%);
+    transform: translateX(4px);
+  }
+
+  &__icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    flex-shrink: 0;
+  }
+
+  &__info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__label {
+    display: block;
+    font-size: 11px;
+    color: $gray;
+    margin-bottom: 2px;
+  }
+
+  &__value {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+
+    .value {
+      font-size: 18px;
+      font-weight: 700;
+      color: $navy;
+      line-height: 1;
+    }
+
+    .unit {
+      font-size: 11px;
+      color: $gray;
+    }
+  }
+
+  &__status {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+
+    &.status--normal {
+      background: $emerald-light;
+      color: darken($emerald, 5%);
+    }
+
+    &.status--high {
+      background: $rose-light;
+      color: $rose;
+    }
+
+    &.status--low {
+      background: $amber-light;
+      color: darken($amber, 5%);
+    }
+
+    .bmi-cat {
+      font-size: 8px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+  }
+
+  // Color variants
+  &.vital--temp .vital-mini__icon { background: linear-gradient(135deg, #f97316, #ea580c); }
+  &.vital--weight .vital-mini__icon { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+  &.vital--pulse .vital-mini__icon { background: linear-gradient(135deg, $sky, $sky-dark); }
+  &.vital--sugar .vital-mini__icon { background: linear-gradient(135deg, #0ea5e9, #0284c7); }
+  &.vital--pressure .vital-mini__icon { background: linear-gradient(135deg, #ec4899, #db2777); }
+
+  &--bmi {
+    .vital-mini__icon {
+      background: linear-gradient(135deg, #14b8a6, #0d9488);
+    }
+
+    .vital-mini__status {
+      width: auto;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 10px;
+      font-weight: 600;
+    }
+  }
+}
+
+// Reference Mini Grid
+.reference-mini-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.ref-mini {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  background: $bg;
+  border-radius: 10px;
+
+  &__icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
     color: white;
     flex-shrink: 0;
 
-    @media (max-width: 640px) {
-      width: 40px;
-      height: 40px;
-    }
+    &.vital--temp { background: linear-gradient(135deg, #f97316, #ea580c); }
+    &.vital--pulse { background: linear-gradient(135deg, $sky, $sky-dark); }
+    &.vital--pressure { background: linear-gradient(135deg, #ec4899, #db2777); }
+    &.vital--sugar { background: linear-gradient(135deg, #0ea5e9, #0284c7); }
   }
 
-  .edit-btn {
-    width: 28px;
-    height: 28px;
-    background: rgba(0, 0, 0, 0.04);
-    border: none;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    opacity: 0;
-    transition: all 0.2s;
-    color: $gray;
-    flex-shrink: 0;
-
-    &:hover {
-      background: rgba(0, 0, 0, 0.08);
-      color: $slate;
-    }
-  }
-
-  &__body {
-    margin-bottom: 0.75rem;
-    overflow: hidden;
-
-    .vital-label {
-      display: block;
-      font-size: 0.75rem;
-      color: $gray;
-      margin-bottom: 0.25rem;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-
-      @media (max-width: 640px) {
-        font-size: 0.6875rem;
-      }
-    }
-
-    .vital-value {
-      display: flex;
-      align-items: baseline;
-      gap: 0.25rem;
-      flex-wrap: wrap;
-
-      .value {
-        font-size: 1.5rem;
-        font-weight: 700;
-        color: $navy;
-        line-height: 1;
-
-        @media (max-width: 640px) {
-          font-size: 1.25rem;
-        }
-      }
-
-      .unit {
-        font-size: 0.75rem;
-        color: $gray;
-      }
-    }
-  }
-
-  &__footer {
-    .status-indicator {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.25rem;
-      padding: 0.25rem 0.5rem;
-      border-radius: 6px;
-      font-size: 0.625rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.3px;
-      white-space: nowrap;
-
-      @media (max-width: 640px) {
-        font-size: 0.5625rem;
-        padding: 0.2rem 0.4rem;
-      }
-
-      &.status--normal {
-        background: $emerald-light;
-        color: darken($emerald, 10%);
-      }
-
-      &.status--high {
-        background: $rose-light;
-        color: $rose;
-      }
-
-      &.status--low {
-        background: $amber-light;
-        color: darken($amber, 10%);
-      }
-    }
-  }
-
-  // Color variants
-  &.vital--temp .vital-icon { background: linear-gradient(135deg, #f97316, #ea580c); }
-  &.vital--weight .vital-icon { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
-  &.vital--pulse .vital-icon { background: linear-gradient(135deg, $sky, $sky-dark); }
-  &.vital--sugar .vital-icon { background: linear-gradient(135deg, #0ea5e9, #0284c7); }
-  &.vital--pressure .vital-icon { background: linear-gradient(135deg, #ec4899, #db2777); }
-
-  // BMI Card
-  &--bmi {
-    .vital-icon {
-      background: linear-gradient(135deg, #14b8a6, #0d9488);
-    }
-
-    .bmi-badge {
-      padding: 0.25rem 0.5rem;
-      border-radius: 6px;
-      font-size: 0.625rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.3px;
-
-      &.status--normal {
-        background: $emerald-light;
-        color: darken($emerald, 10%);
-      }
-
-      &.status--high {
-        background: $rose-light;
-        color: $rose;
-      }
-
-      &.status--low {
-        background: $amber-light;
-        color: darken($amber, 10%);
-      }
-    }
-
-    .bmi-note {
-      font-size: 0.6875rem;
-      color: $light-gray;
-      font-style: italic;
-    }
-  }
-
-  // Add Card
-  &--add {
-    border: 2px dashed rgba(0, 0, 0, 0.1);
-    background: rgba(255, 255, 255, 0.5);
+  &__text {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.75rem;
-    min-height: 160px;
-    cursor: pointer;
+    min-width: 0;
+  }
 
-    &:hover {
-      border-color: $sky;
-      background: $sky-light;
+  &__name {
+    font-size: 11px;
+    font-weight: 600;
+    color: $slate;
+  }
 
-      .add-icon {
-        background: $sky;
-        color: white;
-      }
-    }
-
-    .add-icon {
-      width: 48px;
-      height: 48px;
-      border-radius: 14px;
-      background: rgba(0, 0, 0, 0.04);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: $gray;
-      transition: all 0.2s;
-    }
-
-    span {
-      font-size: 0.875rem;
-      font-weight: 500;
-      color: $gray;
-    }
+  &__range {
+    font-size: 10px;
+    color: $gray;
+    white-space: nowrap;
   }
 }
 
-// Glass Card
-.glass-card {
-  @include glass-card;
-  padding: 1.5rem;
-  margin-bottom: 1.5rem;
-  overflow: hidden;
-  box-sizing: border-box;
-  width: 100%;
-
-  @media (max-width: 640px) {
-    padding: 1rem;
-    border-radius: 16px;
-  }
-}
-
-// Section Header
-.section-header {
+// ============================================
+// CHART SECTION (BENTO)
+// ============================================
+.chart-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 1rem;
-  margin-bottom: 1.25rem;
+  margin-bottom: 16px;
 
-  @media (max-width: 640px) {
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-
-  .section-title-group {
-    min-width: 0;
-
-    h2 {
-      font-size: 1.125rem;
+  &__title {
+    h3 {
+      font-size: 16px;
       font-weight: 600;
       color: $navy;
-      margin: 0 0 0.125rem;
-
-      @media (max-width: 640px) {
-        font-size: 1rem;
-      }
+      margin: 0 0 4px;
     }
 
     p {
-      font-size: 0.8125rem;
+      font-size: 13px;
       color: $gray;
       margin: 0;
-
-      @media (max-width: 640px) {
-        font-size: 0.75rem;
-      }
     }
+  }
+
+  &__actions {
+    display: flex;
+    gap: 8px;
   }
 }
 
-// Chart Section
-.chart-section {
+.icon-btn {
+  width: 32px;
+  height: 32px;
+  background: $bg;
+  border: none;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: $gray;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: $sky;
+    color: white;
+  }
+}
+
+.chart-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding-bottom: 4px;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.chart-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: $bg;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  color: $gray;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
+
+  &:hover {
+    background: white;
+    border-color: rgba(0, 0, 0, 0.06);
+  }
+
+  &.active {
+    background: $sky-light;
+    border-color: $sky;
+    color: $sky-dark;
+  }
+}
+
+.chart-area {
+  flex: 1;
+  background: $bg;
+  border-radius: 12px;
   overflow: hidden;
+  min-height: 320px;
+  display: flex;
+  flex-direction: column;
 
-  .chart-controls {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    flex-wrap: wrap;
-
-    @media (max-width: 768px) {
-      width: 100%;
-      flex-direction: column;
-      align-items: stretch;
-      gap: 0.75rem;
-    }
+  // Ensure chart component fills the container
+  :deep(.chart-wrapper) {
+    flex: 1;
+    min-height: 100%;
   }
 
-  .vital-tabs {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-    padding-bottom: 2px;
-
-    &::-webkit-scrollbar {
-      display: none;
-    }
-
-    @media (max-width: 640px) {
-      flex-wrap: nowrap;
-      width: 100%;
-    }
-  }
-
-  .vital-tab {
-    display: flex;
-    align-items: center;
-    gap: 0.375rem;
-    padding: 0.5rem 0.75rem;
-    background: $bg;
-    border: 2px solid transparent;
-    border-radius: 10px;
-    font-size: 0.75rem;
-    font-weight: 500;
-    color: $gray;
-    cursor: pointer;
-    transition: all 0.2s;
-    white-space: nowrap;
-    flex-shrink: 0;
-
-    &:hover {
-      background: white;
-      border-color: rgba(0, 0, 0, 0.06);
-    }
-
-    &.active {
-      background: $sky-light;
-      border-color: $sky;
-      color: $sky-dark;
-    }
-
-    @media (max-width: 640px) {
-      padding: 0.4rem 0.6rem;
-      font-size: 0.6875rem;
-    }
-  }
-
-  .chart-actions {
-    display: flex;
-    gap: 0.5rem;
-    flex-shrink: 0;
-
-    @media (max-width: 768px) {
-      align-self: flex-end;
-    }
-  }
-
-  .action-btn {
-    width: 36px;
-    height: 36px;
-    background: $bg;
-    border: none;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: $gray;
-    cursor: pointer;
-    transition: all 0.2s;
-    flex-shrink: 0;
-
-    &:hover {
-      background: $sky;
-      color: white;
-    }
-
-    @media (max-width: 640px) {
-      width: 32px;
-      height: 32px;
-    }
-  }
-
-  .chart-container {
-    background: $bg;
-    border-radius: 12px;
-    overflow: hidden;
-    min-height: 250px;
-    width: 100%;
-
-    @media (max-width: 640px) {
-      min-height: 200px;
-      border-radius: 8px;
-    }
-  }
-
-  .chart-legend {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 1.5rem;
-    margin-top: 1rem;
-
-    @media (max-width: 640px) {
-      gap: 1rem;
-      margin-top: 0.75rem;
-    }
-
-    .legend-item {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-size: 0.8125rem;
-      color: $slate;
-
-      @media (max-width: 640px) {
-        font-size: 0.75rem;
-        gap: 0.375rem;
-      }
-
-      .legend-dot {
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
-        flex-shrink: 0;
-
-        @media (max-width: 640px) {
-          width: 10px;
-          height: 10px;
-        }
-
-        &.systolic {
-          background: $sky;
-        }
-
-        &.diastolic {
-          background: $rose;
-        }
-      }
-    }
+  @media (max-width: 768px) {
+    min-height: 280px;
   }
 }
 
-// Reference Section
-.reference-section {
-  .reference-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: 0.75rem;
+.chart-legend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
 
-    @media (max-width: 640px) {
-      grid-template-columns: repeat(2, 1fr);
-      gap: 0.5rem;
-    }
-
-    @media (max-width: 375px) {
-      grid-template-columns: 1fr;
-    }
-  }
-
-  .reference-item {
+  .legend-item {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    padding: 0.75rem;
-    background: $bg;
-    border-radius: 12px;
-    min-width: 0;
+    gap: 8px;
+    font-size: 13px;
+    color: $slate;
 
-    @media (max-width: 640px) {
-      gap: 0.5rem;
-      padding: 0.625rem;
-    }
-
-    .ref-icon {
-      width: 36px;
-      height: 36px;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
       flex-shrink: 0;
 
-      @media (max-width: 640px) {
-        width: 32px;
-        height: 32px;
-        border-radius: 8px;
+      &.systolic {
+        background: $sky;
       }
 
-      &.vital--temp { background: linear-gradient(135deg, #f97316, #ea580c); }
-      &.vital--pulse { background: linear-gradient(135deg, $sky, $sky-dark); }
-      &.vital--pressure { background: linear-gradient(135deg, #ec4899, #db2777); }
-      &.vital--sugar { background: linear-gradient(135deg, #0ea5e9, #0284c7); }
-    }
-
-    .ref-info {
-      display: flex;
-      flex-direction: column;
-      gap: 0.125rem;
-      min-width: 0;
-      overflow: hidden;
-
-      .ref-name {
-        font-size: 0.75rem;
-        font-weight: 500;
-        color: $slate;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-
-        @media (max-width: 640px) {
-          font-size: 0.6875rem;
-        }
-      }
-
-      .ref-range {
-        font-size: 0.6875rem;
-        color: $gray;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-
-        @media (max-width: 640px) {
-          font-size: 0.625rem;
-        }
+      &.diastolic {
+        background: $rose;
       }
     }
   }

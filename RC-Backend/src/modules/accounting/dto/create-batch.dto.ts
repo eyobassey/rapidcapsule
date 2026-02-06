@@ -58,12 +58,20 @@ export class CreateBatchDto {
   from_user?: Types.ObjectId;
 
   @IsOptional()
+  @IsString()
+  from_name?: string;
+
+  @IsOptional()
   @IsMongoId()
   from_wallet?: Types.ObjectId;
 
   @IsOptional()
   @IsMongoId()
   to_user?: Types.ObjectId;
+
+  @IsOptional()
+  @IsString()
+  to_name?: string;
 
   @IsOptional()
   @IsMongoId()

@@ -312,11 +312,11 @@ const routes = [
         name: "Pharmacy Prescription Details",
         component: () => import("@/views/Mainapp/Pharmacy/PrescriptionDetails.vue"),
       },
-      // Wallet Route (redirects to Account page Wallet tab)
+      // Wallet Route
       {
         path: "wallet",
         name: "Patient Wallet",
-        redirect: { name: "Account", query: { tab: "wallet" } },
+        component: () => import("@/views/Mainapp/Wallet/index.vue"),
       },
       // Advanced Health Score Routes
       {

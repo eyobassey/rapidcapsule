@@ -1211,6 +1211,72 @@ export default {
       }
     },
 
+    // Process card payment - call after Paystack callback to verify and record in accounting
+    /**
+     * Initialize Paystack payment - returns authorization_url for redirect
+     */
+    async initializePaystackPayment({ commit }, orderId) {
+      try {
+        commit("SET_LOADING", true);
+        const response = await axios.post(`pharmacy-orders/${orderId}/initialize-payment`);
+        if (response.status === 200 || response.status === 201) {
+          return response.data.data || response.data.result;
+        }
+      } catch (error) {
+        console.error("Error initializing Paystack payment:", error);
+        throw error;
+      } finally {
+        commit("SET_LOADING", false);
+      }
+    },
+
+    async processCardPayment({ commit }, { orderId, paymentReference, amount }) {
+      try {
+        commit("SET_LOADING", true);
+        const response = await axios.patch(`pharmacy-orders/${orderId}/payment`, {
+          payment_reference: paymentReference,
+          payment_method: 'CARD',
+          amount,
+        });
+        if (response.status === 200 || response.status === 201) {
+          const data = response.data.data || response.data.result;
+          commit("SET_CURRENT_ORDER", data);
+          return response.data;
+        }
+      } catch (error) {
+        console.error("Error processing card payment:", error);
+        throw error;
+      } finally {
+        commit("SET_LOADING", false);
+      }
+    },
+
+    // Process split payment - wallet + card
+    async processSplitPayment({ commit }, { orderId, walletAmount, cardPaymentReference, cardAmount }) {
+      try {
+        commit("SET_LOADING", true);
+        const response = await axios.post(`pharmacy-orders/${orderId}/split-payment`, {
+          wallet_amount: walletAmount,
+          card_payment_reference: cardPaymentReference,
+          card_amount: cardAmount,
+        });
+        if (response.status === 200 || response.status === 201) {
+          const data = response.data.data || response.data.result;
+          commit("SET_CURRENT_ORDER", data);
+          // Update wallet balance after payment
+          if (data?.newWalletBalance !== undefined) {
+            commit("SET_WALLET_BALANCE", data.newWalletBalance);
+          }
+          return response.data;
+        }
+      } catch (error) {
+        console.error("Error processing split payment:", error);
+        throw error;
+      } finally {
+        commit("SET_LOADING", false);
+      }
+    },
+
     resetPaymentMethod({ commit }) {
       commit("SET_SELECTED_PAYMENT_METHOD", "card");
       commit("SET_SPLIT_PAYMENT_AMOUNT", 0);

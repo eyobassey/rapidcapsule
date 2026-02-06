@@ -1,292 +1,522 @@
 <template>
-  <div class="page-content pharmacy-ecommerce">
-    <top-bar
-      type="title-only"
-      title="Pharmacy"
-      @open-side-nav="$emit('openSideNav')"
-    />
+  <div class="pharmacy-page">
+    <!-- Mobile Header -->
+    <header class="mobile-header">
+      <button class="menu-btn" @click="$emit('openSideNav')">
+        <v-icon name="hi-menu-alt-2" scale="1.2" />
+      </button>
+      <div class="header-logo">
+        <img src="/RapidCapsule_Logo.png" alt="Rapid Capsule" />
+      </div>
+      <button class="cart-btn" @click="goToCart">
+        <v-icon name="hi-shopping-cart" scale="1.1" />
+        <span v-if="cartItemCount > 0" class="cart-count">{{ cartItemCount }}</span>
+      </button>
+    </header>
 
-    <div class="page-content__body">
-      <!-- Hero Section with Search -->
-      <div class="hero-section">
-        <div class="hero-content">
-          <h1>Your Health, Delivered</h1>
-          <p>Browse thousands of medications and healthcare products</p>
-          <div class="hero-search">
-            <RCIcon icon="search" class="search-icon" />
-            <input
-              type="text"
-              v-model="searchQuery"
-              placeholder="Search medications, vitamins, health products..."
-              @keyup.enter="handleSearch"
-              @input="handleSearchInput"
-            />
-            <button v-if="searchQuery" class="clear-btn" @click="clearSearch">
-              <RCIcon icon="close" />
+    <!-- Page Content -->
+    <div class="page-content">
+      <!-- Loading State -->
+      <div v-if="initialLoading" class="loading-state">
+        <div class="loading-spinner">
+          <div class="spinner-ring"></div>
+          <v-icon name="hi-shopping-bag" scale="1.2" class="spinner-icon" />
+        </div>
+        <p>Loading pharmacy...</p>
+      </div>
+
+      <template v-else>
+        <!-- Hero Section -->
+        <section class="hero">
+          <div class="hero__content">
+            <button class="back-link desktop-only" @click="$router.push('/app/patient/dashboard')">
+              <v-icon name="hi-arrow-left" scale="0.85" />
+              <span>Dashboard</span>
             </button>
-            <button class="search-btn" @click="handleSearch">
-              Search
-            </button>
+            <div class="hero__badge">
+              <div class="badge-pulse"></div>
+              <v-icon name="hi-shopping-bag" />
+              <span>Online Pharmacy</span>
+            </div>
+            <h1 class="hero__title">
+              Your Health,<br/>
+              <span class="hero__title-accent">Delivered</span>
+            </h1>
+            <p class="hero__subtitle">
+              Browse thousands of genuine medications and healthcare products with fast delivery.
+            </p>
+            <div class="hero__stats">
+              <div class="hero-stat">
+                <span class="hero-stat__value">{{ totalProducts || '1000+' }}</span>
+                <span class="hero-stat__label">Products</span>
+              </div>
+              <div class="hero-stat__divider"></div>
+              <div class="hero-stat">
+                <span class="hero-stat__value hero-stat__value--success">{{ categories.length || '8' }}</span>
+                <span class="hero-stat__label">Categories</span>
+              </div>
+              <div class="hero-stat__divider"></div>
+              <div class="hero-stat">
+                <span class="hero-stat__value hero-stat__value--info">24h</span>
+                <span class="hero-stat__label">Delivery</span>
+              </div>
+            </div>
           </div>
-          <!-- Search Suggestions -->
-          <div class="search-suggestions" v-if="showSuggestions && searchSuggestions.length > 0">
-            <div
-              v-for="(suggestion, index) in searchSuggestions"
-              :key="suggestion.batch_id || suggestion._id + '-' + index"
-              class="suggestion-item"
-              @click="selectSuggestion(suggestion)"
+          <div class="hero__visual">
+            <div class="pharmacy-orb">
+              <div class="orb-ring orb-ring--1"></div>
+              <div class="orb-ring orb-ring--2"></div>
+              <div class="orb-ring orb-ring--3"></div>
+              <div class="orb-core">
+                <v-icon name="hi-shopping-bag" />
+              </div>
+            </div>
+            <div class="floating-icons">
+              <div class="float-icon float-icon--1"><v-icon name="ri-capsule-line" /></div>
+              <div class="float-icon float-icon--2"><v-icon name="hi-shield-check" /></div>
+              <div class="float-icon float-icon--3"><v-icon name="bi-truck" /></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Bento Grid -->
+        <section class="bento-grid">
+          <!-- Search Card -->
+          <div class="bento-card search-card">
+            <div class="card-header">
+              <h3>Search Products</h3>
+              <span class="results-count" v-if="searchQuery && !loading">{{ totalProducts }} results</span>
+            </div>
+            <div class="search-wrapper">
+              <div class="search-bar">
+                <v-icon name="hi-search" scale="0.9" class="search-icon" />
+                <input
+                  type="text"
+                  v-model="searchQuery"
+                  placeholder="Search medications, vitamins, health products..."
+                  @keyup.enter="handleSearch"
+                  @input="handleSearchInput"
+                  @focus="onSearchFocus"
+                />
+                <button v-if="searchQuery" class="clear-btn" @click="clearSearch">
+                  <v-icon name="hi-x" scale="0.8" />
+                </button>
+                <button class="search-submit" @click="handleSearch">
+                  <v-icon name="hi-arrow-right" scale="0.9" />
+                </button>
+              </div>
+              <!-- Search Suggestions Dropdown -->
+              <transition name="dropdown">
+                <div class="search-suggestions" v-if="showSuggestions && searchSuggestions.length > 0">
+                  <div
+                    v-for="(suggestion, index) in searchSuggestions"
+                    :key="suggestion.batch_id || suggestion._id + '-' + index"
+                    class="suggestion-item"
+                    @click="selectSuggestion(suggestion)"
+                  >
+                    <div class="suggestion-icon">
+                      <v-icon name="ri-capsule-line" scale="0.9" />
+                    </div>
+                    <div class="suggestion-info">
+                      <span class="suggestion-name">{{ suggestion.name }}</span>
+                      <span class="suggestion-details">
+                        {{ suggestion.strength }}{{ suggestion.dosage_form ? ' • ' + suggestion.dosage_form : '' }}
+                      </span>
+                    </div>
+                    <span class="suggestion-price">₦{{ formatCurrency(suggestion.selling_price) }}</span>
+                  </div>
+                </div>
+              </transition>
+            </div>
+          </div>
+
+          <!-- Quick Actions Card -->
+          <div class="bento-card actions-card">
+            <div class="card-header">
+              <h3>Quick Actions</h3>
+            </div>
+            <div class="actions-row">
+              <button class="action-btn" @click="showCategoriesModal = true">
+                <div class="action-icon sky">
+                  <v-icon name="hi-view-grid" scale="1.1" />
+                </div>
+                <span>Categories</span>
+              </button>
+              <button class="action-btn" @click="goToCart">
+                <div class="action-icon emerald">
+                  <v-icon name="hi-shopping-cart" scale="1.1" />
+                </div>
+                <span>Cart{{ cartItemCount > 0 ? ` (${cartItemCount})` : '' }}</span>
+              </button>
+              <button class="action-btn" @click="$router.push('/app/patient/orders')">
+                <div class="action-icon violet">
+                  <v-icon name="hi-clipboard-list" scale="1.1" />
+                </div>
+                <span>My Orders</span>
+              </button>
+              <button class="action-btn" @click="$router.push('/app/patient/prescriptions')">
+                <div class="action-icon amber">
+                  <v-icon name="ri-capsule-line" scale="1.1" />
+                </div>
+                <span>Prescriptions</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Categories Card - Grid Layout -->
+          <div class="bento-card categories-card">
+            <div class="card-header">
+              <h3>Browse Categories</h3>
+              <button class="view-all" @click="showCategoriesModal = true">
+                View All ({{ categories.length }})
+                <v-icon name="hi-arrow-right" scale="0.75" />
+              </button>
+            </div>
+            <div class="categories-grid">
+              <button
+                :class="['category-card', { active: selectedCategory === null && !searchQuery }]"
+                @click="selectCategory(null)"
+              >
+                <div class="category-image all-products">
+                  <v-icon name="hi-sparkles" scale="1.4" />
+                </div>
+                <span>All Products</span>
+              </button>
+              <button
+                v-for="category in displayedCategories"
+                :key="category.id"
+                :class="['category-card', { active: selectedCategory === category.slug }]"
+                @click="selectCategory(category.slug)"
+              >
+                <div class="category-image">
+                  <img
+                    v-if="category.image_url"
+                    :src="category.image_url"
+                    :alt="category.name"
+                    @error="handleImageError($event, category)"
+                  />
+                  <v-icon v-else name="ri-capsule-line" scale="1.4" />
+                </div>
+                <span>{{ category.name }}</span>
+              </button>
+            </div>
+            <!-- Show More/Less Toggle -->
+            <button
+              v-if="categories.length > 7"
+              class="toggle-categories"
+              @click="showAllCategories = !showAllCategories"
             >
-              <RCIcon icon="pill" class="suggestion-icon" />
-              <div class="suggestion-info">
-                <span class="suggestion-name">{{ suggestion.name }}</span>
-                <span class="suggestion-details">
-                  {{ suggestion.strength }}{{ suggestion.dosage_form ? ' | ' + suggestion.dosage_form : '' }}{{ suggestion.manufacturer ? ' | ' + suggestion.manufacturer : '' }}
-                </span>
-              </div>
-              <span class="suggestion-price">NGN {{ formatCurrency(suggestion.selling_price) }}</span>
-            </div>
+              <span>{{ showAllCategories ? 'Show Less' : `Show All (${categories.length})` }}</span>
+              <v-icon :name="showAllCategories ? 'hi-chevron-up' : 'hi-chevron-down'" scale="0.8" />
+            </button>
           </div>
-        </div>
-      </div>
 
-      <!-- Category Pills (Horizontal Scroll) -->
-      <div class="category-pills-section">
-        <div class="category-pills-wrapper">
-          <button
-            :class="['category-pill', { active: selectedCategory === null }]"
-            @click="selectCategory(null)"
-          >
-            All Products
-          </button>
-          <button
-            v-for="category in categories"
-            :key="category.id"
-            class="category-pill"
-            @click="goToCategory(category.slug)"
-          >
-            {{ category.name }}
-          </button>
-        </div>
-      </div>
-
-      <!-- Filters Bar -->
-      <div class="filters-bar">
-        <div class="filters-left">
-          <span class="results-count" v-if="!loading">
-            {{ totalProducts }} products{{ selectedCategory ? ` in ${formatCategoryName(selectedCategory)}` : '' }}
-          </span>
-        </div>
-        <div class="filters-right">
-          <button class="categories-btn" @click="goToAllCategories">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="3" y="3" width="7" height="7"/>
-              <rect x="14" y="3" width="7" height="7"/>
-              <rect x="14" y="14" width="7" height="7"/>
-              <rect x="3" y="14" width="7" height="7"/>
-            </svg>
-            <span>Categories</span>
-          </button>
-          <div class="filter-group">
-            <label>Sort by:</label>
-            <select v-model="sortBy" @change="applyFilters">
-              <option value="name_asc">Name: A-Z</option>
-              <option value="name_desc">Name: Z-A</option>
-              <option value="price_low">Price: Low to High</option>
-              <option value="price_high">Price: High to Low</option>
-              <option value="newest">Newest First</option>
-            </select>
-          </div>
-          <button class="filter-btn" @click="showFiltersModal = true">
-            <RCIcon icon="filter" />
-            <span>Filters</span>
-            <span v-if="activeFiltersCount > 0" class="filter-badge">{{ activeFiltersCount }}</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Main Content Grid -->
-      <div class="main-content">
-        <!-- Products Grid -->
-        <div class="products-section">
-          <div v-if="loading" class="products-skeleton">
-            <div v-for="i in 8" :key="i" class="skeleton-card">
-              <div class="skeleton-image"></div>
-              <div class="skeleton-content">
-                <div class="skeleton-line"></div>
-                <div class="skeleton-line short"></div>
-                <div class="skeleton-line"></div>
+          <!-- Filters Bar -->
+          <div class="bento-card filters-card">
+            <div class="filters-row">
+              <span class="results-info">
+                <strong>{{ totalProducts }}</strong> products{{ selectedCategory ? ` in ${formatCategoryName(selectedCategory)}` : '' }}
+              </span>
+              <div class="filters-actions">
+                <div class="sort-select">
+                  <v-icon name="hi-sort-ascending" scale="0.85" />
+                  <select v-model="sortBy" @change="applyFilters">
+                    <option value="name_asc">Name: A-Z</option>
+                    <option value="name_desc">Name: Z-A</option>
+                    <option value="price_low">Price: Low to High</option>
+                    <option value="price_high">Price: High to Low</option>
+                    <option value="newest">Newest First</option>
+                  </select>
+                </div>
+                <button class="filter-btn" @click="showFiltersModal = true">
+                  <v-icon name="hi-adjustments" scale="0.9" />
+                  <span>Filters</span>
+                  <span v-if="activeFiltersCount > 0" class="filter-badge">{{ activeFiltersCount }}</span>
+                </button>
               </div>
             </div>
           </div>
 
-          <div v-else-if="products.length > 0" class="products-grid">
-            <DrugCard
-              v-for="drug in products"
-              :key="drug._id"
-              :drug="drug"
-              @add-to-cart="addToCart"
-              @view-details="viewDrugDetails"
-            />
+          <!-- Products Grid Card -->
+          <div class="bento-card products-card">
+            <div class="card-header">
+              <h3>{{ selectedCategory ? formatCategoryName(selectedCategory) : 'All Products' }}</h3>
+              <button v-if="selectedCategory || searchQuery || activeFiltersCount > 0" class="clear-filter" @click="clearAllFilters">
+                Clear filters
+                <v-icon name="hi-x" scale="0.7" />
+              </button>
+            </div>
+
+            <!-- Products Skeleton Loading -->
+            <div v-if="loading" class="products-skeleton">
+              <div v-for="i in 8" :key="i" class="skeleton-card">
+                <div class="skeleton-image"></div>
+                <div class="skeleton-content">
+                  <div class="skeleton-line"></div>
+                  <div class="skeleton-line short"></div>
+                  <div class="skeleton-line"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Products Grid -->
+            <div v-else-if="products.length > 0" class="products-grid">
+              <DrugCard
+                v-for="drug in products"
+                :key="drug._id"
+                :drug="drug"
+                @add-to-cart="addToCart"
+                @view-details="viewDrugDetails"
+              />
+            </div>
+
+            <!-- Empty State -->
+            <div v-else class="empty-state">
+              <div class="empty-icon">
+                <v-icon name="hi-search" scale="2" />
+              </div>
+              <h3>No products found</h3>
+              <p>Try adjusting your search or filters</p>
+              <button class="empty-action" @click="clearAllFilters">
+                <v-icon name="hi-refresh" scale="0.9" />
+                Clear Filters
+              </button>
+            </div>
+
+            <!-- Pagination -->
+            <div class="pagination" v-if="products.length > 0 && totalPages > 1">
+              <div class="pagination-info">
+                Showing {{ showingFrom }}-{{ showingTo }} of {{ totalProducts }}
+              </div>
+              <div class="pagination-controls">
+                <button
+                  class="page-btn"
+                  :disabled="currentPage === 1"
+                  @click="goToPage(currentPage - 1)"
+                >
+                  <v-icon name="hi-chevron-left" scale="0.8" />
+                  <span class="btn-text">Prev</span>
+                </button>
+                <div class="page-numbers">
+                  <button
+                    v-for="page in visiblePages"
+                    :key="page"
+                    :class="['page-num', { active: page === currentPage, ellipsis: page === '...' }]"
+                    :disabled="page === '...'"
+                    @click="page !== '...' && goToPage(page)"
+                  >
+                    {{ page }}
+                  </button>
+                </div>
+                <button
+                  class="page-btn"
+                  :disabled="currentPage === totalPages"
+                  @click="goToPage(currentPage + 1)"
+                >
+                  <span class="btn-text">Next</span>
+                  <v-icon name="hi-chevron-right" scale="0.8" />
+                </button>
+              </div>
+            </div>
           </div>
 
-          <div v-else class="no-products">
-            <RCIcon icon="pill" class="no-products-icon" />
-            <h3>No products found</h3>
-            <p>Try adjusting your filters or search terms</p>
-            <rc-button
-              type="secondary"
-              label="Clear Filters"
-              @click="clearAllFilters"
-            />
+          <!-- Features Banner -->
+          <div class="bento-card features-card">
+            <div class="features-grid">
+              <div class="feature-item">
+                <div class="feature-icon emerald">
+                  <v-icon name="bi-truck" scale="1.1" />
+                </div>
+                <div class="feature-text">
+                  <strong>Free Delivery</strong>
+                  <span>Orders over ₦10,000</span>
+                </div>
+              </div>
+              <div class="feature-item">
+                <div class="feature-icon sky">
+                  <v-icon name="hi-shield-check" scale="1.1" />
+                </div>
+                <div class="feature-text">
+                  <strong>100% Genuine</strong>
+                  <span>Authentic products</span>
+                </div>
+              </div>
+              <div class="feature-item">
+                <div class="feature-icon violet">
+                  <v-icon name="hi-clock" scale="1.1" />
+                </div>
+                <div class="feature-text">
+                  <strong>Fast Delivery</strong>
+                  <span>Same day in Lagos</span>
+                </div>
+              </div>
+              <div class="feature-item">
+                <div class="feature-icon amber">
+                  <v-icon name="hi-support" scale="1.1" />
+                </div>
+                <div class="feature-text">
+                  <strong>24/7 Support</strong>
+                  <span>Always available</span>
+                </div>
+              </div>
+            </div>
           </div>
-
-          <!-- Load More / Pagination -->
-          <div class="pagination-section" v-if="products.length > 0 && hasMoreProducts">
-            <rc-button
-              type="secondary"
-              :label="loadingMore ? 'Loading...' : 'Load More Products'"
-              :disabled="loadingMore"
-              @click="loadMoreProducts"
-            />
-          </div>
-        </div>
-      </div>
-
-      <!-- Quick Stats Banner -->
-      <div class="stats-banner" v-if="!loading && products.length > 0">
-        <div class="stat-item">
-          <RCIcon icon="truck" />
-          <div class="stat-text">
-            <strong>Free Delivery</strong>
-            <span>Orders over NGN 10,000</span>
-          </div>
-        </div>
-        <div class="stat-item">
-          <RCIcon icon="shield-check" />
-          <div class="stat-text">
-            <strong>Genuine Products</strong>
-            <span>100% Authentic</span>
-          </div>
-        </div>
-        <div class="stat-item">
-          <RCIcon icon="icons-time" />
-          <div class="stat-text">
-            <strong>Fast Delivery</strong>
-            <span>Same day in Lagos</span>
-          </div>
-        </div>
-      </div>
+        </section>
+      </template>
     </div>
 
     <!-- Floating Cart Button -->
-    <button class="fab fab-primary" @click="goToCart" v-if="cartItemCount > 0" title="View Cart">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
-        <path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/>
-      </svg>
-      <span class="cart-badge">{{ cartItemCount }}</span>
+    <button class="fab" @click="goToCart" v-if="cartItemCount > 0">
+      <v-icon name="hi-shopping-cart" scale="1.2" />
+      <span class="fab-badge">{{ cartItemCount }}</span>
     </button>
 
-    <!-- Filters Modal -->
-    <transition name="modal">
-      <div v-if="showFiltersModal" class="modal-overlay" @click="showFiltersModal = false">
-        <div class="modal-content filters-modal" @click.stop>
-          <div class="modal-header">
-            <h3>Filter Products</h3>
-            <button class="close-btn" @click="showFiltersModal = false">
-              <RCIcon icon="close" />
-            </button>
-          </div>
-          <div class="modal-body">
-            <!-- Price Range -->
-            <div class="filter-section">
-              <h4>Price Range</h4>
-              <div class="price-inputs">
-                <div class="price-input">
-                  <label>Min</label>
-                  <input type="number" v-model.number="filters.minPrice" placeholder="0" />
-                </div>
-                <span class="price-separator">-</span>
-                <div class="price-input">
-                  <label>Max</label>
-                  <input type="number" v-model.number="filters.maxPrice" placeholder="Any" />
-                </div>
-              </div>
+    <!-- Categories Modal -->
+    <Teleport to="body">
+      <transition name="modal">
+        <div v-if="showCategoriesModal" class="modal-overlay" @click="showCategoriesModal = false">
+          <div class="modal-content categories-modal" @click.stop>
+            <div class="modal-header">
+              <h3>All Categories</h3>
+              <button class="close-btn" @click="showCategoriesModal = false">
+                <v-icon name="hi-x" scale="1" />
+              </button>
             </div>
-
-            <!-- Availability -->
-            <div class="filter-section">
-              <h4>Availability</h4>
-              <label class="checkbox-label">
-                <input type="checkbox" v-model="filters.inStockOnly" />
-                <span>In Stock Only</span>
-              </label>
-            </div>
-
-            <!-- Prescription Type -->
-            <div class="filter-section">
-              <h4>Product Type</h4>
-              <div class="radio-group">
-                <label class="radio-label">
-                  <input type="radio" v-model="filters.prescriptionType" value="all" />
+            <div class="modal-body">
+              <div class="categories-modal-grid">
+                <button
+                  :class="['category-modal-item', { active: selectedCategory === null }]"
+                  @click="selectCategoryAndClose(null)"
+                >
+                  <div class="category-modal-image all-products">
+                    <v-icon name="hi-sparkles" scale="1.5" />
+                  </div>
                   <span>All Products</span>
-                </label>
-                <label class="radio-label">
-                  <input type="radio" v-model="filters.prescriptionType" value="otc" />
-                  <span>Over-the-Counter (OTC)</span>
-                </label>
-                <label class="radio-label">
-                  <input type="radio" v-model="filters.prescriptionType" value="rx" />
-                  <span>Prescription Only</span>
-                </label>
+                </button>
+                <button
+                  v-for="category in categories"
+                  :key="category.id"
+                  :class="['category-modal-item', { active: selectedCategory === category.slug }]"
+                  @click="selectCategoryAndClose(category.slug)"
+                >
+                  <div class="category-modal-image">
+                    <img
+                      v-if="category.image_url"
+                      :src="category.image_url"
+                      :alt="category.name"
+                      @error="handleImageError($event, category)"
+                    />
+                    <v-icon v-else name="ri-capsule-line" scale="1.5" />
+                  </div>
+                  <span>{{ category.name }}</span>
+                </button>
               </div>
             </div>
-
-            <!-- Dosage Form -->
-            <div class="filter-section">
-              <h4>Dosage Form</h4>
-              <div class="checkbox-group">
-                <label v-for="form in dosageForms" :key="form" class="checkbox-label">
-                  <input type="checkbox" :value="form" v-model="filters.dosageForms" />
-                  <span>{{ form }}</span>
-                </label>
-              </div>
-            </div>
-          </div>
-          <div class="modal-footer">
-            <rc-button
-              type="secondary"
-              label="Clear All"
-              @click="clearAllFilters"
-            />
-            <rc-button
-              type="primary"
-              label="Apply Filters"
-              @click="applyFiltersAndClose"
-            />
           </div>
         </div>
-      </div>
-    </transition>
+      </transition>
+    </Teleport>
+
+    <!-- Filters Modal -->
+    <Teleport to="body">
+      <transition name="modal">
+        <div v-if="showFiltersModal" class="modal-overlay" @click="showFiltersModal = false">
+          <div class="modal-content" @click.stop>
+            <div class="modal-header">
+              <h3>Filter Products</h3>
+              <button class="close-btn" @click="showFiltersModal = false">
+                <v-icon name="hi-x" scale="1" />
+              </button>
+            </div>
+            <div class="modal-body">
+              <!-- Price Range -->
+              <div class="filter-section">
+                <h4>Price Range</h4>
+                <div class="price-inputs">
+                  <div class="price-input">
+                    <label>Min (₦)</label>
+                    <input type="number" v-model.number="filters.minPrice" placeholder="0" />
+                  </div>
+                  <span class="price-separator">—</span>
+                  <div class="price-input">
+                    <label>Max (₦)</label>
+                    <input type="number" v-model.number="filters.maxPrice" placeholder="Any" />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Availability -->
+              <div class="filter-section">
+                <h4>Availability</h4>
+                <label class="checkbox-label">
+                  <input type="checkbox" v-model="filters.inStockOnly" />
+                  <span class="checkbox-custom"></span>
+                  <span class="checkbox-text">In Stock Only</span>
+                </label>
+              </div>
+
+              <!-- Product Type -->
+              <div class="filter-section">
+                <h4>Product Type</h4>
+                <div class="radio-group">
+                  <label class="radio-label">
+                    <input type="radio" v-model="filters.prescriptionType" value="all" />
+                    <span class="radio-custom"></span>
+                    <span class="radio-text">All Products</span>
+                  </label>
+                  <label class="radio-label">
+                    <input type="radio" v-model="filters.prescriptionType" value="otc" />
+                    <span class="radio-custom"></span>
+                    <span class="radio-text">Over-the-Counter (OTC)</span>
+                  </label>
+                  <label class="radio-label">
+                    <input type="radio" v-model="filters.prescriptionType" value="rx" />
+                    <span class="radio-custom"></span>
+                    <span class="radio-text">Prescription Only</span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Dosage Form -->
+              <div class="filter-section">
+                <h4>Dosage Form</h4>
+                <div class="dosage-chips">
+                  <button
+                    v-for="form in dosageForms"
+                    :key="form"
+                    :class="['dosage-chip', { active: filters.dosageForms.includes(form) }]"
+                    @click="toggleDosageForm(form)"
+                  >
+                    {{ form }}
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button class="btn-secondary" @click="resetFilters">
+                Reset All
+              </button>
+              <button class="btn-primary" @click="applyFiltersAndClose">
+                Apply Filters
+              </button>
+            </div>
+          </div>
+        </div>
+      </transition>
+    </Teleport>
   </div>
 </template>
 
 <script>
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useStore } from "vuex";
-import TopBar from "@/components/Navigation/top-bar";
-import RcButton from "@/components/buttons/button-primary";
-import RCIcon from "@/components/RCIcon/RCIcon.vue";
 import DrugCard from "./components/DrugCard.vue";
 import axios from "@/services/http";
 
 export default {
   name: "PharmacyIndex",
   components: {
-    TopBar,
-    RcButton,
-    RCIcon,
     DrugCard,
   },
   emits: ["openSideNav"],
@@ -301,14 +531,16 @@ export default {
     const searchSuggestions = ref([]);
     const selectedCategory = ref(null);
     const sortBy = ref("name_asc");
+    const initialLoading = ref(true);
     const loading = ref(false);
-    const loadingMore = ref(false);
     const products = ref([]);
     const totalProducts = ref(0);
     const currentPage = ref(1);
-    const hasMoreProducts = ref(false);
+    const itemsPerPage = 12;
     const categories = ref([]);
     const showFiltersModal = ref(false);
+    const showCategoriesModal = ref(false);
+    const showAllCategories = ref(false);
 
     // Filters
     const filters = ref({
@@ -330,31 +562,91 @@ export default {
       "Inhaler",
     ]);
 
-    // Vuex actions & getters using store directly
+    // Vuex
     const addToCartAction = (payload) => store.dispatch("pharmacy/addToCart", payload);
     const loadCartFromStorage = () => store.dispatch("pharmacy/loadCartFromStorage");
     const cartItemCount = computed(() => store.getters["pharmacy/getCartItemCount"] || 0);
 
     // Category icon mapping
-    const categoryIcons = {
-      PAIN_RELIEF: "pill",
-      COLD_AND_FLU: "thermometer",
-      VITAMINS_SUPPLEMENTS: "vitamin",
-      FIRST_AID: "bandage",
-      DIGESTIVE_HEALTH: "stomach",
-      SKIN_CARE: "skincare",
-      ALLERGIES: "pill",
-      EYE_CARE: "eye",
-      RESPIRATORY: "lungs",
-      CARDIOVASCULAR: "heart-beat",
-      DIABETES: "pill",
-      ANTIBIOTICS: "pill",
-      MENTAL_HEALTH: "brain",
-      WOMENS_HEALTH: "pill",
-      MENS_HEALTH: "pill",
-      CHILDREN_HEALTH: "pill",
-      OTHER: "pill",
+    const categoryIconMap = {
+      'pill': 'ri-capsule-line',
+      'thermometer': 'fa-thermometer-half',
+      'vitamin': 'gi-pill',
+      'bandage': 'gi-bandage-roll',
+      'stomach': 'gi-stomach',
+      'skincare': 'gi-face-to-face',
+      'eye': 'hi-eye',
+      'lungs': 'gi-lungs',
+      'heart-beat': 'hi-heart',
+      'brain': 'gi-brain',
     };
+
+    const getCategoryIcon = (icon) => {
+      return categoryIconMap[icon] || 'ri-capsule-line';
+    };
+
+    // Displayed categories (limited or all)
+    const displayedCategories = computed(() => {
+      if (showAllCategories.value) {
+        return categories.value;
+      }
+      return categories.value.slice(0, 7);
+    });
+
+    // Pagination computed
+    const totalPages = computed(() => {
+      return Math.ceil(totalProducts.value / itemsPerPage);
+    });
+
+    const showingFrom = computed(() => {
+      if (totalProducts.value === 0) return 0;
+      return (currentPage.value - 1) * itemsPerPage + 1;
+    });
+
+    const showingTo = computed(() => {
+      const end = currentPage.value * itemsPerPage;
+      return Math.min(end, totalProducts.value);
+    });
+
+    const visiblePages = computed(() => {
+      const pages = [];
+      const total = totalPages.value;
+      const current = currentPage.value;
+
+      if (total <= 7) {
+        for (let i = 1; i <= total; i++) {
+          pages.push(i);
+        }
+      } else {
+        // Always show first page
+        pages.push(1);
+
+        if (current > 3) {
+          pages.push('...');
+        }
+
+        // Show pages around current
+        const start = Math.max(2, current - 1);
+        const end = Math.min(total - 1, current + 1);
+
+        for (let i = start; i <= end; i++) {
+          if (!pages.includes(i)) {
+            pages.push(i);
+          }
+        }
+
+        if (current < total - 2) {
+          pages.push('...');
+        }
+
+        // Always show last page
+        if (!pages.includes(total)) {
+          pages.push(total);
+        }
+      }
+
+      return pages;
+    });
 
     // Computed
     const activeFiltersCount = computed(() => {
@@ -390,7 +682,8 @@ export default {
             id: cat._id,
             name: cat.name,
             slug: cat.slug || cat.code?.toLowerCase().replace(/_/g, "-"),
-            icon: categoryIcons[cat.code] || "pill",
+            icon: getIconForCategory(cat.code),
+            image_url: cat.image_url || null,
           }));
         } else {
           setDefaultCategories();
@@ -399,6 +692,35 @@ export default {
         console.error("Error fetching categories:", error);
         setDefaultCategories();
       }
+    };
+
+    const handleImageError = (event, category) => {
+      // Hide the broken image and let the fallback icon show
+      event.target.style.display = 'none';
+      category.image_url = null;
+    };
+
+    const getIconForCategory = (code) => {
+      const iconMap = {
+        PAIN_RELIEF: "pill",
+        COLD_AND_FLU: "thermometer",
+        VITAMINS_SUPPLEMENTS: "vitamin",
+        FIRST_AID: "bandage",
+        DIGESTIVE_HEALTH: "stomach",
+        SKIN_CARE: "skincare",
+        ALLERGIES: "pill",
+        EYE_CARE: "eye",
+        RESPIRATORY: "lungs",
+        CARDIOVASCULAR: "heart-beat",
+        DIABETES: "pill",
+        ANTIBIOTICS: "pill",
+        MENTAL_HEALTH: "brain",
+        WOMENS_HEALTH: "pill",
+        MENS_HEALTH: "pill",
+        CHILDREN_HEALTH: "pill",
+        OTHER: "pill",
+      };
+      return iconMap[code] || "pill";
     };
 
     const setDefaultCategories = () => {
@@ -414,32 +736,24 @@ export default {
       ];
     };
 
-    const fetchProducts = async (reset = true) => {
-      if (reset) {
-        loading.value = true;
-        currentPage.value = 1;
-        products.value = [];
-      } else {
-        loadingMore.value = true;
-      }
+    const fetchProducts = async (page = 1) => {
+      loading.value = true;
+      currentPage.value = page;
 
       try {
         const params = {
-          page: currentPage.value,
-          limit: 12,
+          page: page,
+          limit: itemsPerPage,
         };
 
-        // Add search (public endpoint uses 'query' parameter)
         if (searchQuery.value) {
           params.query = searchQuery.value;
         }
 
-        // Add category filter
         if (selectedCategory.value) {
           params.category = selectedCategory.value;
         }
 
-        // Add sort (use snake_case for specialist API)
         switch (sortBy.value) {
           case "price_low":
             params.sort_by = "selling_price";
@@ -467,7 +781,6 @@ export default {
             break;
         }
 
-        // Add filters
         if (filters.value.minPrice) {
           params.min_price = filters.value.minPrice;
         }
@@ -482,46 +795,42 @@ export default {
         } else if (filters.value.prescriptionType === "rx") {
           params.requires_prescription = true;
         }
-        // Note: dosage form filter would require backend support
 
-        // Use public pharmacy search API which properly resolves dosage forms
         const response = await axios.get("/pharmacy/drugs/search", { params });
         const data = response.data?.result || response.data?.data;
 
         if (data) {
           const newProducts = data.drugs || data.items || data;
-          if (reset) {
-            products.value = Array.isArray(newProducts) ? newProducts : [];
-          } else {
-            products.value = [...products.value, ...(Array.isArray(newProducts) ? newProducts : [])];
-          }
+          products.value = Array.isArray(newProducts) ? newProducts : [];
           totalProducts.value = data.total || data.totalCount || products.value.length;
-          hasMoreProducts.value = products.value.length < totalProducts.value;
         }
       } catch (error) {
         console.error("Error fetching products:", error);
       } finally {
         loading.value = false;
-        loadingMore.value = false;
+        initialLoading.value = false;
       }
     };
 
-    const loadMoreProducts = async () => {
-      currentPage.value++;
-      await fetchProducts(false);
+    const goToPage = (page) => {
+      if (page >= 1 && page <= totalPages.value) {
+        fetchProducts(page);
+        // Scroll to products section
+        const productsCard = document.querySelector('.products-card');
+        if (productsCard) {
+          productsCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }
     };
 
-    // Debounce timer for search
     let searchDebounceTimer = null;
 
     const handleSearchInput = () => {
-      // Clear previous timer
       if (searchDebounceTimer) {
         clearTimeout(searchDebounceTimer);
       }
 
       if (searchQuery.value.length >= 2) {
-        // Debounce: wait 300ms after user stops typing
         searchDebounceTimer = setTimeout(async () => {
           try {
             const response = await axios.get("/pharmacy/drugs/search", {
@@ -542,18 +851,24 @@ export default {
       }
     };
 
+    const onSearchFocus = () => {
+      if (searchSuggestions.value.length > 0) {
+        showSuggestions.value = true;
+      }
+    };
+
     const handleSearch = () => {
       showSuggestions.value = false;
-      if (searchQuery.value.length >= 2) {
-        fetchProducts();
-      }
+      currentPage.value = 1;
+      fetchProducts(1);
     };
 
     const clearSearch = () => {
       searchQuery.value = "";
       showSuggestions.value = false;
       searchSuggestions.value = [];
-      fetchProducts();
+      currentPage.value = 1;
+      fetchProducts(1);
     };
 
     const selectSuggestion = (drug) => {
@@ -569,11 +884,13 @@ export default {
 
     const selectCategory = (slug) => {
       selectedCategory.value = slug;
-      fetchProducts();
+      currentPage.value = 1;
+      fetchProducts(1);
     };
 
-    const goToCategory = (slug) => {
-      router.push(`/app/patient/pharmacy/category/${slug}`);
+    const selectCategoryAndClose = (slug) => {
+      showCategoriesModal.value = false;
+      selectCategory(slug);
     };
 
     const goToAllCategories = () => {
@@ -581,15 +898,17 @@ export default {
     };
 
     const applyFilters = () => {
-      fetchProducts();
+      currentPage.value = 1;
+      fetchProducts(1);
     };
 
     const applyFiltersAndClose = () => {
       showFiltersModal.value = false;
-      fetchProducts();
+      currentPage.value = 1;
+      fetchProducts(1);
     };
 
-    const clearAllFilters = () => {
+    const resetFilters = () => {
       filters.value = {
         minPrice: null,
         maxPrice: null,
@@ -597,11 +916,25 @@ export default {
         prescriptionType: "all",
         dosageForms: [],
       };
+    };
+
+    const clearAllFilters = () => {
+      resetFilters();
       selectedCategory.value = null;
       searchQuery.value = "";
       sortBy.value = "name_asc";
       showFiltersModal.value = false;
-      fetchProducts();
+      currentPage.value = 1;
+      fetchProducts(1);
+    };
+
+    const toggleDosageForm = (form) => {
+      const index = filters.value.dosageForms.indexOf(form);
+      if (index > -1) {
+        filters.value.dosageForms.splice(index, 1);
+      } else {
+        filters.value.dosageForms.push(form);
+      }
     };
 
     const addToCart = (drug) => {
@@ -635,14 +968,10 @@ export default {
       router.push("/app/patient/pharmacy/cart");
     };
 
-    // Watch for clicks outside search suggestions
     const handleClickOutside = (event) => {
-      const heroSearch = document.querySelector(".hero-search");
-      const suggestions = document.querySelector(".search-suggestions");
-      if (heroSearch && suggestions) {
-        if (!heroSearch.contains(event.target) && !suggestions.contains(event.target)) {
-          showSuggestions.value = false;
-        }
+      const searchWrapper = document.querySelector(".search-wrapper");
+      if (searchWrapper && !searchWrapper.contains(event.target)) {
+        showSuggestions.value = false;
       }
     };
 
@@ -650,12 +979,15 @@ export default {
       loadCartFromStorage();
       document.addEventListener("click", handleClickOutside);
 
-      // Check for category in route
       if (route.query.category) {
         selectedCategory.value = route.query.category;
       }
 
-      await Promise.all([fetchCategories(), fetchProducts()]);
+      await Promise.all([fetchCategories(), fetchProducts(1)]);
+    });
+
+    onUnmounted(() => {
+      document.removeEventListener("click", handleClickOutside);
     });
 
     return {
@@ -664,30 +996,42 @@ export default {
       searchSuggestions,
       selectedCategory,
       sortBy,
+      initialLoading,
       loading,
-      loadingMore,
       products,
       totalProducts,
-      hasMoreProducts,
+      currentPage,
+      totalPages,
+      showingFrom,
+      showingTo,
+      visiblePages,
       categories,
+      displayedCategories,
       showFiltersModal,
+      showCategoriesModal,
+      showAllCategories,
       filters,
       dosageForms,
       cartItemCount,
       activeFiltersCount,
       formatCurrency,
       formatCategoryName,
+      getCategoryIcon,
+      handleImageError,
       handleSearchInput,
+      onSearchFocus,
       handleSearch,
       clearSearch,
       selectSuggestion,
       selectCategory,
-      goToCategory,
+      selectCategoryAndClose,
       goToAllCategories,
       applyFilters,
       applyFiltersAndClose,
+      resetFilters,
       clearAllFilters,
-      loadMoreProducts,
+      toggleDosageForm,
+      goToPage,
       addToCart,
       viewDrugDetails,
       goToCart,
@@ -697,365 +1041,1067 @@ export default {
 </script>
 
 <style scoped lang="scss">
-.pharmacy-ecommerce {
-  background: #f8fafc;
+// Design Tokens
+$sky: #4FC3F7;
+$sky-light: #E1F5FE;
+$sky-dark: #0288D1;
+$sky-darker: #01579B;
+$navy: #0F172A;
+$slate: #334155;
+$gray: #64748B;
+$light-gray: #94A3B8;
+$bg: #F8FAFC;
+$emerald: #10B981;
+$emerald-light: #D1FAE5;
+$amber: #F59E0B;
+$amber-light: #FEF3C7;
+$rose: #F43F5E;
+$rose-light: #FFE4E6;
+$violet: #8B5CF6;
+$violet-light: #EDE9FE;
+
+@mixin glass-card {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.pharmacy-page {
+  width: 100%;
   min-height: 100vh;
+  background: $bg;
 }
 
-:deep(.page-content__body) {
-  padding: 0 !important;
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
-  height: auto !important;
-  max-height: none !important;
-
-  // Constrain width to 80% and center
-  max-width: 80%;
-  margin: 0 auto;
-
-  @media (max-width: 1024px) {
-    max-width: 95%; // More width on tablets
-  }
-
-  @media (max-width: 768px) {
-    max-width: 100%; // Full width on mobile
-  }
-}
-
-// Hero Section
-.hero-section {
-  background: linear-gradient(135deg, $color-pri 0%, darken($color-pri, 15%) 100%);
-  padding: $size-32 $size-20 $size-48;
-  position: relative;
-  border-radius: 0 0 $size-24 $size-24;
-}
-
-.hero-content {
-  text-align: center;
-  position: relative;
-
-  h1 {
-    color: white;
-    font-size: $size-28;
-    font-weight: 700;
-    margin-bottom: $size-8;
-  }
-
-  p {
-    color: rgba(white, 0.85);
-    font-size: $size-14;
-    margin-bottom: $size-24;
-  }
-}
-
-.hero-search {
-  display: flex;
-  align-items: center;
-  background: white;
-  border-radius: $size-12;
-  padding: $size-8 $size-8 $size-8 $size-16;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-  position: relative;
-
-  .search-icon {
-    color: $color-g-54;
-    flex-shrink: 0;
-    width: $size-20;
-    height: $size-20;
-  }
-
-  input {
-    flex: 1;
-    border: none;
-    outline: none;
-    font-size: $size-15;
-    padding: $size-8 $size-12;
-    min-width: 0;
-
-    &::placeholder {
-      color: $color-g-67;
-    }
-  }
-
-  .clear-btn {
-    background: transparent;
-    border: none;
-    padding: $size-8;
-    cursor: pointer;
-    color: $color-g-54;
-
-    svg {
-      width: $size-16;
-      height: $size-16;
-    }
-  }
-
-  .search-btn {
-    background: $color-pri;
-    color: white;
-    border: none;
-    padding: $size-10 $size-20;
-    border-radius: $size-8;
-    font-weight: 600;
-    font-size: $size-14;
-    cursor: pointer;
-    transition: background 0.2s;
-
-    &:hover {
-      background: darken($color-pri, 10%);
-    }
-  }
-}
-
-.search-suggestions {
-  position: absolute;
-  top: calc(100% + $size-8);
-  left: 0;
-  right: 0;
-  background: white;
-  border-radius: $size-12;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-  overflow: hidden;
-  z-index: 100;
-
-  .suggestion-item {
-    display: flex;
-    align-items: center;
-    padding: $size-12 $size-16;
-    cursor: pointer;
-    transition: background 0.15s;
-
-    &:hover {
-      background: $color-g-97;
-    }
-
-    .suggestion-icon {
-      color: $color-pri;
-      width: $size-20;
-      height: $size-20;
-      margin-right: $size-12;
-    }
-
-    .suggestion-info {
-      flex: 1;
-      min-width: 0;
-
-      .suggestion-name {
-        display: block;
-        font-weight: 500;
-        color: $color-g-21;
-        font-size: $size-14;
-      }
-
-      .suggestion-details {
-        font-size: $size-12;
-        color: $color-g-54;
-      }
-    }
-
-    .suggestion-price {
-      font-weight: 600;
-      color: $color-pri;
-      font-size: $size-13;
-    }
-  }
-}
-
-// Category Pills
-.category-pills-section {
-  padding: $size-24 $size-16 $size-16;
-  background: #f8fafc;
-}
-
-.category-pills-wrapper {
-  display: flex;
-  gap: $size-8;
-  overflow-x: auto;
-  padding-bottom: $size-8;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-
-  &::-webkit-scrollbar {
-    display: none;
-  }
-}
-
-.category-pill {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: $size-6;
-  padding: $size-10 $size-20;
-  background: white;
-  border: 1px solid $color-g-90;
-  border-radius: $size-20;
-  font-size: $size-13;
-  font-weight: 500;
-  color: $color-g-44;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all 0.2s;
-
-  &:hover {
-    border-color: $color-pri;
-    color: $color-pri;
-  }
-
-  &.active {
-    background: $color-pri;
-    border-color: $color-pri;
-    color: white;
-
-    .pill-icon {
-      color: white;
-    }
-  }
-
-  &.view-all {
-    background: $color-pri;
-    border-color: $color-pri;
-    color: white;
-
-    svg {
-      width: $size-14;
-      height: $size-14;
-    }
-
-    &:hover {
-      background: darken($color-pri, 10%);
-      border-color: darken($color-pri, 10%);
-      color: white;
-    }
-  }
-
-  .pill-icon {
-    width: $size-16;
-    height: $size-16;
-    color: $color-g-54;
-  }
-}
-
-// Filters Bar
-.filters-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: $size-12 $size-16;
-  background: white;
-  border-bottom: 1px solid $color-g-92;
+// Mobile Header
+.mobile-header {
+  display: none;
   position: sticky;
   top: 0;
-  z-index: 50;
-}
-
-.filters-left {
-  .results-count {
-    font-size: $size-13;
-    color: $color-g-54;
-  }
-}
-
-.filters-right {
-  display: flex;
-  align-items: center;
-  gap: $size-12;
-}
-
-.categories-btn {
-  display: flex;
-  align-items: center;
-  gap: $size-6;
-  padding: $size-8 $size-12;
-  background: $color-pri;
-  color: white;
-  border: none;
-  border-radius: $size-8;
-  font-size: $size-13;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-
-  svg {
-    width: $size-14;
-    height: $size-14;
-  }
-
-  &:hover {
-    background: darken($color-pri, 10%);
-  }
-}
-
-.filter-group {
-  display: flex;
-  align-items: center;
-  gap: $size-8;
-
-  label {
-    font-size: $size-13;
-    color: $color-g-54;
-  }
-
-  select {
-    padding: $size-8 $size-12;
-    border: 1px solid $color-g-90;
-    border-radius: $size-8;
-    font-size: $size-13;
-    color: $color-g-21;
-    background: white;
-    cursor: pointer;
-
-    &:focus {
-      outline: none;
-      border-color: $color-pri;
-    }
-  }
-}
-
-.filter-btn {
-  display: flex;
-  align-items: center;
-  gap: $size-6;
-  padding: $size-8 $size-12;
+  z-index: 100;
+  padding: 12px 16px;
   background: white;
-  border: 1px solid $color-g-90;
-  border-radius: $size-8;
-  font-size: $size-13;
-  font-weight: 500;
-  color: $color-g-44;
-  cursor: pointer;
-  position: relative;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #F1F5F9;
 
-  svg {
-    width: $size-16;
-    height: $size-16;
+  @media (max-width: 768px) {
+    display: flex;
   }
 
-  .filter-badge {
-    position: absolute;
-    top: -$size-6;
-    right: -$size-6;
-    background: $color-pri;
-    color: white;
-    font-size: $size-10;
-    font-weight: 600;
-    min-width: $size-18;
-    height: $size-18;
-    border-radius: 50%;
+  .menu-btn, .cart-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    border: none;
+    background: $bg;
+    color: $slate;
     display: flex;
     align-items: center;
     justify-content: center;
+    cursor: pointer;
+    position: relative;
+
+    &:active {
+      background: #E2E8F0;
+    }
+  }
+
+  .cart-btn {
+    .cart-count {
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      min-width: 18px;
+      height: 18px;
+      background: $rose;
+      color: white;
+      font-size: 10px;
+      font-weight: 700;
+      border-radius: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 4px;
+    }
+  }
+
+  .header-logo {
+    img {
+      height: 28px;
+      width: auto;
+    }
   }
 }
 
-// Products Section
-.main-content {
-  padding: $size-16;
+// Page Content
+.page-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px 32px 100px;
+
+  @media (max-width: 768px) {
+    padding: 16px 16px 120px;
+  }
+}
+
+// Loading State
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  gap: 16px;
+
+  .loading-spinner {
+    position: relative;
+    width: 64px;
+    height: 64px;
+
+    .spinner-ring {
+      position: absolute;
+      inset: 0;
+      border: 3px solid $sky-light;
+      border-top-color: $sky;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    .spinner-icon {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: $sky;
+    }
+  }
+
+  p {
+    color: $gray;
+    font-size: 14px;
+  }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+// ============================================
+// HERO SECTION
+// ============================================
+.hero {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+  padding: 48px 40px 56px;
+  background: linear-gradient(135deg, $sky 0%, $sky-dark 50%, $sky-darker 100%);
+  border-radius: 28px;
+  position: relative;
+  overflow: hidden;
+  min-height: 460px;
+  margin-bottom: 24px;
+  box-shadow:
+    0 20px 60px rgba(2, 136, 209, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    padding: 24px 20px;
+    gap: 0;
+    text-align: center;
+    min-height: auto;
+    border-radius: 20px;
+    margin-bottom: 16px;
+  }
+
+  .hero__content {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    z-index: 2;
+  }
+
+  .hero__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    border-radius: 24px;
+    width: fit-content;
+    margin-bottom: 20px;
+    position: relative;
+
+    @media (max-width: 768px) {
+      margin: 0 auto 12px;
+      padding: 6px 14px;
+    }
+
+    .badge-pulse {
+      position: absolute;
+      left: 12px;
+      width: 8px;
+      height: 8px;
+      background: $emerald;
+      border-radius: 50%;
+      animation: pulse 2s ease-in-out infinite;
+
+      &::after {
+        content: '';
+        position: absolute;
+        inset: -4px;
+        background: rgba($emerald, 0.4);
+        border-radius: 50%;
+        animation: pulse-ring 2s ease-out infinite;
+      }
+
+      @media (max-width: 768px) {
+        left: 10px;
+        width: 6px;
+        height: 6px;
+      }
+    }
+
+    svg {
+      width: 16px;
+      height: 16px;
+      color: white;
+      margin-left: 12px;
+
+      @media (max-width: 768px) {
+        width: 14px;
+        height: 14px;
+        margin-left: 10px;
+      }
+    }
+
+    span {
+      font-size: 13px;
+      font-weight: 600;
+      color: white;
+      letter-spacing: 0.3px;
+
+      @media (max-width: 768px) {
+        font-size: 12px;
+      }
+    }
+  }
+
+  .hero__title {
+    font-size: 48px;
+    font-weight: 800;
+    color: white;
+    line-height: 1.1;
+    margin: 0 0 16px;
+    letter-spacing: -1px;
+
+    @media (max-width: 768px) {
+      font-size: 28px;
+      margin: 0 0 8px;
+      letter-spacing: -0.5px;
+
+      br {
+        display: none;
+      }
+    }
+
+    .hero__title-accent {
+      background: linear-gradient(90deg, #fff 0%, rgba(255,255,255,0.7) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+
+      @media (max-width: 768px) {
+        display: inline;
+        margin-left: 6px;
+      }
+    }
+  }
+
+  .hero__subtitle {
+    font-size: 18px;
+    color: white;
+    line-height: 1.6;
+    margin: 0 0 24px;
+    max-width: 400px;
+    opacity: 0.95;
+
+    @media (max-width: 768px) {
+      font-size: 14px;
+      max-width: 100%;
+      margin: 0 0 16px;
+      opacity: 0.9;
+    }
+  }
+
+  .hero__stats {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 16px 20px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 16px;
+    width: fit-content;
+
+    @media (max-width: 768px) {
+      width: 100%;
+      justify-content: space-around;
+      padding: 14px 16px;
+      gap: 0;
+      border-radius: 12px;
+    }
+  }
+
+  .hero__visual {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+
+    @media (max-width: 768px) {
+      display: none;
+    }
+  }
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border: none;
+  border-radius: 12px;
+  padding: 10px 16px;
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  margin-bottom: 20px;
+  width: fit-content;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.25);
+  }
+}
+
+.desktop-only {
+  @media (max-width: 768px) {
+    display: none !important;
+  }
+}
+
+.hero-stat {
+  text-align: center;
+
+  &__value {
+    display: block;
+    font-size: 24px;
+    font-weight: 700;
+    color: white;
+    line-height: 1;
+
+    @media (max-width: 768px) {
+      font-size: 20px;
+    }
+
+    &--warning {
+      color: $amber-light;
+    }
+
+    &--info {
+      color: $sky-light;
+    }
+
+    &--success {
+      color: $emerald-light;
+    }
+  }
+
+  &__label {
+    display: block;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.7);
+    margin-top: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+
+    @media (max-width: 768px) {
+      font-size: 10px;
+    }
+  }
+
+  &__divider {
+    width: 1px;
+    height: 32px;
+    background: rgba(255, 255, 255, 0.2);
+
+    @media (max-width: 768px) {
+      height: 28px;
+    }
+  }
+}
+
+// Orb Animation
+.pharmacy-orb {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.orb-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+
+  &--1 {
+    width: 100%;
+    height: 100%;
+    animation: spin-slow 20s linear infinite;
+  }
+
+  &--2 {
+    width: 80%;
+    height: 80%;
+    animation: spin-slow 15s linear infinite reverse;
+  }
+
+  &--3 {
+    width: 60%;
+    height: 60%;
+    animation: spin-slow 10s linear infinite;
+  }
+}
+
+.orb-core {
+  width: 100px;
+  height: 100px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(20px);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    0 0 40px rgba(255, 255, 255, 0.3),
+    0 0 80px rgba(79, 195, 247, 0.3);
+  animation: pulse-glow 3s ease-in-out infinite;
+
+  svg {
+    width: 48px;
+    height: 48px;
+    color: white;
+  }
+}
+
+.floating-icons {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.float-icon {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: float 3s ease-in-out infinite;
+
+  svg {
+    width: 20px;
+    height: 20px;
+    color: white;
+  }
+
+  &--1 {
+    top: 10%;
+    right: 10%;
+    animation-delay: 0s;
+  }
+
+  &--2 {
+    bottom: 20%;
+    right: 5%;
+    animation-delay: 1s;
+  }
+
+  &--3 {
+    bottom: 10%;
+    left: 10%;
+    animation-delay: 2s;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.1); opacity: 0.8; }
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(1); opacity: 0.8; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 40px rgba(255, 255, 255, 0.3), 0 0 80px rgba(79, 195, 247, 0.3); }
+  50% { box-shadow: 0 0 60px rgba(255, 255, 255, 0.4), 0 0 100px rgba(79, 195, 247, 0.4); }
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+// ============================================
+// BENTO GRID
+// ============================================
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 20px;
+
+  @media (max-width: 1024px) {
+    grid-template-columns: repeat(6, 1fr);
+  }
+
+  @media (max-width: 768px) {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+}
+
+.bento-card {
+  @include glass-card;
+  border-radius: 20px;
+  padding: 20px;
+
+  @media (max-width: 768px) {
+    padding: 16px;
+    border-radius: 16px;
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+
+    @media (max-width: 768px) {
+      margin-bottom: 12px;
+    }
+
+    h3 {
+      font-size: 15px;
+      font-weight: 600;
+      color: $navy;
+      margin: 0;
+    }
+
+    .results-count {
+      font-size: 13px;
+      color: $gray;
+    }
+
+    .view-all {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 13px;
+      color: $sky-dark;
+      font-weight: 500;
+      background: none;
+      border: none;
+      cursor: pointer;
+
+      &:hover {
+        color: $sky-darker;
+      }
+    }
+
+    .clear-filter {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 13px;
+      color: $sky-dark;
+      font-weight: 500;
+      background: none;
+      border: none;
+      cursor: pointer;
+
+      &:hover {
+        color: $rose;
+      }
+    }
+  }
+}
+
+// Search Card
+.search-card {
+  grid-column: span 8;
+
+  @media (max-width: 1024px) {
+    grid-column: span 6;
+  }
+
+  .search-wrapper {
+    position: relative;
+  }
+
+  .search-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: $bg;
+    padding: 12px 16px;
+    border-radius: 14px;
+    border: 1px solid #E2E8F0;
+    transition: all 0.2s;
+
+    &:focus-within {
+      border-color: $sky;
+      box-shadow: 0 0 0 3px rgba($sky, 0.1);
+    }
+
+    .search-icon {
+      color: $gray;
+      flex-shrink: 0;
+    }
+
+    input {
+      flex: 1;
+      border: none;
+      outline: none;
+      font-size: 14px;
+      color: $navy;
+      background: transparent;
+      min-width: 0;
+
+      &::placeholder {
+        color: $light-gray;
+      }
+    }
+
+    .clear-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      border: none;
+      background: #E2E8F0;
+      color: $gray;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+
+      &:hover {
+        background: $rose-light;
+        color: $rose;
+      }
+    }
+
+    .search-submit {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      border: none;
+      background: linear-gradient(135deg, $sky, $sky-dark);
+      color: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: all 0.2s;
+
+      &:hover {
+        transform: translateX(2px);
+        box-shadow: 0 4px 12px rgba($sky, 0.3);
+      }
+    }
+  }
+
+  .search-suggestions {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+    z-index: 1000;
+    max-height: 400px;
+    overflow-y: auto;
+
+    .suggestion-item {
+      display: flex;
+      align-items: center;
+      padding: 14px 16px;
+      cursor: pointer;
+      transition: background 0.15s;
+      gap: 12px;
+
+      &:hover {
+        background: $bg;
+      }
+
+      &:not(:last-child) {
+        border-bottom: 1px solid #F1F5F9;
+      }
+
+      .suggestion-icon {
+        width: 40px;
+        height: 40px;
+        background: $sky-light;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: $sky-dark;
+        flex-shrink: 0;
+      }
+
+      .suggestion-info {
+        flex: 1;
+        min-width: 0;
+
+        .suggestion-name {
+          display: block;
+          font-weight: 600;
+          color: $navy;
+          font-size: 14px;
+          margin-bottom: 2px;
+        }
+
+        .suggestion-details {
+          font-size: 12px;
+          color: $gray;
+        }
+      }
+
+      .suggestion-price {
+        font-weight: 700;
+        color: $sky-dark;
+        font-size: 14px;
+        flex-shrink: 0;
+      }
+    }
+  }
+}
+
+// Dropdown animation
+.dropdown-enter-active,
+.dropdown-leave-active {
+  transition: all 0.2s ease;
+}
+
+.dropdown-enter-from,
+.dropdown-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+// Actions Card
+.actions-card {
+  grid-column: span 4;
+
+  @media (max-width: 1024px) {
+    grid-column: span 6;
+  }
+
+  @media (max-width: 768px) {
+    display: none;
+  }
+
+  .actions-row {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .action-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 16px 12px;
+    background: $bg;
+    border: 1px solid #E2E8F0;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+      background: white;
+      border-color: $sky;
+      box-shadow: 0 4px 12px rgba($sky, 0.15);
+      transform: translateY(-2px);
+    }
+
+    span {
+      font-size: 12px;
+      font-weight: 500;
+      color: $slate;
+    }
+  }
+
+  .action-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &.sky { background: $sky-light; color: $sky-dark; }
+    &.emerald { background: $emerald-light; color: $emerald; }
+    &.violet { background: $violet-light; color: $violet; }
+    &.amber { background: $amber-light; color: $amber; }
+  }
+}
+
+// Categories Card - Grid Layout
+.categories-card {
+  grid-column: span 12;
+
+  .categories-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 12px;
+
+    @media (max-width: 1200px) {
+      grid-template-columns: repeat(6, 1fr);
+    }
+
+    @media (max-width: 1024px) {
+      grid-template-columns: repeat(4, 1fr);
+    }
+
+    @media (max-width: 768px) {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    @media (max-width: 480px) {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  .category-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 10px;
+    background: white;
+    border: 1px solid #E2E8F0;
+    border-radius: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+      border-color: $sky;
+      box-shadow: 0 4px 12px rgba($sky, 0.15);
+      transform: translateY(-2px);
+
+      .category-image {
+        transform: scale(1.05);
+      }
+    }
+
+    &.active {
+      background: linear-gradient(135deg, $sky, $sky-dark);
+      border-color: transparent;
+      color: white;
+
+      .category-image {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+
+        &.all-products {
+          background: rgba(255, 255, 255, 0.25);
+          color: white;
+        }
+      }
+
+      span {
+        color: white;
+      }
+    }
+
+    .category-image {
+      width: 56px;
+      height: 56px;
+      border-radius: 14px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      &.all-products {
+        background: linear-gradient(135deg, $sky-light, lighten($sky, 25%));
+        color: $sky-dark;
+      }
+    }
+
+    span {
+      font-size: 11px;
+      font-weight: 600;
+      color: $slate;
+      text-align: center;
+      line-height: 1.2;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  .toggle-categories {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    margin-top: 16px;
+    padding: 12px;
+    background: $bg;
+    border: 1px dashed #CBD5E1;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 500;
+    color: $sky-dark;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+      background: $sky-light;
+      border-color: $sky;
+    }
+  }
+}
+
+// Filters Card
+.filters-card {
+  grid-column: span 12;
+  padding: 14px 20px;
+
+  .filters-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .results-info {
+    font-size: 14px;
+    color: $gray;
+
+    strong {
+      color: $navy;
+    }
+  }
+
+  .filters-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .sort-select {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: $bg;
+    border-radius: 10px;
+    color: $gray;
+
+    select {
+      border: none;
+      outline: none;
+      background: transparent;
+      font-size: 13px;
+      color: $slate;
+      cursor: pointer;
+      padding-right: 4px;
+    }
+  }
+
+  .filter-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: white;
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    color: $slate;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s;
+
+    &:hover {
+      border-color: $sky;
+      color: $sky-dark;
+    }
+
+    .filter-badge {
+      position: absolute;
+      top: -6px;
+      right: -6px;
+      min-width: 18px;
+      height: 18px;
+      background: $sky;
+      color: white;
+      font-size: 10px;
+      font-weight: 700;
+      border-radius: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  }
+}
+
+// Products Card
+.products-card {
+  grid-column: span 12;
 }
 
 .products-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: $size-16;
+  gap: 16px;
 
   @media (max-width: 1200px) {
     grid-template-columns: repeat(3, 1fr);
@@ -1063,14 +2109,14 @@ export default {
 
   @media (max-width: 768px) {
     grid-template-columns: repeat(2, 1fr);
-    gap: $size-12;
+    gap: 12px;
   }
 }
 
 .products-skeleton {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: $size-16;
+  gap: 16px;
 
   @media (max-width: 1200px) {
     grid-template-columns: repeat(3, 1fr);
@@ -1083,27 +2129,27 @@ export default {
 
 .skeleton-card {
   background: white;
-  border-radius: $size-12;
+  border-radius: 16px;
   overflow: hidden;
 
   .skeleton-image {
     height: 140px;
-    background: linear-gradient(90deg, $color-g-95 25%, $color-g-92 50%, $color-g-95 75%);
+    background: linear-gradient(90deg, #F1F5F9 25%, #E2E8F0 50%, #F1F5F9 75%);
     background-size: 200% 100%;
     animation: shimmer 1.5s infinite;
   }
 
   .skeleton-content {
-    padding: $size-12;
+    padding: 14px;
   }
 
   .skeleton-line {
-    height: $size-12;
-    background: linear-gradient(90deg, $color-g-95 25%, $color-g-92 50%, $color-g-95 75%);
+    height: 12px;
+    background: linear-gradient(90deg, #F1F5F9 25%, #E2E8F0 50%, #F1F5F9 75%);
     background-size: 200% 100%;
     animation: shimmer 1.5s infinite;
-    border-radius: $size-4;
-    margin-bottom: $size-8;
+    border-radius: 6px;
+    margin-bottom: 10px;
 
     &.short {
       width: 60%;
@@ -1112,170 +2158,327 @@ export default {
 }
 
 @keyframes shimmer {
-  0% {
-    background-position: 200% 0;
-  }
-  100% {
-    background-position: -200% 0;
-  }
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
-.no-products {
+// Empty State
+.empty-state {
   text-align: center;
-  padding: $size-48;
+  padding: 48px 24px;
 
-  .no-products-icon {
-    width: $size-64;
-    height: $size-64;
-    color: $color-g-77;
-    margin-bottom: $size-16;
-  }
-
-  h3 {
-    font-size: $size-18;
-    color: $color-g-44;
-    margin-bottom: $size-8;
-  }
-
-  p {
-    font-size: $size-14;
-    color: $color-g-67;
-    margin-bottom: $size-24;
-  }
-}
-
-.pagination-section {
-  display: flex;
-  justify-content: center;
-  margin-top: $size-32;
-}
-
-// Stats Banner
-.stats-banner {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: $size-16;
-  padding: $size-24 $size-16;
-  background: white;
-  margin-top: $size-24;
-  border-top: 1px solid $color-g-92;
-
-  @media (max-width: 768px) {
-    grid-template-columns: 1fr;
-    gap: $size-12;
-  }
-}
-
-.stat-item {
-  display: flex;
-  align-items: center;
-  gap: $size-12;
-  padding: $size-16;
-  background: $color-g-97;
-  border-radius: $size-12;
-
-  svg {
-    width: $size-32;
-    height: $size-32;
-    color: $color-pri;
-  }
-
-  .stat-text {
-    strong {
-      display: block;
-      font-size: $size-14;
-      color: $color-g-21;
-    }
-
-    span {
-      font-size: $size-12;
-      color: $color-g-54;
-    }
-  }
-}
-
-// Floating Cart Button
-.fab {
-  position: fixed;
-  bottom: $size-24;
-  right: $size-24;
-  z-index: 100;
-  width: $size-56;
-  height: $size-56;
-  border-radius: 50%;
-  border: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-  transition: all 0.2s;
-  position: relative;
-
-  &:hover {
-    transform: scale(1.05);
-  }
-
-  svg {
-    width: $size-24;
-    height: $size-24;
-  }
-
-  &.fab-primary {
-    background: $color-pri;
-    color: white;
-  }
-
-  .cart-badge {
-    position: absolute;
-    top: -$size-4;
-    right: -$size-4;
-    background: $color-denote-red;
-    color: white;
-    font-size: $size-12;
-    font-weight: 600;
-    min-width: $size-22;
-    height: $size-22;
+  .empty-icon {
+    width: 80px;
+    height: 80px;
+    background: $sky-light;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
+    margin: 0 auto 20px;
+    color: $sky;
+  }
+
+  h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: $navy;
+    margin: 0 0 8px;
+  }
+
+  p {
+    font-size: 14px;
+    color: $gray;
+    margin: 0 0 20px;
+  }
+
+  .empty-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    background: linear-gradient(135deg, $sky, $sky-dark);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba($sky, 0.3);
+    }
   }
 }
 
-// Modal
+// Pagination
+.pagination {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid #E2E8F0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.pagination-info {
+  font-size: 13px;
+  color: $gray;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.page-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 16px;
+  border: 1px solid #E2E8F0;
+  background: white;
+  border-radius: 10px;
+  cursor: pointer;
+  color: $slate;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s;
+
+  .btn-text {
+    @media (max-width: 480px) {
+      display: none;
+    }
+  }
+
+  &:hover:not(:disabled) {
+    border-color: $sky;
+    color: $sky-dark;
+    background: $sky-light;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.page-numbers {
+  display: flex;
+  gap: 4px;
+}
+
+.page-num {
+  min-width: 40px;
+  height: 40px;
+  border: 1px solid #E2E8F0;
+  background: white;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: $slate;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  @media (max-width: 480px) {
+    min-width: 36px;
+    height: 36px;
+    font-size: 13px;
+  }
+
+  &:hover:not(.active):not(.ellipsis) {
+    border-color: $sky;
+    color: $sky-dark;
+  }
+
+  &.active {
+    background: linear-gradient(135deg, $sky, $sky-dark);
+    border-color: transparent;
+    color: white;
+  }
+
+  &.ellipsis {
+    border: none;
+    background: none;
+    cursor: default;
+    color: $gray;
+  }
+}
+
+// Features Card
+.features-card {
+  grid-column: span 12;
+  background: linear-gradient(135deg, #FFFFFF 0%, $sky-light 100%);
+
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+
+    @media (max-width: 1024px) {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    @media (max-width: 480px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .feature-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px;
+    background: white;
+    border-radius: 14px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  }
+
+  .feature-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+
+    &.emerald { background: $emerald-light; color: $emerald; }
+    &.sky { background: $sky-light; color: $sky-dark; }
+    &.violet { background: $violet-light; color: $violet; }
+    &.amber { background: $amber-light; color: $amber; }
+  }
+
+  .feature-text {
+    strong {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      color: $navy;
+      margin-bottom: 2px;
+    }
+
+    span {
+      font-size: 12px;
+      color: $gray;
+    }
+  }
+}
+
+// Floating Action Button
+.fab {
+  display: none;
+  position: fixed;
+  bottom: 90px;
+  right: 20px;
+  width: 56px;
+  height: 56px;
+  background: linear-gradient(135deg, $emerald, darken($emerald, 10%));
+  color: white;
+  border: none;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba($emerald, 0.4);
+  cursor: pointer;
+  z-index: 50;
+  transition: all 0.2s;
+  align-items: center;
+  justify-content: center;
+
+  @media (max-width: 768px) {
+    display: flex;
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+
+  .fab-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    min-width: 22px;
+    height: 22px;
+    background: $rose;
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    border-radius: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    border: 2px solid white;
+  }
+}
+
+// ============================================
+// MODAL STYLES
+// ============================================
 .modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
   z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: $size-16;
+  padding: 16px;
+
+  @media (max-width: 768px) {
+    align-items: flex-end;
+    padding: 0;
+  }
 }
 
 .modal-content {
   background: white;
-  border-radius: $size-16;
+  border-radius: 24px;
   width: 100%;
   max-width: 480px;
   max-height: 90vh;
   display: flex;
   flex-direction: column;
-  animation: fadeInUp 0.3s ease;
+  animation: modal-in 0.3s ease;
+  overflow: hidden;
+
+  @media (max-width: 768px) {
+    border-radius: 24px 24px 0 0;
+    max-height: 85vh;
+    animation: modal-slide-up 0.3s ease;
+  }
+
+  &.categories-modal {
+    max-width: 600px;
+  }
 }
 
-@keyframes fadeInUp {
+@keyframes modal-in {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: scale(0.95);
   }
   to {
     opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes modal-slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
     transform: translateY(0);
   }
 }
@@ -1284,25 +2487,31 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: $size-20;
-  border-bottom: 1px solid $color-g-92;
+  padding: 20px 24px;
+  border-bottom: 1px solid #F1F5F9;
 
   h3 {
-    font-size: $size-18;
+    font-size: 18px;
     font-weight: 600;
+    color: $navy;
     margin: 0;
   }
 
   .close-btn {
-    background: transparent;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
     border: none;
-    padding: $size-8;
+    background: $bg;
+    color: $gray;
     cursor: pointer;
-    color: $color-g-54;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
-    svg {
-      width: $size-20;
-      height: $size-20;
+    &:hover {
+      background: $rose-light;
+      color: $rose;
     }
   }
 }
@@ -1310,35 +2519,148 @@ export default {
 .modal-body {
   flex: 1;
   overflow-y: auto;
-  padding: $size-20;
+  padding: 24px;
 }
 
 .modal-footer {
   display: flex;
-  gap: $size-12;
-  padding: $size-16 $size-20;
-  border-top: 1px solid $color-g-92;
+  gap: 12px;
+  padding: 20px 24px;
+  border-top: 1px solid #F1F5F9;
 
-  > * {
+  .btn-secondary, .btn-primary {
     flex: 1;
+    padding: 14px 20px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-secondary {
+    background: $bg;
+    border: 1px solid #E2E8F0;
+    color: $slate;
+
+    &:hover {
+      background: #E2E8F0;
+    }
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, $sky, $sky-dark);
+    border: none;
+    color: white;
+
+    &:hover {
+      box-shadow: 0 4px 12px rgba($sky, 0.3);
+      transform: translateY(-1px);
+    }
+  }
+}
+
+// Categories Modal Grid
+.categories-modal-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+
+  @media (max-width: 480px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.category-modal-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 12px;
+  background: $bg;
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: $sky;
+    background: white;
+    box-shadow: 0 4px 12px rgba($sky, 0.15);
+
+    .category-modal-image {
+      transform: scale(1.05);
+    }
+  }
+
+  &.active {
+    background: linear-gradient(135deg, $sky, $sky-dark);
+    border-color: transparent;
+
+    .category-modal-image {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+
+      &.all-products {
+        background: rgba(255, 255, 255, 0.25);
+        color: white;
+      }
+    }
+
+    span {
+      color: white;
+    }
+  }
+
+  .category-modal-image {
+    width: 64px;
+    height: 64px;
+    border-radius: 16px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    &.all-products {
+      background: linear-gradient(135deg, $sky-light, lighten($sky, 25%));
+      color: $sky-dark;
+    }
+  }
+
+  span {
+    font-size: 13px;
+    font-weight: 600;
+    color: $slate;
+    text-align: center;
+    line-height: 1.3;
   }
 }
 
 .filter-section {
-  margin-bottom: $size-24;
+  margin-bottom: 28px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
 
   h4 {
-    font-size: $size-14;
+    font-size: 14px;
     font-weight: 600;
-    color: $color-g-21;
-    margin-bottom: $size-12;
+    color: $navy;
+    margin: 0 0 14px;
   }
 }
 
 .price-inputs {
   display: flex;
-  align-items: center;
-  gap: $size-12;
+  align-items: flex-end;
+  gap: 12px;
 }
 
 .price-input {
@@ -1346,57 +2668,162 @@ export default {
 
   label {
     display: block;
-    font-size: $size-12;
-    color: $color-g-54;
-    margin-bottom: $size-4;
+    font-size: 12px;
+    color: $gray;
+    margin-bottom: 6px;
   }
 
   input {
     width: 100%;
-    padding: $size-10 $size-12;
-    border: 1px solid $color-g-90;
-    border-radius: $size-8;
-    font-size: $size-14;
+    padding: 12px 14px;
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+    font-size: 14px;
+    color: $navy;
 
     &:focus {
       outline: none;
-      border-color: $color-pri;
+      border-color: $sky;
+      box-shadow: 0 0 0 3px rgba($sky, 0.1);
     }
   }
 }
 
 .price-separator {
-  color: $color-g-54;
-  padding-top: $size-20;
+  color: $light-gray;
+  padding-bottom: 12px;
 }
 
-.checkbox-label,
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  padding: 10px 0;
+
+  input[type="checkbox"] {
+    display: none;
+  }
+
+  .checkbox-custom {
+    width: 22px;
+    height: 22px;
+    border: 2px solid #E2E8F0;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+
+    &::after {
+      content: '✓';
+      color: white;
+      font-size: 12px;
+      opacity: 0;
+      transform: scale(0.5);
+      transition: all 0.2s;
+    }
+  }
+
+  input:checked + .checkbox-custom {
+    background: $sky;
+    border-color: $sky;
+
+    &::after {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  .checkbox-text {
+    font-size: 14px;
+    color: $slate;
+  }
+}
+
+.radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .radio-label {
   display: flex;
   align-items: center;
-  gap: $size-8;
+  gap: 12px;
   cursor: pointer;
-  padding: $size-8 0;
+  padding: 10px 0;
 
-  input {
-    width: $size-18;
-    height: $size-18;
-    accent-color: $color-pri;
+  input[type="radio"] {
+    display: none;
   }
 
-  span {
-    font-size: $size-14;
-    color: $color-g-44;
+  .radio-custom {
+    width: 22px;
+    height: 22px;
+    border: 2px solid #E2E8F0;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+
+    &::after {
+      content: '';
+      width: 10px;
+      height: 10px;
+      background: $sky;
+      border-radius: 50%;
+      opacity: 0;
+      transform: scale(0.5);
+      transition: all 0.2s;
+    }
+  }
+
+  input:checked + .radio-custom {
+    border-color: $sky;
+
+    &::after {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  .radio-text {
+    font-size: 14px;
+    color: $slate;
   }
 }
 
-.radio-group,
-.checkbox-group {
+.dosage-chips {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  .dosage-chip {
+    padding: 8px 16px;
+    background: white;
+    border: 1px solid #E2E8F0;
+    border-radius: 20px;
+    font-size: 13px;
+    color: $slate;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+      border-color: $sky;
+      color: $sky-dark;
+    }
+
+    &.active {
+      background: $sky-light;
+      border-color: $sky;
+      color: $sky-dark;
+    }
+  }
 }
 
-// Transitions
+// Modal Transitions
 .modal-enter-active,
 .modal-leave-active {
   transition: opacity 0.3s ease;
@@ -1411,7 +2838,11 @@ export default {
   opacity: 0;
 
   .modal-content {
-    transform: translateY(20px);
+    transform: scale(0.95);
+
+    @media (max-width: 768px) {
+      transform: translateY(100%);
+    }
   }
 }
 </style>

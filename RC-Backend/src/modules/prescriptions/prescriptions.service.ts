@@ -41,6 +41,7 @@ import {
   PrescriptionDrug,
   PrescriptionDrugDocument,
 } from './entities/drug.entity';
+import { Drug, DrugDocument } from '../pharmacy/entities/drug.entity';
 import { FAILED, PENDING, SUCCESS } from '../../core/constants';
 import { PaymentFor, Status } from '../payments/entities/payment.entity';
 import { PaymentHandler } from '../../common/external/payment/payment.handler';
@@ -62,6 +63,8 @@ export class PrescriptionsService {
     private drugModel: Model<PrescriptionDrugDocument>,
     @InjectModel(SpecialistPrescription.name)
     private specialistPrescriptionModel: Model<SpecialistPrescriptionDocument>,
+    @InjectModel(Drug.name)
+    private pharmacyDrugModel: Model<DrugDocument>,
     private taskCron: TaskScheduler,
     private readonly fileUpload: FileUploadHelper,
     private readonly usersService: UsersService,
@@ -100,25 +103,62 @@ export class PrescriptionsService {
     if (specialistPrescription) {
       const specialist = specialistPrescription.specialist_id as any;
 
+      // Fetch drug details (images, manufacturer, dosage_form, route) for all items
+      const drugIds = (specialistPrescription.items || [])
+        .map((item: any) => item.drug_id)
+        .filter(Boolean);
+
+      const drugs = drugIds.length > 0
+        ? await this.pharmacyDrugModel.find({ _id: { $in: drugIds } })
+            .select('_id images manufacturer brand_name dosage_form route pharmacist_counseling_points')
+            .populate('dosage_form', 'name')
+            .populate('route', 'name')
+            .lean()
+        : [];
+
+      // Create map for drug_id to various properties
+      const drugDataMap = new Map<string, any>();
+      for (const drug of drugs) {
+        const drugAny = drug as any;
+        const primaryImage = drugAny.images?.find((img: any) => img.is_primary);
+        const imageUrl = primaryImage?.url || drugAny.images?.[0]?.url || null;
+        const resolvedUrl = imageUrl ? await this.fileUpload.resolveProfileImage(imageUrl) : null;
+
+        drugDataMap.set(drugAny._id.toString(), {
+          drug_image: resolvedUrl,
+          manufacturer: drugAny.manufacturer || drugAny.brand_name || null,
+          dosage_form: drugAny.dosage_form?.name || null,
+          route: drugAny.route?.name || null,
+          counseling_points: drugAny.pharmacist_counseling_points || null,
+        });
+      }
+
       // Transform items to match frontend expected format
-      const transformedItems = (specialistPrescription.items || []).map((item: any) => ({
-        drug: item.drug_name,
-        drug_id: item.drug_id,
-        generic_name: item.generic_name,
-        strength: item.drug_strength,
-        manufacturer: item.manufacturer,
-        dose: {
-          quantity: item.quantity,
-          dosage_form: item.drug_strength || 'tablet',
-        },
-        interval: this.parseFrequency(item.frequency),
-        period: this.parseDuration(item.duration),
-        notes: item.instructions || item.dosage,
-        require_refill: false,
-        refill_info: null,
-        unit_price: item.unit_price,
-        total_price: item.total_price,
-      }));
+      const transformedItems = (specialistPrescription.items || []).map((item: any) => {
+        const drugData = drugDataMap.get(item.drug_id?.toString()) || {};
+        return {
+          drug: item.drug_name,
+          drug_id: item.drug_id,
+          drug_image: drugData.drug_image || null,
+          generic_name: item.generic_name,
+          strength: item.drug_strength,
+          manufacturer: item.manufacturer || drugData.manufacturer || null,
+          dosage_form: drugData.dosage_form || null,
+          route: drugData.route || null,
+          dose: {
+            quantity: item.quantity,
+            dosage_form: drugData.dosage_form || item.dosage || 'tablet',
+          },
+          interval: this.parseFrequency(item.frequency),
+          period: this.parseDuration(item.duration),
+          // Use specialist instructions if available, otherwise show drug counseling points
+          notes: item.instructions || drugData.counseling_points || null,
+          require_refill: false,
+          refill_info: null,
+          unit_price: item.unit_price,
+          total_price: item.total_price,
+        };
+      });
 
       // Transform to match expected format
       return {
@@ -205,12 +245,16 @@ export class PrescriptionsService {
   async getSpecialistPrescriptionsByPatient(patientId: Types.ObjectId) {
     const prescriptions = await this.specialistPrescriptionModel
       .find({ patient_id: patientId })
-      .populate('specialist_id', 'profile.first_name profile.last_name profile.profile_image specializations')
+      .populate('specialist_id', 'profile.first_name profile.last_name profile.profile_photo profile.profile_image specializations')
       .sort({ created_at: -1 })
       .lean();
 
     return Promise.all(
       prescriptions.map(async (rx: any) => {
+        // Resolve profile photo - check both field names
+        if (rx.specialist_id?.profile?.profile_photo) {
+          rx.specialist_id.profile.profile_photo = await this.fileUpload.resolveProfileImage(rx.specialist_id.profile.profile_photo);
+        }
         if (rx.specialist_id?.profile?.profile_image) {
           rx.specialist_id.profile.profile_image = await this.fileUpload.resolveProfileImage(rx.specialist_id.profile.profile_image);
         }

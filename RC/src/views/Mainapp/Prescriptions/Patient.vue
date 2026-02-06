@@ -1,273 +1,301 @@
 <template>
-  <div class="page-content">
-    <top-bar
-      type="title-only"
-      title="My Prescriptions"
-      @open-side-nav="$emit('openSideNav')"
-    />
+  <div class="prescriptions-page">
+    <!-- Mobile Header -->
+    <header class="mobile-header">
+      <button class="menu-btn" @click="$emit('openSideNav')">
+        <v-icon name="hi-menu-alt-2" scale="1.2" />
+      </button>
+      <div class="header-logo">
+        <img src="/RapidCapsule_Logo.png" alt="Rapid Capsule" />
+      </div>
+      <button class="notification-btn" @click="goToNotifications">
+        <v-icon name="hi-bell" scale="1.1" />
+      </button>
+    </header>
 
-    <div class="page-content__body">
+    <!-- Page Content -->
+    <div class="page-content">
       <!-- Loading State -->
-      <div class="loader-container" v-if="loading">
-        <Loader :useOverlay="false" :rounded="true" />
+      <div v-if="loading" class="loading-state">
+        <div class="loading-spinner">
+          <div class="spinner-ring"></div>
+          <v-icon name="ri-capsule-line" scale="1.2" class="spinner-icon" />
+        </div>
+        <p>Loading prescriptions...</p>
       </div>
 
-      <!-- Main Content -->
-      <div v-else class="prescriptions-container">
-        <!-- Stats Cards -->
-        <div class="stats-row">
-          <div class="stat-card">
-            <span class="stat-value">{{ stats.total }}</span>
-            <span class="stat-label">Total</span>
-          </div>
-          <div class="stat-card">
-            <span class="stat-value stat-value--warning">{{ stats.pending_payment }}</span>
-            <span class="stat-label">Pending Payment</span>
-          </div>
-          <div class="stat-card">
-            <span class="stat-value stat-value--info">{{ stats.processing }}</span>
-            <span class="stat-label">Processing</span>
-          </div>
-          <div class="stat-card">
-            <span class="stat-value stat-value--success">{{ stats.delivered }}</span>
-            <span class="stat-label">Delivered</span>
-          </div>
-        </div>
-
-        <!-- Filters -->
-        <div class="filters-section">
-          <div class="search-bar">
-            <rc-icon icon-name="search" size="sm" />
-            <input
-              v-model="searchQuery"
-              type="text"
-              placeholder="Search prescriptions..."
-              @input="handleSearch"
-            />
-            <button v-if="searchQuery" class="clear-btn" @click="clearSearch">
-              <rc-icon icon-name="close" size="xs" />
+      <template v-else>
+        <!-- Hero Section -->
+        <section class="hero">
+          <div class="hero__content">
+            <button class="back-link desktop-only" @click="$router.push('/app/patient/dashboard')">
+              <v-icon name="hi-arrow-left" scale="0.85" />
+              <span>Dashboard</span>
             </button>
-          </div>
-          <div class="filter-tabs">
-            <button
-              v-for="tab in statusTabs"
-              :key="tab.value"
-              :class="['filter-tab', { active: activeTab === tab.value }]"
-              @click="setStatusFilter(tab.value)"
-            >
-              {{ tab.label }}
-            </button>
-          </div>
-        </div>
-
-        <!-- Upload Button -->
-        <div class="actions-section">
-          <button class="btn btn-secondary" @click="showUploadPrescription = true">
-            <rc-icon icon-name="plus" size="sm" />
-            Upload Prescription
-          </button>
-        </div>
-
-        <!-- Results -->
-        <div class="results-section">
-          <div v-if="paginatedPrescriptions.length" class="prescriptions-list">
-            <div
-              v-for="prescription in paginatedPrescriptions"
-              :key="prescription._id"
-              class="prescription-card"
-              @click="viewPrescription(prescription)"
-            >
-              <div class="prescription-card__header">
-                <div class="prescription-info">
-                  <span class="prescription-number">
-                    {{ prescription.prescription_number || `#${prescription._id?.slice(-8).toUpperCase()}` }}
-                  </span>
-                  <span :class="['status', getStatusClass(prescription)]">
-                    {{ formatStatus(prescription) }}
-                  </span>
-                </div>
-                <span class="prescription-date">{{ formatDate(prescription.created_at) }}</span>
+            <div class="hero__badge">
+              <div class="badge-pulse"></div>
+              <v-icon name="ri-capsule-line" />
+              <span>Your Medications</span>
+            </div>
+            <h1 class="hero__title">
+              My<br/>
+              <span class="hero__title-accent">Prescriptions</span>
+            </h1>
+            <p class="hero__subtitle">
+              View and manage all your prescriptions from doctors and uploaded documents.
+            </p>
+            <div class="hero__stats">
+              <div class="hero-stat">
+                <span class="hero-stat__value">{{ stats.total }}</span>
+                <span class="hero-stat__label">Total</span>
               </div>
-
-              <!-- Doctor Info for Internal Prescriptions -->
-              <div class="prescription-card__doctor" v-if="prescription.type === 'INTERNAL'">
-                <div class="doctor-avatar">
-                  <img
-                    v-if="getDoctorPhoto(prescription)"
-                    :src="getDoctorPhoto(prescription)"
-                    :alt="getDoctorName(prescription)"
-                  />
-                  <span v-else>{{ getDoctorInitials(prescription) }}</span>
-                </div>
-                <div class="doctor-info">
-                  <p class="doctor-name">{{ getDoctorName(prescription) }}</p>
-                  <p class="doctor-specialty">{{ getDoctorSpecialty(prescription) }}</p>
-                </div>
+              <div class="hero-stat__divider"></div>
+              <div class="hero-stat">
+                <span class="hero-stat__value hero-stat__value--warning">{{ stats.pending_payment }}</span>
+                <span class="hero-stat__label">Pending</span>
               </div>
-
-              <!-- Order Info for Pharmacy Orders -->
-              <div class="prescription-card__order" v-else-if="prescription.type === 'ORDER'">
-                <div class="order-icon">
-                  <rc-icon icon-name="cart" size="md" />
-                </div>
-                <div class="order-info">
-                  <p class="order-title">{{ getPharmacyName(prescription) }}</p>
-                  <p class="order-subtitle">Order placed by you</p>
-                </div>
+              <div class="hero-stat__divider"></div>
+              <div class="hero-stat">
+                <span class="hero-stat__value hero-stat__value--info">{{ stats.processing }}</span>
+                <span class="hero-stat__label">Processing</span>
               </div>
-
-              <!-- External Prescription Info -->
-              <div class="prescription-card__external" v-else>
-                <div class="external-avatar" v-if="prescription.ocr_data?.doctor_name">
-                  <span>{{ getInitials(prescription.ocr_data.doctor_name) }}</span>
-                </div>
-                <div class="external-icon" v-else>
-                  <rc-icon icon-name="upload-cloud" size="md" />
-                </div>
-                <div class="external-info">
-                  <p class="external-title">{{ prescription.ocr_data?.doctor_name ? 'Dr. ' + prescription.ocr_data.doctor_name : 'Uploaded Prescription' }}</p>
-                  <p class="external-subtitle">{{ prescription.ocr_data?.clinic_name || 'External prescription uploaded by you' }}</p>
-                </div>
-              </div>
-
-              <!-- Medication Tags -->
-              <div class="prescription-card__items" v-if="prescription.items?.length">
-                <div class="items-preview">
-                  <span
-                    v-for="(item, index) in prescription.items?.slice(0, 3)"
-                    :key="index"
-                    class="item-tag"
-                  >
-                    {{ item.drug_name || item.drug }}
-                  </span>
-                  <span v-if="prescription.items?.length > 3" class="more-items">
-                    +{{ prescription.items.length - 3 }} more
-                  </span>
-                </div>
-              </div>
-
-              <!-- Documents for External -->
-              <div class="prescription-card__documents" v-else-if="prescription.documents?.length">
-                <span class="documents-badge">
-                  <rc-icon icon-name="file" size="xs" />
-                  {{ prescription.documents.length }} document(s)
-                </span>
-              </div>
-
-              <div class="prescription-card__footer">
-                <div class="source-info">
-                  <span class="source-badge" :class="prescription.type?.toLowerCase()">
-                    {{ getSourceLabel(prescription) }}
-                  </span>
-                  <span
-                    v-if="prescription.payment_status"
-                    :class="['payment-status', `payment-status--${prescription.payment_status?.toLowerCase()}`]"
-                  >
-                    {{ formatPaymentStatus(prescription.payment_status) }}
-                  </span>
-                </div>
-                <div class="amount" v-if="prescription.total_amount">
-                  NGN {{ formatCurrency(prescription.total_amount) }}
-                </div>
-                <div class="view-link" v-else>
-                  View Details →
-                </div>
+              <div class="hero-stat__divider"></div>
+              <div class="hero-stat">
+                <span class="hero-stat__value hero-stat__value--success">{{ stats.delivered }}</span>
+                <span class="hero-stat__label">Delivered</span>
               </div>
             </div>
           </div>
-
-          <!-- Pagination -->
-          <div v-if="filteredPrescriptions.length > 0" class="pagination-section">
-            <div class="pagination-info">
-              Showing {{ showingFrom }} - {{ showingTo }} of {{ filteredPrescriptions.length }} prescriptions
+          <div class="hero__visual">
+            <div class="prescription-orb">
+              <div class="orb-ring orb-ring--1"></div>
+              <div class="orb-ring orb-ring--2"></div>
+              <div class="orb-ring orb-ring--3"></div>
+              <div class="orb-core">
+                <v-icon name="ri-capsule-line" />
+              </div>
             </div>
-            <div class="pagination-controls" v-if="totalPages > 1">
-              <button
-                class="pagination-btn"
-                :disabled="currentPage === 1"
-                @click="goToPage(1)"
-              >
-                First
+            <div class="floating-icons">
+              <div class="float-icon float-icon--1"><v-icon name="hi-clipboard-check" /></div>
+              <div class="float-icon float-icon--2"><v-icon name="hi-document-text" /></div>
+              <div class="float-icon float-icon--3"><v-icon name="hi-shield-check" /></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Bento Grid -->
+        <section class="bento-grid">
+          <!-- Quick Actions Card -->
+          <div class="bento-card actions-card">
+            <div class="card-header">
+              <h3>Quick Actions</h3>
+            </div>
+            <div class="actions-row">
+              <button class="action-btn" @click="goToUploadPrescription">
+                <div class="action-icon violet">
+                  <v-icon name="hi-upload" scale="1.1" />
+                </div>
+                <span>Upload Prescription</span>
               </button>
-              <button
-                class="pagination-btn"
-                :disabled="currentPage === 1"
-                @click="previousPage"
-              >
-                ← Previous
+              <button class="action-btn" @click="$router.push('/app/patient/prescriptions/whatsapp')">
+                <div class="action-icon whatsapp">
+                  <v-icon name="co-whatsapp" scale="1.1" />
+                </div>
+                <span>WhatsApp Prescription</span>
               </button>
-              <div class="page-numbers">
+              <button class="action-btn" @click="$router.push('/app/patient/pharmacy')">
+                <div class="action-icon emerald">
+                  <v-icon name="hi-shopping-cart" scale="1.1" />
+                </div>
+                <span>Order Medications</span>
+              </button>
+              <button class="action-btn" @click="$router.push('/app/patient/appointmentsv2/book')">
+                <div class="action-icon sky">
+                  <v-icon name="hi-video-camera" scale="1.1" />
+                </div>
+                <span>Consult Doctor</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Filters Card -->
+          <div class="bento-card filters-card">
+            <div class="card-header">
+              <h3>Filter Prescriptions</h3>
+              <span class="results-count">{{ filteredPrescriptions.length }} results</span>
+            </div>
+            <div class="search-bar">
+              <v-icon name="hi-search" scale="0.9" class="search-icon" />
+              <input
+                v-model="searchQuery"
+                type="text"
+                placeholder="Search by drug, doctor, or prescription number..."
+                @input="handleSearch"
+              />
+              <button v-if="searchQuery" class="clear-btn" @click="clearSearch">
+                <v-icon name="hi-x" scale="0.8" />
+              </button>
+            </div>
+            <div class="filter-pills">
+              <button
+                v-for="tab in statusTabs"
+                :key="tab.value"
+                :class="['filter-pill', { active: activeTab === tab.value }]"
+                @click="setStatusFilter(tab.value)"
+              >
+                <span class="pill-label">{{ tab.label }}</span>
+                <span v-if="getTabCount(tab.value) > 0" class="pill-count">{{ getTabCount(tab.value) }}</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Prescriptions List Card -->
+          <div class="bento-card prescriptions-card">
+            <div class="card-header">
+              <h3>{{ activeTabLabel }}</h3>
+              <router-link v-if="activeTab !== 'all'" to="#" class="clear-filter" @click.prevent="setStatusFilter('all')">
+                Clear filter
+                <v-icon name="hi-x" scale="0.7" />
+              </router-link>
+            </div>
+
+            <!-- Prescription Items -->
+            <div v-if="paginatedPrescriptions.length" class="prescriptions-list">
+              <div
+                v-for="prescription in paginatedPrescriptions"
+                :key="prescription._id"
+                class="prescription-item"
+                @click="viewPrescription(prescription)"
+              >
+                <div class="prescription-item__left">
+                  <!-- Doctor/Source Avatar -->
+                  <div class="prescription-avatar" :class="getAvatarClass(prescription)">
+                    <img
+                      v-if="getDoctorPhoto(prescription)"
+                      :src="getDoctorPhoto(prescription)"
+                      :alt="getDoctorName(prescription)"
+                    />
+                    <span v-else-if="prescription.type === 'INTERNAL'">{{ getDoctorInitials(prescription) }}</span>
+                    <v-icon v-else-if="prescription.type === 'ORDER'" name="hi-shopping-cart" scale="1" />
+                    <v-icon v-else name="hi-upload" scale="1" />
+                  </div>
+
+                  <div class="prescription-info">
+                    <div class="prescription-header">
+                      <span class="prescription-number">
+                        {{ prescription.prescription_number || `#${prescription._id?.slice(-8).toUpperCase()}` }}
+                      </span>
+                      <span :class="['status-badge', getStatusClass(prescription)]">
+                        {{ formatStatus(prescription) }}
+                      </span>
+                    </div>
+                    <p class="prescription-source">
+                      {{ getSourceDescription(prescription) }}
+                    </p>
+                    <!-- Linked Appointment Badge -->
+                    <div class="linked-appointment-badge" v-if="hasLinkedAppointment(prescription)">
+                      <v-icon name="hi-video-camera" scale="0.7" />
+                      <span>From Consultation</span>
+                    </div>
+                    <!-- Medication Tags -->
+                    <div class="medication-tags" v-if="prescription.items?.length">
+                      <span
+                        v-for="(item, index) in prescription.items?.slice(0, 2)"
+                        :key="index"
+                        class="med-tag"
+                      >
+                        {{ item.drug_name || item.drug }}
+                      </span>
+                      <span v-if="prescription.items?.length > 2" class="med-tag med-tag--more">
+                        +{{ prescription.items.length - 2 }}
+                      </span>
+                    </div>
+                    <div class="documents-badge" v-else-if="prescription.documents?.length">
+                      <v-icon name="hi-document" scale="0.7" />
+                      <span>{{ prescription.documents.length }} document(s)</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="prescription-item__right">
+                  <span class="prescription-date">{{ formatDate(prescription.created_at) }}</span>
+                  <div class="prescription-amount" v-if="prescription.total_amount">
+                    <span class="currency">NGN</span>
+                    <span class="amount">{{ formatCurrency(prescription.total_amount) }}</span>
+                  </div>
+                  <v-icon name="hi-chevron-right" scale="0.9" class="chevron" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Empty State -->
+            <div v-else class="empty-state">
+              <div class="empty-icon">
+                <v-icon name="ri-capsule-line" scale="2" />
+              </div>
+              <h3>No prescriptions found</h3>
+              <p v-if="searchQuery || activeTab !== 'all'">Try adjusting your search or filters</p>
+              <p v-else>You don't have any prescriptions yet</p>
+              <button class="empty-action" @click="goToUploadPrescription">
+                <v-icon name="hi-upload" scale="0.9" />
+                Upload Prescription
+              </button>
+            </div>
+
+            <!-- Pagination -->
+            <div v-if="filteredPrescriptions.length > itemsPerPage" class="pagination">
+              <div class="pagination-info">
+                Showing {{ showingFrom }}-{{ showingTo }} of {{ filteredPrescriptions.length }}
+              </div>
+              <div class="pagination-controls">
                 <button
-                  v-for="page in visiblePages"
-                  :key="page"
-                  :class="['page-btn', { active: page === currentPage }]"
-                  @click="goToPage(page)"
+                  class="page-btn"
+                  :disabled="currentPage === 1"
+                  @click="previousPage"
                 >
-                  {{ page }}
+                  <v-icon name="hi-chevron-left" scale="0.8" />
+                </button>
+                <div class="page-numbers">
+                  <button
+                    v-for="page in visiblePages"
+                    :key="page"
+                    :class="['page-num', { active: page === currentPage }]"
+                    @click="goToPage(page)"
+                  >
+                    {{ page }}
+                  </button>
+                </div>
+                <button
+                  class="page-btn"
+                  :disabled="currentPage === totalPages"
+                  @click="nextPage"
+                >
+                  <v-icon name="hi-chevron-right" scale="0.8" />
                 </button>
               </div>
-              <button
-                class="pagination-btn"
-                :disabled="currentPage === totalPages"
-                @click="nextPage"
-              >
-                Next →
-              </button>
-              <button
-                class="pagination-btn"
-                :disabled="currentPage === totalPages"
-                @click="goToPage(totalPages)"
-              >
-                Last
-              </button>
             </div>
           </div>
-
-          <!-- Empty State -->
-          <div v-else class="empty-state">
-            <div class="empty-icon">
-              <rc-icon icon-name="prescription" size="xl" />
-            </div>
-            <h3>No prescriptions found</h3>
-            <p v-if="searchQuery || activeTab !== 'all'">Try adjusting your filters</p>
-            <p v-else>You don't have any prescriptions yet</p>
-            <button class="btn btn-primary" @click="showUploadPrescription = true">
-              Upload Prescription
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Upload Modal -->
-      <UploadPrescriptions
-        v-if="showUploadPrescription"
-        @handleClose="handleCloseUpload"
-      />
+        </section>
+      </template>
     </div>
+
+    <!-- Mobile Floating Action Button -->
+    <button class="fab" @click="goToUploadPrescription">
+      <v-icon name="hi-plus" scale="1.2" />
+    </button>
   </div>
 </template>
 
 <script>
-import TopBar from "@/components/Navigation/top-bar";
-import Loader from "@/components/Loader/main-loader.vue";
-import UploadPrescriptions from "./components/main/UploadPrescriptionModal.vue";
-import RcIcon from "@/components/RCIcon";
 import moment from "moment";
 import { debounce } from "lodash";
 import { mapGetters, mapActions } from "vuex";
 
 export default {
   name: "PatientPrescriptions",
-  components: {
-    TopBar,
-    Loader,
-    UploadPrescriptions,
-    RcIcon,
-  },
   emits: ["openSideNav"],
   data() {
     return {
-      showUploadPrescription: false,
       searchQuery: "",
       activeTab: "all",
       currentPage: 1,
@@ -288,6 +316,10 @@ export default {
       loading: "getLoadingState",
       prescriptions: "getPrescriptions",
     }),
+    activeTabLabel() {
+      const tab = this.statusTabs.find(t => t.value === this.activeTab);
+      return tab ? `${tab.label} Prescriptions` : 'All Prescriptions';
+    },
     stats() {
       const prescriptions = this.prescriptions || [];
       return {
@@ -314,7 +346,12 @@ export default {
       if (this.activeTab === 'internal') {
         result = result.filter(p => p.type === 'INTERNAL');
       } else if (this.activeTab === 'orders') {
-        result = result.filter(p => p.type === 'ORDER');
+        // Show prescriptions linked to pharmacy orders
+        result = result.filter(p =>
+          p.type === 'ORDER' ||
+          p.linked_pharmacy_order ||
+          p.used_in_orders?.length > 0
+        );
       } else if (this.activeTab === 'external') {
         result = result.filter(p => p.type === 'EXTERNAL');
       } else if (this.activeTab === 'pending_payment') {
@@ -379,7 +416,6 @@ export default {
       let start = Math.max(1, this.currentPage - Math.floor(maxVisible / 2));
       let end = Math.min(this.totalPages, start + maxVisible - 1);
 
-      // Adjust start if we're near the end
       if (end - start + 1 < maxVisible) {
         start = Math.max(1, end - maxVisible + 1);
       }
@@ -392,36 +428,47 @@ export default {
   },
   watch: {
     searchQuery() {
-      // Reset to page 1 when search query changes
       this.currentPage = 1;
     },
   },
   created() {
-    this.handleSearch = debounce(() => {
-      // Search is reactive via computed, no action needed
-    }, 300);
+    this.handleSearch = debounce(() => {}, 300);
   },
   mounted() {
     this.fetchPrescriptions();
   },
   methods: {
     ...mapActions("prescriptions", ["fetchPrescriptions"]),
+    goToNotifications() {
+      this.$router.push('/app/patient/notifications');
+    },
+    getTabCount(tabValue) {
+      if (tabValue === 'all') return this.prescriptions.length;
+      if (tabValue === 'internal') return this.prescriptions.filter(p => p.type === 'INTERNAL').length;
+      if (tabValue === 'orders') return this.prescriptions.filter(p =>
+        p.type === 'ORDER' || p.linked_pharmacy_order || p.used_in_orders?.length > 0
+      ).length;
+      if (tabValue === 'external') return this.prescriptions.filter(p => p.type === 'EXTERNAL').length;
+      if (tabValue === 'pending_payment') return this.stats.pending_payment;
+      if (tabValue === 'processing') return this.stats.processing;
+      if (tabValue === 'delivered') return this.stats.delivered;
+      return 0;
+    },
     setStatusFilter(status) {
       this.activeTab = status;
-      this.currentPage = 1; // Reset to first page when filter changes
+      this.currentPage = 1;
     },
     clearSearch() {
       this.searchQuery = "";
-      this.currentPage = 1; // Reset to first page when search is cleared
+      this.currentPage = 1;
     },
     goToPage(page) {
       if (page >= 1 && page <= this.totalPages) {
         this.currentPage = page;
-        // Scroll to top of results
         this.$nextTick(() => {
-          const resultsSection = document.querySelector('.results-section');
-          if (resultsSection) {
-            resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          const card = document.querySelector('.prescriptions-card');
+          if (card) {
+            card.scrollIntoView({ behavior: 'smooth', block: 'start' });
           }
         });
       }
@@ -432,56 +479,115 @@ export default {
     previousPage() {
       this.goToPage(this.currentPage - 1);
     },
-    handleCloseUpload() {
-      this.showUploadPrescription = false;
-      this.fetchPrescriptions();
+    goToUploadPrescription() {
+      this.$router.push({
+        path: '/app/patient/pharmacy/upload-prescription',
+        query: { returnTo: '/app/patient/prescriptions' }
+      });
     },
     viewPrescription(prescription) {
+      // Get the ID - check multiple possible fields
+      const id = prescription._id || prescription.id || prescription.prescription_id;
+
+      if (!id) {
+        console.error('Prescription has no ID:', prescription);
+        return;
+      }
+
       if (prescription.type === 'ORDER') {
-        this.$router.push(`/app/patient/pharmacy/orders/${prescription._id}`);
+        this.$router.push(`/app/patient/pharmacy/orders/${id}`);
       } else {
-        this.$router.push(`/app/patient/prescriptions/details/${prescription._id}`);
+        this.$router.push(`/app/patient/prescriptions/details/${id}`);
       }
     },
-    getPharmacyName(prescription) {
-      if (prescription.pharmacy?.name) {
-        return prescription.pharmacy.name;
-      }
-      return 'Pharmacy Order';
+    getAvatarClass(prescription) {
+      if (prescription.type === 'INTERNAL') return 'avatar--doctor';
+      if (prescription.type === 'ORDER') return 'avatar--order';
+      return 'avatar--upload';
     },
-    getSourceLabel(prescription) {
-      if (prescription.type === 'INTERNAL') return 'RapidCapsule';
-      if (prescription.type === 'ORDER') return 'Pharmacy Order';
-      return 'Uploaded';
+    getSourceDescription(prescription) {
+      if (prescription.type === 'INTERNAL') {
+        return this.getDoctorName(prescription) + ' • ' + this.getDoctorSpecialty(prescription);
+      }
+      if (prescription.type === 'ORDER') {
+        return prescription.pharmacy?.name || 'Pharmacy Order';
+      }
+      if (prescription.ocr_data?.doctor_name) {
+        return 'Dr. ' + prescription.ocr_data.doctor_name;
+      }
+      return 'Uploaded prescription';
     },
     getDoctorPhoto(prescription) {
-      if (prescription.prescription_source === 'specialist') {
-        return prescription.specialist_id?.profile?.profile_image ||
-               prescription.specialist_id?.profile?.profile_photo || null;
+      // Check specialist_id with nested profile
+      if (prescription.specialist_id?.profile) {
+        const profile = prescription.specialist_id.profile;
+        const photo = profile.profile_photo || profile.profile_image || profile.profileImage || profile.avatar;
+        if (photo) return photo;
       }
-      return prescription.prescribed_by?.profile?.profile_photo || null;
+      // Check specialist_id with direct photo fields (no nested profile)
+      if (prescription.specialist_id) {
+        const specialist = prescription.specialist_id;
+        const photo = specialist.profile_photo || specialist.profile_image || specialist.profileImage || specialist.avatar;
+        if (photo) return photo;
+      }
+      // Check prescribed_by with nested profile
+      if (prescription.prescribed_by?.profile) {
+        const profile = prescription.prescribed_by.profile;
+        const photo = profile.profile_photo || profile.profile_image || profile.profileImage || profile.avatar;
+        if (photo) return photo;
+      }
+      // Check prescribed_by with direct photo fields
+      if (prescription.prescribed_by) {
+        const prescriber = prescription.prescribed_by;
+        const photo = prescriber.profile_photo || prescriber.profile_image || prescriber.profileImage || prescriber.avatar;
+        if (photo) return photo;
+      }
+      // Check specialist field (some APIs return this)
+      if (prescription.specialist?.profile) {
+        const profile = prescription.specialist.profile;
+        const photo = profile.profile_photo || profile.profile_image || profile.profileImage || profile.avatar;
+        if (photo) return photo;
+      }
+      if (prescription.specialist) {
+        const specialist = prescription.specialist;
+        if (typeof specialist === 'object') {
+          const photo = specialist.profile_photo || specialist.profile_image || specialist.profileImage || specialist.avatar;
+          if (photo) return photo;
+        }
+      }
+      return null;
+    },
+    hasLinkedAppointment(prescription) {
+      return !!(
+        prescription.appointment_id ||
+        prescription.linked_appointments?.length > 0 ||
+        prescription.related_appointments?.length > 0
+      );
     },
     getDoctorName(prescription) {
-      if (prescription.prescription_source === 'specialist') {
-        const specialist = prescription.specialist_id;
-        if (specialist?.profile) {
-          return `Dr. ${specialist.profile.first_name || ''} ${specialist.profile.last_name || ''}`.trim();
+      // Check specialist_id first (for specialist prescriptions)
+      if (prescription.specialist_id?.profile) {
+        const profile = prescription.specialist_id.profile;
+        const firstName = profile.first_name || profile.firstName || '';
+        const lastName = profile.last_name || profile.lastName || '';
+        if (firstName || lastName) {
+          return `Dr. ${firstName} ${lastName}`.trim();
         }
-        return 'Doctor';
       }
-      const doctor = prescription.prescribed_by;
-      if (doctor?.profile) {
-        return `Dr. ${doctor.profile.first_name || ''} ${doctor.profile.last_name || ''}`.trim();
+      // Check prescribed_by (legacy field)
+      if (prescription.prescribed_by?.profile) {
+        const profile = prescription.prescribed_by.profile;
+        const firstName = profile.first_name || profile.firstName || '';
+        const lastName = profile.last_name || profile.lastName || '';
+        if (firstName || lastName) {
+          return `Dr. ${firstName} ${lastName}`.trim();
+        }
       }
       return 'Doctor';
     },
     getDoctorInitials(prescription) {
       const name = this.getDoctorName(prescription);
       return name.replace('Dr. ', '').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'DR';
-    },
-    getInitials(name) {
-      if (!name) return 'RX';
-      return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'RX';
     },
     getDoctorSpecialty(prescription) {
       if (prescription.prescription_source === 'specialist') {
@@ -513,34 +619,25 @@ export default {
 
       const lowerStatus = status.toLowerCase();
 
-      // For approved uploaded prescriptions that haven't been used in an order yet,
-      // show "Ready to Order" to prompt patient action
       if (lowerStatus === 'approved' && prescription.type === 'EXTERNAL' && !prescription.used_in_order) {
         return 'Ready to Order';
       }
 
-      // Map status to user-friendly text
       const statusMap = {
         'pending': 'Pending Review',
         'verifying': 'Verifying',
         'verified': 'Verified',
-        'verification_failed': 'Verification Failed',
+        'verification_failed': 'Failed',
         'under_review': 'Under Review',
         'pharmacist_review': 'Under Review',
         'tier1_processing': 'Processing',
         'tier2_processing': 'Processing',
-        'tier1_passed': 'Processing',
-        'tier2_passed': 'Processing',
-        'tier1_failed': 'Needs Review',
-        'tier2_failed': 'Needs Review',
-        'clarification_needed': 'Clarification Needed',
-        'clarification_received': 'Under Review',
         'approved': 'Approved',
         'rejected': 'Rejected',
         'expired': 'Expired',
-        'used_in_order': 'Used in Order',
-        'pending_acceptance': 'Pending Acceptance',
-        'pending_payment': 'Pending Payment',
+        'used_in_order': 'Used',
+        'pending_acceptance': 'Pending',
+        'pending_payment': 'Pay Now',
         'paid': 'Paid',
         'processing': 'Processing',
         'dispensed': 'Dispensed',
@@ -554,720 +651,1109 @@ export default {
       const status = prescription.status || prescription.verification_status || prescription.payment_status || '';
       const lowerStatus = status.toLowerCase();
 
-      // For approved uploaded prescriptions that haven't been used, use ready_to_order class
       if (lowerStatus === 'approved' && prescription.type === 'EXTERNAL' && !prescription.used_in_order) {
-        return 'status--ready_to_order';
+        return 'status--ready';
       }
 
-      return `status--${lowerStatus.replace(/ /g, '_')}`;
-    },
-    formatPaymentStatus(status) {
-      if (!status) return "N/A";
-      const statuses = {
-        pending: "Pending",
-        processing: "Processing",
-        completed: "Paid",
-        paid: "Paid",
-        failed: "Failed",
-        refunded: "Refunded",
-      };
-      return statuses[status.toLowerCase()] || status;
+      if (['delivered', 'completed', 'approved', 'verified'].includes(lowerStatus)) {
+        return 'status--success';
+      }
+      if (['pending', 'pending_payment', 'pending_acceptance', 'under_review', 'verifying'].includes(lowerStatus)) {
+        return 'status--warning';
+      }
+      if (['processing', 'paid', 'dispensed', 'shipped', 'confirmed'].includes(lowerStatus)) {
+        return 'status--info';
+      }
+      if (['cancelled', 'rejected', 'failed', 'verification_failed', 'expired'].includes(lowerStatus)) {
+        return 'status--error';
+      }
+      return 'status--default';
     },
   },
 };
 </script>
 
 <style scoped lang="scss">
-.page-content {
-  @include flexItem(vertical) {
-    gap: $size-12;
-    flex-grow: 1;
-    max-width: 82.67rem;
-    height: 100vh;
+// Design Tokens
+$sky: #4FC3F7;
+$sky-light: #E1F5FE;
+$sky-dark: #0288D1;
+$sky-darker: #01579B;
+$navy: #0F172A;
+$slate: #334155;
+$gray: #64748B;
+$light-gray: #94A3B8;
+$bg: #F8FAFC;
+$emerald: #10B981;
+$emerald-light: #D1FAE5;
+$amber: #F59E0B;
+$amber-light: #FEF3C7;
+$rose: #F43F5E;
+$rose-light: #FFE4E6;
+$violet: #8B5CF6;
+$violet-light: #EDE9FE;
 
-    @include responsive(tab-landscape) {
-      min-height: 100vh;
+@mixin glass-card {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.prescriptions-page {
+  width: 100%;
+  min-height: 100vh;
+  background: $bg;
+}
+
+// Mobile Header
+.mobile-header {
+  display: none;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  padding: 12px 16px;
+  background: white;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #F1F5F9;
+
+  @media (max-width: 768px) {
+    display: flex;
+  }
+
+  .menu-btn, .notification-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    border: none;
+    background: $bg;
+    color: $slate;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+
+    &:active {
+      background: #E2E8F0;
     }
   }
 
-  &__body {
-    @include flexItem(vertical) {
-      gap: $size-24;
-      overflow-y: auto;
-      overscroll-behavior-block: contain;
-      padding: $size-12 $size-48 $size-24 $size-48;
-      margin-left: $size-8;
-      margin-right: $size-8;
-
-      @include scrollBar(normal);
-
-      @include responsive(tab-landscape) {
-        padding-left: $size-32;
-        padding-right: $size-32;
-        margin-right: $size-0;
-        margin-left: $size-0;
-
-        @include scrollBar(reset);
-      }
-
-      @include responsive(phone) {
-        padding: $size-12 $size-16 $size-24 $size-16;
-        margin-right: $size-0;
-        margin-left: $size-0;
-        overflow-x: visible;
-        overflow-y: auto;
-
-        @include scrollBar(none);
-      }
+  .header-logo {
+    img {
+      height: 28px;
+      width: auto;
     }
   }
 }
 
-.loader-container {
-  width: 100%;
-  height: 100%;
+// Page Content
+.page-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px 32px 100px;
+
+  @media (max-width: 768px) {
+    padding: 16px 16px 120px;
+  }
+}
+
+// Loading State
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  gap: 16px;
+
+  .loading-spinner {
+    position: relative;
+    width: 64px;
+    height: 64px;
+
+    .spinner-ring {
+      position: absolute;
+      inset: 0;
+      border: 3px solid $sky-light;
+      border-top-color: $sky;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    .spinner-icon {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: $sky;
+    }
+  }
+
+  p {
+    color: $gray;
+    font-size: 14px;
+  }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+// ============================================
+// HERO SECTION
+// ============================================
+.hero {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+  padding: 48px 40px 56px;
+  background: linear-gradient(135deg, $sky 0%, $sky-dark 50%, $sky-darker 100%);
+  border-radius: 28px;
+  position: relative;
+  overflow: visible;
+  min-height: 460px;
+  margin-bottom: 24px;
+  box-shadow:
+    0 20px 60px rgba(2, 136, 209, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    padding: 24px 20px;
+    gap: 0;
+    text-align: center;
+    min-height: auto;
+    border-radius: 20px;
+    margin-bottom: 16px;
+  }
+
+  .hero__content {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    z-index: 2;
+  }
+
+  .hero__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    border-radius: 24px;
+    width: fit-content;
+    margin-bottom: 20px;
+    position: relative;
+
+    @media (max-width: 768px) {
+      margin: 0 auto 12px;
+      padding: 6px 14px;
+    }
+
+    .badge-pulse {
+      position: absolute;
+      left: 12px;
+      width: 8px;
+      height: 8px;
+      background: $emerald;
+      border-radius: 50%;
+      animation: pulse 2s ease-in-out infinite;
+
+      &::after {
+        content: '';
+        position: absolute;
+        inset: -4px;
+        background: rgba($emerald, 0.4);
+        border-radius: 50%;
+        animation: pulse-ring 2s ease-out infinite;
+      }
+
+      @media (max-width: 768px) {
+        left: 10px;
+        width: 6px;
+        height: 6px;
+      }
+    }
+
+    svg {
+      width: 16px;
+      height: 16px;
+      color: white;
+      margin-left: 12px;
+
+      @media (max-width: 768px) {
+        width: 14px;
+        height: 14px;
+        margin-left: 10px;
+      }
+    }
+
+    span {
+      font-size: 13px;
+      font-weight: 600;
+      color: white;
+      letter-spacing: 0.3px;
+
+      @media (max-width: 768px) {
+        font-size: 12px;
+      }
+    }
+  }
+
+  .hero__title {
+    font-size: 48px;
+    font-weight: 800;
+    color: white;
+    line-height: 1.1;
+    margin: 0 0 16px;
+    letter-spacing: -1px;
+
+    @media (max-width: 768px) {
+      font-size: 28px;
+      margin: 0 0 8px;
+      letter-spacing: -0.5px;
+
+      br {
+        display: none;
+      }
+    }
+
+    .hero__title-accent {
+      background: linear-gradient(90deg, #fff 0%, rgba(255,255,255,0.7) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+
+      @media (max-width: 768px) {
+        display: inline;
+        margin-left: 6px;
+      }
+    }
+  }
+
+  .hero__subtitle {
+    font-size: 18px;
+    color: white;
+    line-height: 1.6;
+    margin: 0 0 24px;
+    max-width: 400px;
+    opacity: 0.95;
+
+    @media (max-width: 768px) {
+      font-size: 14px;
+      max-width: 100%;
+      margin: 0 0 16px;
+      opacity: 0.9;
+    }
+  }
+
+  .hero__stats {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 16px 20px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 16px;
+    width: fit-content;
+
+    @media (max-width: 768px) {
+      width: 100%;
+      justify-content: space-around;
+      padding: 14px 16px;
+      gap: 0;
+      border-radius: 12px;
+    }
+  }
+
+  .hero__visual {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+
+    @media (max-width: 768px) {
+      display: none;
+    }
+  }
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border: none;
+  border-radius: 12px;
+  padding: 10px 16px;
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  margin-bottom: 20px;
+  width: fit-content;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.25);
+  }
+}
+
+.desktop-only {
+  @media (max-width: 768px) {
+    display: none !important;
+  }
+}
+
+.hero-stat {
+  text-align: center;
+
+  &__value {
+    display: block;
+    font-size: 24px;
+    font-weight: 700;
+    color: white;
+    line-height: 1;
+
+    @media (max-width: 768px) {
+      font-size: 20px;
+    }
+
+    &--warning {
+      color: $amber-light;
+    }
+
+    &--info {
+      color: $sky-light;
+    }
+
+    &--success {
+      color: $emerald-light;
+    }
+  }
+
+  &__label {
+    display: block;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.7);
+    margin-top: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+
+    @media (max-width: 768px) {
+      font-size: 10px;
+    }
+  }
+
+  &__divider {
+    width: 1px;
+    height: 32px;
+    background: rgba(255, 255, 255, 0.2);
+
+    @media (max-width: 768px) {
+      height: 28px;
+    }
+  }
+}
+
+// Orb Animation
+.prescription-orb {
+  position: relative;
+  width: 200px;
+  height: 200px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.prescriptions-container {
-  width: 100%;
-}
+.orb-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.2);
 
-.stats-row {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: $size-12;
-  margin-bottom: $size-24;
-
-  @include responsive(tab-portrait) {
-    grid-template-columns: repeat(2, 1fr);
+  &--1 {
+    width: 100%;
+    height: 100%;
+    animation: spin-slow 20s linear infinite;
   }
 
-  @include responsive(phone) {
-    grid-template-columns: repeat(2, 1fr);
-    gap: $size-8;
-  }
-}
-
-.stat-card {
-  background: $color-white;
-  padding: $size-16;
-  border-radius: $size-12;
-  text-align: center;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-
-  @include responsive(phone) {
-    padding: $size-12;
+  &--2 {
+    width: 80%;
+    height: 80%;
+    animation: spin-slow 15s linear infinite reverse;
   }
 
-  .stat-value {
-    display: block;
-    font-size: $size-28;
-    font-weight: $fw-bold;
-    color: $color-g-21;
-
-    @include responsive(phone) {
-      font-size: $size-22;
-    }
-
-    &--warning {
-      color: #d97706;
-    }
-
-    &--info {
-      color: #2563eb;
-    }
-
-    &--success {
-      color: #059669;
-    }
-  }
-
-  .stat-label {
-    font-size: $size-12;
-    color: $color-g-54;
-
-    @include responsive(phone) {
-      font-size: $size-11;
-    }
+  &--3 {
+    width: 60%;
+    height: 60%;
+    animation: spin-slow 10s linear infinite;
   }
 }
 
-.filters-section {
-  margin-bottom: $size-16;
-}
-
-.search-bar {
+.orb-core {
+  width: 100px;
+  height: 100px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(20px);
+  border-radius: 50%;
   display: flex;
   align-items: center;
-  gap: $size-12;
-  background: $color-white;
-  padding: $size-12 $size-16;
-  border-radius: $size-12;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-  margin-bottom: $size-16;
+  justify-content: center;
+  box-shadow:
+    0 0 40px rgba(255, 255, 255, 0.3),
+    0 0 80px rgba(79, 195, 247, 0.3);
+  animation: pulse-glow 3s ease-in-out infinite;
 
-  input {
-    flex: 1;
-    border: none;
-    outline: none;
-    font-size: $size-15;
-    color: $color-g-21;
+  svg {
+    width: 48px;
+    height: 48px;
+    color: white;
+  }
+}
 
-    &::placeholder {
-      color: $color-g-67;
-    }
+.floating-icons {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.float-icon {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: float 3s ease-in-out infinite;
+
+  svg {
+    width: 20px;
+    height: 20px;
+    color: white;
   }
 
-  .clear-btn {
-    background: none;
-    border: none;
+  &--1 {
+    top: 10%;
+    right: 10%;
+    animation-delay: 0s;
+  }
+
+  &--2 {
+    bottom: 20%;
+    right: 5%;
+    animation-delay: 1s;
+  }
+
+  &--3 {
+    bottom: 10%;
+    left: 10%;
+    animation-delay: 2s;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.1); opacity: 0.8; }
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(1); opacity: 0.8; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 40px rgba(255, 255, 255, 0.3), 0 0 80px rgba(79, 195, 247, 0.3); }
+  50% { box-shadow: 0 0 60px rgba(255, 255, 255, 0.4), 0 0 100px rgba(79, 195, 247, 0.4); }
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+// ============================================
+// BENTO GRID
+// ============================================
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 20px;
+
+  @media (max-width: 1024px) {
+    grid-template-columns: repeat(6, 1fr);
+  }
+
+  @media (max-width: 768px) {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+}
+
+.bento-card {
+  @include glass-card;
+  border-radius: 20px;
+  padding: 20px;
+
+  @media (max-width: 768px) {
+    padding: 16px;
+    border-radius: 16px;
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+
+    @media (max-width: 768px) {
+      margin-bottom: 12px;
+    }
+
+    h3 {
+      font-size: 15px;
+      font-weight: 600;
+      color: $navy;
+      margin: 0;
+    }
+
+    .results-count {
+      font-size: 13px;
+      color: $gray;
+    }
+
+    .clear-filter {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 13px;
+      color: $sky-dark;
+      text-decoration: none;
+      font-weight: 500;
+
+      &:hover {
+        color: $sky-darker;
+      }
+    }
+  }
+}
+
+// Actions Card
+.actions-card {
+  grid-column: span 12;
+
+  @media (max-width: 768px) {
+    display: none; // Hide on mobile, use FAB instead
+  }
+
+  .actions-row {
+    display: flex;
+    gap: 12px;
+  }
+
+  .action-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 20px 16px;
+    background: $bg;
+    border: 1px solid #E2E8F0;
+    border-radius: 14px;
     cursor: pointer;
-    padding: $size-4;
-    color: $color-g-54;
+    transition: all 0.2s;
 
     &:hover {
-      color: $color-g-36;
+      background: white;
+      border-color: $sky;
+      box-shadow: 0 4px 12px rgba($sky, 0.15);
+      transform: translateY(-2px);
+    }
+
+    span {
+      font-size: 13px;
+      font-weight: 500;
+      color: $slate;
+    }
+  }
+
+  .action-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &.sky { background: $sky-light; color: $sky-dark; }
+    &.emerald { background: $emerald-light; color: $emerald; }
+    &.violet { background: $violet-light; color: $violet; }
+    &.amber { background: $amber-light; color: $amber; }
+    &.whatsapp { background: #DCF8C6; color: #25D366; }
+  }
+}
+
+// Filters Card
+.filters-card {
+  grid-column: span 12;
+
+  .search-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: $bg;
+    padding: 12px 16px;
+    border-radius: 12px;
+    border: 1px solid #E2E8F0;
+    margin-bottom: 16px;
+    transition: all 0.2s;
+
+    &:focus-within {
+      border-color: $sky;
+      box-shadow: 0 0 0 3px rgba($sky, 0.1);
+    }
+
+    .search-icon {
+      color: $gray;
+    }
+
+    input {
+      flex: 1;
+      border: none;
+      outline: none;
+      font-size: 14px;
+      color: $navy;
+      background: transparent;
+
+      &::placeholder {
+        color: $light-gray;
+      }
+    }
+
+    .clear-btn {
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      border: none;
+      background: #E2E8F0;
+      color: $gray;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      &:hover {
+        background: $rose-light;
+        color: $rose;
+      }
+    }
+  }
+
+  .filter-pills {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+
+    &::-webkit-scrollbar {
+      height: 4px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: #E2E8F0;
+      border-radius: 2px;
+    }
+  }
+
+  .filter-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 20px;
+    border: 1px solid #E2E8F0;
+    background: white;
+    font-size: 13px;
+    font-weight: 500;
+    color: $slate;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+
+    &:hover {
+      border-color: $sky;
+      color: $sky-dark;
+    }
+
+    &.active {
+      background: linear-gradient(135deg, $sky, $sky-dark);
+      border-color: transparent;
+      color: white;
+
+      .pill-count {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+      }
+    }
+
+    .pill-count {
+      background: $bg;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 600;
+      color: $gray;
     }
   }
 }
 
-.filter-tabs {
-  display: flex;
-  gap: $size-8;
-  overflow-x: auto;
-  padding-bottom: $size-4;
-
-  &::-webkit-scrollbar {
-    height: 4px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: $color-g-85;
-    border-radius: 2px;
-  }
-}
-
-.filter-tab {
-  padding: $size-8 $size-16;
-  border-radius: $size-20;
-  border: 1px solid $color-g-85;
-  background: $color-white;
-  font-size: $size-12;
-  font-weight: $fw-medium;
-  color: $color-g-44;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all 0.2s ease;
-
-  &:hover {
-    border-color: $color-pri;
-    color: $color-pri;
-  }
-
-  &.active {
-    background: $color-pri;
-    border-color: $color-pri;
-    color: $color-white;
-  }
-}
-
-.actions-section {
-  margin-bottom: $size-20;
-  display: flex;
-  justify-content: flex-end;
+// Prescriptions Card
+.prescriptions-card {
+  grid-column: span 12;
 }
 
 .prescriptions-list {
   display: flex;
   flex-direction: column;
-  gap: $size-12;
+  gap: 12px;
 }
 
-.prescription-card {
-  background: $color-white;
-  padding: $size-20;
-  border-radius: $size-12;
+.prescription-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  background: $bg;
+  border-radius: 14px;
+  border: 1px solid #E2E8F0;
   cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  transition: all 0.2s;
 
-  @include responsive(phone) {
-    padding: $size-16;
+  @media (max-width: 768px) {
+    padding: 14px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
   }
 
   &:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    transform: translateY(-1px);
+    background: white;
+    border-color: $sky-light;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    transform: translateX(4px);
   }
 
-  &__header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: $size-16;
-
-    .prescription-info {
-      display: flex;
-      align-items: center;
-      gap: $size-12;
-      flex-wrap: wrap;
-
-      .prescription-number {
-        font-size: $size-16;
-        font-weight: $fw-semi-bold;
-        color: $color-g-21;
-      }
-    }
-
-    .prescription-date {
-      font-size: $size-12;
-      color: $color-g-54;
-    }
-  }
-
-  &__doctor {
+  &__left {
     display: flex;
     align-items: center;
-    gap: $size-12;
-    margin-bottom: $size-16;
+    gap: 14px;
+    flex: 1;
+    min-width: 0;
 
-    .doctor-avatar {
-      width: $size-44;
-      height: $size-44;
-      border-radius: 50%;
-      background: $color-pri;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
-      flex-shrink: 0;
-
-      img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-      }
-
-      span {
-        font-size: $size-15;
-        font-weight: $fw-semi-bold;
-        color: $color-white;
-      }
-    }
-
-    .doctor-name {
-      font-size: $size-15;
-      font-weight: $fw-medium;
-      color: $color-g-21;
-    }
-
-    .doctor-specialty {
-      font-size: $size-12;
-      color: $color-g-54;
+    @media (max-width: 768px) {
+      width: 100%;
     }
   }
 
-  &__external {
+  &__right {
     display: flex;
     align-items: center;
-    gap: $size-12;
-    margin-bottom: $size-16;
+    gap: 16px;
+    flex-shrink: 0;
 
-    .external-icon {
-      width: $size-44;
-      height: $size-44;
-      border-radius: 50%;
-      background: $color-g-92;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: $color-g-54;
+    @media (max-width: 768px) {
+      width: 100%;
+      justify-content: space-between;
+      padding-top: 12px;
+      border-top: 1px solid #E2E8F0;
     }
 
-    .external-avatar {
-      width: $size-44;
-      height: $size-44;
-      border-radius: 50%;
-      background: linear-gradient(135deg, $color-pri 0%, darken($color-pri, 15%) 100%);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      font-weight: $fw-semi-bold;
-      font-size: $size-14;
-    }
+    .chevron {
+      color: $light-gray;
 
-    .external-title {
-      font-size: $size-15;
-      font-weight: $fw-medium;
-      color: $color-g-21;
-    }
-
-    .external-subtitle {
-      font-size: $size-12;
-      color: $color-g-54;
-    }
-  }
-
-  &__order {
-    display: flex;
-    align-items: center;
-    gap: $size-12;
-    margin-bottom: $size-16;
-
-    .order-icon {
-      width: $size-44;
-      height: $size-44;
-      border-radius: 50%;
-      background: #e0f2fe;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #0369a1;
-    }
-
-    .order-title {
-      font-size: $size-15;
-      font-weight: $fw-medium;
-      color: $color-g-21;
-    }
-
-    .order-subtitle {
-      font-size: $size-12;
-      color: $color-g-54;
-    }
-  }
-
-  &__items {
-    margin-bottom: $size-16;
-
-    .items-preview {
-      display: flex;
-      flex-wrap: wrap;
-      gap: $size-6;
-    }
-
-    .item-tag {
-      font-size: $size-12;
-      padding: $size-4 $size-10;
-      background: $color-g-95;
-      border-radius: $size-12;
-      color: $color-g-44;
-    }
-
-    .more-items {
-      font-size: $size-12;
-      padding: $size-4 $size-10;
-      background: $color-g-90;
-      border-radius: $size-12;
-      color: $color-g-54;
-    }
-  }
-
-  &__documents {
-    margin-bottom: $size-16;
-
-    .documents-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: $size-6;
-      font-size: $size-12;
-      padding: $size-4 $size-10;
-      background: #e0f2fe;
-      border-radius: $size-12;
-      color: #0369a1;
-    }
-  }
-
-  &__footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding-top: $size-12;
-    border-top: 1px solid $color-g-92;
-
-    .source-info {
-      display: flex;
-      align-items: center;
-      gap: $size-8;
-    }
-
-    .source-badge {
-      font-size: $size-11;
-      padding: $size-3 $size-8;
-      border-radius: $size-8;
-      font-weight: $fw-medium;
-
-      &.internal {
-        background: rgba($color-pri, 0.1);
-        color: $color-pri;
+      @media (max-width: 768px) {
+        display: none;
       }
-
-      &.external {
-        background: $color-g-90;
-        color: $color-g-54;
-      }
-
-      &.order {
-        background: #e0f2fe;
-        color: #0369a1;
-      }
-    }
-
-    .amount {
-      font-size: $size-18;
-      font-weight: $fw-bold;
-      color: $color-g-21;
-
-      @include responsive(phone) {
-        font-size: $size-16;
-      }
-    }
-
-    .view-link {
-      font-size: $size-14;
-      color: $color-pri;
-      font-weight: $fw-medium;
     }
   }
 }
 
-.status {
-  font-size: $size-11;
-  padding: $size-4 $size-10;
-  border-radius: $size-12;
-  font-weight: $fw-medium;
-  text-transform: capitalize;
+.prescription-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
 
-  &--draft {
-    background: $color-g-90;
-    color: $color-g-44;
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
   }
 
-  &--pending_payment,
-  &--pending {
-    background: rgba(#f59e0b, 0.1);
-    color: #d97706;
+  span {
+    font-size: 16px;
+    font-weight: 600;
+    color: white;
   }
 
-  &--paid,
-  &--processing {
-    background: rgba(#3b82f6, 0.1);
-    color: #2563eb;
+  &.avatar--doctor {
+    background: linear-gradient(135deg, $sky, $sky-dark);
+    color: white;
   }
 
-  &--dispensed,
-  &--shipped {
-    background: rgba(#8b5cf6, 0.1);
-    color: #7c3aed;
+  &.avatar--order {
+    background: $emerald-light;
+    color: $emerald;
   }
 
-  &--delivered {
-    background: rgba(#10b981, 0.1);
-    color: #059669;
+  &.avatar--upload {
+    background: $violet-light;
+    color: $violet;
+  }
+}
+
+.prescription-info {
+  flex: 1;
+  min-width: 0;
+
+  .prescription-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 4px;
+    flex-wrap: wrap;
   }
 
-  &--cancelled {
-    background: rgba(#ef4444, 0.1);
-    color: #dc2626;
+  .prescription-number {
+    font-size: 15px;
+    font-weight: 600;
+    color: $navy;
   }
 
-  &--active,
-  &--uploaded {
-    background: rgba(#10b981, 0.1);
-    color: #059669;
+  .prescription-source {
+    font-size: 13px;
+    color: $gray;
+    margin: 0 0 8px;
+  }
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+
+  &.status--success {
+    background: $emerald-light;
+    color: $emerald;
   }
 
-  &--verifying {
-    background: rgba(#3b82f6, 0.1);
-    color: #2563eb;
+  &.status--warning {
+    background: $amber-light;
+    color: $amber;
   }
 
-  &--verified,
-  &--approved {
-    background: rgba(#10b981, 0.1);
-    color: #059669;
+  &.status--info {
+    background: $sky-light;
+    color: $sky-dark;
   }
 
-  &--ready_to_order {
-    background: linear-gradient(135deg, rgba(#f59e0b, 0.15) 0%, rgba(#f97316, 0.15) 100%);
-    color: #d97706;
-    font-weight: $fw-semi-bold;
+  &.status--error {
+    background: $rose-light;
+    color: $rose;
+  }
+
+  &.status--ready {
+    background: linear-gradient(135deg, $amber-light, #FDE68A);
+    color: #B45309;
     animation: pulse-subtle 2s ease-in-out infinite;
   }
 
-  @keyframes pulse-subtle {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.8; }
-  }
-
-  &--verification_failed,
-  &--rejected {
-    background: rgba(#ef4444, 0.1);
-    color: #dc2626;
-  }
-
-  &--under_review {
-    background: rgba(#f59e0b, 0.1);
-    color: #d97706;
-  }
-
-  &--expired {
-    background: rgba(#6b7280, 0.1);
-    color: #4b5563;
-  }
-
-  &--used_in_order {
-    background: rgba(#8b5cf6, 0.1);
-    color: #7c3aed;
-  }
-
-  &--pending_acceptance {
-    background: rgba(#f59e0b, 0.1);
-    color: #d97706;
+  &.status--default {
+    background: #F1F5F9;
+    color: $slate;
   }
 }
 
-.payment-status {
-  font-size: $size-11;
-  padding: $size-3 $size-8;
-  border-radius: $size-8;
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
 
-  &--pending {
-    background: rgba(#f59e0b, 0.1);
-    color: #d97706;
-  }
+.medication-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 
-  &--completed,
-  &--paid {
-    background: rgba(#10b981, 0.1);
-    color: #059669;
-  }
+  .med-tag {
+    font-size: 11px;
+    padding: 4px 10px;
+    background: white;
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+    color: $slate;
 
-  &--failed {
-    background: rgba(#ef4444, 0.1);
-    color: #dc2626;
+    &--more {
+      background: $sky-light;
+      border-color: $sky-light;
+      color: $sky-dark;
+      font-weight: 500;
+    }
   }
 }
 
+.documents-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: $violet;
+  background: $violet-light;
+  padding: 4px 10px;
+  border-radius: 8px;
+}
+
+.linked-appointment-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: $sky-dark;
+  background: $sky-light;
+  padding: 3px 8px;
+  border-radius: 6px;
+  margin-bottom: 6px;
+}
+
+.prescription-date {
+  font-size: 13px;
+  color: $gray;
+}
+
+.prescription-amount {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+
+  .currency {
+    font-size: 12px;
+    color: $gray;
+  }
+
+  .amount {
+    font-size: 16px;
+    font-weight: 700;
+    color: $navy;
+  }
+}
+
+// Empty State
 .empty-state {
   text-align: center;
-  padding: $size-64 $size-24;
-  color: $color-g-54;
+  padding: 48px 24px;
 
   .empty-icon {
     width: 80px;
     height: 80px;
-    margin: 0 auto $size-16;
-    background: $color-g-95;
+    background: $sky-light;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: $color-g-67;
+    margin: 0 auto 20px;
+    color: $sky;
   }
 
   h3 {
-    font-size: $size-18;
-    font-weight: $fw-semi-bold;
-    color: $color-g-44;
-    margin: $size-16 0 $size-8;
+    font-size: 18px;
+    font-weight: 600;
+    color: $navy;
+    margin: 0 0 8px;
   }
 
   p {
-    font-size: $size-15;
-    margin-bottom: $size-20;
-  }
-}
-
-.btn {
-  padding: $size-12 $size-20;
-  border-radius: $size-8;
-  font-size: $size-14;
-  font-weight: $fw-medium;
-  cursor: pointer;
-  border: none;
-  transition: all 0.2s ease;
-  display: inline-flex;
-  align-items: center;
-  gap: $size-8;
-
-  &-primary {
-    background: $color-pri;
-    color: $color-white;
-
-    &:hover {
-      background: darken($color-pri, 10%);
-    }
+    font-size: 14px;
+    color: $gray;
+    margin: 0 0 20px;
   }
 
-  &-secondary {
-    background: $color-white;
-    color: $color-pri;
-    border: 1px solid $color-pri;
+  .empty-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    background: linear-gradient(135deg, $sky, $sky-dark);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
 
     &:hover {
-      background: rgba($color-pri, 0.05);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba($sky, 0.3);
     }
   }
 }
 
-.pagination-section {
-  margin-top: $size-24;
-  padding: $size-16 0;
-  border-top: 1px solid $color-g-92;
+// Pagination
+.pagination {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #E2E8F0;
   display: flex;
   flex-direction: column;
-  gap: $size-16;
   align-items: center;
-
-  @include responsive(tab-landscape) {
-    flex-direction: column;
-    gap: $size-12;
-  }
+  gap: 16px;
 }
 
 .pagination-info {
-  font-size: $size-14;
-  color: $color-g-54;
-  text-align: center;
+  font-size: 13px;
+  color: $gray;
 }
 
 .pagination-controls {
   display: flex;
   align-items: center;
-  gap: $size-8;
-  flex-wrap: wrap;
-  justify-content: center;
-
-  @include responsive(phone) {
-    gap: $size-6;
-  }
+  gap: 8px;
 }
 
-.pagination-btn {
-  padding: $size-8 $size-16;
-  border: 1px solid $color-g-85;
-  background: $color-white;
-  border-radius: $size-8;
-  font-size: $size-13;
-  font-weight: $fw-medium;
-  color: $color-g-44;
+.page-btn {
+  width: 36px;
+  height: 36px;
+  border: 1px solid #E2E8F0;
+  background: white;
+  border-radius: 10px;
   cursor: pointer;
-  transition: all 0.2s ease;
-
-  @include responsive(phone) {
-    padding: $size-6 $size-12;
-    font-size: $size-12;
-  }
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: $slate;
+  transition: all 0.2s;
 
   &:hover:not(:disabled) {
-    border-color: $color-pri;
-    color: $color-pri;
-    background: rgba($color-pri, 0.05);
+    border-color: $sky;
+    color: $sky-dark;
   }
 
   &:disabled {
@@ -1278,36 +1764,58 @@ export default {
 
 .page-numbers {
   display: flex;
-  gap: $size-4;
+  gap: 4px;
 }
 
-.page-btn {
-  width: $size-36;
-  height: $size-36;
-  border: 1px solid $color-g-85;
-  background: $color-white;
-  border-radius: $size-8;
-  font-size: $size-14;
-  font-weight: $fw-medium;
-  color: $color-g-44;
+.page-num {
+  width: 36px;
+  height: 36px;
+  border: 1px solid #E2E8F0;
+  background: white;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: $slate;
   cursor: pointer;
-  transition: all 0.2s ease;
-
-  @include responsive(phone) {
-    width: $size-32;
-    height: $size-32;
-    font-size: $size-13;
-  }
+  transition: all 0.2s;
 
   &:hover {
-    border-color: $color-pri;
-    color: $color-pri;
+    border-color: $sky;
+    color: $sky-dark;
   }
 
   &.active {
-    background: $color-pri;
-    border-color: $color-pri;
-    color: $color-white;
+    background: linear-gradient(135deg, $sky, $sky-dark);
+    border-color: transparent;
+    color: white;
+  }
+}
+
+// Floating Action Button
+.fab {
+  display: none;
+  position: fixed;
+  bottom: 90px;
+  right: 20px;
+  width: 56px;
+  height: 56px;
+  background: linear-gradient(135deg, $violet, darken($violet, 10%));
+  color: white;
+  border: none;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba($violet, 0.4);
+  cursor: pointer;
+  z-index: 50;
+  transition: all 0.2s;
+
+  @media (max-width: 768px) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &:active {
+    transform: scale(0.95);
   }
 }
 </style>

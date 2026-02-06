@@ -49,11 +49,17 @@ export class TransactionBatch {
   @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'User' })
   from_user: mongoose.Types.ObjectId; // Payer
 
+  @Prop({ type: String })
+  from_name: string; // Payer name (for non-user entities)
+
   @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'UnifiedWallet' })
   from_wallet: mongoose.Types.ObjectId;
 
   @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'User' })
   to_user: mongoose.Types.ObjectId; // Payee
+
+  @Prop({ type: String })
+  to_name: string; // Payee name (for non-user entities like pharmacies)
 
   @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'UnifiedWallet' })
   to_wallet: mongoose.Types.ObjectId;

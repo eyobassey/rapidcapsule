@@ -16,6 +16,7 @@ export enum PaymentFor {
   ADD_CARD = 'Adding Card',
   PRESCRIPTION = 'Prescription',
   WALLET_TOPUP = 'Wallet Topup',
+  PHARMACY_ORDER = 'Pharmacy Order',
 }
 
 @Schema({ timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } })
@@ -49,6 +50,7 @@ export class Payment {
         PaymentFor.ADD_CARD,
         PaymentFor.PRESCRIPTION,
         PaymentFor.WALLET_TOPUP,
+        PaymentFor.PHARMACY_ORDER,
       ],
     },
   })

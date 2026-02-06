@@ -185,9 +185,9 @@
 
           <div v-if="nextAppointment" class="appointment-preview">
             <div class="appointment-header">
-              <div class="appointment-date-badge">
+              <div class="appointment-date-badge" :class="{ 'is-text-date': isTextDate(nextAppointment.start_time) }">
                 <span class="date-day">{{ formatAppointmentDay(nextAppointment.start_time) }}</span>
-                <span class="date-month">{{ formatAppointmentMonth(nextAppointment.start_time) }}</span>
+                <span v-if="formatAppointmentMonth(nextAppointment.start_time)" class="date-month">{{ formatAppointmentMonth(nextAppointment.start_time) }}</span>
               </div>
               <div class="appointment-time-pill">
                 <v-icon name="hi-clock" scale="0.7" />
@@ -943,6 +943,11 @@ const formatAppointmentMonth = (date) => {
   const d = new Date(date);
   if (isToday(d) || isTomorrow(d)) return '';
   return format(d, 'MMM');
+};
+
+const isTextDate = (date) => {
+  const d = new Date(date);
+  return isToday(d) || isTomorrow(d);
 };
 
 const formatAppointmentTime = (dateStr) => {
@@ -2024,12 +2029,13 @@ $violet-light: #EDE9FE;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 56px;
+  min-width: 56px;
   height: 56px;
   background: linear-gradient(135deg, $sky, $sky-dark);
   border-radius: 14px;
   color: white;
   flex-shrink: 0;
+  padding: 0 8px;
 
   .date-day {
     font-size: 20px;
@@ -2042,6 +2048,19 @@ $violet-light: #EDE9FE;
     text-transform: uppercase;
     opacity: 0.9;
     letter-spacing: 0.5px;
+  }
+
+  // When displaying "Today" or "Tomorrow"
+  &.is-text-date {
+    width: auto;
+    padding: 0 16px;
+    border-radius: 28px;
+
+    .date-day {
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
   }
 }
 

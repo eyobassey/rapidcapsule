@@ -408,6 +408,23 @@ export class PharmacyOrderController {
   }
 
   /**
+   * Initialize Paystack payment for an order
+   * Returns authorization_url for redirect-based payment
+   */
+  @Post(':id/initialize-payment')
+  @UseGuards(JwtAuthGuard)
+  async initializePayment(
+    @Param('id') id: string,
+    @Request() req,
+  ) {
+    const result = await this.orderService.initializePaystackPayment(
+      id,
+      req.user.sub,
+    );
+    return sendSuccessResponse('Payment initialized successfully', result);
+  }
+
+  /**
    * Dispense order (pharmacy fulfillment)
    */
   @Patch(':id/dispense')

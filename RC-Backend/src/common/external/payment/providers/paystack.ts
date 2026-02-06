@@ -70,6 +70,7 @@ export class Paystack implements IPaymentInterface {
     this.logger.log(`Initializing transaction for ${email} with callback: ${data.callback_url || 'none'}`);
     this.logger.log(`Request data: ${JSON.stringify(data)}`);
     const response = await post(url, data, { headers: this.headers });
+    this.logger.log(`Paystack response: ${JSON.stringify(response)}`);
     return response;
   }
 

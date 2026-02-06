@@ -19,6 +19,85 @@
         </div>
 
         <div class="form-sections">
+          <!-- Pre-existing Conditions -->
+          <div class="form-section">
+            <h2 class="section-title">Pre-existing Conditions</h2>
+            <p class="section-description">Medical conditions you've been diagnosed with that may affect your healthcare.</p>
+            <div class="condition-list">
+              <div v-for="(condition, index) in preExistingConditions.conditions" :key="index" class="condition-card">
+                <div class="condition-header">
+                  <span class="condition-number">Condition {{ index + 1 }}</span>
+                  <div class="condition-actions">
+                    <button class="edit-btn" @click="editCondition(index)" v-if="editingConditionIndex !== index">
+                      <v-icon name="hi-pencil" scale="0.7" />
+                    </button>
+                    <button class="remove-btn" @click="removeCondition(index)">
+                      <v-icon name="hi-x" scale="0.8" />
+                    </button>
+                  </div>
+                </div>
+                <!-- View mode -->
+                <div v-if="editingConditionIndex !== index" class="condition-view">
+                  <div class="condition-name-display">{{ condition.name }}</div>
+                  <div class="condition-description-display" v-if="condition.description">{{ condition.description }}</div>
+                  <div class="condition-meta">
+                    <span v-if="condition.start_date" class="meta-item">
+                      <v-icon name="hi-calendar" scale="0.7" />
+                      Started: {{ formatDate(condition.start_date) }}
+                    </span>
+                    <span v-if="condition.end_date" class="meta-item">
+                      <v-icon name="hi-calendar" scale="0.7" />
+                      Ended: {{ formatDate(condition.end_date) }}
+                    </span>
+                    <span class="status-badge" :class="condition.is_condition_exists ? 'active' : 'resolved'">
+                      {{ condition.is_condition_exists ? 'Active' : 'Resolved' }}
+                    </span>
+                  </div>
+                </div>
+                <!-- Edit mode -->
+                <div v-else class="condition-fields">
+                  <div class="field-row">
+                    <div class="form-group flex-2">
+                      <label class="form-label">Condition Name <span class="required">*</span></label>
+                      <input type="text" v-model="condition.name" class="form-input" placeholder="e.g., Type 2 Diabetes" />
+                    </div>
+                    <div class="form-group flex-1">
+                      <label class="form-label">Status</label>
+                      <select v-model="condition.is_condition_exists" class="form-select">
+                        <option :value="true">Active (Ongoing)</option>
+                        <option :value="false">Resolved</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Description <span class="required">*</span></label>
+                    <textarea v-model="condition.description" class="form-textarea" rows="2" placeholder="Describe the condition, symptoms, or treatment..."></textarea>
+                  </div>
+                  <div class="field-row">
+                    <div class="form-group flex-1">
+                      <label class="form-label">Start Date</label>
+                      <input type="date" v-model="condition.start_date" class="form-input" />
+                    </div>
+                    <div class="form-group flex-1">
+                      <label class="form-label">End Date</label>
+                      <input type="date" v-model="condition.end_date" class="form-input" :disabled="condition.is_condition_exists" />
+                    </div>
+                  </div>
+                  <div class="edit-actions">
+                    <button class="btn-done" @click="doneEditingCondition">
+                      <v-icon name="hi-check" scale="0.8" />
+                      <span>Done</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <button class="add-btn" @click="addCondition">
+              <v-icon name="hi-plus" scale="0.8" />
+              <span>Add Pre-existing Condition</span>
+            </button>
+          </div>
+
           <!-- Chronic Conditions -->
           <div class="form-section">
             <h2 class="section-title">Chronic Conditions</h2>
@@ -326,11 +405,49 @@ import { usePatientOnboardingState } from './composables/usePatientOnboardingSta
 const router = useRouter();
 const store = useStore();
 const $http = inject('$http');
-const { medicalHistory, completeStep, saveProgress, goToStep } = usePatientOnboardingState();
+const { medicalHistory, preExistingConditions, completeStep, saveProgress, goToStep } = usePatientOnboardingState();
 
 const isSaving = ref(false);
+const editingConditionIndex = ref(null);
 
 const customCondition = ref('');
+
+// Pre-existing Conditions CRUD
+const addCondition = () => {
+  preExistingConditions.conditions.push({
+    name: '',
+    description: '',
+    start_date: '',
+    end_date: '',
+    is_condition_exists: true,
+    file: [],
+  });
+  // Auto-enter edit mode for the new condition
+  editingConditionIndex.value = preExistingConditions.conditions.length - 1;
+};
+
+const editCondition = (index) => {
+  editingConditionIndex.value = index;
+};
+
+const doneEditingCondition = () => {
+  editingConditionIndex.value = null;
+};
+
+const removeCondition = (index) => {
+  preExistingConditions.conditions.splice(index, 1);
+  if (editingConditionIndex.value === index) {
+    editingConditionIndex.value = null;
+  } else if (editingConditionIndex.value > index) {
+    editingConditionIndex.value--;
+  }
+};
+
+const formatDate = (dateStr) => {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+};
 
 const commonConditions = [
   'Diabetes',
@@ -448,7 +565,7 @@ const removeImmunization = (index) => {
 
 // Save medical history to backend
 const saveMedicalHistoryToBackend = async () => {
-  const hasData =
+  const hasMedicalHistoryData =
     medicalHistory.chronic_conditions.length > 0 ||
     medicalHistory.current_medications.length > 0 ||
     medicalHistory.past_surgeries.length > 0 ||
@@ -457,20 +574,41 @@ const saveMedicalHistoryToBackend = async () => {
     medicalHistory.lifestyle.smoking ||
     medicalHistory.lifestyle.alcohol;
 
-  if (!hasData) return true;
+  // Filter valid pre-existing conditions (must have name and description)
+  const validPreExistingConditions = preExistingConditions.conditions.filter(
+    c => c.name && c.description
+  );
+  const hasPreExistingConditions = validPreExistingConditions.length > 0;
+
+  if (!hasMedicalHistoryData && !hasPreExistingConditions) return true;
 
   try {
     isSaving.value = true;
-    await $http.$_updateUser({
-      medical_history: {
+
+    const updatePayload = {};
+
+    if (hasMedicalHistoryData) {
+      updatePayload.medical_history = {
         chronic_conditions: medicalHistory.chronic_conditions,
         current_medications: medicalHistory.current_medications.filter(m => m.name),
         lifestyle: medicalHistory.lifestyle,
         past_surgeries: medicalHistory.past_surgeries.filter(s => s.procedure),
         family_history: medicalHistory.family_history.filter(f => f.condition),
         immunizations: medicalHistory.immunizations.filter(i => i.vaccine),
-      },
-    });
+      };
+    }
+
+    // Always include pre_existing_conditions (even if empty, to allow deletion)
+    updatePayload.pre_existing_conditions = validPreExistingConditions.map(condition => ({
+      name: condition.name,
+      description: condition.description,
+      start_date: condition.start_date || null,
+      end_date: condition.end_date || null,
+      is_condition_exists: condition.is_condition_exists ?? true,
+      file: condition.file || [],
+    }));
+
+    await $http.$_updateUser(updatePayload);
     // Refresh user profile in store
     await store.dispatch('authenticate', localStorage.getItem('token') || sessionStorage.getItem('token'));
     return true;
@@ -501,7 +639,8 @@ const saveAndContinue = async () => {
     medicalHistory.family_history.length > 0 ||
     medicalHistory.immunizations.length > 0 ||
     medicalHistory.lifestyle.smoking ||
-    medicalHistory.lifestyle.alcohol;
+    medicalHistory.lifestyle.alcohol ||
+    preExistingConditions.conditions.filter(c => c.name && c.description).length > 0;
 
   const saved = await saveMedicalHistoryToBackend();
 
@@ -515,6 +654,172 @@ const saveAndContinue = async () => {
 
 <style scoped lang="scss">
 @import './styles/step-common.scss';
+
+.condition-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.condition-card {
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 0.75rem;
+  padding: 1rem;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: #CBD5E1;
+  }
+}
+
+.condition-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+.condition-number {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #0288D1;
+}
+
+.condition-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.edit-btn {
+  padding: 0.375rem;
+  background: #E1F5FE;
+  border: 1px solid #4FC3F7;
+  border-radius: 0.375rem;
+  color: #0288D1;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: #B3E5FC;
+  }
+}
+
+.condition-view {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.condition-name-display {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1A365D;
+}
+
+.condition-description-display {
+  font-size: 0.875rem;
+  color: #64748B;
+  line-height: 1.5;
+}
+
+.condition-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  margin-top: 0.25rem;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: #64748B;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+
+  &.active {
+    background: #FEF3C7;
+    color: #D97706;
+  }
+
+  &.resolved {
+    background: #D1FAE5;
+    color: #059669;
+  }
+}
+
+.condition-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.form-textarea {
+  padding: 0.75rem;
+  background: white;
+  border: 1px solid #E2E8F0;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  color: #1A365D;
+  resize: vertical;
+  min-height: 60px;
+  transition: all 0.2s;
+  font-family: inherit;
+
+  &:focus {
+    outline: none;
+    border-color: #4FC3F7;
+    box-shadow: 0 0 0 3px rgba(79, 195, 247, 0.15);
+  }
+
+  &:hover {
+    border-color: #CBD5E1;
+  }
+
+  &::placeholder {
+    color: #94A3B8;
+  }
+}
+
+.edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.5rem;
+}
+
+.btn-done {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 1rem;
+  background: #0288D1;
+  border: none;
+  border-radius: 0.5rem;
+  color: white;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: #0277BD;
+  }
+}
 
 .chip-selector {
   display: flex;
@@ -725,6 +1030,51 @@ const saveAndContinue = async () => {
 
 /* Mobile Styles */
 @media (max-width: 768px) {
+  .condition-card {
+    padding: 0.875rem;
+  }
+
+  .condition-header {
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+
+  .condition-number {
+    font-size: 0.75rem;
+  }
+
+  .condition-name-display {
+    font-size: 0.9375rem;
+  }
+
+  .condition-description-display {
+    font-size: 0.8125rem;
+  }
+
+  .condition-meta {
+    gap: 0.5rem;
+  }
+
+  .meta-item {
+    font-size: 0.6875rem;
+  }
+
+  .status-badge {
+    font-size: 0.625rem;
+    padding: 0.1875rem 0.5rem;
+  }
+
+  .form-textarea {
+    padding: 0.75rem;
+    font-size: 1rem;
+  }
+
+  .btn-done {
+    width: 100%;
+    justify-content: center;
+    padding: 0.75rem 1rem;
+  }
+
   .chip-selector {
     gap: 0.375rem;
   }

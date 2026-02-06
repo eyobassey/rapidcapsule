@@ -81,7 +81,7 @@ export class AuthService {
 
   async login(user: IJwtPayload) {
     const setting = await this.userSettingService.findOne(user.sub);
-    if (setting.defaults?.twoFA_auth) {
+    if (setting?.defaults?.twoFA_auth) {
       return await this.twoFactorAuthAuthentication(
         setting.defaults.twoFA_medium,
         user.sub,

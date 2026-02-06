@@ -1,523 +1,499 @@
 <template>
-  <div class="upload-prescription">
-    <div class="page-header">
-      <button class="back-btn" @click="$router.back()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="19" y1="12" x2="5" y2="12"/>
-          <polyline points="12 19 5 12 12 5"/>
-        </svg>
+  <div class="upload-prescription-page">
+    <!-- Mobile Header -->
+    <header class="mobile-header">
+      <button class="menu-btn" @click="$router.back()">
+        <v-icon name="hi-arrow-left" scale="1.2" />
       </button>
-      <h1>Upload Prescription</h1>
-    </div>
+      <div class="header-logo">
+        <img src="/RapidCapsule_Logo.png" alt="Rapid Capsule" />
+      </div>
+      <button class="notification-btn" @click="$router.push('/app/patient/notifications')">
+        <v-icon name="hi-bell" scale="1.1" />
+      </button>
+    </header>
 
-    <div class="upload-content">
-      <!-- Upload Section - shown when no file selected -->
-      <div class="upload-section" v-if="!selectedFile && !uploading && !uploadedPrescription">
-        <!-- Upload Area -->
-        <div class="upload-area">
-          <div class="upload-icon-wrapper">
-            <svg class="upload-main-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="17 8 12 3 7 8"/>
-              <line x1="12" y1="3" x2="12" y2="15"/>
-            </svg>
+    <!-- Page Content -->
+    <div class="page-content">
+      <!-- Hero Section -->
+      <section class="hero">
+        <div class="hero__content">
+          <button class="back-link desktop-only" @click="$router.back()">
+            <v-icon name="hi-arrow-left" scale="0.85" />
+            <span>Back</span>
+          </button>
+          <div class="hero__badge">
+            <div class="badge-pulse"></div>
+            <v-icon name="hi-upload" />
+            <span>AI-Powered Verification</span>
           </div>
-          <h3>Upload Your Prescription</h3>
-          <p class="upload-subtitle">Take a photo or select an image/PDF of your prescription</p>
+          <h1 class="hero__title">
+            Upload<br/>
+            <span class="hero__title-accent">Prescription</span>
+          </h1>
+          <p class="hero__subtitle">
+            Upload your prescription and our AI will verify it instantly. Get medications delivered to your door.
+          </p>
+          <div class="hero__features" v-if="!uploadedPrescription">
+            <div class="feature-tag">
+              <v-icon name="hi-lightning-bolt" scale="0.8" />
+              <span>2 min verification</span>
+            </div>
+            <div class="feature-tag">
+              <v-icon name="hi-shield-check" scale="0.8" />
+              <span>Secure & private</span>
+            </div>
+            <div class="feature-tag">
+              <v-icon name="hi-clock" scale="0.8" />
+              <span>24/7 service</span>
+            </div>
+          </div>
+        </div>
+        <div class="hero__visual">
+          <div class="upload-orb">
+            <div class="orb-ring orb-ring--1"></div>
+            <div class="orb-ring orb-ring--2"></div>
+            <div class="orb-ring orb-ring--3"></div>
+            <div class="orb-core">
+              <v-icon name="hi-document-text" v-if="!uploading && !uploadedPrescription" />
+              <v-icon name="hi-refresh" class="spinning" v-else-if="uploading || (uploadedPrescription && verificationStep < 4)" />
+              <v-icon name="hi-check-circle" v-else-if="verificationStatus === 'APPROVED'" />
+              <v-icon name="hi-x-circle" v-else-if="verificationStatus === 'REJECTED'" />
+              <v-icon name="hi-clock" v-else />
+            </div>
+          </div>
+          <div class="floating-icons">
+            <div class="float-icon float-icon--1"><v-icon name="hi-camera" /></div>
+            <div class="float-icon float-icon--2"><v-icon name="hi-photograph" /></div>
+            <div class="float-icon float-icon--3"><v-icon name="ri-capsule-line" /></div>
+          </div>
+        </div>
+      </section>
 
-          <div class="upload-buttons">
-            <button class="upload-btn primary" @click="openFilePicker">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                <circle cx="8.5" cy="8.5" r="1.5"/>
-                <polyline points="21 15 16 10 5 21"/>
-              </svg>
-              Choose File
-            </button>
-            <button class="upload-btn secondary" @click="openCamera">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-                <circle cx="12" cy="13" r="4"/>
-              </svg>
-              Take Photo
-            </button>
+      <!-- Bento Grid -->
+      <section class="bento-grid">
+        <!-- Upload Section Card - shown when no file selected -->
+        <div class="bento-card upload-card" v-if="!selectedFile && !uploading && !uploadedPrescription">
+          <div class="card-header">
+            <v-icon name="hi-cloud-upload" scale="1.1" />
+            <h3>Select Your Prescription</h3>
           </div>
 
-          <p class="file-types">Supported: JPG, PNG, WebP, PDF (Max 10MB)</p>
+          <div class="upload-area" @dragover.prevent @drop.prevent="handleDrop">
+            <div class="upload-icon-wrapper">
+              <div class="upload-icon-bg"></div>
+              <v-icon name="hi-upload" scale="2" />
+            </div>
+            <h4>Drag & drop your file here</h4>
+            <p class="upload-hint">or use the buttons below</p>
+
+            <div class="upload-actions">
+              <button class="upload-btn upload-btn--primary" @click="openFilePicker">
+                <v-icon name="hi-photograph" scale="1" />
+                <span>Choose File</span>
+              </button>
+              <button class="upload-btn upload-btn--secondary" @click="openCamera">
+                <v-icon name="hi-camera" scale="1" />
+                <span>Take Photo</span>
+              </button>
+            </div>
+
+            <p class="file-types">
+              <v-icon name="hi-information-circle" scale="0.8" />
+              Supports: JPG, PNG, WebP, PDF (Max 10MB)
+            </p>
+          </div>
+
+          <input
+            ref="fileInput"
+            type="file"
+            accept="image/jpeg,image/png,image/webp,application/pdf"
+            @change="handleFileSelect"
+            style="display: none"
+          />
+          <input
+            ref="cameraInput"
+            type="file"
+            accept="image/*"
+            capture="environment"
+            @change="handleFileSelect"
+            style="display: none"
+          />
         </div>
 
-        <!-- Requirements -->
-        <div class="requirements-card">
-          <h4>For best results:</h4>
+        <!-- Requirements Card -->
+        <div class="bento-card requirements-card" v-if="!selectedFile && !uploading && !uploadedPrescription">
+          <div class="card-header">
+            <v-icon name="hi-clipboard-check" scale="1.1" />
+            <h3>Requirements</h3>
+          </div>
+
           <ul class="requirements-list">
             <li>
-              <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="20 6 9 17 4 12"/>
-              </svg>
-              Ensure image is clear and readable
+              <div class="check-circle">
+                <v-icon name="hi-check" scale="0.7" />
+              </div>
+              <div class="requirement-text">
+                <strong>Clear & Readable</strong>
+                <span>Ensure text is visible and not blurry</span>
+              </div>
             </li>
             <li>
-              <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="20 6 9 17 4 12"/>
-              </svg>
-              Include doctor's signature
+              <div class="check-circle">
+                <v-icon name="hi-check" scale="0.7" />
+              </div>
+              <div class="requirement-text">
+                <strong>Doctor's Signature</strong>
+                <span>Must include prescriber's signature</span>
+              </div>
             </li>
             <li>
-              <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="20 6 9 17 4 12"/>
-              </svg>
-              Prescription date must be visible
+              <div class="check-circle">
+                <v-icon name="hi-check" scale="0.7" />
+              </div>
+              <div class="requirement-text">
+                <strong>Valid Date</strong>
+                <span>Prescription date must be visible</span>
+              </div>
+            </li>
+            <li>
+              <div class="check-circle">
+                <v-icon name="hi-check" scale="0.7" />
+              </div>
+              <div class="requirement-text">
+                <strong>Complete Information</strong>
+                <span>Patient name and medications listed</span>
+              </div>
             </li>
           </ul>
+
           <div class="time-notice">
-            <svg class="clock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"/>
-              <polyline points="12 6 12 12 16 14"/>
-            </svg>
-            <span>Verification takes up to 2 minutes</span>
-          </div>
-        </div>
-
-        <input
-          ref="fileInput"
-          type="file"
-          accept="image/jpeg,image/png,image/webp,application/pdf"
-          @change="handleFileSelect"
-          style="display: none"
-        />
-        <input
-          ref="cameraInput"
-          type="file"
-          accept="image/*"
-          capture="environment"
-          @change="handleFileSelect"
-          style="display: none"
-        />
-      </div>
-
-      <!-- Selected File Preview - hide once upload is complete -->
-      <div class="file-preview" v-if="selectedFile && !uploading && !uploadedPrescription">
-        <div class="preview-header">
-          <h3>Selected File</h3>
-          <button class="clear-btn" @click="clearSelection">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"/>
-              <line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-          </button>
-        </div>
-        <div class="preview-content">
-          <img
-            v-if="filePreviewUrl && !isPdf"
-            :src="filePreviewUrl"
-            alt="Prescription preview"
-            class="preview-image"
-          />
-          <div v-else-if="isPdf" class="pdf-preview">
-            <svg class="pdf-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-              <polyline points="14 2 14 8 20 8"/>
-              <line x1="16" y1="13" x2="8" y2="13"/>
-              <line x1="16" y1="17" x2="8" y2="17"/>
-              <polyline points="10 9 9 9 8 9"/>
-            </svg>
-            <span>{{ selectedFile.name }}</span>
-          </div>
-        </div>
-        <div class="file-info">
-          <span class="file-name">{{ selectedFile.name }}</span>
-          <span class="file-size">{{ formatFileSize(selectedFile.size) }}</span>
-        </div>
-        <button class="submit-btn" @click="uploadPrescription" :disabled="uploading">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="17 8 12 3 7 8"/>
-            <line x1="12" y1="3" x2="12" y2="15"/>
-          </svg>
-          Upload Prescription
-        </button>
-      </div>
-
-      <!-- Uploading State -->
-      <div class="uploading-state" v-if="uploading">
-        <div class="upload-progress">
-          <div class="spinner"></div>
-          <h3>Uploading...</h3>
-          <p>This may take up to 2 minutes</p>
-        </div>
-      </div>
-
-      <!-- Verification Progress/Results -->
-      <div class="verification-progress" v-if="uploadedPrescription">
-        <div class="status-header" :class="getHeaderClass()">
-          <div class="status-icon">
-            <!-- Check circle for approved -->
-            <svg v-if="verificationStatus === 'APPROVED'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-              <polyline points="22 4 12 14.01 9 11.01"/>
-            </svg>
-            <!-- Alert circle for rejected -->
-            <svg v-else-if="verificationStatus === 'REJECTED'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"/>
-              <line x1="12" y1="8" x2="12" y2="12"/>
-              <line x1="12" y1="16" x2="12.01" y2="16"/>
-            </svg>
-            <!-- Clock for review -->
-            <svg v-else-if="verificationStatus === 'PHARMACIST_REVIEW'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"/>
-              <polyline points="12 6 12 12 16 14"/>
-            </svg>
-            <!-- Loader for processing -->
-            <svg v-else class="spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="12" y1="2" x2="12" y2="6"/>
-              <line x1="12" y1="18" x2="12" y2="22"/>
-              <line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/>
-              <line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/>
-              <line x1="2" y1="12" x2="6" y2="12"/>
-              <line x1="18" y1="12" x2="22" y2="12"/>
-              <line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/>
-              <line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/>
-            </svg>
-          </div>
-          <h3>{{ getHeaderTitle() }}</h3>
-          <p>{{ getHeaderSubtitle() }}</p>
-        </div>
-
-        <!-- Verification Timeline -->
-        <div class="verification-timeline">
-          <div
-            class="timeline-step"
-            :class="{
-              active: verificationStep >= 1,
-              completed: verificationStep > 1,
-            }"
-          >
-            <div class="step-indicator">
-              <svg v-if="verificationStep > 1" class="step-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                <polyline points="20 6 9 17 4 12"/>
-              </svg>
-              <span v-else>1</span>
+            <div class="time-icon">
+              <v-icon name="hi-clock" scale="0.9" />
             </div>
-            <div class="step-content">
-              <h4>Upload Complete</h4>
-              <p>File received successfully</p>
-            </div>
-          </div>
-
-          <div
-            class="timeline-step"
-            :class="{
-              active: verificationStep >= 2,
-              completed: verificationStep > 2,
-            }"
-          >
-            <div class="step-indicator">
-              <div class="step-spinner" v-if="verificationStep === 2"></div>
-              <svg v-else-if="verificationStep > 2" class="step-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                <polyline points="20 6 9 17 4 12"/>
-              </svg>
-              <span v-else>2</span>
-            </div>
-            <div class="step-content">
-              <h4>Initial Checks (Tier 1)</h4>
-              <p>OCR, image quality, format validation</p>
-            </div>
-          </div>
-
-          <div
-            class="timeline-step"
-            :class="{
-              active: verificationStep >= 3,
-              completed: verificationStep > 3,
-            }"
-          >
-            <div class="step-indicator">
-              <div class="step-spinner" v-if="verificationStep === 3"></div>
-              <svg v-else-if="verificationStep > 3" class="step-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                <polyline points="20 6 9 17 4 12"/>
-              </svg>
-              <span v-else>3</span>
-            </div>
-            <div class="step-content">
-              <h4>AI Analysis (Tier 2)</h4>
-              <p>Medication validation, doctor verification</p>
-            </div>
-          </div>
-
-          <div
-            class="timeline-step"
-            :class="{
-              active: verificationStep >= 4,
-              completed: verificationStatus === 'APPROVED',
-              failed: verificationStatus === 'REJECTED',
-              review: verificationStatus === 'PHARMACIST_REVIEW',
-            }"
-          >
-            <div class="step-indicator">
-              <svg v-if="verificationStatus === 'APPROVED'" class="step-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                <polyline points="20 6 9 17 4 12"/>
-              </svg>
-              <svg v-else-if="verificationStatus === 'REJECTED'" class="step-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                <line x1="18" y1="6" x2="6" y2="18"/>
-                <line x1="6" y1="6" x2="18" y2="18"/>
-              </svg>
-              <svg v-else-if="verificationStatus === 'PHARMACIST_REVIEW'" class="step-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                <circle cx="12" cy="7" r="4"/>
-              </svg>
-              <span v-else>4</span>
-            </div>
-            <div class="step-content">
-              <h4>
-                {{ getStatusTitle() }}
-              </h4>
-              <p>{{ getStatusDescription() }}</p>
+            <div class="time-text">
+              <strong>Fast Verification</strong>
+              <span>AI verification takes up to 2 minutes</span>
             </div>
           </div>
         </div>
 
-        <!-- Action Buttons - hide when rejected since rejection section has its own button -->
-        <div class="action-buttons" v-if="verificationStatus !== 'REJECTED'">
-          <button class="secondary-btn" @click="viewDetails" v-if="verificationStatus === 'APPROVED' || verificationStatus === 'PHARMACIST_REVIEW'">
-            View Details
-          </button>
-          <button class="primary-btn" @click="uploadAnother">
-            Upload Another
+        <!-- File Preview Card -->
+        <div class="bento-card preview-card" v-if="selectedFile && !uploading && !uploadedPrescription">
+          <div class="card-header">
+            <v-icon name="hi-document" scale="1.1" />
+            <h3>Selected File</h3>
+            <button class="clear-btn" @click="clearSelection">
+              <v-icon name="hi-x" scale="0.9" />
+            </button>
+          </div>
+
+          <div class="preview-content">
+            <img
+              v-if="filePreviewUrl && !isPdf"
+              :src="filePreviewUrl"
+              alt="Prescription preview"
+              class="preview-image"
+            />
+            <div v-else-if="isPdf" class="pdf-preview">
+              <div class="pdf-icon">
+                <v-icon name="hi-document-text" scale="2.5" />
+              </div>
+              <span class="pdf-name">{{ selectedFile.name }}</span>
+            </div>
+          </div>
+
+          <div class="file-meta">
+            <div class="file-info">
+              <v-icon name="hi-document" scale="0.9" />
+              <span class="file-name">{{ selectedFile.name }}</span>
+            </div>
+            <span class="file-size">{{ formatFileSize(selectedFile.size) }}</span>
+          </div>
+
+          <button class="submit-btn" @click="uploadPrescription" :disabled="uploading">
+            <v-icon name="hi-cloud-upload" scale="1" />
+            <span>Upload & Verify</span>
           </button>
         </div>
 
-        <!-- Review Reasons Section - Show why prescription needs pharmacist review -->
-        <div class="review-reasons-section" v-if="verificationStatus === 'PHARMACIST_REVIEW'">
+        <!-- Uploading State Card -->
+        <div class="bento-card uploading-card" v-if="uploading">
+          <div class="uploading-content">
+            <div class="upload-spinner">
+              <div class="spinner-ring"></div>
+              <v-icon name="hi-cloud-upload" scale="1.5" class="spinner-icon" />
+            </div>
+            <h3>Uploading Your Prescription</h3>
+            <p>Please wait while we securely upload your file...</p>
+            <div class="upload-progress-bar">
+              <div class="progress-fill"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Verification Progress Card -->
+        <div class="bento-card verification-card" v-if="uploadedPrescription">
+          <div class="status-header" :class="getHeaderClass()">
+            <div class="status-icon-wrapper">
+              <v-icon v-if="verificationStatus === 'APPROVED'" name="hi-check-circle" scale="1.8" />
+              <v-icon v-else-if="verificationStatus === 'REJECTED'" name="hi-x-circle" scale="1.8" />
+              <v-icon v-else-if="verificationStatus === 'PHARMACIST_REVIEW'" name="hi-clock" scale="1.8" />
+              <v-icon v-else name="hi-refresh" scale="1.8" class="spinning" />
+            </div>
+            <h3>{{ getHeaderTitle() }}</h3>
+            <p>{{ getHeaderSubtitle() }}</p>
+          </div>
+
+          <!-- Verification Timeline -->
+          <div class="verification-timeline">
+            <div
+              class="timeline-step"
+              :class="{
+                active: verificationStep >= 1,
+                completed: verificationStep > 1,
+              }"
+            >
+              <div class="step-indicator">
+                <v-icon v-if="verificationStep > 1" name="hi-check" scale="0.8" />
+                <span v-else>1</span>
+              </div>
+              <div class="step-content">
+                <h4>Upload Complete</h4>
+                <p>File received successfully</p>
+              </div>
+            </div>
+
+            <div
+              class="timeline-step"
+              :class="{
+                active: verificationStep >= 2,
+                completed: verificationStep > 2,
+                processing: verificationStep === 2,
+              }"
+            >
+              <div class="step-indicator">
+                <div class="step-spinner" v-if="verificationStep === 2"></div>
+                <v-icon v-else-if="verificationStep > 2" name="hi-check" scale="0.8" />
+                <span v-else>2</span>
+              </div>
+              <div class="step-content">
+                <h4>Initial Checks (Tier 1)</h4>
+                <p>OCR, image quality, format validation</p>
+              </div>
+            </div>
+
+            <div
+              class="timeline-step"
+              :class="{
+                active: verificationStep >= 3,
+                completed: verificationStep > 3,
+                processing: verificationStep === 3,
+              }"
+            >
+              <div class="step-indicator">
+                <div class="step-spinner" v-if="verificationStep === 3"></div>
+                <v-icon v-else-if="verificationStep > 3" name="hi-check" scale="0.8" />
+                <span v-else>3</span>
+              </div>
+              <div class="step-content">
+                <h4>AI Analysis (Tier 2)</h4>
+                <p>Medication validation, doctor verification</p>
+              </div>
+            </div>
+
+            <div
+              class="timeline-step"
+              :class="{
+                active: verificationStep >= 4,
+                completed: verificationStatus === 'APPROVED',
+                failed: verificationStatus === 'REJECTED',
+                review: verificationStatus === 'PHARMACIST_REVIEW',
+              }"
+            >
+              <div class="step-indicator">
+                <v-icon v-if="verificationStatus === 'APPROVED'" name="hi-check" scale="0.8" />
+                <v-icon v-else-if="verificationStatus === 'REJECTED'" name="hi-x" scale="0.8" />
+                <v-icon v-else-if="verificationStatus === 'PHARMACIST_REVIEW'" name="hi-user" scale="0.8" />
+                <span v-else>4</span>
+              </div>
+              <div class="step-content">
+                <h4>{{ getStatusTitle() }}</h4>
+                <p>{{ getStatusDescription() }}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="action-buttons" v-if="verificationStatus !== 'REJECTED'">
+            <button class="action-btn action-btn--secondary" @click="viewDetails" v-if="verificationStatus === 'APPROVED' || verificationStatus === 'PHARMACIST_REVIEW'">
+              <v-icon name="hi-eye" scale="0.9" />
+              View Details
+            </button>
+            <button class="action-btn action-btn--primary" @click="uploadAnother">
+              <v-icon name="hi-plus" scale="0.9" />
+              Upload Another
+            </button>
+          </div>
+        </div>
+
+        <!-- Review Notice Card -->
+        <div class="bento-card review-card" v-if="verificationStatus === 'PHARMACIST_REVIEW'">
           <div class="review-header">
-            <svg class="review-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"/>
-              <line x1="12" y1="16" x2="12" y2="12"/>
-              <line x1="12" y1="8" x2="12.01" y2="8"/>
-            </svg>
+            <div class="review-icon">
+              <v-icon name="hi-user-circle" scale="1.3" />
+            </div>
             <h4>Prescription Under Review</h4>
           </div>
 
-          <!-- Patient-friendly summary -->
-          <p class="review-summary" v-if="patientSummary">
-            {{ patientSummary }}
-          </p>
+          <p class="review-summary" v-if="patientSummary">{{ patientSummary }}</p>
           <p class="review-summary" v-else>
             Your prescription requires verification by our pharmacy team before it can be used.
           </p>
 
-          <p class="review-note">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"/>
-              <polyline points="12 6 12 12 16 14"/>
-            </svg>
-            A pharmacist will review within 24 hours. We'll notify you once it's complete.
-          </p>
-        </div>
-
-        <!-- Coverage Status Section -->
-        <div class="coverage-section" v-if="verificationStatus === 'APPROVED' || verificationStatus === 'PHARMACIST_REVIEW'">
-          <!-- Verified Medications from Prescription -->
-          <div class="verified-meds" v-if="verifiedMedications.length > 0">
-            <h4>📋 Medications on Prescription</h4>
-            <div class="med-list">
-              <div
-                v-for="(med, index) in verifiedMedications"
-                :key="index"
-                :class="['med-item', { valid: med.is_valid, invalid: !med.is_valid }]"
-              >
-                <span class="med-status">{{ med.is_valid ? '✓' : '✗' }}</span>
-                <div class="med-details">
-                  <span class="med-name">{{ med.prescription_medication_name }}</span>
-                  <span class="med-match" v-if="med.is_valid && med.matched_drug_name">
-                    → {{ med.matched_drug_name }}
-                  </span>
-                  <span class="med-dosage" v-if="med.dosage">{{ med.dosage }}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Cart Coverage Status -->
-          <div class="cart-coverage" v-if="rxCartItems.length > 0">
-            <h4>🛒 Cart Coverage Status</h4>
-
-            <!-- All Covered -->
-            <div v-if="coverageStatus.allCovered" class="coverage-success">
-              <div class="coverage-icon">✅</div>
-              <div class="coverage-message">
-                <strong>All prescription items covered!</strong>
-                <p>Your prescription covers all {{ coverageStatus.covered.length }} RX item(s) in your cart.</p>
-              </div>
-            </div>
-
-            <!-- Partial Coverage -->
-            <div v-else-if="coverageStatus.covered.length > 0" class="coverage-partial">
-              <div class="coverage-summary">
-                <span class="covered-count">{{ coverageStatus.covered.length }} covered</span>
-                <span class="separator">|</span>
-                <span class="uncovered-count">{{ coverageStatus.uncovered.length }} need prescription</span>
-              </div>
-
-              <!-- Covered Items -->
-              <div class="covered-items" v-if="coverageStatus.covered.length">
-                <h5>✓ Covered Items</h5>
-                <div class="item-chips">
-                  <span v-for="item in coverageStatus.covered" :key="item.drugId" class="item-chip covered">
-                    {{ item.name }}
-                  </span>
-                </div>
-              </div>
-
-              <!-- Uncovered Items -->
-              <div class="uncovered-items" v-if="coverageStatus.uncovered.length">
-                <h5>⚠️ Still Needs Prescription</h5>
-                <div class="item-chips">
-                  <span v-for="item in coverageStatus.uncovered" :key="item.drugId" class="item-chip uncovered">
-                    {{ item.name }}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <!-- No Coverage -->
-            <div v-else class="coverage-none">
-              <div class="coverage-icon">⚠️</div>
-              <div class="coverage-message">
-                <strong>Prescription doesn't cover cart items</strong>
-                <p>The medications on this prescription don't match the RX items in your cart.</p>
-              </div>
-            </div>
-          </div>
-
-          <!-- Action Buttons Based on Coverage -->
-          <div class="coverage-actions">
-            <!-- Returning to checkout flow -->
-            <template v-if="returnTo">
-              <template v-if="coverageStatus.allCovered">
-                <!-- Countdown redirect UI -->
-                <div class="redirect-countdown" v-if="redirectCountdown !== null">
-                  <div class="countdown-header">
-                    <svg class="countdown-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                      <polyline points="22 4 12 14.01 9 11.01"/>
-                    </svg>
-                    <span>All items covered!</span>
-                  </div>
-                  <p class="countdown-text">Redirecting to checkout in <strong>{{ redirectCountdown }}</strong> seconds...</p>
-                  <div class="countdown-progress">
-                    <div class="countdown-bar" :style="{ width: (redirectCountdown / 10) * 100 + '%' }"></div>
-                  </div>
-                  <div class="countdown-actions">
-                    <button class="countdown-btn secondary" @click="cancelRedirect">
-                      Stay Here
-                    </button>
-                    <button class="countdown-btn primary" @click="redirectNow">
-                      Go Now
-                    </button>
-                  </div>
-                </div>
-                <!-- User cancelled redirect -->
-                <div v-else class="redirect-cancelled">
-                  <p>Take your time to review the verification results.</p>
-                  <button class="action-btn primary" @click="redirectNow">
-                    Continue to Checkout
-                  </button>
-                </div>
-              </template>
-              <template v-else-if="coverageStatus.uncovered.length > 0">
-                <div class="action-options">
-                  <button class="action-btn primary" @click="proceedToCheckout">
-                    Continue with Covered Items
-                  </button>
-                  <button class="action-btn secondary" @click="uploadAnother">
-                    Upload Another Prescription
-                  </button>
-                  <button class="action-btn danger" @click="removeUncoveredItems">
-                    Remove Uncovered Items & Checkout
-                  </button>
-                </div>
-              </template>
-            </template>
-
-            <!-- Not from checkout - general navigation -->
-            <template v-else>
-              <template v-if="verificationStatus === 'PHARMACIST_REVIEW'">
-                <p class="review-note">Once the pharmacist approves your prescription, you'll be able to use it for orders.</p>
-                <button class="action-btn secondary" @click="$router.push('/app/patient/prescriptions')">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                    <polyline points="14 2 14 8 20 8"/>
-                    <line x1="16" y1="13" x2="8" y2="13"/>
-                    <line x1="16" y1="17" x2="8" y2="17"/>
-                    <polyline points="10 9 9 9 8 9"/>
-                  </svg>
-                  View My Prescriptions
-                </button>
-              </template>
-              <template v-else-if="rxCartItems.length > 0">
-                <button class="action-btn primary" @click="proceedToCheckout">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="9" cy="21" r="1"/>
-                    <circle cx="20" cy="21" r="1"/>
-                    <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
-                  </svg>
-                  Go to Cart
-                </button>
-              </template>
-              <template v-else>
-                <p>Prescription approved! You can now use it for your orders.</p>
-                <button class="action-btn primary" @click="$router.push('/app/patient/pharmacy')">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
-                    <line x1="3" y1="6" x2="21" y2="6"/>
-                    <path d="M16 10a4 4 0 0 1-8 0"/>
-                  </svg>
-                  Browse Medications
-                </button>
-              </template>
-            </template>
+          <div class="review-notice">
+            <v-icon name="hi-clock" scale="0.9" />
+            <span>A pharmacist will review within 24 hours. We'll notify you once it's complete.</span>
           </div>
         </div>
 
-        <!-- Rejection Details Section -->
-        <div class="rejected-section" v-else-if="verificationStatus === 'REJECTED'">
-          <!-- Patient-friendly rejection summary -->
-          <p class="rejection-summary" v-if="patientSummary">
-            {{ patientSummary }}
-          </p>
-          <p class="rejection-summary" v-else>
-            Your prescription could not be verified. Please try uploading a clearer image or contact support.
-          </p>
+        <!-- Verified Medications Card -->
+        <div class="bento-card medications-card" v-if="(verificationStatus === 'APPROVED' || verificationStatus === 'PHARMACIST_REVIEW') && verifiedMedications.length > 0">
+          <div class="card-header">
+            <v-icon name="ri-capsule-line" scale="1.1" />
+            <h3>Verified Medications</h3>
+            <span class="count-badge">{{ verifiedMedications.length }}</span>
+          </div>
 
-          <button class="browse-btn" @click="uploadAnother">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="23 4 23 10 17 10"/>
-              <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-            </svg>
-            Try Again
-          </button>
+          <div class="med-list">
+            <div
+              v-for="(med, index) in verifiedMedications"
+              :key="index"
+              :class="['med-item', { valid: med.is_valid, invalid: !med.is_valid }]"
+            >
+              <div class="med-status">
+                <v-icon v-if="med.is_valid" name="hi-check-circle" scale="1" />
+                <v-icon v-else name="hi-x-circle" scale="1" />
+              </div>
+              <div class="med-details">
+                <span class="med-name">{{ med.prescription_medication_name }}</span>
+                <span class="med-match" v-if="med.is_valid && med.matched_drug_name">
+                  Matched: {{ med.matched_drug_name }}
+                </span>
+                <span class="med-dosage" v-if="med.dosage">{{ med.dosage }}</span>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
 
-      <!-- Error State -->
-      <div class="error-state" v-if="uploadError">
-        <div class="error-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="12" y1="8" x2="12" y2="12"/>
-            <line x1="12" y1="16" x2="12.01" y2="16"/>
-          </svg>
+        <!-- Cart Coverage Card -->
+        <div class="bento-card coverage-card" v-if="(verificationStatus === 'APPROVED' || verificationStatus === 'PHARMACIST_REVIEW') && rxCartItems.length > 0">
+          <div class="card-header">
+            <v-icon name="hi-shopping-cart" scale="1.1" />
+            <h3>Cart Coverage</h3>
+          </div>
+
+          <!-- All Covered -->
+          <div v-if="coverageStatus.allCovered" class="coverage-success">
+            <div class="coverage-icon">
+              <v-icon name="hi-check-circle" scale="1.5" />
+            </div>
+            <div class="coverage-message">
+              <strong>All prescription items covered!</strong>
+              <p>Your prescription covers all {{ coverageStatus.covered.length }} RX item(s) in your cart.</p>
+            </div>
+            <button class="coverage-btn" @click="proceedToCheckout">
+              <v-icon name="hi-arrow-right" scale="0.9" />
+              Proceed to Checkout
+            </button>
+          </div>
+
+          <!-- Partial Coverage -->
+          <div v-else-if="coverageStatus.covered.length > 0" class="coverage-partial">
+            <div class="coverage-icon warning">
+              <v-icon name="hi-exclamation" scale="1.5" />
+            </div>
+            <div class="coverage-message">
+              <strong>Partial coverage</strong>
+              <p>{{ coverageStatus.covered.length }} of {{ rxCartItems.length }} RX items are covered.</p>
+            </div>
+            <div class="coverage-actions">
+              <button class="coverage-btn secondary" @click="removeUncoveredItems">Remove Uncovered</button>
+              <button class="coverage-btn primary" @click="goToCart">Review Cart</button>
+            </div>
+          </div>
+
+          <!-- No Coverage -->
+          <div v-else class="coverage-none">
+            <div class="coverage-icon error">
+              <v-icon name="hi-x-circle" scale="1.5" />
+            </div>
+            <div class="coverage-message">
+              <strong>No items covered</strong>
+              <p>This prescription doesn't cover items in your cart.</p>
+            </div>
+            <button class="coverage-btn" @click="goToCart">
+              <v-icon name="hi-shopping-cart" scale="0.9" />
+              Go to Cart
+            </button>
+          </div>
         </div>
-        <h3>Upload Failed</h3>
-        <p>{{ uploadError }}</p>
-        <button class="retry-btn" @click="retryUpload">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="23 4 23 10 17 10"/>
-            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-          </svg>
-          Try Again
-        </button>
-      </div>
+
+        <!-- Rejection Card -->
+        <div class="bento-card rejection-card" v-if="verificationStatus === 'REJECTED'">
+          <div class="rejection-header">
+            <div class="rejection-icon">
+              <v-icon name="hi-x-circle" scale="1.5" />
+            </div>
+            <h4>Verification Failed</h4>
+            <p>We couldn't verify your prescription</p>
+          </div>
+
+          <div class="failure-reasons" v-if="dedupedFailureReasons.length > 0">
+            <h5>Reasons:</h5>
+            <ul>
+              <li v-for="(reason, index) in dedupedFailureReasons" :key="index">
+                <v-icon name="hi-exclamation-circle" scale="0.8" />
+                <span>{{ reason.reason }}</span>
+              </li>
+            </ul>
+          </div>
+
+          <div class="rejection-actions">
+            <button class="action-btn action-btn--primary" @click="uploadAnother">
+              <v-icon name="hi-refresh" scale="0.9" />
+              Try Again
+            </button>
+          </div>
+        </div>
+
+        <!-- Redirect Countdown Card -->
+        <div class="bento-card redirect-card" v-if="redirectCountdown !== null && returnTo">
+          <div class="redirect-content">
+            <v-icon name="hi-arrow-circle-right" scale="1.5" />
+            <p>Returning to checkout in <strong>{{ redirectCountdown }}</strong> seconds...</p>
+            <div class="redirect-actions">
+              <button class="redirect-btn secondary" @click="cancelRedirect">Stay Here</button>
+              <button class="redirect-btn primary" @click="redirectNow">Go Now</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Error State Card -->
+        <div class="bento-card error-card" v-if="uploadError">
+          <div class="error-content">
+            <div class="error-icon">
+              <v-icon name="hi-exclamation-circle" scale="2" />
+            </div>
+            <h3>Upload Failed</h3>
+            <p>{{ uploadError }}</p>
+            <button class="retry-btn" @click="retryUpload">
+              <v-icon name="hi-refresh" scale="0.9" />
+              Try Again
+            </button>
+          </div>
+        </div>
+      </section>
     </div>
   </div>
 </template>
@@ -545,21 +521,19 @@ export default defineComponent({
     const verificationStep = ref(1);
     const verificationStatus = ref(null);
     const pollingInterval = ref(null);
-    const returnTo = ref(null); // Store return URL from checkout
-    const verifiedMedications = ref([]); // Medications verified from prescription
-    const failureReasons = ref([]); // Reasons why prescription was rejected (admin detail)
-    const patientSummary = ref(null); // Patient-friendly summary from AI
-    const processingTimeMs = ref(null); // Time taken to verify in milliseconds
-    const redirectCountdown = ref(null); // Countdown timer for redirect
-    const redirectIntervalId = ref(null); // Interval ID for countdown
-    const fraudDetection = ref(null); // Fraud detection results
-    const verificationData = ref(null); // Full verification data
+    const returnTo = ref(null);
+    const verifiedMedications = ref([]);
+    const failureReasons = ref([]);
+    const patientSummary = ref(null);
+    const processingTimeMs = ref(null);
+    const redirectCountdown = ref(null);
+    const redirectIntervalId = ref(null);
+    const fraudDetection = ref(null);
+    const verificationData = ref(null);
 
-    // Get cart items from store
     const cart = computed(() => store.getters['pharmacy/getCart'] || []);
     const rxCartItems = computed(() => cart.value.filter(item => item.requiresPrescription));
 
-    // Calculate coverage - which RX items in cart are covered by this prescription
     const coverageStatus = computed(() => {
       if (!verifiedMedications.value.length || !rxCartItems.value.length) {
         return { covered: [], uncovered: rxCartItems.value, allCovered: false };
@@ -599,17 +573,26 @@ export default defineComponent({
       fileInput.value?.click();
     };
 
+    const handleDrop = (event) => {
+      const file = event.dataTransfer.files[0];
+      if (file) {
+        processFile(file);
+      }
+    };
+
     const handleFileSelect = (event) => {
       const file = event.target.files[0];
-      if (!file) return;
+      if (file) {
+        processFile(file);
+      }
+    };
 
-      // Validate file size (10MB max)
+    const processFile = (file) => {
       if (file.size > 10 * 1024 * 1024) {
         uploadError.value = "File size exceeds 10MB limit";
         return;
       }
 
-      // Validate file type
       const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp", "application/pdf"];
       if (!allowedTypes.includes(file.type)) {
         uploadError.value = "Invalid file type. Please upload JPEG, PNG, WebP, or PDF";
@@ -619,7 +602,6 @@ export default defineComponent({
       selectedFile.value = file;
       uploadError.value = null;
 
-      // Create preview URL for images
       if (file.type.startsWith("image/")) {
         filePreviewUrl.value = URL.createObjectURL(file);
       }
@@ -649,48 +631,45 @@ export default defineComponent({
         formData.append("prescription", selectedFile.value);
         formData.append(
           "uploadSource",
-          cameraInput.value?.value ? "MOBILE_CAMERA" : "FILE_UPLOAD"
+          cameraInput.value?.files?.[0] ? "MOBILE_CAMERA" : "FILE_UPLOAD"
         );
 
         const response = await axios.post(
           "/pharmacy/prescriptions/upload",
           formData,
           {
-            headers: {
-              "Content-Type": "multipart/form-data",
-            },
+            headers: { "Content-Type": "multipart/form-data" },
           }
         );
 
-        // Backend returns { success: true, data: {...} } or { statusCode: 200, data: {...} }
-        console.log("Upload response:", response);
-        console.log("Response data:", response.data);
+        if (response.status === 200 || response.status === 201) {
+          const data = response.data.data || response.data.result;
+          uploadedPrescription.value = data;
+          verificationStep.value = 1;
 
-        const isSuccess = response.status === 200 || response.status === 201 ||
-                          response.data?.statusCode === 200 || response.data?.statusCode === 201 ||
-                          response.data?.success === true;
+          if (data.status) {
+            verificationStatus.value = data.status;
+            if (data.status === "TIER1_PROCESSING") {
+              verificationStep.value = 2;
+            }
+          }
 
-        const uploadData = response.data?.data;
-        console.log("isSuccess:", isSuccess, "uploadData:", uploadData);
-
-        if (isSuccess && uploadData && uploadData.uploadId) {
-          uploadedPrescription.value = uploadData;
-          verificationStep.value = 2;
-          startPollingVerification(uploadData.uploadId);
+          startPolling(data.uploadId);
         } else {
-          console.error("Upload validation failed - isSuccess:", isSuccess, "uploadData:", uploadData, "uploadId:", uploadData?.uploadId);
-          throw new Error(response.data?.message || "Upload failed - invalid response");
+          uploadError.value = response.data.message || "Upload failed";
         }
       } catch (error) {
+        console.error("Upload error:", error);
         uploadError.value =
-          error.response?.data?.message || error.message || "Failed to upload prescription";
+          error.response?.data?.message ||
+          error.message ||
+          "Failed to upload prescription";
       } finally {
         uploading.value = false;
       }
     };
 
-    const startPollingVerification = (uploadId) => {
-      // Poll every 3 seconds for verification status
+    const startPolling = (uploadId) => {
       pollingInterval.value = setInterval(async () => {
         try {
           const response = await axios.get(
@@ -701,41 +680,33 @@ export default defineComponent({
             const data = response.data.data || response.data.result;
             verificationStatus.value = data.status;
 
-            // Store verified medications when available
             if (data.verifiedMedications && data.verifiedMedications.length > 0) {
               verifiedMedications.value = data.verifiedMedications;
             }
 
-            // Store processing time when available
             if (data.verification?.totalProcessingTime) {
               processingTimeMs.value = data.verification.totalProcessingTime;
             }
 
-            // Store fraud detection data
             if (data.verification?.fraudDetection) {
               fraudDetection.value = data.verification.fraudDetection;
             }
 
-            // Store full verification data for display
             verificationData.value = data.verification;
 
-            // Store failure reasons (for review and rejection - admin detail)
             if (data.failureReasons && data.failureReasons.length > 0) {
               failureReasons.value = data.failureReasons;
             }
 
-            // Store patient-friendly summary from AI
             if (data.patientSummary) {
               patientSummary.value = data.patientSummary;
             }
 
-            // Update step based on status
             if (data.status === "TIER1_PROCESSING") {
               verificationStep.value = 2;
             } else if (data.status === "TIER1_PASSED") {
               verificationStep.value = 2;
             } else if (data.status === "TIER1_FAILED") {
-              // Tier 1 failure is a final state - show as rejected
               verificationStep.value = 4;
               verificationStatus.value = "REJECTED";
               if (data.failureReasons) {
@@ -748,7 +719,6 @@ export default defineComponent({
             ) {
               verificationStep.value = 3;
             } else if (data.status === "TIER2_FAILED") {
-              // Tier 2 failure is a final state - show as rejected
               verificationStep.value = 4;
               verificationStatus.value = "REJECTED";
               if (data.failureReasons) {
@@ -777,16 +747,13 @@ export default defineComponent({
       }
     };
 
-    // Watch for approval and auto-redirect if came from checkout
     watch(verificationStatus, (newStatus) => {
       if (newStatus === 'APPROVED' && returnTo.value) {
-        // Store the approved prescription ID for checkout to use
         const prescriptionId = uploadedPrescription.value?.uploadId;
         if (prescriptionId) {
           store.commit('setSelectedPrescription', prescriptionId);
         }
 
-        // Start 10-second countdown before redirect
         redirectCountdown.value = 10;
         redirectIntervalId.value = setInterval(() => {
           redirectCountdown.value--;
@@ -802,7 +769,6 @@ export default defineComponent({
       }
     });
 
-    // Cancel redirect countdown
     const cancelRedirect = () => {
       if (redirectIntervalId.value) {
         clearInterval(redirectIntervalId.value);
@@ -811,7 +777,6 @@ export default defineComponent({
       redirectCountdown.value = null;
     };
 
-    // Redirect now (skip countdown)
     const redirectNow = () => {
       if (redirectIntervalId.value) {
         clearInterval(redirectIntervalId.value);
@@ -850,7 +815,6 @@ export default defineComponent({
       }
     };
 
-    // Header helper functions for dynamic status display
     const getHeaderClass = () => {
       switch (verificationStatus.value) {
         case "APPROVED":
@@ -861,19 +825,6 @@ export default defineComponent({
           return "review";
         default:
           return "processing";
-      }
-    };
-
-    const getHeaderIcon = () => {
-      switch (verificationStatus.value) {
-        case "APPROVED":
-          return "check-circle";
-        case "REJECTED":
-          return "alert-circle";
-        case "PHARMACIST_REVIEW":
-          return "clock";
-        default:
-          return "loader";
       }
     };
 
@@ -890,35 +841,11 @@ export default defineComponent({
       }
     };
 
-    // Format processing time for display
     const formattedProcessingTime = computed(() => {
       if (!processingTimeMs.value) return null;
       const seconds = (processingTimeMs.value / 1000).toFixed(1);
       return `${seconds}s`;
     });
-
-    // Get CSS class for fraud score
-    const getFraudScoreClass = () => {
-      if (!fraudDetection.value) return '';
-      const score = fraudDetection.value.score || 0;
-      if (score >= 80) return 'critical';
-      if (score >= 60) return 'high';
-      if (score >= 40) return 'medium';
-      return 'low';
-    };
-
-    // Format risk level for display
-    const formatRiskLevel = (level) => {
-      if (!level) return 'Unknown';
-      const labels = {
-        'CRITICAL': 'Critical Risk',
-        'HIGH': 'High Risk',
-        'MEDIUM': 'Medium Risk',
-        'LOW': 'Low Risk',
-        'MINIMAL': 'Minimal Risk'
-      };
-      return labels[level] || level.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
-    };
 
     const getHeaderSubtitle = () => {
       const timeStr = formattedProcessingTime.value ? ` in ${formattedProcessingTime.value}` : '';
@@ -934,7 +861,6 @@ export default defineComponent({
       }
     };
 
-    // De-duplicate failure reasons (avoid showing same issue from both tier checks and fraud flags)
     const dedupedFailureReasons = computed(() => {
       if (!failureReasons.value || failureReasons.value.length === 0) return [];
 
@@ -942,7 +868,6 @@ export default defineComponent({
       const deduped = [];
 
       for (const reason of failureReasons.value) {
-        // Create a key based on the type of issue (normalize similar names)
         const normalizedReason = reason.reason.toLowerCase().replace(/[^a-z]/g, '');
         const key = normalizedReason.includes('duplicate') ? 'duplicate' : normalizedReason;
 
@@ -957,9 +882,7 @@ export default defineComponent({
 
     const viewDetails = () => {
       if (uploadedPrescription.value?.uploadId) {
-        router.push(
-          `/pharmacy/prescriptions/${uploadedPrescription.value.uploadId}`
-        );
+        router.push(`/app/patient/prescriptions/details/${uploadedPrescription.value.uploadId}`);
       }
     };
 
@@ -981,10 +904,8 @@ export default defineComponent({
     };
 
     onMounted(() => {
-      // Check if we came from checkout (or another page) and need to return
       returnTo.value = route.query.returnTo || null;
 
-      // Check if we need to show camera directly
       const showCamera = route.query.camera;
       if (showCamera === "true") {
         setTimeout(() => openCamera(), 300);
@@ -1001,22 +922,18 @@ export default defineComponent({
       }
     });
 
-    // Navigation functions for coverage actions
     const goToCart = () => {
       router.push('/app/patient/pharmacy/cart');
     };
 
     const removeUncoveredItems = async () => {
-      // Remove all uncovered RX items from cart
       for (const item of coverageStatus.value.uncovered) {
         await store.dispatch('pharmacy/removeFromCart', item.drugId);
       }
-      // Then go to cart
       goToCart();
     };
 
     const proceedToCheckout = () => {
-      // Store the prescription and go to cart
       const prescriptionId = uploadedPrescription.value?.uploadId;
       if (prescriptionId) {
         router.push(`/app/patient/pharmacy/cart?prescriptionId=${prescriptionId}`);
@@ -1042,6 +959,7 @@ export default defineComponent({
       isPdf,
       openCamera,
       openFilePicker,
+      handleDrop,
       handleFileSelect,
       clearSelection,
       formatFileSize,
@@ -1049,7 +967,6 @@ export default defineComponent({
       getStatusTitle,
       getStatusDescription,
       getHeaderClass,
-      getHeaderIcon,
       getHeaderTitle,
       getHeaderSubtitle,
       dedupedFailureReasons,
@@ -1068,1441 +985,1473 @@ export default defineComponent({
       redirectNow,
       fraudDetection,
       verificationData,
-      getFraudScoreClass,
-      formatRiskLevel,
     };
   },
 });
 </script>
 
 <style scoped lang="scss">
-.upload-prescription {
-  min-height: 100vh;
-  background: $color-g-95;
-  padding-bottom: $size-80;
-  overflow-y: auto;
+// Design Tokens (matching prescriptions page)
+$sky: #4FC3F7;
+$sky-light: #E1F5FE;
+$sky-dark: #0288D1;
+$sky-darker: #01579B;
+$navy: #0F172A;
+$slate: #334155;
+$gray: #64748B;
+$light-gray: #94A3B8;
+$bg: #F8FAFC;
+$emerald: #10B981;
+$emerald-light: #D1FAE5;
+$amber: #F59E0B;
+$amber-light: #FEF3C7;
+$rose: #F43F5E;
+$rose-light: #FFE4E6;
+$violet: #8B5CF6;
+$violet-light: #EDE9FE;
+
+@mixin glass-card {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
 }
 
-.page-header {
-  display: flex;
-  align-items: center;
-  gap: $size-12;
-  padding: $size-16;
-  background: $color-white;
-  border-bottom: 1px solid $color-g-85;
+.upload-prescription-page {
+  width: 100%;
+  min-height: 100vh;
+  background: $bg;
+}
+
+// Mobile Header
+.mobile-header {
+  display: none;
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 100;
+  padding: 12px 16px;
+  background: white;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #F1F5F9;
 
-  .back-btn {
-    width: $size-40;
-    height: $size-40;
-    border-radius: 50%;
+  @media (max-width: 768px) {
+    display: flex;
+  }
+
+  .menu-btn, .notification-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
     border: none;
-    background: $color-g-95;
+    background: $bg;
+    color: $slate;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
 
-    svg {
-      width: $size-20;
-      height: $size-20;
-      color: $color-g-21;
+    &:active {
+      background: #E2E8F0;
     }
   }
 
-  h1 {
-    font-size: $size-18;
-    font-weight: 600;
-    color: $color-g-21;
-  }
-}
-
-.upload-content {
-  padding: $size-16;
-}
-
-// New Upload Section Styles
-.upload-section {
-  .upload-area {
-    background: $color-white;
-    border-radius: $size-16;
-    padding: $size-32 $size-24;
-    text-align: center;
-    margin-bottom: $size-16;
-    border: 2px dashed $color-g-85;
-
-    .upload-icon-wrapper {
-      width: $size-64;
-      height: $size-64;
-      border-radius: 50%;
-      background: rgba($color-pri, 0.1);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto $size-16;
-
-      .upload-main-icon {
-        width: $size-32;
-        height: $size-32;
-        color: $color-pri;
-      }
-    }
-
-    h3 {
-      font-size: $size-18;
-      font-weight: 600;
-      color: $color-g-21;
-      margin-bottom: $size-8;
-    }
-
-    .upload-subtitle {
-      font-size: $size-14;
-      color: $color-g-67;
-      margin-bottom: $size-20;
-    }
-
-    .upload-buttons {
-      display: flex;
-      gap: $size-12;
-      justify-content: center;
-      margin-bottom: $size-16;
-
-      .upload-btn {
-        display: flex;
-        align-items: center;
-        gap: $size-8;
-        padding: $size-12 $size-20;
-        border-radius: $size-10;
-        font-size: $size-14;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        border: none;
-
-        svg {
-          width: $size-18;
-          height: $size-18;
-          flex-shrink: 0;
-        }
-
-        &.primary {
-          background: $color-pri;
-          color: white;
-
-          &:hover {
-            background: darken($color-pri, 8%);
-          }
-        }
-
-        &.secondary {
-          background: $color-g-95;
-          color: $color-g-21;
-
-          &:hover {
-            background: $color-g-90;
-          }
-        }
-      }
-    }
-
-    .file-types {
-      font-size: $size-12;
-      color: $color-g-67;
-      margin: 0;
-    }
-  }
-
-  .requirements-card {
-    background: $color-white;
-    border-radius: $size-12;
-    padding: $size-16;
-
-    h4 {
-      font-size: $size-14;
-      font-weight: 600;
-      color: $color-g-21;
-      margin-bottom: $size-12;
-    }
-
-    .requirements-list {
-      list-style: none;
-      padding: 0;
-      margin: 0 0 $size-16 0;
-
-      li {
-        display: flex;
-        align-items: center;
-        gap: $size-8;
-        font-size: $size-13;
-        color: $color-g-44;
-        padding: $size-6 0;
-
-        .check-icon {
-          width: $size-16;
-          height: $size-16;
-          flex-shrink: 0;
-          stroke: $color-denote-green;
-        }
-      }
-    }
-
-    .time-notice {
-      display: flex;
-      align-items: center;
-      gap: $size-8;
-      padding: $size-12;
-      background: rgba($color-pri, 0.05);
-      border-radius: $size-8;
-      font-size: $size-13;
-      color: $color-pri;
-
-      .clock-icon {
-        width: $size-16;
-        height: $size-16;
-        flex-shrink: 0;
-        stroke: $color-pri;
-      }
+  .header-logo {
+    img {
+      height: 28px;
+      width: auto;
     }
   }
 }
 
-// Legacy styles (keeping for backwards compatibility)
-.upload-options {
+// Page Content
+.page-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px 32px 100px;
+
+  @media (max-width: 768px) {
+    padding: 16px 16px 120px;
+  }
+}
+
+// ============================================
+// HERO SECTION
+// ============================================
+.hero {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: $size-16;
+  gap: 32px;
+  padding: 48px 40px 56px;
+  background: linear-gradient(135deg, $sky 0%, $sky-dark 50%, $sky-darker 100%);
+  border-radius: 28px;
+  position: relative;
+  overflow: visible;
+  min-height: 400px;
+  margin-bottom: 24px;
+  box-shadow:
+    0 20px 60px rgba(2, 136, 209, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.1) inset;
 
-  .upload-option {
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    padding: 24px 20px;
+    gap: 0;
+    text-align: center;
+    min-height: auto;
+    border-radius: 20px;
+    margin-bottom: 16px;
+  }
+
+  .hero__content {
     display: flex;
     flex-direction: column;
+    justify-content: center;
+    z-index: 2;
+  }
+
+  .back-link {
+    display: inline-flex;
     align-items: center;
-    gap: $size-12;
-    padding: $size-24;
-    background: $color-white;
-    border: 2px dashed $color-g-85;
-    border-radius: $size-16;
+    gap: 6px;
+    color: rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
     cursor: pointer;
-    transition: all 0.2s ease;
+    width: fit-content;
+    margin-bottom: 16px;
+    transition: all 0.2s;
 
     &:hover {
-      border-color: $color-pri;
-      background: rgba($color-pri, 0.02);
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+    }
+  }
+
+  .desktop-only {
+    @media (max-width: 768px) {
+      display: none;
+    }
+  }
+
+  .hero__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    border-radius: 24px;
+    width: fit-content;
+    margin-bottom: 20px;
+    position: relative;
+
+    @media (max-width: 768px) {
+      margin: 0 auto 12px;
+      padding: 6px 14px;
     }
 
-    .option-icon {
-      width: $size-56;
-      height: $size-56;
+    .badge-pulse {
+      position: absolute;
+      left: 12px;
+      width: 8px;
+      height: 8px;
+      background: $emerald;
       border-radius: 50%;
-      background: rgba($color-pri, 0.1);
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      animation: pulse 2s ease-in-out infinite;
 
-      svg {
-        width: $size-28;
-        height: $size-28;
-        color: $color-pri;
+      &::after {
+        content: '';
+        position: absolute;
+        inset: -4px;
+        background: rgba($emerald, 0.4);
+        border-radius: 50%;
+        animation: pulse-ring 2s ease-out infinite;
       }
+    }
+
+    svg {
+      width: 16px;
+      height: 16px;
+      color: white;
+      margin-left: 12px;
     }
 
     span {
-      font-size: $size-14;
+      font-size: 13px;
+      font-weight: 600;
+      color: white;
+    }
+  }
+
+  .hero__title {
+    font-size: 48px;
+    font-weight: 800;
+    color: white;
+    line-height: 1.1;
+    margin-bottom: 16px;
+    letter-spacing: -1px;
+
+    @media (max-width: 768px) {
+      font-size: 32px;
+      margin-bottom: 12px;
+    }
+
+    &-accent {
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.7));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+  }
+
+  .hero__subtitle {
+    font-size: 16px;
+    color: rgba(255, 255, 255, 0.85);
+    line-height: 1.6;
+    max-width: 400px;
+    margin-bottom: 24px;
+
+    @media (max-width: 768px) {
+      font-size: 14px;
+      margin: 0 auto 20px;
+    }
+  }
+
+  .hero__features {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+
+    @media (max-width: 768px) {
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .feature-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      font-size: 12px;
       font-weight: 500;
-      color: $color-g-21;
+      color: rgba(255, 255, 255, 0.9);
+
+      svg {
+        width: 14px;
+        height: 14px;
+      }
     }
   }
 }
 
-.file-preview {
-  background: $color-white;
-  border-radius: $size-16;
-  overflow: hidden;
+// Hero Visual
+.hero__visual {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
-  .preview-header {
+  @media (max-width: 768px) {
+    display: none;
+  }
+}
+
+.upload-orb {
+  position: relative;
+  width: 280px;
+  height: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  .orb-ring {
+    position: absolute;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+
+    &--1 {
+      width: 100%;
+      height: 100%;
+      animation: orbit 20s linear infinite;
+    }
+
+    &--2 {
+      width: 80%;
+      height: 80%;
+      animation: orbit 15s linear infinite reverse;
+    }
+
+    &--3 {
+      width: 60%;
+      height: 60%;
+      animation: orbit 10s linear infinite;
+    }
+  }
+
+  .orb-core {
+    width: 100px;
+    height: 100px;
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(20px);
+    border-radius: 50%;
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    padding: $size-16;
-    border-bottom: 1px solid $color-g-95;
+    justify-content: center;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+
+    svg {
+      width: 40px;
+      height: 40px;
+      color: white;
+    }
+  }
+}
+
+.floating-icons {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+
+  .float-icon {
+    position: absolute;
+    width: 48px;
+    height: 48px;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: float 6s ease-in-out infinite;
+
+    svg {
+      width: 20px;
+      height: 20px;
+      color: white;
+    }
+
+    &--1 {
+      top: 10%;
+      right: 5%;
+      animation-delay: 0s;
+    }
+
+    &--2 {
+      bottom: 20%;
+      right: 0;
+      animation-delay: 2s;
+    }
+
+    &--3 {
+      bottom: 10%;
+      left: 5%;
+      animation-delay: 4s;
+    }
+  }
+}
+
+// ============================================
+// BENTO GRID
+// ============================================
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
+.bento-card {
+  @include glass-card;
+  border-radius: 20px;
+  padding: 24px;
+
+  @media (max-width: 768px) {
+    padding: 20px;
+    border-radius: 16px;
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+
+    svg {
+      color: $sky;
+    }
 
     h3 {
-      font-size: $size-16;
+      font-size: 16px;
       font-weight: 600;
-      color: $color-g-21;
+      color: $navy;
+      flex: 1;
+    }
+
+    .count-badge {
+      background: $sky-light;
+      color: $sky-dark;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
     }
 
     .clear-btn {
-      width: $size-32;
-      height: $size-32;
-      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
       border: none;
-      background: $color-g-95;
+      background: $rose-light;
+      color: $rose;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
+      transition: all 0.2s;
 
-      svg {
-        width: $size-16;
-        height: $size-16;
-        color: $color-g-44;
+      &:hover {
+        background: $rose;
+        color: white;
+      }
+    }
+  }
+}
+
+// Upload Card
+.upload-card {
+  grid-column: span 2;
+
+  @media (max-width: 768px) {
+    grid-column: span 1;
+  }
+}
+
+.upload-area {
+  border: 2px dashed rgba($sky, 0.3);
+  border-radius: 16px;
+  padding: 40px 20px;
+  text-align: center;
+  background: rgba($sky-light, 0.3);
+  transition: all 0.3s;
+
+  &:hover {
+    border-color: $sky;
+    background: rgba($sky-light, 0.5);
+  }
+
+  .upload-icon-wrapper {
+    position: relative;
+    display: inline-flex;
+    margin-bottom: 16px;
+
+    .upload-icon-bg {
+      position: absolute;
+      inset: -12px;
+      background: rgba($sky, 0.1);
+      border-radius: 50%;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    svg {
+      color: $sky;
+      position: relative;
+    }
+  }
+
+  h4 {
+    font-size: 18px;
+    font-weight: 600;
+    color: $navy;
+    margin-bottom: 8px;
+  }
+
+  .upload-hint {
+    font-size: 14px;
+    color: $gray;
+    margin-bottom: 24px;
+  }
+
+  .upload-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-bottom: 20px;
+
+    @media (max-width: 480px) {
+      flex-direction: column;
+    }
+  }
+
+  .upload-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 28px;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+
+    &--primary {
+      background: linear-gradient(135deg, $sky 0%, $sky-dark 100%);
+      color: white;
+      box-shadow: 0 4px 14px rgba($sky, 0.3);
+
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba($sky, 0.4);
+      }
+    }
+
+    &--secondary {
+      background: white;
+      color: $slate;
+      border: 1px solid #E2E8F0;
+
+      &:hover {
+        border-color: $sky;
+        color: $sky-dark;
       }
     }
   }
 
+  .file-types {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 12px;
+    color: $gray;
+
+    svg {
+      color: $light-gray;
+    }
+  }
+}
+
+// Requirements Card
+.requirements-card {
+  .requirements-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+
+    li {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .check-circle {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: $emerald-light;
+      color: $emerald;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .requirement-text {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+
+      strong {
+        font-size: 14px;
+        font-weight: 600;
+        color: $navy;
+      }
+
+      span {
+        font-size: 13px;
+        color: $gray;
+      }
+    }
+  }
+
+  .time-notice {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px;
+    background: $sky-light;
+    border-radius: 12px;
+
+    .time-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: $sky;
+    }
+
+    .time-text {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+
+      strong {
+        font-size: 14px;
+        font-weight: 600;
+        color: $navy;
+      }
+
+      span {
+        font-size: 12px;
+        color: $gray;
+      }
+    }
+  }
+}
+
+// Preview Card
+.preview-card {
+  grid-column: span 2;
+
+  @media (max-width: 768px) {
+    grid-column: span 1;
+  }
+
   .preview-content {
-    padding: $size-16;
+    margin-bottom: 16px;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #F1F5F9;
 
     .preview-image {
       width: 100%;
       max-height: 300px;
       object-fit: contain;
-      border-radius: $size-8;
     }
 
     .pdf-preview {
+      padding: 40px 20px;
+      text-align: center;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: $size-12;
-      padding: $size-32;
-      background: $color-g-95;
-      border-radius: $size-8;
+      gap: 12px;
 
-      svg {
-        width: $size-48;
-        height: $size-48;
-        color: $color-pri;
+      .pdf-icon {
+        color: $rose;
       }
 
-      span {
-        font-size: $size-14;
-        color: $color-g-44;
+      .pdf-name {
+        font-size: 14px;
+        color: $slate;
+        font-weight: 500;
       }
     }
   }
 
-  .file-info {
+  .file-meta {
     display: flex;
+    align-items: center;
     justify-content: space-between;
-    padding: 0 $size-16;
-    margin-bottom: $size-16;
+    padding: 12px 16px;
+    background: $bg;
+    border-radius: 10px;
+    margin-bottom: 20px;
 
-    .file-name {
-      font-size: $size-14;
-      color: $color-g-21;
-      font-weight: 500;
+    .file-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: $gray;
+
+      .file-name {
+        font-size: 14px;
+        font-weight: 500;
+        color: $slate;
+        max-width: 200px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
     }
 
     .file-size {
-      font-size: $size-14;
-      color: $color-g-67;
+      font-size: 13px;
+      color: $gray;
+      font-weight: 500;
     }
   }
 
   .submit-btn {
-    width: calc(100% - $size-32);
-    margin: 0 $size-16 $size-16;
-    padding: $size-14;
-    background: $color-pri;
-    color: white;
-    border: none;
-    border-radius: $size-12;
-    font-size: $size-16;
-    font-weight: 600;
+    width: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: $size-8;
+    gap: 10px;
+    padding: 16px;
+    background: linear-gradient(135deg, $sky 0%, $sky-dark 100%);
+    color: white;
+    border: none;
+    border-radius: 14px;
+    font-size: 16px;
+    font-weight: 600;
     cursor: pointer;
-    transition: background 0.2s ease;
+    transition: all 0.2s;
+    box-shadow: 0 4px 14px rgba($sky, 0.3);
 
     &:hover:not(:disabled) {
-      background: darken($color-pri, 10%);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba($sky, 0.4);
     }
 
     &:disabled {
-      background: $color-g-85;
+      opacity: 0.7;
       cursor: not-allowed;
-    }
-
-    svg {
-      width: $size-20;
-      height: $size-20;
     }
   }
 }
 
-.uploading-state {
-  background: $color-white;
-  border-radius: $size-16;
-  padding: $size-48;
-  text-align: center;
+// Uploading Card
+.uploading-card {
+  grid-column: span 2;
 
-  .upload-progress {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: $size-16;
+  @media (max-width: 768px) {
+    grid-column: span 1;
+  }
 
-    .spinner {
-      width: $size-48;
-      height: $size-48;
-      border: 3px solid $color-g-85;
-      border-top-color: $color-pri;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
+  .uploading-content {
+    text-align: center;
+    padding: 40px 20px;
+
+    .upload-spinner {
+      position: relative;
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 24px;
+
+      .spinner-ring {
+        position: absolute;
+        inset: 0;
+        border: 4px solid $sky-light;
+        border-top-color: $sky;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+
+      .spinner-icon {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: $sky;
+      }
     }
 
     h3 {
-      font-size: $size-18;
+      font-size: 20px;
       font-weight: 600;
-      color: $color-g-21;
+      color: $navy;
+      margin-bottom: 8px;
     }
 
     p {
-      font-size: $size-14;
-      color: $color-g-67;
+      font-size: 14px;
+      color: $gray;
+      margin-bottom: 24px;
+    }
+
+    .upload-progress-bar {
+      height: 6px;
+      background: $sky-light;
+      border-radius: 3px;
+      overflow: hidden;
+      max-width: 300px;
+      margin: 0 auto;
+
+      .progress-fill {
+        height: 100%;
+        width: 60%;
+        background: linear-gradient(90deg, $sky, $sky-dark);
+        border-radius: 3px;
+        animation: progress-indeterminate 1.5s ease-in-out infinite;
+      }
     }
   }
 }
 
-.verification-progress {
-  background: $color-white;
-  border-radius: $size-16;
-  overflow: visible;
+// Verification Card
+.verification-card {
+  grid-column: span 2;
+
+  @media (max-width: 768px) {
+    grid-column: span 1;
+  }
 
   .status-header {
     text-align: center;
-    padding: $size-24;
-    border-bottom: 1px solid $color-g-95;
-    border-radius: $size-16 $size-16 0 0;
+    padding: 24px;
+    border-radius: 16px;
+    margin-bottom: 24px;
 
-    .status-icon {
-      width: $size-56;
-      height: $size-56;
+    &.processing {
+      background: linear-gradient(135deg, $sky-light, rgba($sky, 0.2));
+    }
+
+    &.success {
+      background: linear-gradient(135deg, $emerald-light, rgba($emerald, 0.2));
+    }
+
+    &.failed {
+      background: linear-gradient(135deg, $rose-light, rgba($rose, 0.2));
+    }
+
+    &.review {
+      background: linear-gradient(135deg, $amber-light, rgba($amber, 0.2));
+    }
+
+    .status-icon-wrapper {
+      width: 64px;
+      height: 64px;
       border-radius: 50%;
+      background: white;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin: 0 auto $size-12;
+      margin: 0 auto 16px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 
       svg {
-        width: $size-28;
-        height: $size-28;
+        color: $sky;
       }
+    }
+
+    &.success .status-icon-wrapper svg {
+      color: $emerald;
+    }
+
+    &.failed .status-icon-wrapper svg {
+      color: $rose;
+    }
+
+    &.review .status-icon-wrapper svg {
+      color: $amber;
     }
 
     h3 {
-      font-size: $size-18;
-      font-weight: 600;
-      margin-bottom: $size-4;
+      font-size: 20px;
+      font-weight: 700;
+      color: $navy;
+      margin-bottom: 6px;
     }
 
     p {
-      font-size: $size-14;
-      color: $color-g-67;
-    }
-
-    // Processing state (default)
-    &.processing {
-      background: rgba($color-pri, 0.05);
-
-      .status-icon {
-        background: rgba($color-pri, 0.1);
-        svg { color: $color-pri; }
-      }
-      h3 { color: $color-pri; }
-    }
-
-    // Success state
-    &.success {
-      background: rgba($color-denote-green, 0.05);
-
-      .status-icon {
-        background: rgba($color-denote-green, 0.1);
-        svg { color: $color-denote-green; }
-      }
-      h3 { color: $color-denote-green; }
-    }
-
-    // Failed state
-    &.failed {
-      background: rgba($color-denote-red, 0.05);
-
-      .status-icon {
-        background: rgba($color-denote-red, 0.1);
-        svg { color: $color-denote-red; }
-      }
-      h3 { color: $color-denote-red; }
-    }
-
-    // Review state
-    &.review {
-      background: rgba($color-denote-yellow, 0.05);
-
-      .status-icon {
-        background: rgba($color-denote-yellow, 0.1);
-        svg { color: darken($color-denote-yellow, 10%); }
-      }
-      h3 { color: darken($color-denote-yellow, 10%); }
-    }
-  }
-
-  .verification-timeline {
-    padding: $size-24;
-
-    .timeline-step {
-      display: flex;
-      gap: $size-16;
-      padding-bottom: $size-24;
-      position: relative;
-
-      &:not(:last-child)::before {
-        content: "";
-        position: absolute;
-        left: $size-15;
-        top: $size-36;
-        width: 2px;
-        height: calc(100% - $size-32);
-        background: $color-g-85;
-      }
-
-      &.completed::before {
-        background: $color-denote-green;
-      }
-
-      &.active .step-indicator {
-        background: $color-pri;
-        color: white;
-      }
-
-      &.completed .step-indicator {
-        background: $color-denote-green;
-        color: white;
-      }
-
-      &.failed .step-indicator {
-        background: $color-denote-red;
-        color: white;
-      }
-
-      &.review .step-indicator {
-        background: $color-denote-yellow;
-        color: $color-g-21;
-      }
-
-      .step-indicator {
-        width: $size-32;
-        height: $size-32;
-        border-radius: 50%;
-        background: $color-g-85;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: $size-14;
-        font-weight: 600;
-        color: $color-g-67;
-        flex-shrink: 0;
-
-        .step-spinner {
-          width: $size-16;
-          height: $size-16;
-          border: 2px solid rgba(white, 0.3);
-          border-top-color: white;
-          border-radius: 50%;
-          animation: spin 1s linear infinite;
-        }
-
-        svg {
-          width: $size-16;
-          height: $size-16;
-        }
-      }
-
-      .step-content {
-        flex: 1;
-        padding-top: $size-4;
-
-        h4 {
-          font-size: $size-14;
-          font-weight: 600;
-          color: $color-g-21;
-          margin-bottom: $size-2;
-        }
-
-        p {
-          font-size: $size-12;
-          color: $color-g-67;
-        }
-      }
-    }
-  }
-
-  .action-buttons {
-    display: flex;
-    gap: $size-12;
-    padding: 0 $size-24 $size-16;
-
-    button {
-      flex: 1;
-      padding: $size-12;
-      border-radius: $size-10;
-      font-size: $size-14;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-
-    .secondary-btn {
-      background: $color-g-95;
-      border: none;
-      color: $color-g-21;
-
-      &:hover {
-        background: $color-g-85;
-      }
-    }
-
-    .primary-btn {
-      background: $color-pri;
-      border: none;
-      color: white;
-
-      &:hover {
-        background: darken($color-pri, 10%);
-      }
-    }
-  }
-
-  .quick-navigate {
-    padding: $size-16 $size-24 $size-24;
-    text-align: center;
-    border-top: 1px solid $color-g-95;
-
-    p {
-      font-size: $size-14;
-      color: $color-g-44;
-      margin-bottom: $size-12;
-    }
-
-    .browse-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: $size-8;
-      padding: $size-12 $size-24;
-      background: rgba($color-pri, 0.1);
-      color: $color-pri;
-      border: none;
-      border-radius: $size-10;
-      font-size: $size-14;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.2s ease;
-
-      &:hover {
-        background: rgba($color-pri, 0.15);
-      }
-
-      svg {
-        width: $size-18;
-        height: $size-18;
-      }
-    }
-
-    .redirect-spinner {
-      width: $size-24;
-      height: $size-24;
-      border: 3px solid $color-g-85;
-      border-top-color: $color-denote-green;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin: $size-12 auto 0;
+      font-size: 14px;
+      color: $gray;
     }
   }
 }
 
-.error-state {
-  background: $color-white;
-  border-radius: $size-16;
-  padding: $size-48;
-  text-align: center;
+// Verification Timeline
+.verification-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-bottom: 24px;
 
-  .error-icon {
-    width: $size-56;
-    height: $size-56;
-    border-radius: 50%;
-    background: rgba($color-denote-red, 0.1);
+  .timeline-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 16px 0;
+    position: relative;
+
+    &::before {
+      content: '';
+      position: absolute;
+      left: 15px;
+      top: 48px;
+      bottom: 0;
+      width: 2px;
+      background: #E2E8F0;
+    }
+
+    &:last-child::before {
+      display: none;
+    }
+
+    &.active::before {
+      background: $sky;
+    }
+
+    &.completed::before {
+      background: $emerald;
+    }
+
+    .step-indicator {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #E2E8F0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 600;
+      color: $gray;
+      flex-shrink: 0;
+      position: relative;
+      z-index: 1;
+
+      .step-spinner {
+        width: 20px;
+        height: 20px;
+        border: 2px solid rgba($sky, 0.3);
+        border-top-color: $sky;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+    }
+
+    &.active .step-indicator {
+      background: $sky-light;
+      color: $sky-dark;
+    }
+
+    &.completed .step-indicator {
+      background: $emerald;
+      color: white;
+    }
+
+    &.failed .step-indicator {
+      background: $rose;
+      color: white;
+    }
+
+    &.review .step-indicator {
+      background: $amber;
+      color: white;
+    }
+
+    &.processing .step-indicator {
+      background: $sky;
+    }
+
+    .step-content {
+      flex: 1;
+      padding-top: 4px;
+
+      h4 {
+        font-size: 14px;
+        font-weight: 600;
+        color: $navy;
+        margin-bottom: 4px;
+      }
+
+      p {
+        font-size: 13px;
+        color: $gray;
+      }
+    }
+  }
+}
+
+// Action Buttons
+.action-buttons {
+  display: flex;
+  gap: 12px;
+
+  @media (max-width: 480px) {
+    flex-direction: column;
+  }
+
+  .action-btn {
+    flex: 1;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin: 0 auto $size-16;
-
-    svg {
-      width: $size-28;
-      height: $size-28;
-      color: $color-denote-red;
-    }
-  }
-
-  h3 {
-    font-size: $size-18;
-    font-weight: 600;
-    color: $color-g-21;
-    margin-bottom: $size-8;
-  }
-
-  p {
-    font-size: $size-14;
-    color: $color-g-67;
-    margin-bottom: $size-24;
-  }
-
-  .retry-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: $size-8;
-    padding: $size-12 $size-24;
-    background: $color-pri;
-    color: white;
-    border: none;
-    border-radius: $size-10;
-    font-size: $size-14;
+    gap: 8px;
+    padding: 14px 20px;
+    border-radius: 12px;
+    font-size: 14px;
     font-weight: 600;
     cursor: pointer;
-    transition: background 0.2s ease;
+    transition: all 0.2s;
+    border: none;
 
-    &:hover {
-      background: darken($color-pri, 10%);
+    &--primary {
+      background: linear-gradient(135deg, $sky 0%, $sky-dark 100%);
+      color: white;
+      box-shadow: 0 4px 14px rgba($sky, 0.3);
+
+      &:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 20px rgba($sky, 0.4);
+      }
     }
+
+    &--secondary {
+      background: white;
+      color: $slate;
+      border: 1px solid #E2E8F0;
+
+      &:hover {
+        border-color: $sky;
+        color: $sky-dark;
+      }
+    }
+  }
+}
+
+// Review Card
+.review-card {
+  .review-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+
+    .review-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: $amber-light;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: $amber;
+    }
+
+    h4 {
+      font-size: 16px;
+      font-weight: 600;
+      color: $navy;
+    }
+  }
+
+  .review-summary {
+    font-size: 14px;
+    color: $slate;
+    line-height: 1.6;
+    margin-bottom: 16px;
+  }
+
+  .review-notice {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px;
+    background: $amber-light;
+    border-radius: 10px;
+    font-size: 13px;
+    color: darken($amber, 15%);
 
     svg {
-      width: $size-18;
-      height: $size-18;
+      flex-shrink: 0;
     }
   }
 }
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
+// Medications Card
+.medications-card {
+  .med-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
   }
-}
 
-// Coverage Section Styles
-.coverage-section {
-  padding: $size-16;
-  background: $color-white;
-  border-radius: $size-12;
-  margin-top: $size-16;
+  .med-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px;
+    border-radius: 12px;
+    background: $bg;
 
-  .verified-meds {
-    margin-bottom: $size-20;
+    &.valid {
+      border-left: 3px solid $emerald;
 
-    h4 {
-      font-size: $size-14;
-      font-weight: 600;
-      color: $color-g-21;
-      margin-bottom: $size-12;
+      .med-status svg {
+        color: $emerald;
+      }
     }
 
-    .med-list {
+    &.invalid {
+      border-left: 3px solid $rose;
+
+      .med-status svg {
+        color: $rose;
+      }
+    }
+
+    .med-status {
+      flex-shrink: 0;
+    }
+
+    .med-details {
       display: flex;
       flex-direction: column;
-      gap: $size-8;
-    }
+      gap: 4px;
 
-    .med-item {
-      display: flex;
-      align-items: flex-start;
-      gap: $size-10;
-      padding: $size-10;
-      border-radius: $size-8;
-      background: $color-g-95;
-
-      &.valid {
-        background: rgba($color-denote-green, 0.08);
-
-        .med-status {
-          color: $color-denote-green;
-        }
-      }
-
-      &.invalid {
-        background: rgba($color-denote-red, 0.08);
-
-        .med-status {
-          color: $color-denote-red;
-        }
-      }
-
-      .med-status {
+      .med-name {
+        font-size: 14px;
         font-weight: 600;
-        font-size: $size-16;
+        color: $navy;
       }
 
-      .med-details {
-        flex: 1;
+      .med-match {
+        font-size: 12px;
+        color: $emerald;
+      }
 
-        .med-name {
-          font-weight: 500;
-          color: $color-g-21;
-          display: block;
-        }
-
-        .med-match {
-          font-size: $size-12;
-          color: $color-denote-green;
-          display: block;
-        }
-
-        .med-dosage {
-          font-size: $size-12;
-          color: $color-g-67;
-        }
+      .med-dosage {
+        font-size: 12px;
+        color: $gray;
       }
     }
   }
+}
 
-  .cart-coverage {
-    border-top: 1px solid $color-g-90;
-    padding-top: $size-16;
+// Coverage Card
+.coverage-card {
+  .coverage-success,
+  .coverage-partial,
+  .coverage-none {
+    padding: 20px;
+    border-radius: 14px;
+    text-align: center;
+  }
 
-    h4 {
-      font-size: $size-14;
-      font-weight: 600;
-      color: $color-g-21;
-      margin-bottom: $size-12;
+  .coverage-success {
+    background: linear-gradient(135deg, $emerald-light, rgba($emerald, 0.15));
+
+    .coverage-icon svg {
+      color: $emerald;
+    }
+  }
+
+  .coverage-partial {
+    background: linear-gradient(135deg, $amber-light, rgba($amber, 0.15));
+
+    .coverage-icon svg {
+      color: $amber;
+    }
+  }
+
+  .coverage-none {
+    background: linear-gradient(135deg, $rose-light, rgba($rose, 0.15));
+
+    .coverage-icon svg {
+      color: $rose;
+    }
+  }
+
+  .coverage-icon {
+    margin-bottom: 12px;
+  }
+
+  .coverage-message {
+    margin-bottom: 16px;
+
+    strong {
+      display: block;
+      font-size: 16px;
+      color: $navy;
+      margin-bottom: 4px;
     }
 
-    .coverage-success,
-    .coverage-none {
-      display: flex;
-      align-items: flex-start;
-      gap: $size-12;
-      padding: $size-14;
-      border-radius: $size-10;
+    p {
+      font-size: 13px;
+      color: $gray;
+    }
+  }
+
+  .coverage-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+    background: linear-gradient(135deg, $sky 0%, $sky-dark 100%);
+    color: white;
+
+    &.secondary {
+      background: white;
+      color: $slate;
+      border: 1px solid #E2E8F0;
     }
 
-    .coverage-success {
-      background: rgba($color-denote-green, 0.08);
-
-      .coverage-icon {
-        font-size: $size-24;
-      }
-
-      .coverage-message {
-        strong {
-          color: $color-denote-green;
-          display: block;
-          margin-bottom: $size-4;
-        }
-
-        p {
-          font-size: $size-13;
-          color: $color-g-44;
-          margin: 0;
-        }
-      }
-    }
-
-    .coverage-none {
-      background: rgba($color-denote-yellow, 0.08);
-
-      .coverage-icon {
-        font-size: $size-24;
-      }
-
-      .coverage-message {
-        strong {
-          color: $color-denote-yellow;
-          display: block;
-          margin-bottom: $size-4;
-        }
-
-        p {
-          font-size: $size-13;
-          color: $color-g-44;
-          margin: 0;
-        }
-      }
-    }
-
-    .coverage-partial {
-      .coverage-summary {
-        display: flex;
-        align-items: center;
-        gap: $size-12;
-        padding: $size-12;
-        background: $color-g-95;
-        border-radius: $size-8;
-        margin-bottom: $size-12;
-
-        .covered-count {
-          color: $color-denote-green;
-          font-weight: 600;
-        }
-
-        .separator {
-          color: $color-g-77;
-        }
-
-        .uncovered-count {
-          color: $color-denote-yellow;
-          font-weight: 600;
-        }
-      }
-
-      .covered-items,
-      .uncovered-items {
-        margin-bottom: $size-12;
-
-        h5 {
-          font-size: $size-13;
-          font-weight: 500;
-          color: $color-g-44;
-          margin-bottom: $size-8;
-        }
-
-        .item-chips {
-          display: flex;
-          flex-wrap: wrap;
-          gap: $size-8;
-
-          .item-chip {
-            padding: $size-6 $size-12;
-            border-radius: $size-16;
-            font-size: $size-12;
-            font-weight: 500;
-
-            &.covered {
-              background: rgba($color-denote-green, 0.1);
-              color: $color-denote-green;
-            }
-
-            &.uncovered {
-              background: rgba($color-denote-yellow, 0.1);
-              color: $color-denote-yellow;
-            }
-          }
-        }
-      }
+    &.primary {
+      background: linear-gradient(135deg, $sky 0%, $sky-dark 100%);
+      color: white;
     }
   }
 
   .coverage-actions {
-    margin-top: $size-20;
-    padding-top: $size-16;
-    border-top: 1px solid $color-g-90;
-
-    .redirect-message {
-      text-align: center;
-      color: $color-denote-green;
-      font-weight: 500;
-      margin-bottom: $size-8;
-    }
-
-    .redirect-spinner {
-      width: $size-24;
-      height: $size-24;
-      border: 3px solid $color-g-85;
-      border-top-color: $color-denote-green;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin: 0 auto;
-    }
-
-    .redirect-countdown {
-      background: rgba($color-denote-green, 0.06);
-      border: 1px solid rgba($color-denote-green, 0.2);
-      border-radius: $size-12;
-      padding: $size-20;
-      text-align: center;
-
-      .countdown-header {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: $size-8;
-        margin-bottom: $size-12;
-
-        .countdown-check {
-          width: $size-24;
-          height: $size-24;
-          color: $color-denote-green;
-        }
-
-        span {
-          font-size: $size-16;
-          font-weight: 600;
-          color: $color-denote-green;
-        }
-      }
-
-      .countdown-text {
-        font-size: $size-14;
-        color: $color-g-44;
-        margin-bottom: $size-16;
-
-        strong {
-          font-size: $size-18;
-          color: $color-pri;
-        }
-      }
-
-      .countdown-progress {
-        height: 4px;
-        background: $color-g-90;
-        border-radius: 2px;
-        margin-bottom: $size-16;
-        overflow: hidden;
-
-        .countdown-bar {
-          height: 100%;
-          background: $color-pri;
-          border-radius: 2px;
-          transition: width 1s linear;
-        }
-      }
-
-      .countdown-actions {
-        display: flex;
-        gap: $size-12;
-        justify-content: center;
-
-        .countdown-btn {
-          padding: $size-10 $size-20;
-          border-radius: $size-8;
-          font-size: $size-14;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          border: none;
-
-          &.primary {
-            background: $color-pri;
-            color: white;
-
-            &:hover {
-              background: darken($color-pri, 8%);
-            }
-          }
-
-          &.secondary {
-            background: $color-white;
-            color: $color-g-44;
-            border: 1px solid $color-g-85;
-
-            &:hover {
-              background: $color-g-95;
-            }
-          }
-        }
-      }
-    }
-
-    .redirect-cancelled {
-      text-align: center;
-
-      p {
-        color: $color-g-44;
-        margin-bottom: $size-16;
-      }
-    }
-
-    .action-options {
-      display: flex;
-      flex-direction: column;
-      gap: $size-10;
-    }
-
-    .action-btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: $size-8;
-      padding: $size-12 $size-20;
-      border-radius: $size-10;
-      font-size: $size-14;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      border: none;
-
-      svg {
-        width: $size-18;
-        height: $size-18;
-      }
-
-      &.primary {
-        background: $color-pri;
-        color: white;
-
-        &:hover {
-          background: darken($color-pri, 8%);
-        }
-      }
-
-      &.secondary {
-        background: $color-g-95;
-        color: $color-g-21;
-
-        &:hover {
-          background: $color-g-90;
-        }
-      }
-
-      &.danger {
-        background: rgba($color-denote-red, 0.1);
-        color: $color-denote-red;
-
-        &:hover {
-          background: rgba($color-denote-red, 0.15);
-        }
-      }
-    }
-
-    p {
-      text-align: center;
-      color: $color-g-67;
-      font-size: $size-14;
-      margin-bottom: $size-12;
-    }
+    display: flex;
+    gap: 12px;
+    justify-content: center;
   }
 }
 
-// Rejection Section Styles
-.rejected-section {
-  padding: $size-16 $size-24 $size-24;
-  text-align: left;
+// Rejection Card
+.rejection-card {
+  grid-column: span 2;
 
-  .rejection-summary {
-    font-size: $size-14;
-    color: $color-g-44;
-    margin-bottom: $size-20;
-    line-height: 1.6;
-    padding: $size-14 $size-16;
-    background: rgba($color-denote-red, 0.05);
-    border-radius: $size-8;
-    border-left: 3px solid $color-denote-red;
+  @media (max-width: 768px) {
+    grid-column: span 1;
   }
 
-  .rejection-reasons {
-    background: rgba($color-denote-red, 0.04);
-    border: 1px solid rgba($color-denote-red, 0.15);
-    border-radius: $size-12;
-    padding: $size-16;
-    margin-bottom: $size-20;
+  .rejection-header {
+    text-align: center;
+    padding: 24px;
+    background: linear-gradient(135deg, $rose-light, rgba($rose, 0.15));
+    border-radius: 14px;
+    margin-bottom: 20px;
 
-    .reasons-intro {
-      font-size: $size-14;
-      color: $color-g-44;
-      margin-bottom: $size-12;
+    .rejection-icon {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+
+      svg {
+        color: $rose;
+      }
     }
 
-    .reasons-list {
+    h4 {
+      font-size: 18px;
+      font-weight: 700;
+      color: $navy;
+      margin-bottom: 6px;
+    }
+
+    p {
+      font-size: 14px;
+      color: $gray;
+    }
+  }
+
+  .failure-reasons {
+    margin-bottom: 20px;
+
+    h5 {
+      font-size: 14px;
+      font-weight: 600;
+      color: $navy;
+      margin-bottom: 12px;
+    }
+
+    ul {
       list-style: none;
       padding: 0;
       margin: 0;
       display: flex;
       flex-direction: column;
-      gap: $size-12;
+      gap: 8px;
 
-      .reason-item {
+      li {
         display: flex;
-        align-items: flex-start;
-        gap: $size-10;
-        padding: $size-12;
-        background: $color-white;
-        border-radius: $size-8;
-        border-left: 3px solid $color-g-67;
+        align-items: center;
+        gap: 10px;
+        padding: 12px;
+        background: $rose-light;
+        border-radius: 10px;
+        font-size: 13px;
+        color: darken($rose, 15%);
 
-        &.critical {
-          border-left-color: $color-denote-red;
-        }
-
-        &.high {
-          border-left-color: #e67e22;
-        }
-
-        &.medium {
-          border-left-color: $color-denote-yellow;
-        }
-
-        &.low {
-          border-left-color: $color-g-67;
-        }
-
-        .reason-badge {
+        svg {
           flex-shrink: 0;
-          padding: $size-4 $size-8;
-          border-radius: $size-4;
-          font-size: $size-10;
-          font-weight: 700;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-
-          &.critical {
-            background: rgba($color-denote-red, 0.12);
-            color: $color-denote-red;
-          }
-
-          &.high {
-            background: rgba(#e67e22, 0.12);
-            color: #e67e22;
-          }
-
-          &.medium {
-            background: rgba($color-denote-yellow, 0.12);
-            color: darken($color-denote-yellow, 10%);
-          }
-
-          &.low {
-            background: $color-g-95;
-            color: $color-g-44;
-          }
-        }
-
-        .reason-content {
-          flex: 1;
-          min-width: 0;
-
-          strong {
-            display: block;
-            font-size: $size-14;
-            font-weight: 600;
-            color: $color-g-21;
-            margin-bottom: $size-4;
-          }
-
-          p {
-            font-size: $size-13;
-            color: $color-g-44;
-            margin: 0;
-            line-height: 1.4;
-          }
+          color: $rose;
         }
       }
     }
   }
 
-  .generic-message {
-    font-size: $size-14;
-    color: $color-g-44;
-    margin-bottom: $size-16;
-    line-height: 1.5;
-    text-align: center;
+  .rejection-actions {
+    display: flex;
+    justify-content: center;
+  }
+}
+
+// Redirect Card
+.redirect-card {
+  grid-column: span 2;
+
+  @media (max-width: 768px) {
+    grid-column: span 1;
   }
 
-  .browse-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: $size-8;
-    width: 100%;
-    margin-top: $size-16;
-    padding: $size-14;
-    background: $color-pri;
-    color: white;
-    border: none;
-    border-radius: $size-12;
-    font-size: $size-14;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 0.2s ease;
-
-    &:hover {
-      background: darken($color-pri, 8%);
-    }
+  .redirect-content {
+    text-align: center;
+    padding: 20px;
+    background: $sky-light;
+    border-radius: 14px;
 
     svg {
-      width: $size-18;
-      height: $size-18;
+      color: $sky;
+      margin-bottom: 12px;
+    }
+
+    p {
+      font-size: 14px;
+      color: $slate;
+      margin-bottom: 16px;
+
+      strong {
+        color: $sky-dark;
+        font-size: 18px;
+      }
+    }
+
+    .redirect-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+
+      .redirect-btn {
+        padding: 10px 20px;
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: none;
+
+        &.secondary {
+          background: white;
+          color: $slate;
+        }
+
+        &.primary {
+          background: linear-gradient(135deg, $sky 0%, $sky-dark 100%);
+          color: white;
+        }
+      }
     }
   }
 }
 
-// Review Reasons Section (for PHARMACIST_REVIEW status)
-.review-reasons-section {
-  background: rgba(#f59e0b, 0.08);
-  border: 1px solid rgba(#f59e0b, 0.25);
-  border-radius: $size-12;
-  padding: $size-16;
-  margin: $size-16 0;
-  max-width: 100%;
-  box-sizing: border-box;
-  overflow: hidden;
+// Error Card
+.error-card {
+  grid-column: span 2;
 
-  .review-header {
-    display: flex;
-    align-items: center;
-    gap: $size-10;
-    margin-bottom: $size-12;
-
-    .review-icon {
-      width: $size-20;
-      height: $size-20;
-      color: #d97706;
-    }
-
-    h4 {
-      margin: 0;
-      font-size: $size-15;
-      font-weight: 600;
-      color: #92400e;
-    }
+  @media (max-width: 768px) {
+    grid-column: span 1;
   }
 
-  .review-intro {
-    font-size: $size-13;
-    color: $color-g-44;
-    margin-bottom: $size-14;
-    line-height: 1.5;
-  }
+  .error-content {
+    text-align: center;
+    padding: 40px 20px;
 
-  .review-summary {
-    font-size: $size-14;
-    color: $color-g-44;
-    margin-bottom: $size-14;
-    line-height: 1.6;
-    padding: $size-12 $size-14;
-    background: rgba(#f59e0b, 0.05);
-    border-radius: $size-8;
-    border-left: 3px solid #f59e0b;
-  }
-
-  .fraud-summary {
-    display: flex;
-    align-items: center;
-    gap: $size-12;
-    padding: $size-12;
-    background: rgba(#ef4444, 0.08);
-    border-radius: $size-8;
-    margin-bottom: $size-14;
-
-    .fraud-score {
+    .error-icon {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: $rose-light;
       display: flex;
-      flex-direction: column;
       align-items: center;
-      padding: $size-8 $size-12;
-      background: white;
-      border-radius: $size-6;
-      border: 1px solid rgba(#ef4444, 0.2);
+      justify-content: center;
+      margin: 0 auto 20px;
 
-      .score-label {
-        font-size: $size-10;
-        color: $color-g-54;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
+      svg {
+        color: $rose;
       }
-
-      .score-value {
-        font-size: $size-16;
-        font-weight: 700;
-        color: #ef4444;
-      }
-
-      &.critical .score-value { color: #dc2626; }
-      &.high .score-value { color: #ea580c; }
-      &.medium .score-value { color: #d97706; }
-      &.low .score-value { color: #65a30d; }
     }
 
-    .risk-level {
-      font-size: $size-12;
+    h3 {
+      font-size: 20px;
       font-weight: 600;
-      padding: $size-4 $size-10;
-      border-radius: $size-4;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-
-      &.critical { background: rgba(#dc2626, 0.15); color: #dc2626; }
-      &.high { background: rgba(#ea580c, 0.15); color: #ea580c; }
-      &.medium { background: rgba(#d97706, 0.15); color: #d97706; }
-      &.low { background: rgba(#65a30d, 0.15); color: #65a30d; }
+      color: $navy;
+      margin-bottom: 8px;
     }
-  }
 
-  .review-reasons-list {
-    list-style: none;
-    padding: 0;
-    margin: 0 0 $size-14;
-    display: flex;
-    flex-direction: column;
-    gap: $size-10;
+    p {
+      font-size: 14px;
+      color: $gray;
+      margin-bottom: 24px;
+    }
 
-    .review-reason-item {
-      display: flex;
-      align-items: flex-start;
-      gap: $size-10;
-      padding: $size-12;
-      background: white;
-      border-radius: $size-8;
-      border-left: 3px solid #d97706;
+    .retry-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 28px;
+      background: linear-gradient(135deg, $sky 0%, $sky-dark 100%);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
 
-      &.critical, &.high { border-left-color: #dc2626; }
-      &.medium { border-left-color: #d97706; }
-      &.low, &.info { border-left-color: #3b82f6; }
-
-      .reason-icon {
-        flex-shrink: 0;
-        width: $size-18;
-        height: $size-18;
-        color: #d97706;
-
-        &.critical, &.high { color: #dc2626; }
-        &.medium { color: #d97706; }
-        &.low, &.info { color: #3b82f6; }
-
-        svg {
-          width: 100%;
-          height: 100%;
-        }
-      }
-
-      .reason-text {
-        flex: 1;
-        min-width: 0;
-        overflow: hidden;
-        word-break: break-word;
-
-        strong {
-          display: block;
-          font-size: $size-13;
-          font-weight: 600;
-          color: $color-g-21;
-          margin-bottom: $size-2;
-        }
-
-        p {
-          font-size: $size-12;
-          color: $color-g-44;
-          margin: 0;
-          line-height: 1.4;
-          word-break: break-word;
-        }
+      &:hover {
+        transform: translateY(-2px);
       }
     }
   }
+}
 
-  .review-note {
-    display: flex;
-    align-items: center;
-    gap: $size-8;
-    font-size: $size-12;
-    color: #92400e;
-    padding: $size-10;
-    background: rgba(#f59e0b, 0.12);
-    border-radius: $size-6;
-    margin: 0;
+// Animations
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
 
-    svg {
-      flex-shrink: 0;
-      width: $size-16;
-      height: $size-16;
-    }
-  }
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(2); opacity: 0; }
+}
+
+@keyframes orbit {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes progress-indeterminate {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
 }
 </style>

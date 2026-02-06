@@ -26,6 +26,8 @@ import {
   EntryStatus,
   BatchStatus,
   NormalBalance,
+  AccountCode,
+  TransactionCategory,
   getAccountTypeFromCode,
   getNormalBalance,
 } from '../enums/account-codes.enum';
@@ -136,8 +138,10 @@ export class AccountingService {
       currency: 'NGN',
       status: BatchStatus.PENDING,
       from_user: dto.from_user,
+      from_name: dto.from_name,
       from_wallet: dto.from_wallet,
       to_user: dto.to_user,
+      to_name: dto.to_name,
       to_wallet: dto.to_wallet,
       reference_type: dto.reference_type,
       reference_id: dto.reference_id,
@@ -305,8 +309,10 @@ export class AccountingService {
       currency: 'NGN',
       status: BatchStatus.POSTED,
       from_user: dto.from_user,
+      from_name: dto.from_name,
       from_wallet: dto.from_wallet,
       to_user: dto.to_user,
+      to_name: dto.to_name,
       to_wallet: dto.to_wallet,
       reference_type: dto.reference_type,
       reference_id: dto.reference_id,
@@ -428,8 +434,10 @@ export class AccountingService {
       description: `Reversal of ${dto.batch_id}: ${dto.reason}`,
       entries: reversingEntries,
       from_user: originalBatch.from_user,
+      from_name: originalBatch.from_name,
       from_wallet: originalBatch.from_wallet,
       to_user: originalBatch.to_user,
+      to_name: originalBatch.to_name,
       to_wallet: originalBatch.to_wallet,
       reference_type: originalBatch.reference_type,
       reference_id: originalBatch.reference_id,
@@ -547,6 +555,58 @@ export class AccountingService {
     );
 
     return calculatedBalance;
+  }
+
+  /**
+   * Record prescription card payment
+   * Creates a double-entry:
+   * - DEBIT CASH_PAYSTACK (money received)
+   * - CREDIT REVENUE_PRESCRIPTION_FEE (revenue recognized)
+   */
+  async recordPrescriptionCardPayment(data: {
+    prescriptionId: Types.ObjectId;
+    prescriptionNumber: string;
+    patientId: Types.ObjectId;
+    amount: number;
+    paymentMethod: string;
+    paymentReference: string;
+  }): Promise<TransactionBatchDocument> {
+    const description = `Prescription payment: ${data.prescriptionNumber}`;
+
+    const batch = await this.createAndPostBatch({
+      category: TransactionCategory.PRESCRIPTION_PAYMENT,
+      description,
+      entries: [
+        {
+          account_code: AccountCode.CASH_PAYSTACK,
+          entry_type: EntryType.DEBIT,
+          amount: data.amount,
+          description: `Card payment received - ${data.prescriptionNumber}`,
+          user_id: data.patientId,
+        },
+        {
+          account_code: AccountCode.REVENUE_PRESCRIPTION_FEE,
+          entry_type: EntryType.CREDIT,
+          amount: data.amount,
+          description: `Revenue from prescription - ${data.prescriptionNumber}`,
+          user_id: data.patientId,
+        },
+      ],
+      from_user: data.patientId,
+      reference_type: 'prescription',
+      reference_id: data.prescriptionId,
+      external_reference: data.paymentReference,
+      metadata: {
+        prescription_number: data.prescriptionNumber,
+        payment_method: data.paymentMethod,
+      },
+    });
+
+    this.logger.log(
+      `Prescription payment recorded: ${data.prescriptionNumber}, Amount: ₦${data.amount}, Batch: ${batch.batch_id}`,
+    );
+
+    return batch;
   }
 
   /**

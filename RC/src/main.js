@@ -118,6 +118,11 @@ import {
 	HiShoppingCart,
 	HiRefresh,
 	RiMedicineBottleLine,
+	HiInbox,
+	HiSwitchVertical,
+	HiShoppingBag,
+	FaCcVisa,
+	FaCcMastercard,
 	// Referrals page icons
 	HiLink,
 	HiGift,
@@ -218,6 +223,15 @@ import {
 	FaSun,
 	FaCloudSun,
 	FaMoon,
+	// DrugDetails page icons
+	HiZoomIn,
+	HiCube,
+	HiArchive,
+	HiBan,
+	HiSwitchHorizontal,
+	HiCollection,
+	// Cart page icons
+	HiReply,
 } from "oh-vue-icons/icons";
 addIcons(
 	BiCreditCard2Back,
@@ -324,6 +338,11 @@ addIcons(
 	HiShoppingCart,
 	HiRefresh,
 	RiMedicineBottleLine,
+	HiInbox,
+	HiSwitchVertical,
+	HiShoppingBag,
+	FaCcVisa,
+	FaCcMastercard,
 	// Referrals page icons
 	HiLink,
 	HiGift,
@@ -424,11 +443,47 @@ addIcons(
 	FaSun,
 	FaCloudSun,
 	FaMoon,
+	// DrugDetails page icons
+	HiZoomIn,
+	HiCube,
+	HiArchive,
+	HiBan,
+	HiSwitchHorizontal,
+	HiCollection,
+	// Cart page icons
+	HiReply,
 );
 
 require("@/store/subscriber");
 
 axios.defaults.baseURL = `${process.env.VUE_APP_API_GATEWAY}/api/`;
+
+// Handle chunk loading errors (cache mismatch after deployment)
+window.addEventListener('error', (event) => {
+  if (event.message && event.message.includes('Loading chunk') ||
+      event.message && event.message.includes('Loading CSS chunk')) {
+    console.warn('Chunk load error detected, reloading page...');
+    // Clear cache and reload
+    if ('caches' in window) {
+      caches.keys().then((names) => {
+        names.forEach(name => caches.delete(name));
+      });
+    }
+    window.location.reload(true);
+  }
+}, true);
+
+// Also handle unhandled promise rejections for dynamic imports
+window.addEventListener('unhandledrejection', (event) => {
+  if (event.reason && event.reason.message &&
+      (event.reason.message.includes('Loading chunk') ||
+       event.reason.message.includes('Loading CSS chunk') ||
+       event.reason.message.includes('ChunkLoadError'))) {
+    console.warn('Chunk load error in promise, reloading page...');
+    event.preventDefault();
+    window.location.reload(true);
+  }
+});
 
 const app = createApp(App);
 app.directive("scrollViz", scrollBarVizDirective);

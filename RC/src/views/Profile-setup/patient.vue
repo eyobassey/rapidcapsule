@@ -1,29 +1,21 @@
 <template>
-	<UpdateImageForm v-if="!moveto" @saved="isSaved" />
-	<UpdateInfoForm v-if="moveto" />
+	<UpdateImageForm @saved="goToOnboarding" />
 </template>
 
 <script>
 import UpdateImageForm from "@/components/forms/Profile-setup/Update-image.vue";
-import UpdateInfoForm from "@/components/forms/Profile-setup/Update-user-info.vue";
 
 export default {
 	name: "Patient Profile Setup",
 
 	components: {
 		UpdateImageForm,
-		UpdateInfoForm,
-	},
-
-	data() {
-		return {
-			moveto: false,
-		};
 	},
 
 	methods: {
-		isSaved() {
-			this.moveto = true;
+		goToOnboarding() {
+			// Redirect to new patient onboarding flow
+			this.$router.push('/app/patient/onboarding');
 		},
 	},
 };

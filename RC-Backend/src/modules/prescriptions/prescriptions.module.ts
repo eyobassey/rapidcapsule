@@ -18,6 +18,10 @@ import {
   StockReservation,
   StockReservationSchema,
 } from './entities/stock-reservation.entity';
+import {
+  Drug,
+  DrugSchema,
+} from '../pharmacy/entities/drug.entity';
 import { FileUploadHelper } from '../../common/helpers/file-upload.helpers';
 import { TaskScheduler } from '../../core/worker/task.scheduler';
 import { UsersModule } from '../users/users.module';
@@ -34,6 +38,7 @@ import { Paystack } from '../../common/external/payment/providers/paystack';
 import { AdminSettingsModule } from '../admin-settings/admin-settings.module';
 import { WalletsModule } from '../wallets/wallets.module';
 import { UserSettingsModule } from '../user-settings/user-settings.module';
+import { AccountingModule } from '../accounting/accounting.module';
 import { SpecialistPrescriptionService } from './specialist-prescription.service';
 import { PrescriptionPdfService } from './services/prescription-pdf.service';
 import { RefillService } from './services/refill.service';
@@ -52,6 +57,7 @@ import { PrescriptionVerifyController } from './prescription-verify.controller';
     AdminSettingsModule,
     WalletsModule,
     UserSettingsModule,
+    AccountingModule,
     MongooseModule.forFeature([
       { name: Prescription.name, schema: PrescriptionSchema },
       { name: PrescriptionFile.name, schema: PrescriptionFileSchema },
@@ -59,6 +65,7 @@ import { PrescriptionVerifyController } from './prescription-verify.controller';
       { name: PrescriptionDrug.name, schema: PrescriptionDrugSchema },
       { name: SpecialistPrescription.name, schema: SpecialistPrescriptionSchema },
       { name: StockReservation.name, schema: StockReservationSchema },
+      { name: Drug.name, schema: DrugSchema },
     ]),
   ],
   controllers: [

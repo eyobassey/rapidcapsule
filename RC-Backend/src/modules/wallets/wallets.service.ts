@@ -401,12 +401,48 @@ export class WalletsService {
     narration: string,
     category: TransactionCategory = TransactionCategory.PHARMACY_ORDER_PAYMENT,
   ): Promise<{ newBalance: number; transaction: any }> {
-    // Try legacy wallet first
+    // Check unified wallet first (source of truth after migration)
+    // This matches the getUserEarnings logic for consistency
+    let unifiedWallet: any = null;
+    try {
+      unifiedWallet = await this.unifiedWalletService.getWalletByOwner(userId, WalletOwnerType.PATIENT);
+    } catch (err) {
+      // Unified wallet not found - will check legacy
+    }
+
+    // Use unified wallet if it has sufficient balance
+    if (unifiedWallet && +unifiedWallet.available_balance >= +amount) {
+      await this.unifiedWalletService.debit({
+        wallet_id: unifiedWallet.wallet_id,
+        amount,
+        description: narration,
+        category,
+        reference_type: 'prescription_payment',
+        reference_id: userId,
+        external_reference: reference,
+      });
+
+      const newBalance = currency(unifiedWallet.available_balance).subtract(amount).value;
+
+      // Create a legacy transaction record for compatibility
+      const transaction = await create(this.walletTxnModel, {
+        amount,
+        type: TransactionType.DEBIT,
+        walletId: unifiedWallet._id,
+        userId,
+        narration,
+        reference,
+      });
+
+      return { newBalance, transaction };
+    }
+
+    // Fallback to legacy wallet
     let wallet: WalletDocument | null = null;
     try {
       wallet = await this.getUserWallet(userId);
     } catch (err) {
-      // Legacy wallet not found - check unified wallet
+      // Legacy wallet not found
     }
 
     if (wallet) {
@@ -436,12 +472,12 @@ export class WalletsService {
 
       // Also record in unified accounting
       try {
-        const unifiedWallet = await this.unifiedWalletService.getOrCreateWallet(
+        const unifiedWalletForSync = await this.unifiedWalletService.getOrCreateWallet(
           userId,
           WalletOwnerType.PATIENT,
         );
         await this.unifiedWalletService.debit({
-          wallet_id: unifiedWallet.wallet_id,
+          wallet_id: unifiedWalletForSync.wallet_id,
           amount,
           description: narration,
           category,
@@ -456,39 +492,13 @@ export class WalletsService {
       return { newBalance, transaction };
     }
 
-    // Unified wallet path (no legacy wallet)
-    const unifiedWallet = await this.unifiedWalletService.getWalletByOwner(userId, WalletOwnerType.PATIENT);
-    if (!unifiedWallet) {
-      throw new NotFoundException('Patient does not have a wallet');
-    }
-
-    if (+amount > +unifiedWallet.available_balance) {
+    // No wallet found at all
+    if (unifiedWallet) {
+      // Unified wallet exists but insufficient balance
       throw new BadRequestException(Messages.WALLET_BALANCE_LOW);
     }
 
-    const txResult = await this.unifiedWalletService.debit({
-      wallet_id: unifiedWallet.wallet_id,
-      amount,
-      description: narration,
-      category,
-      reference_type: 'prescription_payment',
-      reference_id: userId,
-      external_reference: reference,
-    });
-
-    const newBalance = currency(unifiedWallet.available_balance).subtract(amount).value;
-
-    // Create a legacy transaction record for compatibility
-    const transaction = await create(this.walletTxnModel, {
-      amount,
-      type: TransactionType.DEBIT,
-      walletId: unifiedWallet._id,
-      userId,
-      narration,
-      reference,
-    });
-
-    return { newBalance, transaction };
+    throw new NotFoundException('Patient does not have a wallet');
   }
 
   /**

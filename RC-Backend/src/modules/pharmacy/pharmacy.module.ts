@@ -2,6 +2,11 @@ import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { HttpModule } from '@nestjs/axios';
 import { WalletsModule } from '../wallets/wallets.module';
+import { AccountingModule } from '../accounting/accounting.module';
+import { AdminSettingsModule } from '../admin-settings/admin-settings.module';
+import { PaymentsModule } from '../payments/payments.module';
+import { PaymentHandler } from '../../common/external/payment/payment.handler';
+import { Paystack } from '../../common/external/payment/providers/paystack';
 import { FileUploadHelper } from '../../common/helpers/file-upload.helpers';
 import { GeneralHelpers } from '../../common/helpers/general.helpers';
 
@@ -78,6 +83,9 @@ import { PrescriptionUploadController } from './controllers/prescription-upload.
       { name: SpecialistPrescription.name, schema: SpecialistPrescriptionSchema },
     ]),
     forwardRef(() => WalletsModule),
+    AccountingModule,
+    AdminSettingsModule,
+    PaymentsModule,
     HttpModule,
   ],
   controllers: [
@@ -104,6 +112,8 @@ import { PrescriptionUploadController } from './controllers/prescription-upload.
     OrderConfirmationPdfService,
     FileUploadHelper,
     GeneralHelpers,
+    PaymentHandler,
+    Paystack,
   ],
   exports: [
     DrugService,

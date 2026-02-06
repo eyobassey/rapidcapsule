@@ -160,6 +160,23 @@ export class DrugController {
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
+  /**
+   * Get drug interaction settings for patients
+   * Returns configuration for how drug interactions should be checked
+   */
+  @UseGuards(JwtAuthGuard)
+  @Get('interaction-settings')
+  async getInteractionSettings() {
+    // Return default settings - can be made configurable via admin later
+    const settings = {
+      enabled_for_patients: true,
+      data_sources: ['claude_ai', 'openfda'],
+      show_severity_levels: true,
+      show_disclaimer: true,
+    };
+    return sendSuccessResponse(Messages.RETRIEVED, settings);
+  }
+
   // ============ ADMIN ENDPOINTS ============
 
   /**

@@ -393,12 +393,9 @@ export default {
 <style scoped lang="scss">
 .chart-wrapper {
   width: 100%;
-  height: 320px;
+  height: 100%;
+  min-height: 300px;
   position: relative;
-
-  @media (max-width: 640px) {
-    height: 260px;
-  }
 }
 
 canvas {

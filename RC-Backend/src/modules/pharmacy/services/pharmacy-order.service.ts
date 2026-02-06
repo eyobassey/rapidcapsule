@@ -69,6 +69,14 @@ import {
   PatientPrescriptionUpload,
   PatientPrescriptionUploadDocument,
 } from '../entities/patient-prescription-upload.entity';
+import { AccountingService } from '../../accounting/services/accounting.service';
+import {
+  AccountCode,
+  EntryType,
+  TransactionCategory,
+} from '../../accounting/enums/account-codes.enum';
+import { PaymentHandler } from '../../../common/external/payment/payment.handler';
+import { PaymentsService } from '../../payments/payments.service';
 
 @Injectable()
 export class PharmacyOrderService {
@@ -100,6 +108,9 @@ export class PharmacyOrderService {
     @Inject(forwardRef(() => OpenFDAService))
     private readonly openFDAService: OpenFDAService,
     private readonly fileUploadHelper: FileUploadHelper,
+    private readonly accountingService: AccountingService,
+    private readonly paymentHandler: PaymentHandler,
+    private readonly paymentsService: PaymentsService,
   ) {}
 
   /**
@@ -1190,7 +1201,10 @@ export class PharmacyOrderService {
       throw new BadRequestException('Order is already paid');
     }
 
-    if (paymentDto.amount < order.total_amount) {
+    // For card payment verification from Paystack redirect, use order total if amount is 0
+    const paymentAmount = paymentDto.amount > 0 ? paymentDto.amount : order.total_amount;
+
+    if (paymentAmount < order.total_amount) {
       throw new BadRequestException('Payment amount is less than order total');
     }
 
@@ -1202,11 +1216,104 @@ export class PharmacyOrderService {
         payment_method: paymentDto.payment_method,
         payment_reference: paymentDto.payment_reference,
         paid_at: new Date(),
-        amount_paid: paymentDto.amount,
+        amount_paid: paymentAmount,
         status: PharmacyOrderStatus.CONFIRMED,
         updated_by: userId,
       },
     );
+
+    // Record card payment in chart of accounts (double-entry)
+    // DEBIT: Cash/Paystack (Asset increases - money received)
+    // CREDIT: Payable to Pharmacy (Liability increases - we owe the pharmacy)
+    if (paymentDto.payment_method === 'CARD') {
+      try {
+        // Get pharmacy info for to_name field
+        const pharmacyId = (order.pharmacy as any)?._id || order.pharmacy;
+        const PharmaciesCollection = this.connection.collection('pharmacies');
+        const pharmacy = await PharmaciesCollection.findOne(
+          { _id: new Types.ObjectId(pharmacyId.toString()) },
+          { projection: { name: 1 } },
+        );
+        const pharmacyName = pharmacy?.name || 'Unknown Pharmacy';
+
+        await this.accountingService.createAndPostBatch({
+          category: TransactionCategory.PHARMACY_ORDER_PAYMENT,
+          description: `Pharmacy order card payment: ${order.order_number}`,
+          entries: [
+            {
+              account_code: AccountCode.CASH_PAYSTACK,
+              entry_type: EntryType.DEBIT,
+              amount: paymentAmount,
+              description: `Card payment received - ${order.order_number}`,
+              user_id: userId,
+            },
+            {
+              account_code: AccountCode.PAYABLE_PHARMACY,
+              entry_type: EntryType.CREDIT,
+              amount: paymentAmount,
+              description: `Payable to pharmacy - ${order.order_number}`,
+              user_id: userId,
+            },
+          ],
+          from_user: userId,
+          to_name: pharmacyName,
+          reference_type: 'PharmacyOrder',
+          reference_id: order._id,
+          external_reference: paymentDto.payment_reference,
+          performed_by: userId,
+          metadata: {
+            order_number: order.order_number,
+            pharmacy_id: pharmacyId?.toString(),
+            pharmacy_name: pharmacyName,
+            payment_method: paymentDto.payment_method,
+          },
+        });
+        this.logger.log(`Accounting entries recorded for card payment - ${order.order_number}`);
+      } catch (accountingError) {
+        this.logger.error(
+          `Failed to record accounting entries for order ${order.order_number}: ${accountingError.message}`,
+        );
+        // Don't fail the payment - accounting can be reconciled later
+      }
+
+      // Create a wallet transaction record for visibility in transaction history
+      try {
+        const WalletTxnCollection = this.connection.collection('wallettransactions');
+        const WalletsCollection = this.connection.collection('wallets');
+
+        // Find or create a wallet for the user
+        let wallet = await WalletsCollection.findOne({ userId: userId });
+        if (!wallet) {
+          // Create a minimal wallet for transaction tracking
+          const result = await WalletsCollection.insertOne({
+            userId: userId,
+            available_balance: 0,
+            ledger_balance: 0,
+            created_at: new Date(),
+            updated_at: new Date(),
+          });
+          wallet = { _id: result.insertedId };
+        }
+
+        // Create transaction record (does NOT affect balance - just for history)
+        await WalletTxnCollection.insertOne({
+          walletId: wallet._id,
+          userId: userId,
+          amount: paymentAmount,
+          type: 'Debit',
+          narration: `Pharmacy Order ${order.order_number} - Card Payment`,
+          reference: paymentDto.payment_reference,
+          created_at: new Date(),
+          updated_at: new Date(),
+        });
+        this.logger.log(`Wallet transaction record created for card payment - ${order.order_number}`);
+      } catch (txnError) {
+        this.logger.error(
+          `Failed to create wallet transaction record for order ${order.order_number}: ${txnError.message}`,
+        );
+        // Don't fail - this is just for visibility
+      }
+    }
 
     // Sync payment status to linked specialist prescription if any
     await this.syncPaymentToLinkedPrescription(updatedOrder, paymentDto.payment_reference);
@@ -1720,6 +1827,64 @@ export class PharmacyOrderService {
       },
     );
 
+    // Record card portion in chart of accounts (double-entry)
+    // Note: Wallet portion is already recorded by walletsService.debitWalletForPurchase
+    // DEBIT: Cash/Paystack (Asset increases - money received)
+    // CREDIT: Payable to Pharmacy (Liability increases - we owe the pharmacy)
+    if (paymentDto.card_amount > 0) {
+      try {
+        // Get pharmacy info for to_name field
+        const pharmacyId = (order.pharmacy as any)?._id || order.pharmacy;
+        const PharmaciesCollection = this.connection.collection('pharmacies');
+        const pharmacy = await PharmaciesCollection.findOne(
+          { _id: new Types.ObjectId(pharmacyId.toString()) },
+          { projection: { name: 1 } },
+        );
+        const pharmacyName = pharmacy?.name || 'Unknown Pharmacy';
+
+        await this.accountingService.createAndPostBatch({
+          category: TransactionCategory.PHARMACY_ORDER_PAYMENT,
+          description: `Pharmacy order split payment (card portion): ${order.order_number}`,
+          entries: [
+            {
+              account_code: AccountCode.CASH_PAYSTACK,
+              entry_type: EntryType.DEBIT,
+              amount: paymentDto.card_amount,
+              description: `Card payment received (split) - ${order.order_number}`,
+              user_id: userId,
+            },
+            {
+              account_code: AccountCode.PAYABLE_PHARMACY,
+              entry_type: EntryType.CREDIT,
+              amount: paymentDto.card_amount,
+              description: `Payable to pharmacy (card portion) - ${order.order_number}`,
+              user_id: userId,
+            },
+          ],
+          from_user: userId,
+          to_name: pharmacyName,
+          reference_type: 'PharmacyOrder',
+          reference_id: order._id,
+          external_reference: paymentDto.card_payment_reference,
+          performed_by: userId,
+          metadata: {
+            order_number: order.order_number,
+            pharmacy_id: pharmacyId?.toString(),
+            pharmacy_name: pharmacyName,
+            payment_method: 'SPLIT',
+            wallet_amount: paymentDto.wallet_amount,
+            card_amount: paymentDto.card_amount,
+          },
+        });
+        this.logger.log(`Accounting entries recorded for card portion of split payment - ${order.order_number}`);
+      } catch (accountingError) {
+        this.logger.error(
+          `Failed to record accounting entries for split payment card portion ${order.order_number}: ${accountingError.message}`,
+        );
+        // Don't fail the payment - accounting can be reconciled later
+      }
+    }
+
     // Sync payment status to linked specialist prescription if any
     await this.syncPaymentToLinkedPrescription(updatedOrder, paymentDto.card_payment_reference);
 
@@ -1733,6 +1898,97 @@ export class PharmacyOrderService {
       `Split payment (Wallet: ${paymentDto.wallet_amount}, Card: ${paymentDto.card_amount}) processed for order ${order.order_number}`,
     );
     return { order: updatedOrder, newBalance };
+  }
+
+  /**
+   * Initialize Paystack payment for an order
+   * Returns authorization_url for redirect-based payment (like appointments v2)
+   */
+  async initializePaystackPayment(
+    orderId: Types.ObjectId | string,
+    userId: Types.ObjectId,
+  ): Promise<{
+    authorization_url: string;
+    payment_reference: string;
+    order_id: string;
+  }> {
+    const order = await this.findById(orderId);
+
+    // Verify order belongs to user
+    const patientId = (order.patient as any)?._id || order.patient;
+    if (patientId.toString() !== userId.toString()) {
+      throw new ForbiddenException('You are not authorized to pay for this order');
+    }
+
+    if (order.payment_status === PharmacyOrderPaymentStatus.PAID) {
+      throw new BadRequestException('Order is already paid');
+    }
+
+    // Get user email - email is stored at profile.contact.email
+    const UsersCollection = this.connection.collection('users');
+    const userObjectId = typeof userId === 'string' ? new Types.ObjectId(userId) : userId;
+
+    const user = await UsersCollection.findOne(
+      { _id: userObjectId },
+      { projection: { 'profile.contact.email': 1 } },
+    );
+
+    const userEmail = user?.profile?.contact?.email;
+    if (!userEmail) {
+      this.logger.error(`User email not found for userId: ${userId}`);
+      throw new BadRequestException('User email not found');
+    }
+
+    // Generate payment reference
+    const paymentReference = `RCPH-${order.order_number}-${Date.now()}`;
+    const amount = order.total_amount;
+
+    // Get the callback URL for redirect after payment
+    const callbackUrl = `${process.env.FRONTEND_URL || 'https://rapidcapsule.com'}/app/patient/pharmacy/orders/${order._id}?payment=verify&reference=${paymentReference}`;
+
+    // Initialize Paystack transaction
+    const paymentResponse = await this.paymentHandler.initializeTransaction(
+      userEmail,
+      amount,
+      paymentReference,
+      {
+        order_id: order._id.toString(),
+        order_number: order.order_number,
+        source: 'WEB_PHARMACY',
+        payment_for: 'PHARMACY_ORDER',
+        callback_url: callbackUrl,
+      },
+    );
+
+    if (!paymentResponse?.data?.status || !paymentResponse.data.data?.authorization_url) {
+      this.logger.error(`Failed to initialize Paystack payment for order ${order.order_number}`);
+      throw new BadRequestException('Failed to initialize payment. Please try again.');
+    }
+
+    // Update order with payment reference
+    await this.orderModel.updateOne(
+      { _id: order._id },
+      {
+        payment_reference: paymentReference,
+        updated_by: userId,
+      },
+    );
+
+    // Create Payment record for webhook to find
+    await this.paymentsService.create(
+      userObjectId,
+      paymentReference,
+      amount,
+      'Pharmacy Order',
+    );
+
+    this.logger.log(`Paystack payment initialized for order ${order.order_number} - ref: ${paymentReference}`);
+
+    return {
+      authorization_url: paymentResponse.data.data.authorization_url,
+      payment_reference: paymentReference,
+      order_id: order._id.toString(),
+    };
   }
 
   // ============ PATIENT DELIVERY ADDRESS METHODS ============
