@@ -100,7 +100,7 @@
                 </div>
                 <span>Notifications</span>
               </button>
-              <button class="action-btn" @click="$router.push('/app/patient/account')">
+              <button class="action-btn" @click="$router.push('/app/patient/onboarding/personal-details')">
                 <div class="action-icon emerald">
                   <v-icon name="hi-user" scale="1.1" />
                 </div>
@@ -272,21 +272,65 @@
             </div>
           </div>
 
-          <!-- Coming Soon Cards -->
-          <div class="bento-card coming-soon-card">
-            <div class="coming-soon-icon biometric">
-              <v-icon name="hi-finger-print" scale="1.2" />
+          <!-- Biometric Login Card -->
+          <div class="bento-card biometric-card">
+            <div class="card-header">
+              <div class="header-icon" :class="{ active: biometricEnabled }">
+                <v-icon name="hi-finger-print" scale="1.1" />
+              </div>
+              <div class="header-text">
+                <h3>Biometric Login</h3>
+                <span class="header-subtitle">
+                  {{ biometricEnabled ? 'Face ID / Touch ID enabled' : 'Login using Face ID or fingerprint' }}
+                </span>
+              </div>
+              <div v-if="biometricEnabled" class="status-badge enabled">
+                <v-icon name="hi-check" scale="0.7" />
+                Enabled
+              </div>
             </div>
-            <div class="coming-soon-content">
-              <h4>Biometric Login</h4>
-              <p>Login using Face ID or fingerprint</p>
+
+            <div v-if="!biometricSupported" class="biometric-notice">
+              <v-icon name="hi-information-circle" scale="1" />
+              <div class="notice-content">
+                <strong>Not Supported</strong>
+                <p>Your device or browser doesn't support biometric authentication.</p>
+              </div>
             </div>
-            <div class="coming-soon-badge">
-              <v-icon name="hi-clock" scale="0.7" />
-              <span>Coming Soon</span>
+
+            <div v-else class="biometric-content">
+              <div v-if="biometricCredentials.length > 0" class="credentials-list">
+                <div
+                  v-for="cred in biometricCredentials"
+                  :key="cred.credentialId"
+                  class="credential-item"
+                >
+                  <div class="credential-info">
+                    <v-icon name="hi-device-mobile" scale="0.9" />
+                    <div class="credential-text">
+                      <span class="credential-name">{{ cred.deviceName }}</span>
+                      <span class="credential-date">Added {{ formatDate(cred.created_at) }}</span>
+                    </div>
+                  </div>
+                  <button class="delete-btn" @click="removeBiometricCredential(cred.credentialId)" :disabled="deletingCredential">
+                    <v-icon name="hi-trash" scale="0.85" />
+                  </button>
+                </div>
+              </div>
+
+              <button
+                class="biometric-setup-btn"
+                @click="setupBiometric"
+                :disabled="settingUpBiometric"
+              >
+                <v-icon name="hi-plus" scale="0.9" v-if="!settingUpBiometric" />
+                <span v-if="settingUpBiometric" class="spinner-small"></span>
+                <span>{{ biometricCredentials.length > 0 ? 'Add Another Device' : 'Set Up Biometric Login' }}</span>
+              </button>
             </div>
           </div>
 
+          <!-- Coming Soon Card -->
           <div class="bento-card coming-soon-card">
             <div class="coming-soon-icon sessions">
               <v-icon name="hi-device-mobile" scale="1.2" />
@@ -391,6 +435,133 @@
         </div>
       </div>
     </div>
+
+    <!-- Change Password Modal -->
+    <div v-if="selectedModal === 'Change Password'" class="modal-overlay" @click.self="closeModal">
+      <div class="password-modal">
+        <div class="password-modal__header">
+          <div class="header-icon">
+            <v-icon name="hi-lock-closed" scale="1.2" />
+          </div>
+          <div class="header-text">
+            <h3>Change Password</h3>
+            <p>Create a strong password to protect your account</p>
+          </div>
+          <button class="close-btn" @click="closeModal">
+            <v-icon name="hi-x" scale="1" />
+          </button>
+        </div>
+
+        <div class="password-modal__body">
+          <!-- Current Password -->
+          <div class="form-group">
+            <label>Current Password</label>
+            <div class="password-input-wrapper">
+              <input
+                :type="showCurrentPassword ? 'text' : 'password'"
+                v-model="passwordForm.current"
+                placeholder="Enter your current password"
+                :class="{ 'has-error': passwordErrors.current }"
+              />
+              <button type="button" class="toggle-visibility" @click="showCurrentPassword = !showCurrentPassword">
+                <v-icon :name="showCurrentPassword ? 'hi-eye-off' : 'hi-eye'" scale="0.9" />
+              </button>
+            </div>
+            <span v-if="passwordErrors.current" class="error-text">{{ passwordErrors.current }}</span>
+          </div>
+
+          <div class="divider-line"></div>
+
+          <!-- New Password -->
+          <div class="form-group">
+            <label>New Password</label>
+            <div class="password-input-wrapper">
+              <input
+                :type="showNewPassword ? 'text' : 'password'"
+                v-model="passwordForm.new"
+                placeholder="Enter new password"
+                :class="{ 'has-error': passwordErrors.new }"
+              />
+              <button type="button" class="toggle-visibility" @click="showNewPassword = !showNewPassword">
+                <v-icon :name="showNewPassword ? 'hi-eye-off' : 'hi-eye'" scale="0.9" />
+              </button>
+            </div>
+            <span v-if="passwordErrors.new" class="error-text">{{ passwordErrors.new }}</span>
+
+            <!-- Password Strength Indicator -->
+            <div class="password-strength" v-if="passwordForm.new">
+              <div class="strength-bars">
+                <div class="bar" :class="{ active: passwordForm.new.length >= 1 }"></div>
+                <div class="bar" :class="{ active: passwordForm.new.length >= 6 }"></div>
+                <div class="bar" :class="{ active: passwordForm.new.length >= 8 && /[A-Z]/.test(passwordForm.new) }"></div>
+                <div class="bar" :class="{ active: passwordForm.new.length >= 8 && /[0-9]/.test(passwordForm.new) && /[A-Z]/.test(passwordForm.new) }"></div>
+              </div>
+              <span class="strength-label">{{ passwordStrengthLabel }}</span>
+            </div>
+          </div>
+
+          <!-- Confirm Password -->
+          <div class="form-group">
+            <label>Confirm New Password</label>
+            <div class="password-input-wrapper">
+              <input
+                :type="showConfirmPassword ? 'text' : 'password'"
+                v-model="passwordForm.confirm"
+                placeholder="Confirm new password"
+                :class="{ 'has-error': passwordErrors.confirm }"
+              />
+              <button type="button" class="toggle-visibility" @click="showConfirmPassword = !showConfirmPassword">
+                <v-icon :name="showConfirmPassword ? 'hi-eye-off' : 'hi-eye'" scale="0.9" />
+              </button>
+            </div>
+            <span v-if="passwordErrors.confirm" class="error-text">{{ passwordErrors.confirm }}</span>
+            <span v-if="passwordForm.confirm && passwordForm.new === passwordForm.confirm && !passwordErrors.confirm" class="success-text">
+              <v-icon name="hi-check-circle" scale="0.7" /> Passwords match
+            </span>
+          </div>
+
+          <!-- Password Tips -->
+          <div class="password-tips-box">
+            <h4><v-icon name="hi-light-bulb" scale="0.8" /> Password Tips</h4>
+            <ul>
+              <li :class="{ met: passwordForm.new.length >= 8 }">
+                <v-icon :name="passwordForm.new.length >= 8 ? 'hi-check-circle' : 'hi-minus-circle'" scale="0.7" />
+                At least 8 characters
+              </li>
+              <li :class="{ met: /[A-Z]/.test(passwordForm.new) && /[a-z]/.test(passwordForm.new) }">
+                <v-icon :name="/[A-Z]/.test(passwordForm.new) && /[a-z]/.test(passwordForm.new) ? 'hi-check-circle' : 'hi-minus-circle'" scale="0.7" />
+                Upper and lowercase letters
+              </li>
+              <li :class="{ met: /[0-9]/.test(passwordForm.new) }">
+                <v-icon :name="/[0-9]/.test(passwordForm.new) ? 'hi-check-circle' : 'hi-minus-circle'" scale="0.7" />
+                Include numbers
+              </li>
+              <li :class="{ met: /[^a-zA-Z0-9]/.test(passwordForm.new) }">
+                <v-icon :name="/[^a-zA-Z0-9]/.test(passwordForm.new) ? 'hi-check-circle' : 'hi-minus-circle'" scale="0.7" />
+                Include special characters
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="password-modal__footer">
+          <button class="btn secondary" @click="closeModal" :disabled="changingPassword">
+            Cancel
+          </button>
+          <button
+            class="btn primary"
+            @click="submitPasswordChange"
+            :disabled="changingPassword || !passwordForm.current || !passwordForm.new || !passwordForm.confirm"
+          >
+            <span v-if="changingPassword" class="btn-loading">
+              <div class="spinner-small"></div>
+              Changing...
+            </span>
+            <span v-else>Change Password</span>
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -398,6 +569,7 @@
 import { mapGetters, mapActions } from "vuex";
 import http from "@/services/http";
 import { TWO_FAS, SECURITY_UPDATE_OPTIONS } from "@/utilities/constants";
+import { startRegistration } from "@simplewebauthn/browser";
 
 export default {
   name: "SecuritySettingsPage",
@@ -420,6 +592,28 @@ export default {
       // WhatsApp
       whatsappEnabled: false,
       updatingWhatsapp: false,
+
+      // Password Change
+      passwordForm: {
+        current: "",
+        new: "",
+        confirm: "",
+      },
+      passwordErrors: {
+        current: "",
+        new: "",
+        confirm: "",
+      },
+      showCurrentPassword: false,
+      showNewPassword: false,
+      showConfirmPassword: false,
+      changingPassword: false,
+
+      // Biometric
+      biometricSupported: false,
+      biometricCredentials: [],
+      settingUpBiometric: false,
+      deletingCredential: false,
     };
   },
 
@@ -453,9 +647,22 @@ export default {
       return active?.title || "";
     },
 
+    passwordStrengthLabel() {
+      const pwd = this.passwordForm.new;
+      if (!pwd) return "";
+      if (pwd.length < 8) return "Too short";
+      if (pwd.length >= 12 && /[A-Z]/.test(pwd) && /[0-9]/.test(pwd) && /[^a-zA-Z0-9]/.test(pwd)) return "Strong";
+      if (pwd.length >= 8 && (/[A-Z]/.test(pwd) || /[0-9]/.test(pwd))) return "Medium";
+      return "Weak";
+    },
+
     lastPasswordChanged() {
       // This could be fetched from the backend in the future
       return "Unknown";
+    },
+
+    biometricEnabled() {
+      return this.biometricCredentials.length > 0;
     },
   },
 
@@ -482,7 +689,22 @@ export default {
   },
 
   async mounted() {
-    await this.fetchUserSettings();
+    // Check if biometric is supported
+    this.biometricSupported = window.PublicKeyCredential !== undefined &&
+      typeof window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable === 'function';
+
+    if (this.biometricSupported) {
+      try {
+        this.biometricSupported = await window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+      } catch (e) {
+        this.biometricSupported = false;
+      }
+    }
+
+    await Promise.all([
+      this.fetchUserSettings(),
+      this.loadBiometricCredentials(),
+    ]);
     this.loading = false;
   },
 
@@ -493,6 +715,10 @@ export default {
       verifyNumber: "userAccountSettings/verifynumber",
       sendSecreteCode: "userAccountSettings/getSecreteCode",
       activateApp: "userAccountSettings/activateApp",
+      getBiometricRegistrationOptions: "userAccountSettings/getBiometricRegistrationOptions",
+      verifyBiometricRegistration: "userAccountSettings/verifyBiometricRegistration",
+      getBiometricCredentials: "userAccountSettings/getBiometricCredentials",
+      deleteBiometricCredential: "userAccountSettings/deleteBiometricCredential",
     }),
 
     async fetchUserSettings() {
@@ -507,10 +733,155 @@ export default {
       }
     },
 
+    // ==================== BIOMETRIC METHODS ====================
+
+    async loadBiometricCredentials() {
+      if (!this.biometricSupported) return;
+      try {
+        const result = await this.getBiometricCredentials();
+        if (result.success) {
+          this.biometricCredentials = result.credentials || [];
+        }
+      } catch (e) {
+        console.error("Error loading biometric credentials:", e);
+      }
+    },
+
+    async setupBiometric() {
+      if (!this.biometricSupported) {
+        this.$toast?.error?.("Biometric authentication is not supported on this device");
+        return;
+      }
+
+      this.settingUpBiometric = true;
+      try {
+        // Get registration options from server
+        const optionsResult = await this.getBiometricRegistrationOptions();
+        if (!optionsResult.success) {
+          throw new Error(optionsResult.error || "Failed to get registration options");
+        }
+
+        // Start WebAuthn registration
+        const credential = await startRegistration({ optionsJSON: optionsResult.options });
+
+        // Get device name
+        const deviceName = this.getDeviceName();
+
+        // Verify with server
+        const verifyResult = await this.verifyBiometricRegistration({
+          credential,
+          deviceName,
+        });
+
+        if (verifyResult.success) {
+          this.$toast?.success?.("Biometric login enabled successfully!");
+          await this.loadBiometricCredentials();
+        } else {
+          throw new Error(verifyResult.error || "Failed to register biometric");
+        }
+      } catch (error) {
+        console.error("Biometric setup error:", error);
+        if (error.name === "NotAllowedError") {
+          this.$toast?.error?.("Biometric registration was cancelled");
+        } else if (error.name === "InvalidStateError") {
+          this.$toast?.error?.("This device is already registered");
+        } else {
+          this.$toast?.error?.(error.message || "Failed to set up biometric login");
+        }
+      }
+      this.settingUpBiometric = false;
+    },
+
+    async removeBiometricCredential(credentialId) {
+      if (!confirm("Remove this biometric credential?")) return;
+
+      this.deletingCredential = true;
+      try {
+        const result = await this.deleteBiometricCredential(credentialId);
+        if (result.success) {
+          this.$toast?.success?.("Biometric credential removed");
+          await this.loadBiometricCredentials();
+        } else {
+          throw new Error(result.error);
+        }
+      } catch (error) {
+        this.$toast?.error?.(error.message || "Failed to remove credential");
+      }
+      this.deletingCredential = false;
+    },
+
+    getDeviceName() {
+      const ua = navigator.userAgent;
+      if (/iPhone/.test(ua)) return "iPhone";
+      if (/iPad/.test(ua)) return "iPad";
+      if (/Macintosh/.test(ua)) return "Mac";
+      if (/Android/.test(ua)) return "Android Device";
+      if (/Windows/.test(ua)) return "Windows PC";
+      return "Device";
+    },
+
+    formatDate(dateStr) {
+      if (!dateStr) return "";
+      const date = new Date(dateStr);
+      return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    },
+
     handlePasswordReset() {
-      localStorage.clear();
-      sessionStorage.clear();
-      window.location = "/reset-password/request-link";
+      // Open password change modal
+      this.selectedModal = "Change Password";
+      this.passwordForm = { current: "", new: "", confirm: "" };
+      this.passwordErrors = { current: "", new: "", confirm: "" };
+    },
+
+    validatePasswordForm() {
+      let isValid = true;
+      this.passwordErrors = { current: "", new: "", confirm: "" };
+
+      if (!this.passwordForm.current) {
+        this.passwordErrors.current = "Current password is required";
+        isValid = false;
+      }
+
+      if (!this.passwordForm.new) {
+        this.passwordErrors.new = "New password is required";
+        isValid = false;
+      } else if (this.passwordForm.new.length < 8) {
+        this.passwordErrors.new = "Password must be at least 8 characters";
+        isValid = false;
+      }
+
+      if (!this.passwordForm.confirm) {
+        this.passwordErrors.confirm = "Please confirm your new password";
+        isValid = false;
+      } else if (this.passwordForm.new !== this.passwordForm.confirm) {
+        this.passwordErrors.confirm = "Passwords do not match";
+        isValid = false;
+      }
+
+      return isValid;
+    },
+
+    async submitPasswordChange() {
+      if (!this.validatePasswordForm()) return;
+
+      this.changingPassword = true;
+      try {
+        await http.patch("auth/change-password", {
+          current_password: this.passwordForm.current,
+          new_password: this.passwordForm.new,
+          confirm_password: this.passwordForm.confirm,
+        });
+        this.$toast?.success?.("Password changed successfully!");
+        this.closeModal();
+      } catch (error) {
+        const message = error.response?.data?.message || error.response?.data?.errorMessage || "Failed to change password";
+        if (message.toLowerCase().includes("current") || message.toLowerCase().includes("incorrect")) {
+          this.passwordErrors.current = "Current password is incorrect";
+        } else {
+          this.$toast?.error?.(message);
+        }
+      }
+      this.changingPassword = false;
     },
 
     getMethodIcon(name) {
@@ -1648,6 +2019,149 @@ $whatsapp: #25D366;
   }
 }
 
+// Biometric Card
+.biometric-card {
+  grid-column: span 6;
+
+  @media (max-width: 1024px) {
+    grid-column: span 6;
+  }
+
+  .biometric-notice {
+    display: flex;
+    gap: 14px;
+    padding: 16px;
+    background: rgba($gray, 0.05);
+    border-radius: 12px;
+
+    svg {
+      color: $gray;
+      flex-shrink: 0;
+    }
+
+    .notice-content {
+      strong {
+        display: block;
+        font-size: 14px;
+        color: $navy;
+        margin-bottom: 4px;
+      }
+
+      p {
+        font-size: 13px;
+        color: $gray;
+        margin: 0;
+      }
+    }
+  }
+
+  .biometric-content {
+    .credentials-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .credential-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 16px;
+      background: #F8FAFC;
+      border-radius: 12px;
+      border: 1px solid #E5E7EB;
+
+      .credential-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+
+        svg {
+          color: $violet;
+        }
+
+        .credential-text {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+
+          .credential-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: $navy;
+          }
+
+          .credential-date {
+            font-size: 12px;
+            color: $gray;
+          }
+        }
+      }
+
+      .delete-btn {
+        width: 36px;
+        height: 36px;
+        border: none;
+        background: rgba($rose, 0.1);
+        color: $rose;
+        border-radius: 10px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+
+        &:hover {
+          background: rgba($rose, 0.2);
+        }
+
+        &:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+      }
+    }
+
+    .biometric-setup-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      padding: 14px 20px;
+      background: linear-gradient(135deg, $violet 0%, darken($violet, 10%) 100%);
+      border: none;
+      border-radius: 12px;
+      color: white;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+
+      &:hover {
+        box-shadow: 0 4px 16px rgba($violet, 0.3);
+        transform: translateY(-1px);
+      }
+
+      &:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      .spinner-small {
+        width: 18px;
+        height: 18px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-top-color: white;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+    }
+  }
+}
+
 // Coming Soon Cards
 .coming-soon-card {
   grid-column: span 6;
@@ -1977,6 +2491,320 @@ $whatsapp: #25D366;
     &:hover {
       border-color: $sky;
       color: $sky-dark;
+    }
+  }
+}
+
+// Password Change Modal Styles
+.password-modal {
+  background: white;
+  border-radius: 20px;
+  width: min(480px, 95vw);
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  animation: modalSlideUp 0.3s ease;
+
+  @keyframes modalSlideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  &__header {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 24px 24px 0;
+
+    .header-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, $sky 0%, $sky-dark 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      flex-shrink: 0;
+    }
+
+    .header-text {
+      flex: 1;
+
+      h3 {
+        font-size: 20px;
+        font-weight: 700;
+        color: $navy;
+        margin: 0 0 4px;
+      }
+
+      p {
+        font-size: 14px;
+        color: $gray;
+        margin: 0;
+      }
+    }
+
+    .close-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      border: none;
+      background: #F1F5F9;
+      color: $gray;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+
+      &:hover {
+        background: #E2E8F0;
+        color: $navy;
+      }
+    }
+  }
+
+  &__body {
+    padding: 24px;
+    overflow-y: auto;
+    flex: 1;
+
+    .form-group {
+      margin-bottom: 20px;
+
+      label {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        color: $slate;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .password-input-wrapper {
+        position: relative;
+
+        input {
+          width: 100%;
+          padding: 14px 48px 14px 16px;
+          border: 2px solid #E5E7EB;
+          border-radius: 12px;
+          font-size: 15px;
+          color: $navy;
+          transition: all 0.2s ease;
+          background: #FAFBFC;
+
+          &::placeholder {
+            color: #9CA3AF;
+          }
+
+          &:focus {
+            outline: none;
+            border-color: $sky;
+            background: white;
+            box-shadow: 0 0 0 4px rgba($sky, 0.1);
+          }
+
+          &.has-error {
+            border-color: #EF4444;
+            background: #FEF2F2;
+          }
+        }
+
+        .toggle-visibility {
+          position: absolute;
+          right: 12px;
+          top: 50%;
+          transform: translateY(-50%);
+          background: none;
+          border: none;
+          color: #9CA3AF;
+          cursor: pointer;
+          padding: 4px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: color 0.2s ease;
+
+          &:hover {
+            color: $sky-dark;
+          }
+        }
+      }
+
+      .error-text {
+        display: block;
+        font-size: 12px;
+        color: #EF4444;
+        margin-top: 6px;
+      }
+
+      .success-text {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 12px;
+        color: #10B981;
+        margin-top: 6px;
+      }
+    }
+
+    .divider-line {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, #E5E7EB, transparent);
+      margin: 24px 0;
+    }
+
+    .password-strength {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 10px;
+
+      .strength-bars {
+        display: flex;
+        gap: 4px;
+        flex: 1;
+
+        .bar {
+          height: 4px;
+          flex: 1;
+          border-radius: 2px;
+          background: #E5E7EB;
+          transition: all 0.3s ease;
+
+          &.active:nth-child(1) { background: #EF4444; }
+          &.active:nth-child(2) { background: #F59E0B; }
+          &.active:nth-child(3) { background: #10B981; }
+          &.active:nth-child(4) { background: #10B981; }
+        }
+      }
+
+      .strength-label {
+        font-size: 12px;
+        font-weight: 600;
+        color: $gray;
+        min-width: 60px;
+      }
+    }
+
+    .password-tips-box {
+      background: linear-gradient(135deg, rgba($sky, 0.08) 0%, rgba($sky-dark, 0.04) 100%);
+      border: 1px solid rgba($sky, 0.2);
+      border-radius: 14px;
+      padding: 16px;
+      margin-top: 8px;
+
+      h4 {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        color: $sky-dark;
+        margin: 0 0 12px;
+      }
+
+      ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+
+        li {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 13px;
+          color: $gray;
+          transition: color 0.2s ease;
+
+          &.met {
+            color: #10B981;
+          }
+        }
+      }
+    }
+  }
+
+  &__footer {
+    display: flex;
+    gap: 12px;
+    padding: 20px 24px 24px;
+    border-top: 1px solid #F1F5F9;
+    background: #FAFBFC;
+
+    .btn {
+      flex: 1;
+      padding: 14px 20px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+
+      &.primary {
+        background: linear-gradient(135deg, $sky 0%, $sky-dark 100%);
+        border: none;
+        color: white;
+
+        &:hover:not(:disabled) {
+          box-shadow: 0 4px 12px rgba($sky, 0.4);
+          transform: translateY(-1px);
+        }
+
+        &:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+      }
+
+      &.secondary {
+        background: white;
+        border: 2px solid #E5E7EB;
+        color: $slate;
+
+        &:hover:not(:disabled) {
+          border-color: $sky;
+          color: $sky-dark;
+        }
+
+        &:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+      }
+
+      .btn-loading {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        .spinner-small {
+          width: 16px;
+          height: 16px;
+          border: 2px solid rgba(255, 255, 255, 0.3);
+          border-top-color: white;
+          border-radius: 50%;
+          animation: spin 0.8s linear infinite;
+        }
+      }
     }
   }
 }

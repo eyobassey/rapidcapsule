@@ -245,5 +245,50 @@ export default {
         console.log(err);
       }
     },
+
+    // ==================== BIOMETRIC AUTHENTICATION ====================
+
+    async getBiometricRegistrationOptions() {
+      try {
+        const res = await axios.post("auth/biometric/register/options");
+        return { success: true, options: res.data.data };
+      } catch (err) {
+        console.error("Error getting biometric registration options:", err);
+        return { success: false, error: err.response?.data?.message || err.message };
+      }
+    },
+
+    async verifyBiometricRegistration(_, { credential, deviceName }) {
+      try {
+        const res = await axios.post("auth/biometric/register/verify", {
+          credential,
+          deviceName,
+        });
+        return { success: true, data: res.data.data };
+      } catch (err) {
+        console.error("Error verifying biometric registration:", err);
+        return { success: false, error: err.response?.data?.message || err.message };
+      }
+    },
+
+    async getBiometricCredentials() {
+      try {
+        const res = await axios.get("auth/biometric/credentials");
+        return { success: true, credentials: res.data.data };
+      } catch (err) {
+        console.error("Error getting biometric credentials:", err);
+        return { success: false, error: err.response?.data?.message || err.message };
+      }
+    },
+
+    async deleteBiometricCredential(_, credentialId) {
+      try {
+        await axios.post("auth/biometric/delete", { credentialId });
+        return { success: true };
+      } catch (err) {
+        console.error("Error deleting biometric credential:", err);
+        return { success: false, error: err.response?.data?.message || err.message };
+      }
+    },
   },
 };

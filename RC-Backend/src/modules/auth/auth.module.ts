@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { UsersModule } from '../users/users.module';
@@ -13,6 +14,11 @@ import { GoogleAuth } from './strategies/googleAuth.strategy';
 import { UserSettingsModule } from '../user-settings/user-settings.module';
 import { Twilio } from '../../common/external/twilio/twilio';
 import { AppleAuth } from './strategies/appleAuth.strategy';
+import { BiometricService } from './biometric.service';
+import {
+  BiometricCredential,
+  BiometricCredentialSchema,
+} from './entities/biometric-credential.entity';
 
 dotenv.config();
 
@@ -25,6 +31,9 @@ dotenv.config();
         expiresIn: process.env.TOKEN_EXPIRATION,
       },
     }),
+    MongooseModule.forFeature([
+      { name: BiometricCredential.name, schema: BiometricCredentialSchema },
+    ]),
     UsersModule,
     TokensModule,
     UserSettingsModule,
@@ -32,6 +41,7 @@ dotenv.config();
   controllers: [AuthController],
   providers: [
     AuthService,
+    BiometricService,
     LocalStrategy,
     JwtStrategy,
     GeneralHelpers,
@@ -39,6 +49,6 @@ dotenv.config();
     AppleAuth,
     Twilio,
   ],
-  exports: [AuthService],
+  exports: [AuthService, BiometricService],
 })
 export class AuthModule {}

@@ -72,6 +72,23 @@
 								<div class="line"></div>
 							</div>
 
+							<!-- Biometric Login Button - Always visible when device supports biometrics -->
+							<button
+								v-if="biometricSupported"
+								type="button"
+								class="biometric-login-btn"
+								:class="{ 'biometric-available': biometricAvailable.patient }"
+								@click="biometricLogin('Patient')"
+								:disabled="biometricLoading || checkingBiometric"
+							>
+								<svg class="biometric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+									<path d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4" />
+								</svg>
+								<span v-if="biometricLoading">Authenticating...</span>
+								<span v-else-if="checkingBiometric">Checking...</span>
+								<span v-else>Sign in with Biometrics</span>
+							</button>
+
 							<div class="input__group">
 								<ButtonSocial
 									provider="apple"
@@ -160,6 +177,23 @@
 								<div class="line"></div>
 							</div>
 
+							<!-- Biometric Login Button - Always visible when device supports biometrics -->
+							<button
+								v-if="biometricSupported"
+								type="button"
+								class="biometric-login-btn"
+								:class="{ 'biometric-available': biometricAvailable.specialist }"
+								@click="biometricLogin('Specialist')"
+								:disabled="biometricLoading || checkingBiometric"
+							>
+								<svg class="biometric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+									<path d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4" />
+								</svg>
+								<span v-if="biometricLoading">Authenticating...</span>
+								<span v-else-if="checkingBiometric">Checking...</span>
+								<span v-else>Sign in with Biometrics</span>
+							</button>
+
 							<div class="input__group">
 								<ButtonSocial
 									provider="apple"
@@ -196,6 +230,7 @@ import { mapActions, mapGetters } from "vuex";
 import { useVuelidate } from "@vuelidate/core";
 import { required } from "@vuelidate/validators";
 import { googleTokenLogin } from "vue3-google-login";
+import { startAuthentication } from "@simplewebauthn/browser";
 import SegmentNav from "@/components/tab-components/segmented-control.vue";
 import SegmentContent from "@/components/tab-components/segment.vue";
 import Text from "../../inputs/text.vue";
@@ -251,6 +286,14 @@ export default {
 				},
 			},
 			loading: false,
+			// Biometric
+			biometricSupported: false,
+			biometricAvailable: {
+				patient: false,
+				specialist: false,
+			},
+			checkingBiometric: false,
+			biometricLoading: false,
 		};
 	},
 
@@ -305,6 +348,11 @@ export default {
 			login: "userRegAuth/login",
 			googleAuth: "userRegAuth/googleauth",
 			appleAuth: "userRegAuth/appleauth",
+			checkBiometricEnabled: "userRegAuth/checkBiometricEnabled",
+			getBiometricLoginOptions: "userRegAuth/getBiometricLoginOptions",
+			verifyBiometricLogin: "userRegAuth/verifyBiometricLogin",
+			getPasskeyLoginOptions: "userRegAuth/getPasskeyLoginOptions",
+			verifyPasskeyLogin: "userRegAuth/verifyPasskeyLogin",
 		}),
 
 		setActiveTab() {
@@ -383,12 +431,208 @@ export default {
 				document.head.appendChild(appleSignIn);
 			}
 		},
+
+		async checkBiometricSupport() {
+			// Check if WebAuthn is supported and platform authenticator is available
+			console.log("Checking biometric support...");
+			console.log("PublicKeyCredential available:", !!window.PublicKeyCredential);
+
+			if (
+				window.PublicKeyCredential &&
+				typeof window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable === "function"
+			) {
+				try {
+					this.biometricSupported =
+						await window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+					console.log("Biometric supported:", this.biometricSupported);
+				} catch (err) {
+					console.error("Error checking biometric support:", err);
+					this.biometricSupported = false;
+				}
+			} else {
+				console.log("PublicKeyCredential or isUserVerifyingPlatformAuthenticatorAvailable not available");
+				this.biometricSupported = false;
+			}
+		},
+
+		async checkBiometricForEmail(email, userType) {
+			console.log("checkBiometricForEmail called:", { email, userType, biometricSupported: this.biometricSupported });
+			if (!email || !this.biometricSupported) {
+				console.log("Skipping check - email or biometric not supported");
+				return;
+			}
+
+			this.checkingBiometric = true;
+			try {
+				const result = await this.checkBiometricEnabled(email);
+				console.log("Biometric enabled check result:", result);
+				if (userType === "Patient") {
+					this.biometricAvailable.patient = result.enabled;
+				} else if (userType === "Specialist") {
+					this.biometricAvailable.specialist = result.enabled;
+				}
+			} catch (err) {
+				console.error("Error checking biometric availability:", err);
+			} finally {
+				this.checkingBiometric = false;
+			}
+		},
+
+		async biometricLogin(userType) {
+			const email =
+				userType === "Patient"
+					? this.logInCredentials.patient.email
+					: this.logInCredentials.specialist.email;
+
+			this.biometricLoading = true;
+			this.loading = true;
+
+			try {
+				// Try passkey (discoverable credentials) flow first - no email required
+				console.log("Trying passkey flow...");
+				const passkeySuccess = await this.tryPasskeyLogin();
+
+				if (passkeySuccess) {
+					// Passkey login succeeded
+					return;
+				}
+				console.log("Passkey flow failed, falling back to email-based flow...");
+
+				// Passkey failed - use email-based flow
+
+				if (!email) {
+					alert("Please enter your email address to use biometric login.");
+					this.loading = false;
+					this.biometricLoading = false;
+					return;
+				}
+
+				await this.emailBasedBiometricLogin(email, userType);
+			} catch (err) {
+				console.error("Biometric login error:", err);
+				// Don't show error for user cancellation
+				if (err.name !== "NotAllowedError") {
+					alert(err.message || "Biometric authentication failed. Please try again or use password.");
+				}
+				this.loading = false;
+			} finally {
+				this.biometricLoading = false;
+			}
+		},
+
+		async tryPasskeyLogin() {
+			try {
+				// Get passkey options (no email required)
+				const optionsResult = await this.getPasskeyLoginOptions();
+				console.log("Passkey options result:", optionsResult);
+
+				if (!optionsResult.success) {
+					console.log("Failed to get passkey options:", optionsResult.error);
+					return false;
+				}
+
+				// Start the WebAuthn authentication - browser shows available passkeys
+				console.log("Starting passkey authentication...");
+				const authResult = await startAuthentication(optionsResult.options);
+				console.log("Passkey auth result:", authResult);
+
+				// Verify with the server
+				console.log("Verifying passkey with server...");
+				const verifyResult = await this.verifyPasskeyLogin({
+					credential: authResult,
+				});
+				console.log("Passkey verify result:", verifyResult);
+
+				if (!verifyResult.success) {
+					console.log("Passkey verification failed:", verifyResult.error);
+					return false;
+				}
+
+				// Success!
+				return true;
+			} catch (err) {
+				// NotAllowedError means user cancelled or no passkeys available
+				if (err.name === "NotAllowedError") {
+					console.log("User cancelled passkey or no passkeys available");
+				} else {
+					console.error("Passkey error:", err);
+				}
+				return false;
+			}
+		},
+
+		async emailBasedBiometricLogin(email, userType) {
+			// Check if biometrics are enabled for this email
+			console.log("Checking biometric for email:", email);
+			const checkResult = await this.checkBiometricEnabled(email);
+			console.log("Biometric check result:", checkResult);
+
+			if (!checkResult.enabled) {
+				throw new Error("Biometric login is not set up for this account. Please set it up in Security Settings first.");
+			}
+
+			// Get authentication options from the server
+			console.log("Getting biometric login options...");
+			const optionsResult = await this.getBiometricLoginOptions(email);
+			console.log("Login options result:", optionsResult);
+
+			if (!optionsResult.success) {
+				throw new Error(optionsResult.error || "Failed to get authentication options");
+			}
+
+			// Start the WebAuthn authentication
+			console.log("Starting WebAuthn authentication...");
+			const authResult = await startAuthentication(optionsResult.options);
+			console.log("WebAuthn auth result:", authResult);
+
+			// Verify with the server
+			console.log("Verifying with server...");
+			const verifyResult = await this.verifyBiometricLogin({
+				email,
+				credential: authResult,
+				usertype: userType,
+			});
+			console.log("Verify result:", verifyResult);
+
+			if (!verifyResult.success) {
+				throw new Error(verifyResult.error || "Biometric authentication failed");
+			}
+			// Success - authentication is handled by the verifyBiometricLogin action
+		},
+	},
+
+	watch: {
+		"logInCredentials.patient.email"(newEmail) {
+			if (newEmail && this.biometricSupported) {
+				// Debounce the check
+				clearTimeout(this._patientEmailTimeout);
+				this._patientEmailTimeout = setTimeout(() => {
+					this.checkBiometricForEmail(newEmail, "Patient");
+				}, 500);
+			} else {
+				this.biometricAvailable.patient = false;
+			}
+		},
+		"logInCredentials.specialist.email"(newEmail) {
+			if (newEmail && this.biometricSupported) {
+				// Debounce the check
+				clearTimeout(this._specialistEmailTimeout);
+				this._specialistEmailTimeout = setTimeout(() => {
+					this.checkBiometricForEmail(newEmail, "Specialist");
+				}, 500);
+			} else {
+				this.biometricAvailable.specialist = false;
+			}
+		},
 	},
 
 	mounted() {
 		this.setActiveTab();
 
 		this.setupAppleLogin();
+
+		// Check if biometric authentication is supported
+		this.checkBiometricSupport();
 	},
 };
 </script>
@@ -490,6 +734,50 @@ export default {
 					color: $color-denote-red;
 					margin-left: 8px;
 					font-size: $size-11;
+				}
+
+				.biometric-login-btn {
+					display: flex;
+					align-items: center;
+					justify-content: center;
+					gap: $size-8;
+					width: 100%;
+					padding: $size-14 $size-16;
+					background-color: $color-white;
+					border: 2px solid $color-g-77;
+					border-radius: $size-8;
+					color: $color-g-44;
+					font-size: $size-14;
+					font-weight: 500;
+					cursor: pointer;
+					transition: all 0.2s ease;
+
+					&:hover:not(:disabled) {
+						background-color: hsla(121, 48%, 46%, 0.1);
+						border-color: $color-denote-green;
+						color: $color-denote-green;
+					}
+
+					&:disabled {
+						opacity: 0.6;
+						cursor: not-allowed;
+					}
+
+					// Highlight green when biometrics are confirmed available for this email
+					&.biometric-available {
+						border-color: $color-denote-green;
+						background-color: hsla(121, 48%, 46%, 0.1);
+						color: $color-denote-green;
+
+						&:hover:not(:disabled) {
+							background-color: hsla(121, 48%, 46%, 0.15);
+						}
+					}
+
+					.biometric-icon {
+						width: $size-20;
+						height: $size-20;
+					}
 				}
 			}
 		}

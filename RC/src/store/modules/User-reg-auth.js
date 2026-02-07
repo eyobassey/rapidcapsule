@@ -310,5 +310,86 @@ export default {
         commit("SET_USER_TYPE", data.authorization.state);
       }
     },
+
+    // ==================== BIOMETRIC AUTHENTICATION ====================
+
+    async checkBiometricEnabled(_, email) {
+      try {
+        const res = await axios.post("auth/biometric/check", { email });
+        return { enabled: res.data.data?.enabled || false };
+      } catch (err) {
+        console.error("Error checking biometric status:", err);
+        return { enabled: false };
+      }
+    },
+
+    async getBiometricLoginOptions(_, email) {
+      try {
+        const res = await axios.post("auth/biometric/login/options", { email });
+        return { success: true, options: res.data.data };
+      } catch (err) {
+        console.error("Error getting biometric login options:", err);
+        return { success: false, error: err.response?.data?.message || err.message };
+      }
+    },
+
+    async verifyBiometricLogin({ dispatch, commit }, { email, credential, usertype }) {
+      try {
+        const res = await axios.post("auth/biometric/login/verify", {
+          email,
+          credential,
+        });
+
+        // The response includes the JWT token
+        const token = res.data.data;
+        if (token) {
+          // Store token and authenticate
+          const storage = localStorage; // Or determine based on remember me preference
+          storage.setItem("token", token);
+          await dispatch("authenticate", token, { root: true });
+          return { success: true };
+        }
+        return { success: false, error: "No token received" };
+      } catch (err) {
+        console.error("Biometric login error:", err);
+        const message = err.response?.data?.message || "Biometric authentication failed";
+        commit("SET_LOGIN_ERROR", message);
+        commit("SET_USER_TYPE", usertype);
+        return { success: false, error: message };
+      }
+    },
+
+    // ==================== PASSKEY (DISCOVERABLE CREDENTIALS) ====================
+
+    async getPasskeyLoginOptions() {
+      try {
+        const res = await axios.post("auth/biometric/passkey/options");
+        return { success: true, options: res.data.data };
+      } catch (err) {
+        console.error("Error getting passkey options:", err);
+        return { success: false, error: err.response?.data?.message || err.message };
+      }
+    },
+
+    async verifyPasskeyLogin({ dispatch, commit }, { credential }) {
+      try {
+        const res = await axios.post("auth/biometric/passkey/verify", { credential });
+
+        // The response includes the JWT token
+        const token = res.data.data;
+        if (token) {
+          // Store token and authenticate
+          const storage = localStorage;
+          storage.setItem("token", token);
+          await dispatch("authenticate", token, { root: true });
+          return { success: true };
+        }
+        return { success: false, error: "No token received" };
+      } catch (err) {
+        console.error("Passkey login error:", err);
+        const message = err.response?.data?.errorMessage || err.response?.data?.message || "Passkey authentication failed";
+        return { success: false, error: message };
+      }
+    },
   },
 };

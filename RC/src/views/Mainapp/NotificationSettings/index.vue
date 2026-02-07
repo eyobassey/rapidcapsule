@@ -104,7 +104,7 @@
                 </div>
                 <span>Disable All</span>
               </button>
-              <button class="action-btn" @click="$router.push('/app/patient/account')">
+              <button class="action-btn" @click="$router.push('/app/patient/onboarding')">
                 <div class="action-icon sky">
                   <v-icon name="hi-user" scale="1.1" />
                 </div>

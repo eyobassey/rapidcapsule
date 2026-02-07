@@ -16,6 +16,7 @@ import { sendSuccessResponse } from '../../core/responses/success.responses';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { EmailOtpVerifyDto } from './dto/email-otp-verify.dto';
 import { IsEmailVerified } from '../../core/guards/isEmailVerified.guards';
 import { PhoneVerifyDto } from './dto/phone-verify.dto';
@@ -34,10 +35,20 @@ import { IsUserActive } from '../../core/guards/isUserActive.guards';
 import { ChangeEmailAddressDto } from './dto/change-email-address.dto';
 import { VerifyPhoneNumberChangeDto } from './dto/verify-phone-number-change.dto';
 import { VerifyEmailChangeDto } from './dto/verify-email-change.dto';
+import { BiometricService } from './biometric.service';
+import {
+  BiometricRegisterVerifyDto,
+  BiometricLoginOptionsDto,
+  BiometricLoginVerifyDto,
+  DeleteBiometricDto,
+} from './dto/biometric.dto';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly biometricService: BiometricService,
+  ) {}
   @Post('login')
   @UseGuards(LocalAuthGuard)
   @UseGuards(IsAuthorized)
@@ -71,6 +82,21 @@ export class AuthController {
   async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
     await this.authService.resetPassword(resetPasswordDto);
     return sendSuccessResponse(Messages.PASSWORD_RESET, null);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('change-password')
+  @HttpCode(HttpStatus.OK)
+  async changePassword(
+    @Body() changePasswordDto: ChangePasswordDto,
+    @Request() req,
+  ) {
+    await this.authService.changePassword(
+      req.user.sub,
+      changePasswordDto.current_password,
+      changePasswordDto.new_password,
+    );
+    return sendSuccessResponse('Password changed successfully', null);
   }
 
   @HttpCode(HttpStatus.OK)
@@ -229,5 +255,126 @@ export class AuthController {
       verifyEmailChangeDto,
     );
     return sendSuccessResponse(Messages.EMAIL_CHANGED, null);
+  }
+
+  // ==================== BIOMETRIC AUTHENTICATION ====================
+
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  @Post('biometric/register/options')
+  async getBiometricRegistrationOptions(@Request() req) {
+    const options = await this.biometricService.generateRegistrationOptions(req.user.sub);
+    return sendSuccessResponse('Registration options generated', options);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  @Post('biometric/register/verify')
+  async verifyBiometricRegistration(
+    @Body() body: BiometricRegisterVerifyDto,
+    @Request() req,
+  ) {
+    const result = await this.biometricService.verifyRegistration(
+      req.user.sub,
+      body.credential,
+      body.deviceName,
+    );
+    return sendSuccessResponse('Biometric credential registered successfully', {
+      verified: result.verified,
+      credentialId: result.credential?.credentialId,
+      deviceName: result.credential?.deviceName,
+    });
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @Post('biometric/login/options')
+  async getBiometricLoginOptions(@Body() body: BiometricLoginOptionsDto) {
+    const options = await this.biometricService.generateAuthenticationOptions(body.email);
+    return sendSuccessResponse('Authentication options generated', options);
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @Post('biometric/login/verify')
+  async verifyBiometricLogin(@Body() body: BiometricLoginVerifyDto) {
+    const { verified, user } = await this.biometricService.verifyAuthentication(
+      body.email,
+      body.credential,
+    );
+
+    if (verified && user) {
+      // Generate JWT token directly - skip 2FA since biometric is already a strong auth factor
+      const payload = {
+        sub: user._id,
+        email: user.profile?.contact?.email,
+        first_name: user.profile?.first_name,
+        user_type: user.user_type,
+        is_email_verified: user.is_email_verified,
+        is_phone_verified: user.is_phone_verified,
+      };
+      const token = await this.authService.generateToken(payload);
+      return sendSuccessResponse('User authenticated successfully', token);
+    }
+
+    return sendSuccessResponse('Biometric authentication failed', { verified: false });
+  }
+
+  // ============ DISCOVERABLE CREDENTIALS (PASSKEY) ENDPOINTS ============
+
+  @HttpCode(HttpStatus.OK)
+  @Post('biometric/passkey/options')
+  async getPasskeyLoginOptions() {
+    // No email required - browser discovers available passkeys
+    const options = await this.biometricService.generateDiscoverableAuthOptions();
+    return sendSuccessResponse('Passkey options generated', options);
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @Post('biometric/passkey/verify')
+  async verifyPasskeyLogin(@Body() body: { credential: any }) {
+    const { verified, user } = await this.biometricService.verifyDiscoverableAuth(
+      body.credential,
+    );
+
+    if (verified && user) {
+      // Generate JWT token directly
+      const payload = {
+        sub: user._id,
+        email: user.profile?.contact?.email,
+        first_name: user.profile?.first_name,
+        user_type: user.user_type,
+        is_email_verified: user.is_email_verified,
+        is_phone_verified: user.is_phone_verified,
+      };
+      const token = await this.authService.generateToken(payload);
+      return sendSuccessResponse('User authenticated successfully', token);
+    }
+
+    return sendSuccessResponse('Passkey authentication failed', { verified: false });
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  @Get('biometric/credentials')
+  async getBiometricCredentials(@Request() req) {
+    const credentials = await this.biometricService.getUserCredentials(req.user.sub);
+    return sendSuccessResponse('Credentials retrieved', credentials);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  @Post('biometric/delete')
+  async deleteBiometricCredential(
+    @Body() body: DeleteBiometricDto,
+    @Request() req,
+  ) {
+    await this.biometricService.deleteCredential(req.user.sub, body.credentialId);
+    return sendSuccessResponse('Biometric credential deleted', null);
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @Post('biometric/check')
+  async checkBiometricEnabled(@Body() body: BiometricLoginOptionsDto) {
+    const hasCredentials = await this.biometricService.hasBiometricCredentials(body.email);
+    return sendSuccessResponse('Biometric status checked', { enabled: hasCredentials });
   }
 }

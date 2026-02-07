@@ -429,6 +429,13 @@
     <button class="fab" @click="goToBookAppointment">
       <v-icon name="hi-plus" scale="1.3" />
     </button>
+
+    <!-- Passkey Setup Prompt -->
+    <PasskeySetupPrompt
+      :show="showPasskeyPrompt"
+      @close="showPasskeyPrompt = false"
+      @success="onPasskeySetupSuccess"
+    />
   </div>
 </template>
 
@@ -437,6 +444,7 @@ import { ref, computed, inject, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useStore } from 'vuex';
 import { format, formatDistanceToNow, parseISO, isToday, isTomorrow, differenceInMinutes } from 'date-fns';
+import PasskeySetupPrompt from '@/components/Modals/PasskeySetupPrompt.vue';
 
 const router = useRouter();
 const store = useStore();
@@ -456,6 +464,7 @@ const profileBannerDismissed = ref(false);
 const healthTips = ref([]);
 const loadingTips = ref(false);
 const premiumScore = ref(null);
+const showPasskeyPrompt = ref(false);
 
 // Computed for AI credits display
 const hasAICredits = computed(() => aiCredits.value > 0);
@@ -1101,6 +1110,49 @@ const fetchDashboardData = async () => {
   }
 };
 
+// Passkey Setup Prompt Logic
+const checkPasskeyPrompt = async () => {
+  try {
+    // Check if device supports biometrics
+    if (!window.PublicKeyCredential) return;
+
+    const isSupported = await window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+    if (!isSupported) return;
+
+    // Check if user already set up passkey
+    const alreadySetup = localStorage.getItem('rc_passkey_setup') === 'true';
+    if (alreadySetup) return;
+
+    // Check and increment login count
+    let loginCount = parseInt(localStorage.getItem('rc_login_count') || '0', 10);
+    loginCount += 1;
+    localStorage.setItem('rc_login_count', loginCount.toString());
+
+    // Show prompt on every 2nd login (2, 4, 6, 8...)
+    if (loginCount % 2 === 0) {
+      // Double check with server that user doesn't have passkey
+      const result = await store.dispatch('userAccountSettings/getBiometricCredentials');
+      if (result.success && result.credentials?.length > 0) {
+        // User has passkeys, mark as setup
+        localStorage.setItem('rc_passkey_setup', 'true');
+        return;
+      }
+
+      // Show the prompt after a short delay for better UX
+      setTimeout(() => {
+        showPasskeyPrompt.value = true;
+      }, 2000);
+    }
+  } catch (error) {
+    console.error('Error checking passkey prompt:', error);
+  }
+};
+
+const onPasskeySetupSuccess = () => {
+  // Could show a success toast here if needed
+  console.log('Passkey setup successful!');
+};
+
 onMounted(() => {
   // Use store vitals immediately if available (faster initial render)
   if (storeVitals.value) {
@@ -1108,6 +1160,9 @@ onMounted(() => {
   }
   fetchDashboardData();
   loadHealthTips();
+
+  // Check if we should show passkey setup prompt
+  checkPasskeyPrompt();
 });
 </script>
 

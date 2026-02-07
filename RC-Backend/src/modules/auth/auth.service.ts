@@ -209,6 +209,38 @@ export class AuthService {
     return true;
   }
 
+  async changePassword(
+    userId: Types.ObjectId,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<boolean> {
+    const user = await this.usersService.findById(userId);
+    if (!user) throw new NotFoundException(Messages.NO_USER_FOUND);
+
+    // Verify current password
+    const isValidPassword = await this.comparePassword(
+      currentPassword,
+      user.profile?.password,
+    );
+    if (!isValidPassword) {
+      throw new BadRequestException('Current password is incorrect');
+    }
+
+    // Hash and save new password
+    const salt = await bcrypt.genSalt(10);
+    user.profile.password = await bcrypt.hash(newPassword, salt);
+    await user.save();
+
+    // Send confirmation email
+    this.generalHelpers.generateEmailAndSend({
+      email: user.profile.contact.email,
+      subject: 'Password Changed Successfully',
+      emailBody: passwordResetEmail(user.profile.first_name),
+    });
+
+    return true;
+  }
+
   async verifyEmailOTP(email: string, token: string) {
     const user = await this.usersService.findOneByEmail(email);
     if (!user) throw new NotFoundException(Messages.NO_USER_FOUND);
