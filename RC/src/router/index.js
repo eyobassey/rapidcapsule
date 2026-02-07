@@ -324,6 +324,18 @@ const routes = [
         name: "Patient Notifications",
         component: () => import("@/views/Mainapp/Notifications/index.vue"),
       },
+      // Notification Settings Route
+      {
+        path: "notification-settings",
+        name: "Notification Settings",
+        component: () => import("@/views/Mainapp/NotificationSettings/index.vue"),
+      },
+      // Security Settings Route
+      {
+        path: "security-settings",
+        name: "Security Settings",
+        component: () => import("@/views/Mainapp/SecuritySettings/index.vue"),
+      },
       // Advanced Health Score Routes
       {
         path: "advanced-health-score",
@@ -555,6 +567,18 @@ const routes = [
         path: "specialist-account",
         name: "SpecialistAccount",
         component: () => import("@/views/Mainapp/SpecialistApp/Account"),
+      },
+      // Specialist Notification Settings Route
+      {
+        path: "notification-settings",
+        name: "SpecialistNotificationSettings",
+        component: () => import("@/views/Mainapp/SpecialistApp/NotificationSettings/index.vue"),
+      },
+      // Specialist Security Settings Route
+      {
+        path: "security-settings",
+        name: "SpecialistSecuritySettings",
+        component: () => import("@/views/Mainapp/SpecialistApp/SecuritySettings/index.vue"),
       },
       {
         path: "specialist-meetings/:patientId/:meetingId",

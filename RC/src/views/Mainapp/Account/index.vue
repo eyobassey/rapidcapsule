@@ -131,22 +131,10 @@
           </div>
         </transition>
 
-        <!-- Security Tab -->
+        <!-- Notifications Tab -->
         <transition name="fade" mode="out-in">
-          <div v-if="activeTab === 'security'" class="tab-panel security-tab">
-            <PasswordSection @resetPassword="handlePasswordReset" />
-            <TwoFactorAuth
-              v-if="regMedium"
-              :methods="twoFAs"
-              @toggleMethod="selectedMethod"
-              @changeMethod="handleChangeAction"
-            />
-            <WhatsAppSettingsSection
-              :enabled="whatsappEnabled"
-              :phoneNumber="formattedPhone"
-              :updating="updatingWhatsapp"
-              @toggle="toggleWhatsapp"
-            />
+          <div v-if="activeTab === 'notifications'" class="tab-panel notifications-tab">
+            <NotificationPreferences />
           </div>
         </transition>
       </div>
@@ -1178,10 +1166,8 @@ import TransactionHistory from "./components/WalletTab/TransactionHistory.vue";
 import AICreditsHistory from "./components/WalletTab/AICreditsHistory.vue";
 import QuickActions from "./components/WalletTab/QuickActions.vue";
 
-// Security Tab Components
-import PasswordSection from "./components/SecurityTab/PasswordSection.vue";
-import TwoFactorAuth from "./components/SecurityTab/TwoFactorAuth.vue";
-import WhatsAppSettingsSection from "./components/SecurityTab/WhatsAppSettings.vue";
+// Notifications Tab Components
+import NotificationPreferences from "./components/NotificationsTab/NotificationPreferences.vue";
 
 export default {
   name: "AccountPage",
@@ -1218,9 +1204,7 @@ export default {
     TransactionHistory,
     AICreditsHistory,
     QuickActions,
-    PasswordSection,
-    TwoFactorAuth,
-    WhatsAppSettingsSection,
+    NotificationPreferences,
   },
   emits: ["openSideNav"],
   data() {
@@ -1229,7 +1213,7 @@ export default {
       tabs: [
         { id: "profile", label: "Profile", icon: "hi-user" },
         { id: "wallet", label: "Wallet & Billing", icon: "bi-wallet2" },
-        { id: "security", label: "Security", icon: "hi-shield-check" },
+        { id: "notifications", label: "Notifications", icon: "hi-bell" },
       ],
 
       // Modal state

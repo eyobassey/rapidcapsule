@@ -205,6 +205,18 @@ export default {
 					matchRoutes: ["/app/specialist/onboarding"]
 				},
 				{ link: "/app/specialist/specialist-account", label: "Account", icon: "user" },
+				{
+					link: "/app/specialist/notification-settings",
+					label: "Notifications",
+					icon: "bell",
+					matchRoutes: ["/app/specialist/notification-settings"]
+				},
+				{
+					link: "/app/specialist/security-settings",
+					label: "Security",
+					icon: "lock",
+					matchRoutes: ["/app/specialist/security-settings"]
+				},
 			],
 			disabledNavItems: [
 				{ label: "Appointments", vicon: "ri-calendar-check-line" },

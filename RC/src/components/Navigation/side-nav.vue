@@ -178,9 +178,14 @@ export default {
           icon: "gift-box",
         },
         {
-          link: "/app/patient/app-settings",
-          label: "App Settings",
-          icon: "cog-wheel",
+          link: "/app/patient/notification-settings",
+          label: "Notifications",
+          icon: "bell",
+        },
+        {
+          link: "/app/patient/security-settings",
+          label: "Security",
+          icon: "shield-check",
         },
         { link: "", label: "Log out", icon: "log-out" },
       ],
