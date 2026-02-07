@@ -461,12 +461,13 @@ export default {
 
     userSettings: {
       handler(val) {
-        if (val?.defaults?.twoFA_medium) {
-          const medium = val.defaults.twoFA_medium.toLowerCase();
-          this.twoFAs.forEach((item) => {
-            item.isActive = item.name === medium;
-          });
-        }
+        const is2FAEnabled = val?.defaults?.twoFA_auth === true;
+        const medium = val?.defaults?.twoFA_medium?.toLowerCase();
+
+        this.twoFAs.forEach((item) => {
+          // Method is active only if 2FA is enabled AND this is the selected method
+          item.isActive = is2FAEnabled && item.name === medium;
+        });
       },
       immediate: true,
       deep: true,
@@ -535,9 +536,36 @@ export default {
       const index = this.twoFAs.findIndex((m) => m.name === method.name);
       if (index === -1) return;
 
+      const isCurrentlyActive = method.isActive;
+
+      // If disabling the currently active method
+      if (isCurrentlyActive) {
+        this.twoFAs[index].isLoading = true;
+        try {
+          // Disable 2FA entirely
+          await this.updateTwoFA({ enabled: false });
+          this.twoFAs[index].isActive = false;
+          this.$toast?.success?.("Two-factor authentication disabled");
+        } catch (e) {
+          this.$toast?.error?.("Failed to disable 2FA");
+        }
+        this.twoFAs[index].isLoading = false;
+        return;
+      }
+
+      // Enabling a method
       if (method.name === "email") {
         this.twoFAs[index].isLoading = true;
-        await this.updateTwoFA("EMAIL");
+        try {
+          await this.updateTwoFA({ method: "EMAIL", enabled: true });
+          // Deactivate other methods
+          this.twoFAs.forEach((m, i) => {
+            m.isActive = i === index;
+          });
+          this.$toast?.success?.("Email 2FA enabled");
+        } catch (e) {
+          this.$toast?.error?.("Failed to enable Email 2FA");
+        }
         this.twoFAs[index].isLoading = false;
       }
 
@@ -549,7 +577,16 @@ export default {
           this.selectedModal = "Verify Phone";
         } else {
           this.twoFAs[index].isLoading = true;
-          await this.updateTwoFA("SMS");
+          try {
+            await this.updateTwoFA({ method: "SMS", enabled: true });
+            // Deactivate other methods
+            this.twoFAs.forEach((m, i) => {
+              m.isActive = i === index;
+            });
+            this.$toast?.success?.("SMS 2FA enabled");
+          } catch (e) {
+            this.$toast?.error?.("Failed to enable SMS 2FA");
+          }
           this.twoFAs[index].isLoading = false;
         }
       }
@@ -561,7 +598,16 @@ export default {
           this.sendSecreteCode(token);
         } else {
           this.twoFAs[index].isLoading = true;
-          await this.updateTwoFA("AUTH_APPS");
+          try {
+            await this.updateTwoFA({ method: "AUTH_APPS", enabled: true });
+            // Deactivate other methods
+            this.twoFAs.forEach((m, i) => {
+              m.isActive = i === index;
+            });
+            this.$toast?.success?.("Authenticator app 2FA enabled");
+          } catch (e) {
+            this.$toast?.error?.("Failed to enable Authenticator 2FA");
+          }
           this.twoFAs[index].isLoading = false;
         }
       }

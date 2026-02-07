@@ -44,16 +44,38 @@ export default {
   },
 
   actions: {
-    async updatetwofactorauth({ dispatch }, method) {
+    async updatetwofactorauth({ dispatch }, payload) {
       try {
+        // payload can be a string (method) for backwards compatibility
+        // or an object { method, enabled } for explicit control
+        let updateData = {};
+
+        if (typeof payload === 'string') {
+          // Legacy: just setting the method, enable 2FA
+          updateData = {
+            twoFA_medium: payload,
+            twoFA_auth: true,
+          };
+        } else if (payload && typeof payload === 'object') {
+          // New: explicit control over enabled state
+          if (payload.method) {
+            updateData.twoFA_medium = payload.method;
+          }
+          if (typeof payload.enabled === 'boolean') {
+            updateData.twoFA_auth = payload.enabled;
+          }
+        }
+
         await axios.patch("user-settings", {
-          defaults: {
-            twoFA_medium: method,
-          },
+          defaults: updateData,
         });
 
         await dispatch("authenticate", saved_token, { root: true });
-      } catch (err) {}
+        return { success: true };
+      } catch (err) {
+        console.error("Error updating 2FA settings:", err);
+        return { success: false, error: err };
+      }
     },
 
     async getPhoneVerCode({ commit }, credentials) {

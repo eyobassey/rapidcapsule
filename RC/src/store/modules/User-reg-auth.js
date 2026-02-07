@@ -165,14 +165,27 @@ export default {
 
     /* Login sequence */
     //Login
-    async login({ commit, state }, credentials) {
+    async login({ commit, state, dispatch }, credentials) {
       let usertype = credentials.user_type;
       if (state.errorMessage["Login"]) {
         commit("SET_LOGIN_ERROR", null);
       }
       try {
         let res = await axios.post("/auth/login", credentials);
-        let activeTwoFA = res.data.data.defaults.twoFA_medium;
+        const responseData = res.data.data;
+
+        // Check if 2FA is disabled - response contains token string directly
+        // When 2FA is enabled, response contains settings object with defaults.twoFA_medium
+        if (typeof responseData === 'string') {
+          // 2FA is disabled, responseData is the JWT token string
+          const storage = credentials.rememberMe ? localStorage : sessionStorage;
+          storage.setItem("token", responseData);
+          await dispatch("authenticate", responseData, { root: true });
+          return;
+        }
+
+        // 2FA is enabled - response contains user settings object
+        let activeTwoFA = responseData?.defaults?.twoFA_medium;
         let authorizationStatus = true;
         commit("SET_AUTH_DATA", {
           status: authorizationStatus,
@@ -181,16 +194,17 @@ export default {
           rememberLogin: credentials.rememberMe,
         });
       } catch (error) {
-        if (error.response.data.statusCode == 401) {
+        if (error.response?.data?.statusCode == 401) {
           let message =
             "The email and password pair you entered is invalid. Please try again";
           commit("SET_LOGIN_ERROR", message);
           commit("SET_USER_TYPE", usertype);
-        } else if (error.response.data.statusCode == 400) {
+        } else if (error.response?.data?.statusCode == 400) {
           commit("SET_LOGIN_ERROR", error.response.data.errorMessage);
           commit("SET_USER_TYPE", usertype);
         } else {
-          alert(error);
+          console.error("Login error:", error);
+          commit("SET_LOGIN_ERROR", "An unexpected error occurred. Please try again.");
         }
       }
     },
