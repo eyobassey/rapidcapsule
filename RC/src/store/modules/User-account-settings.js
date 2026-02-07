@@ -290,5 +290,37 @@ export default {
         return { success: false, error: err.response?.data?.message || err.message };
       }
     },
+
+    // ==================== SESSION MANAGEMENT ====================
+
+    async getActiveSessions() {
+      try {
+        const res = await axios.get("auth/sessions");
+        return { success: true, sessions: res.data.data };
+      } catch (err) {
+        console.error("Error getting active sessions:", err);
+        return { success: false, error: err.response?.data?.message || err.message };
+      }
+    },
+
+    async revokeSession(_, sessionId) {
+      try {
+        const res = await axios.delete(`auth/sessions/${sessionId}`);
+        return { success: true, revoked: res.data.data?.revoked };
+      } catch (err) {
+        console.error("Error revoking session:", err);
+        return { success: false, error: err.response?.data?.message || err.message };
+      }
+    },
+
+    async revokeAllOtherSessions() {
+      try {
+        const res = await axios.post("auth/sessions/revoke-all-other");
+        return { success: true, count: res.data.data?.count };
+      } catch (err) {
+        console.error("Error revoking all other sessions:", err);
+        return { success: false, error: err.response?.data?.message || err.message };
+      }
+    },
   },
 };

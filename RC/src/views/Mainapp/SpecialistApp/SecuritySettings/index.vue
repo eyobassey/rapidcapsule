@@ -330,18 +330,78 @@
             </div>
           </div>
 
-          <!-- Coming Soon Card -->
-          <div class="bento-card coming-soon-card">
-            <div class="coming-soon-icon sessions">
-              <v-icon name="hi-device-mobile" scale="1.2" />
+          <!-- Active Sessions Card -->
+          <div class="bento-card sessions-card">
+            <div class="card-header">
+              <div class="header-icon">
+                <v-icon name="hi-device-mobile" scale="1.1" />
+              </div>
+              <div class="header-text">
+                <h3>Active Sessions</h3>
+                <span class="header-subtitle">
+                  {{ activeSessions.length }} device{{ activeSessions.length !== 1 ? 's' : '' }} logged in
+                </span>
+              </div>
+              <button
+                v-if="activeSessions.length > 1"
+                class="logout-all-btn"
+                @click="logoutAllOtherSessions"
+                :disabled="revokingAllSessions"
+              >
+                <span v-if="revokingAllSessions" class="spinner-small"></span>
+                <span v-else>Logout All Others</span>
+              </button>
             </div>
-            <div class="coming-soon-content">
-              <h4>Active Sessions</h4>
-              <p>View and manage logged-in devices</p>
+
+            <div v-if="loadingSessions" class="sessions-loading">
+              <div class="spinner-small"></div>
+              <span>Loading sessions...</span>
             </div>
-            <div class="coming-soon-badge">
-              <v-icon name="hi-clock" scale="0.7" />
-              <span>Coming Soon</span>
+
+            <div v-else-if="activeSessions.length === 0" class="no-sessions">
+              <v-icon name="hi-check-circle" scale="1.2" />
+              <p>No active sessions found</p>
+            </div>
+
+            <div v-else class="sessions-list">
+              <div
+                v-for="session in activeSessions"
+                :key="session._id"
+                class="session-item"
+                :class="{ current: session.isCurrent }"
+              >
+                <div class="session-icon">
+                  <v-icon :name="getSessionIcon(session.deviceType)" scale="1" />
+                </div>
+                <div class="session-info">
+                  <div class="session-device">
+                    <span class="device-name">{{ session.deviceName }}</span>
+                    <span v-if="session.isCurrent" class="current-badge">This device</span>
+                  </div>
+                  <div class="session-details">
+                    <span class="session-browser">{{ session.browser }}</span>
+                    <span class="session-separator">•</span>
+                    <span class="session-os">{{ session.os }}</span>
+                  </div>
+                  <div class="session-activity">
+                    <span class="activity-label">Last active:</span>
+                    <span class="activity-time">{{ formatSessionTime(session.lastActiveAt) }}</span>
+                  </div>
+                  <div v-if="session.location" class="session-location">
+                    <v-icon name="hi-location-marker" scale="0.7" />
+                    <span>{{ session.location }}</span>
+                  </div>
+                </div>
+                <button
+                  v-if="!session.isCurrent"
+                  class="logout-btn"
+                  @click="logoutSession(session._id)"
+                  :disabled="revokingSessionId === session._id"
+                >
+                  <span v-if="revokingSessionId === session._id" class="spinner-small"></span>
+                  <v-icon v-else name="hi-logout" scale="0.85" />
+                </button>
+              </div>
             </div>
           </div>
         </section>
@@ -619,6 +679,12 @@ export default {
       biometricCredentials: [],
       settingUpBiometric: false,
       deletingCredential: false,
+
+      // Sessions
+      activeSessions: [],
+      loadingSessions: false,
+      revokingSessionId: null,
+      revokingAllSessions: false,
     };
   },
 
@@ -716,6 +782,7 @@ export default {
     await Promise.all([
       this.fetchUserSettings(),
       this.loadBiometricCredentials(),
+      this.loadActiveSessions(),
     ]);
     this.loading = false;
   },
@@ -731,6 +798,9 @@ export default {
       verifyBiometricRegistration: "userAccountSettings/verifyBiometricRegistration",
       getBiometricCredentials: "userAccountSettings/getBiometricCredentials",
       deleteBiometricCredential: "userAccountSettings/deleteBiometricCredential",
+      getActiveSessions: "userAccountSettings/getActiveSessions",
+      revokeSession: "userAccountSettings/revokeSession",
+      revokeAllOtherSessions: "userAccountSettings/revokeAllOtherSessions",
     }),
 
     async fetchUserSettings() {
@@ -1124,6 +1194,85 @@ export default {
 
     scrollToWhatsapp() {
       this.$refs.whatsappSection?.scrollIntoView({ behavior: "smooth" });
+    },
+
+    // ==================== SESSION METHODS ====================
+
+    async loadActiveSessions() {
+      this.loadingSessions = true;
+      try {
+        const result = await this.getActiveSessions();
+        if (result.success) {
+          this.activeSessions = result.sessions || [];
+        }
+      } catch (e) {
+        console.error("Error loading sessions:", e);
+      }
+      this.loadingSessions = false;
+    },
+
+    async logoutSession(sessionId) {
+      this.revokingSessionId = sessionId;
+      try {
+        const result = await this.revokeSession(sessionId);
+        if (result.success) {
+          this.$toast?.success?.("Device logged out successfully");
+          await this.loadActiveSessions();
+        } else {
+          this.$toast?.error?.(result.error || "Failed to logout device");
+        }
+      } catch (e) {
+        this.$toast?.error?.("Failed to logout device");
+      }
+      this.revokingSessionId = null;
+    },
+
+    async logoutAllOtherSessions() {
+      if (!confirm("Log out from all other devices? You will only stay logged in on this device.")) {
+        return;
+      }
+
+      this.revokingAllSessions = true;
+      try {
+        const result = await this.revokeAllOtherSessions();
+        if (result.success) {
+          this.$toast?.success?.(`Logged out from ${result.count} device(s)`);
+          await this.loadActiveSessions();
+        } else {
+          this.$toast?.error?.(result.error || "Failed to logout devices");
+        }
+      } catch (e) {
+        this.$toast?.error?.("Failed to logout devices");
+      }
+      this.revokingAllSessions = false;
+    },
+
+    getSessionIcon(deviceType) {
+      switch (deviceType) {
+        case "mobile":
+          return "hi-device-mobile";
+        case "tablet":
+          return "hi-device-tablet";
+        case "desktop":
+        default:
+          return "hi-desktop-computer";
+      }
+    },
+
+    formatSessionTime(dateStr) {
+      if (!dateStr) return "Unknown";
+      const date = new Date(dateStr);
+      const now = new Date();
+      const diffMs = now - date;
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+
+      if (diffMins < 1) return "Just now";
+      if (diffMins < 60) return `${diffMins} min${diffMins > 1 ? 's' : ''} ago`;
+      if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+      if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+      return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
     },
   },
 };
@@ -2180,71 +2329,216 @@ $whatsapp: #25D366;
   }
 }
 
-// Coming Soon Cards
-.coming-soon-card {
+// Active Sessions Card
+.sessions-card {
   grid-column: span 6;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 24px;
-  background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(248,250,252,0.9) 100%);
 
   @media (max-width: 1024px) {
-    grid-column: span 3;
+    grid-column: span 6;
   }
 
-  @media (max-width: 768px) {
-    padding: 20px;
+  .card-header {
+    .logout-all-btn {
+      padding: 8px 14px;
+      background: rgba($rose, 0.1);
+      border: none;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      color: $rose;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+
+      &:hover:not(:disabled) {
+        background: rgba($rose, 0.15);
+      }
+
+      &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      .spinner-small {
+        width: 14px;
+        height: 14px;
+        border: 2px solid rgba($rose, 0.3);
+        border-top-color: $rose;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+    }
   }
 
-  .coming-soon-icon {
-    width: 56px;
-    height: 56px;
-    border-radius: 14px;
+  .sessions-loading,
+  .no-sessions {
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    flex-shrink: 0;
+    padding: 32px;
+    gap: 12px;
+    color: $gray;
+    font-size: 14px;
 
-    &.biometric {
-      background: linear-gradient(135deg, rgba($violet, 0.1) 0%, rgba($violet, 0.2) 100%);
-      color: $violet;
+    .spinner-small {
+      width: 24px;
+      height: 24px;
+      border: 3px solid #E5E7EB;
+      border-top-color: $sky;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
     }
 
-    &.sessions {
-      background: linear-gradient(135deg, rgba($sky, 0.1) 0%, rgba($sky, 0.2) 100%);
-      color: $sky-dark;
-    }
-  }
-
-  .coming-soon-content {
-    flex: 1;
-
-    h4 {
-      font-size: 16px;
-      font-weight: 700;
-      color: $navy;
-      margin: 0 0 4px;
-    }
-
-    p {
-      font-size: 13px;
-      color: $gray;
-      margin: 0;
+    svg {
+      color: $emerald;
     }
   }
 
-  .coming-soon-badge {
+  .sessions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .session-item {
     display: flex;
     align-items: center;
-    gap: 4px;
-    padding: 6px 12px;
-    background: rgba($gray, 0.1);
-    border-radius: 20px;
-    font-size: 11px;
-    font-weight: 600;
-    color: $gray;
-    white-space: nowrap;
+    gap: 14px;
+    padding: 16px;
+    background: #F8FAFC;
+    border-radius: 12px;
+    border: 2px solid transparent;
+    transition: all 0.2s ease;
+
+    &.current {
+      background: rgba($sky, 0.05);
+      border-color: rgba($sky, 0.2);
+    }
+
+    &:hover {
+      background: #F1F5F9;
+    }
+
+    .session-icon {
+      width: 44px;
+      height: 44px;
+      background: white;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: $sky-dark;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+      flex-shrink: 0;
+    }
+
+    .session-info {
+      flex: 1;
+      min-width: 0;
+
+      .session-device {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 4px;
+
+        .device-name {
+          font-size: 14px;
+          font-weight: 600;
+          color: $navy;
+        }
+
+        .current-badge {
+          font-size: 10px;
+          font-weight: 600;
+          padding: 2px 8px;
+          background: $sky;
+          color: white;
+          border-radius: 10px;
+          text-transform: uppercase;
+          letter-spacing: 0.3px;
+        }
+      }
+
+      .session-details {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: $gray;
+        margin-bottom: 4px;
+
+        .session-separator {
+          color: #D1D5DB;
+        }
+      }
+
+      .session-activity {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 11px;
+        color: $light-gray;
+
+        .activity-label {
+          color: $light-gray;
+        }
+
+        .activity-time {
+          color: $gray;
+        }
+      }
+
+      .session-location {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 11px;
+        color: $gray;
+        margin-top: 2px;
+
+        svg {
+          color: $sky;
+          flex-shrink: 0;
+        }
+      }
+    }
+
+    .logout-btn {
+      width: 36px;
+      height: 36px;
+      border: none;
+      background: rgba($rose, 0.1);
+      color: $rose;
+      border-radius: 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+
+      &:hover:not(:disabled) {
+        background: rgba($rose, 0.2);
+      }
+
+      &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      .spinner-small {
+        width: 16px;
+        height: 16px;
+        border: 2px solid rgba($rose, 0.3);
+        border-top-color: $rose;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+    }
   }
 }
 

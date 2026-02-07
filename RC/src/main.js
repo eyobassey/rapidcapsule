@@ -232,6 +232,9 @@ import {
 	HiCollection,
 	// Cart page icons
 	HiReply,
+	// Active Sessions icons
+	HiLogout,
+	HiDeviceTablet,
 } from "oh-vue-icons/icons";
 addIcons(
 	BiCreditCard2Back,
@@ -452,6 +455,9 @@ addIcons(
 	HiCollection,
 	// Cart page icons
 	HiReply,
+	// Active Sessions icons
+	HiLogout,
+	HiDeviceTablet,
 );
 
 require("@/store/subscriber");

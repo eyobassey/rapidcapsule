@@ -47,6 +47,7 @@ import { ChangePhoneNumberDto } from './dto/change-phone-number.dto';
 import { ChangeEmailAddressDto } from './dto/change-email-address.dto';
 import { VerifyPhoneNumberChangeDto } from './dto/verify-phone-number-change.dto';
 import { VerifyEmailChangeDto } from './dto/verify-email-change.dto';
+import { SessionService } from './session.service';
 
 @Injectable()
 export class AuthService {
@@ -59,6 +60,7 @@ export class AuthService {
     private readonly userSettingService: UserSettingsService,
     private readonly twilio: Twilio,
     private readonly appleAuth: AppleAuth,
+    private readonly sessionService: SessionService,
   ) {}
 
   async validateUserByEmail(
@@ -79,7 +81,7 @@ export class AuthService {
     return null;
   }
 
-  async login(user: IJwtPayload) {
+  async login(user: IJwtPayload, userAgent?: string, ipAddress?: string) {
     const setting = await this.userSettingService.findOne(user.sub);
     if (setting?.defaults?.twoFA_auth) {
       return await this.twoFactorAuthAuthentication(
@@ -87,11 +89,11 @@ export class AuthService {
         user.sub,
       );
     }
-    const token = await this.generateToken(user);
+    const token = await this.generateTokenWithSession(user, userAgent, ipAddress);
     return { message: Messages.USER_AUTHENTICATED, result: token };
   }
 
-  async googleAltLogin(token: string, user_type: UserType) {
+  async googleAltLogin(token: string, user_type: UserType, userAgent?: string, ipAddress?: string) {
     const data = await this.decodeGoogleData(token);
     if (!data.email) throw new BadRequestException(Messages.NO_GOOGLE_USER);
     return this.socialMediaLogin({
@@ -100,7 +102,7 @@ export class AuthService {
       is_email_verified: true,
       email_verified_at: new Date(),
       user_type,
-    });
+    }, userAgent, ipAddress);
   }
 
   async decodeGoogleData(token: string) {
@@ -123,7 +125,7 @@ export class AuthService {
     return { email: data.email };
   }
 
-  async appleLogin(appleLoginDto: AppleLoginDto) {
+  async appleLogin(appleLoginDto: AppleLoginDto, userAgent?: string, ipAddress?: string) {
     const data = await this.decodeAppleData(appleLoginDto);
     return this.socialMediaLogin({
       ...data,
@@ -131,10 +133,10 @@ export class AuthService {
       is_email_verified: true,
       email_verified_at: new Date(),
       user_type: appleLoginDto?.authorization?.state,
-    });
+    }, userAgent, ipAddress);
   }
 
-  async socialMediaLogin(loggedInUser: SocialMediaUserType) {
+  async socialMediaLogin(loggedInUser: SocialMediaUserType, userAgent?: string, ipAddress?: string) {
     const { email, user_type } = loggedInUser;
 
     let user = await this.usersService.findOneByEmail(email);
@@ -148,7 +150,7 @@ export class AuthService {
     }
 
     const payload = AuthService.formatJwtPayload(user);
-    return await this.generateToken(payload);
+    return await this.generateTokenWithSession(payload, userAgent, ipAddress);
   }
 
   async forgotPassword(
@@ -241,16 +243,16 @@ export class AuthService {
     return true;
   }
 
-  async verifyEmailOTP(email: string, token: string) {
+  async verifyEmailOTP(email: string, token: string, userAgent?: string, ipAddress?: string) {
     const user = await this.usersService.findOneByEmail(email);
     if (!user) throw new NotFoundException(Messages.NO_USER_FOUND);
 
     const verified = await this.tokensService.verifyOTP(user._id, token);
     if (verified) {
       const payload = AuthService.formatJwtPayload(user);
-      const jwtToken = await this.generateToken(payload);
+      const jwtToken = await this.generateTokenWithSession(payload, userAgent, ipAddress);
       // Return user data along with token for frontend
-      return { 
+      return {
         token: jwtToken,
         user: {
           _id: user._id,
@@ -265,7 +267,7 @@ export class AuthService {
     throw new BadRequestException(Messages.INVALID_EXPIRED_TOKEN);
   }
 
-  async verifyPhoneOTP(email: string, code: string) {
+  async verifyPhoneOTP(email: string, code: string, userAgent?: string, ipAddress?: string) {
     const user = await this.usersService.findOneByEmail(email);
     if (!user) throw new NotFoundException(Messages.NO_USER_FOUND);
 
@@ -275,9 +277,9 @@ export class AuthService {
     );
     if (response.data.status === APPROVED) {
       const payload = AuthService.formatJwtPayload(user);
-      const jwtToken = await this.generateToken(payload);
+      const jwtToken = await this.generateTokenWithSession(payload, userAgent, ipAddress);
       // Return user data along with token for frontend
-      return { 
+      return {
         token: jwtToken,
         user: {
           _id: user._id,
@@ -292,7 +294,7 @@ export class AuthService {
     throw new BadRequestException(Messages.INVALID_EXPIRED_CODE);
   }
 
-  async verify2FACode(email: string, twoFACodeDto: TwoFACodeDto) {
+  async verify2FACode(email: string, twoFACodeDto: TwoFACodeDto, userAgent?: string, ipAddress?: string) {
     const user = await this.usersService.findOneByEmail(email);
     if (!user) throw new NotFoundException(Messages.NO_USER_FOUND);
 
@@ -302,9 +304,9 @@ export class AuthService {
     );
     if (verified) {
       const payload = AuthService.formatJwtPayload(user);
-      const jwtToken = await this.generateToken(payload);
+      const jwtToken = await this.generateTokenWithSession(payload, userAgent, ipAddress);
       // Return user data along with token for frontend
-      return { 
+      return {
         token: jwtToken,
         user: {
           _id: user._id,
@@ -564,6 +566,31 @@ export class AuthService {
     payload: IJwtPayload | { sub: string; email: string } | JwtPayload,
   ) {
     return await this.jwtService.signAsync(payload);
+  }
+
+  /**
+   * Generate a JWT token with session tracking
+   * Creates a session record and includes tokenId in the JWT payload
+   */
+  async generateTokenWithSession(
+    payload: IJwtPayload,
+    userAgent?: string,
+    ipAddress?: string,
+  ) {
+    // Create a session for this login
+    const { tokenId } = await this.sessionService.createSession(
+      payload.sub,
+      userAgent || 'Unknown',
+      ipAddress,
+    );
+
+    // Include tokenId in the JWT payload
+    const payloadWithSession = {
+      ...payload,
+      tokenId,
+    };
+
+    return await this.jwtService.signAsync(payloadWithSession);
   }
 
   private async twoFactorAuthAuthentication(

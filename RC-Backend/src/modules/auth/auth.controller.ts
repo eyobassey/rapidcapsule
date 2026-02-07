@@ -9,6 +9,7 @@ import {
   HttpCode,
   Param,
   Patch,
+  Delete,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { Messages } from '../../core/messages/messages';
@@ -42,12 +43,14 @@ import {
   BiometricLoginVerifyDto,
   DeleteBiometricDto,
 } from './dto/biometric.dto';
+import { SessionService } from './session.service';
 
 @Controller('auth')
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly biometricService: BiometricService,
+    private readonly sessionService: SessionService,
   ) {}
   @Post('login')
   @UseGuards(LocalAuthGuard)
@@ -56,14 +59,18 @@ export class AuthController {
   @UseGuards(IsUserActive)
   @HttpCode(HttpStatus.OK)
   async loginWithEmail(@Request() req) {
-    const { message, result } = await this.authService.login(req.user);
+    const userAgent = req.headers['user-agent'] || '';
+    const ipAddress = this.sessionService.getClientIP(req);
+    const { message, result } = await this.authService.login(req.user, userAgent, ipAddress);
     return sendSuccessResponse(message, result);
   }
 
   @Post('apple')
   @HttpCode(HttpStatus.OK)
-  async appleLogin(@Body() appleLoginDto: AppleLoginDto): Promise<any> {
-    const result = await this.authService.appleLogin(appleLoginDto);
+  async appleLogin(@Body() appleLoginDto: AppleLoginDto, @Request() req): Promise<any> {
+    const userAgent = req.headers['user-agent'] || '';
+    const ipAddress = this.sessionService.getClientIP(req);
+    const result = await this.authService.appleLogin(appleLoginDto, userAgent, ipAddress);
     return sendSuccessResponse(Messages.USER_AUTHENTICATED, result);
   }
 
@@ -101,25 +108,31 @@ export class AuthController {
 
   @HttpCode(HttpStatus.OK)
   @Post('google/alt-login')
-  async googleLogin(@Body() googleLoginDto: GoogleLoginDto) {
+  async googleLogin(@Body() googleLoginDto: GoogleLoginDto, @Request() req) {
     const { token, user_type } = googleLoginDto;
-    const result = await this.authService.googleAltLogin(token, user_type);
+    const userAgent = req.headers['user-agent'] || '';
+    const ipAddress = this.sessionService.getClientIP(req);
+    const result = await this.authService.googleAltLogin(token, user_type, userAgent, ipAddress);
     return sendSuccessResponse(Messages.USER_AUTHENTICATED, result);
   }
 
   @HttpCode(HttpStatus.OK)
   @Post('otp/verify')
-  async verifyEmailOTP(@Body() otpVerifyDto: EmailOtpVerifyDto) {
+  async verifyEmailOTP(@Body() otpVerifyDto: EmailOtpVerifyDto, @Request() req) {
     const { token, email } = otpVerifyDto;
-    const result = await this.authService.verifyEmailOTP(email, token);
+    const userAgent = req.headers['user-agent'] || '';
+    const ipAddress = this.sessionService.getClientIP(req);
+    const result = await this.authService.verifyEmailOTP(email, token, userAgent, ipAddress);
     return sendSuccessResponse(Messages.LOGIN_VERIFIED, result);
   }
 
   @HttpCode(HttpStatus.OK)
   @Post('otp/phone/verify')
-  async verifyPhoneOTP(@Body() phoneOtpVerifyDto: PhoneOtpVerifyDto) {
+  async verifyPhoneOTP(@Body() phoneOtpVerifyDto: PhoneOtpVerifyDto, @Request() req) {
     const { code, email } = phoneOtpVerifyDto;
-    const result = await this.authService.verifyPhoneOTP(email, code);
+    const userAgent = req.headers['user-agent'] || '';
+    const ipAddress = this.sessionService.getClientIP(req);
+    const result = await this.authService.verifyPhoneOTP(email, code, userAgent, ipAddress);
     return sendSuccessResponse(Messages.LOGIN_VERIFIED, result);
   }
 
@@ -193,10 +206,14 @@ export class AuthController {
 
   @HttpCode(HttpStatus.OK)
   @Post('2fa/verify')
-  async verify2FACode(@Body() twoFACodeDto: TwoFACodeDto, @Body() body) {
+  async verify2FACode(@Body() twoFACodeDto: TwoFACodeDto, @Body() body, @Request() req) {
+    const userAgent = req.headers['user-agent'] || '';
+    const ipAddress = this.sessionService.getClientIP(req);
     const result = await this.authService.verify2FACode(
       body.email,
       twoFACodeDto,
+      userAgent,
+      ipAddress,
     );
     return sendSuccessResponse(Messages.LOGIN_VERIFIED, result);
   }
@@ -295,7 +312,7 @@ export class AuthController {
 
   @HttpCode(HttpStatus.OK)
   @Post('biometric/login/verify')
-  async verifyBiometricLogin(@Body() body: BiometricLoginVerifyDto) {
+  async verifyBiometricLogin(@Body() body: BiometricLoginVerifyDto, @Request() req) {
     const { verified, user } = await this.biometricService.verifyAuthentication(
       body.email,
       body.credential,
@@ -311,7 +328,9 @@ export class AuthController {
         is_email_verified: user.is_email_verified,
         is_phone_verified: user.is_phone_verified,
       };
-      const token = await this.authService.generateToken(payload);
+      const userAgent = req.headers['user-agent'] || '';
+      const ipAddress = this.sessionService.getClientIP(req);
+      const token = await this.authService.generateTokenWithSession(payload, userAgent, ipAddress);
       return sendSuccessResponse('User authenticated successfully', token);
     }
 
@@ -330,7 +349,7 @@ export class AuthController {
 
   @HttpCode(HttpStatus.OK)
   @Post('biometric/passkey/verify')
-  async verifyPasskeyLogin(@Body() body: { credential: any }) {
+  async verifyPasskeyLogin(@Body() body: { credential: any }, @Request() req) {
     const { verified, user } = await this.biometricService.verifyDiscoverableAuth(
       body.credential,
     );
@@ -345,7 +364,9 @@ export class AuthController {
         is_email_verified: user.is_email_verified,
         is_phone_verified: user.is_phone_verified,
       };
-      const token = await this.authService.generateToken(payload);
+      const userAgent = req.headers['user-agent'] || '';
+      const ipAddress = this.sessionService.getClientIP(req);
+      const token = await this.authService.generateTokenWithSession(payload, userAgent, ipAddress);
       return sendSuccessResponse('User authenticated successfully', token);
     }
 
@@ -376,5 +397,47 @@ export class AuthController {
   async checkBiometricEnabled(@Body() body: BiometricLoginOptionsDto) {
     const hasCredentials = await this.biometricService.hasBiometricCredentials(body.email);
     return sendSuccessResponse('Biometric status checked', { enabled: hasCredentials });
+  }
+
+  // ==================== SESSION MANAGEMENT ====================
+
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  @Get('sessions')
+  async getUserSessions(@Request() req) {
+    const currentTokenId = req.user?.tokenId;
+    const sessions = await this.sessionService.getUserSessions(req.user.sub, currentTokenId);
+    return sendSuccessResponse('Sessions retrieved', sessions);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  @Delete('sessions/:sessionId')
+  async revokeSession(@Param('sessionId') sessionId: string, @Request() req) {
+    const revoked = await this.sessionService.revokeSession(req.user.sub, sessionId);
+    if (!revoked) {
+      return sendSuccessResponse('Session not found or already revoked', { revoked: false });
+    }
+    return sendSuccessResponse('Session revoked successfully', { revoked: true });
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  @Post('sessions/revoke-all-other')
+  async revokeAllOtherSessions(@Request() req) {
+    const currentTokenId = req.user?.tokenId;
+    if (!currentTokenId) {
+      return sendSuccessResponse('No active session found', { count: 0 });
+    }
+    const count = await this.sessionService.revokeAllOtherSessions(req.user.sub, currentTokenId);
+    return sendSuccessResponse(`${count} session(s) revoked`, { count });
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  @Get('sessions/count')
+  async getActiveSessionCount(@Request() req) {
+    const count = await this.sessionService.countActiveSessions(req.user.sub);
+    return sendSuccessResponse('Session count retrieved', { count });
   }
 }
