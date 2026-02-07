@@ -96,9 +96,17 @@ export default {
       }
     },
 
-    async getSecreteCode({ commit }, token) {
-      let res = await axios.post("auth/2fa/generate", token);
-      commit("SET_SECRETE", res.data);
+    async getSecreteCode({ commit }) {
+      try {
+        // Token is automatically added via axios interceptor
+        let res = await axios.post("auth/2fa/generate", {});
+        // Backend returns { statusCode, message, data: { secret, dataUrl } }
+        commit("SET_SECRETE", res.data.data);
+        return { success: true, data: res.data.data };
+      } catch (err) {
+        console.error("Error generating 2FA secret:", err);
+        return { success: false, error: err };
+      }
     },
 
     async activateApp({ dispatch, commit }, obj) {
@@ -107,11 +115,16 @@ export default {
         let res = await axios.post("auth/2fa/turn-on", obj);
 
         if (res.data.statusCode == 200) {
-          dispatch("updatetwofactorauth", "AUTH_APPS");
+          // Update 2FA settings to use AUTH_APPS and enable 2FA
+          await dispatch("updatetwofactorauth", { method: "AUTH_APPS", enabled: true });
           commit("SET_ACTIVATION_STATUS", false);
+          return { success: true };
         }
+        return { success: false };
       } catch (err) {
-        commit("SET_ACTIVATION_STATUS", true);
+        console.error("Error activating auth app:", err);
+        commit("SET_ACTIVATION_STATUS", false);
+        return { success: false, error: err };
       }
     },
 

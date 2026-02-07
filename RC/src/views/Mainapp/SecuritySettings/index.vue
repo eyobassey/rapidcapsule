@@ -350,16 +350,14 @@
         </div>
         <div class="verify-modal__body">
           <div v-if="!qrNext" class="qr-step">
-            <p>Scan this QR code with your authenticator app</p>
+            <p>Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.)</p>
             <div class="qr-code">
               <img v-if="qrUrl" :src="qrUrl" alt="QR Code" />
-              <div v-else class="qr-placeholder">
-                <v-icon name="hi-qrcode" scale="3" />
+              <div v-else class="qr-loading">
+                <div class="spinner-small"></div>
+                <span>Generating QR code...</span>
               </div>
             </div>
-            <button class="btn primary" @click="qrNext = true">
-              I've scanned the code
-            </button>
           </div>
           <div v-else class="verify-step">
             <p>Enter the 6-digit code from your authenticator app</p>
@@ -377,11 +375,19 @@
             </div>
           </div>
         </div>
-        <div v-if="qrNext" class="verify-modal__footer">
-          <button class="btn secondary" @click="qrNext = false">Back</button>
-          <button class="btn primary" @click="autoSubmitApp" :disabled="loadingApp || otpApp.join('').length < 6">
-            {{ loadingApp ? 'Verifying...' : 'Verify' }}
-          </button>
+        <div class="verify-modal__footer">
+          <template v-if="!qrNext">
+            <button class="btn secondary" @click="closeModal">Cancel</button>
+            <button class="btn primary" @click="qrNext = true" :disabled="!qrUrl">
+              I've scanned the code
+            </button>
+          </template>
+          <template v-else>
+            <button class="btn secondary" @click="qrNext = false">Back</button>
+            <button class="btn primary" @click="autoSubmitApp" :disabled="loadingApp || otpApp.join('').length < 6">
+              {{ loadingApp ? 'Verifying...' : 'Verify' }}
+            </button>
+          </template>
         </div>
       </div>
     </div>
@@ -425,7 +431,7 @@ export default {
     }),
 
     qrUrl() {
-      return this.QRCode?.data || "";
+      return this.QRCode?.dataUrl || "";
     },
 
     regMedium() {
@@ -594,10 +600,17 @@ export default {
 
       if (method.name === "auth_apps") {
         if (!this.userProfile?.is_auth_app_enabled) {
+          // First time setup - generate QR code
           this.twoFAs[index].isLoading = true;
-          const token = localStorage.getItem("token") || sessionStorage.getItem("token");
-          this.sendSecreteCode(token);
+          try {
+            await this.sendSecreteCode();
+            // Modal will open via QRCode watcher
+          } catch (e) {
+            this.$toast?.error?.("Failed to generate authenticator code");
+            this.twoFAs[index].isLoading = false;
+          }
         } else {
+          // Already set up - just enable it
           this.twoFAs[index].isLoading = true;
           try {
             await this.updateTwoFA({ method: "AUTH_APPS", enabled: true });
@@ -627,6 +640,12 @@ export default {
       this.qrNext = false;
       this.otpPhone = [];
       this.otpApp = [];
+      // Reset loading states
+      this.twoFAs.forEach((m) => {
+        m.isLoading = false;
+      });
+      // Clear QR code from store
+      this.$store.commit("userAccountSettings/SET_SECRETE", null);
     },
 
     resendCode() {
@@ -671,11 +690,30 @@ export default {
     },
 
     async autoSubmitApp() {
-      if (this.otpApp.length >= 6) {
+      if (this.otpApp.join("").length >= 6) {
         this.loadingApp = true;
-        await this.activateApp({ code: this.otpApp.join("") });
+        try {
+          const result = await this.activateApp({ code: this.otpApp.join("") });
+          if (result?.success) {
+            // Update UI to show auth_apps as active
+            this.twoFAs.forEach((m) => {
+              m.isActive = m.name === "auth_apps";
+              m.isLoading = false;
+            });
+            this.$toast?.success?.("Authenticator app 2FA enabled");
+          } else {
+            this.$toast?.error?.("Invalid code. Please try again.");
+          }
+        } catch (e) {
+          this.$toast?.error?.("Failed to verify code");
+        }
         this.closeModal();
         this.loadingApp = false;
+        // Reset loading state for auth_apps method
+        const authAppIndex = this.twoFAs.findIndex((m) => m.name === "auth_apps");
+        if (authAppIndex !== -1) {
+          this.twoFAs[authAppIndex].isLoading = false;
+        }
       }
     },
 
@@ -1827,6 +1865,28 @@ $whatsapp: #25D366;
       .qr-placeholder {
         color: $light-gray;
       }
+
+      .qr-loading {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        color: $gray;
+        font-size: 13px;
+
+        .spinner-small {
+          width: 32px;
+          height: 32px;
+          border: 3px solid #E5E7EB;
+          border-top-color: $sky;
+          border-radius: 50%;
+          animation: spin 0.8s linear infinite;
+        }
+      }
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
     }
 
     .otp-input {
