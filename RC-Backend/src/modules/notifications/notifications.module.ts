@@ -2,6 +2,7 @@ import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 
 // Entity
 import { Notification, NotificationSchema } from './entities/notification.entity';
@@ -10,6 +11,9 @@ import { Notification, NotificationSchema } from './entities/notification.entity
 import { NotificationsService } from './notifications.service';
 import { NotificationOrchestratorService } from './services/notification-orchestrator.service';
 import { SmsNotificationService } from './services/sms-notification.service';
+import { PushNotificationService } from './services/push-notification.service';
+import { ScheduledNotificationService } from './services/scheduled-notification.service';
+import { AdminBroadcastService } from './services/admin-broadcast.service';
 
 // Controller & Gateway
 import { NotificationsController } from './notifications.controller';
@@ -52,6 +56,7 @@ import { UserSetting, UserSettingSchema } from '../user-settings/entities/user-s
     forwardRef(() => WhatsAppModule),
     CommonModule,
     ConfigModule,
+    ScheduleModule.forRoot(),
   ],
   controllers: [NotificationsController],
   providers: [
@@ -59,6 +64,9 @@ import { UserSetting, UserSettingSchema } from '../user-settings/entities/user-s
     NotificationsService,
     NotificationOrchestratorService,
     SmsNotificationService,
+    PushNotificationService,
+    ScheduledNotificationService,
+    AdminBroadcastService,
     AppointmentListener,
     PrescriptionListener,
     PaymentListener,
@@ -69,6 +77,9 @@ import { UserSetting, UserSettingSchema } from '../user-settings/entities/user-s
     NotificationsService,
     NotificationOrchestratorService,
     NotificationsGateway,
+    PushNotificationService,
+    ScheduledNotificationService,
+    AdminBroadcastService,
   ],
 })
 export class NotificationsModule {}

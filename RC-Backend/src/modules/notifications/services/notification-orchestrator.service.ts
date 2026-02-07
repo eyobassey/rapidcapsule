@@ -7,6 +7,7 @@ import { NotificationsService } from '../notifications.service';
 import { NotificationsGateway } from '../notifications.gateway';
 import { GeneralHelpers } from '../../../common/helpers/general.helpers';
 import { SmsNotificationService } from './sms-notification.service';
+import { PushNotificationService } from './push-notification.service';
 import { WhatsAppNotificationService, NotificationType as WhatsAppNotificationType } from '../../whatsapp/services/whatsapp-notification.service';
 import {
   NotificationType,
@@ -36,6 +37,7 @@ export class NotificationOrchestratorService {
     private notificationsGateway: NotificationsGateway,
     private generalHelpers: GeneralHelpers,
     private smsNotificationService: SmsNotificationService,
+    private pushNotificationService: PushNotificationService,
     @Optional() private whatsAppNotificationService: WhatsAppNotificationService,
   ) {}
 
@@ -253,7 +255,7 @@ export class NotificationOrchestratorService {
             break;
 
           case NotificationChannel.PUSH:
-            // TODO: Implement push notifications in Phase 3
+            await this.sendPushNotification(notification, user);
             break;
         }
       } catch (error) {
@@ -393,6 +395,53 @@ export class NotificationOrchestratorService {
       await this.notificationsService.updateDeliveryStatus(
         notification._id.toString(),
         NotificationChannel.WHATSAPP,
+        'failed' as any,
+        error.message,
+      );
+    }
+  }
+
+  // Send push notification using Firebase
+  private async sendPushNotification(notification: any, user: any): Promise<void> {
+    try {
+      const result = await this.pushNotificationService.sendToUser(
+        user._id.toString(),
+        {
+          title: notification.title,
+          body: notification.message,
+          data: {
+            type: notification.type,
+            notification_id: notification._id.toString(),
+            action_url: notification.action_url || '',
+          },
+        },
+      );
+
+      if (result.success) {
+        await this.notificationsService.updateDeliveryStatus(
+          notification._id.toString(),
+          NotificationChannel.PUSH,
+          'sent' as any,
+        );
+        this.logger.log(`Push notification sent to user ${user._id}`);
+      } else {
+        // If no device tokens, silently skip
+        if (result.error?.includes('No device tokens')) {
+          this.logger.debug(`Push not sent - no device tokens for user ${user._id}`);
+        } else {
+          await this.notificationsService.updateDeliveryStatus(
+            notification._id.toString(),
+            NotificationChannel.PUSH,
+            'failed' as any,
+            result.error,
+          );
+        }
+      }
+    } catch (error) {
+      this.logger.error(`Failed to send push to user ${user._id}: ${error.message}`);
+      await this.notificationsService.updateDeliveryStatus(
+        notification._id.toString(),
+        NotificationChannel.PUSH,
         'failed' as any,
         error.message,
       );
