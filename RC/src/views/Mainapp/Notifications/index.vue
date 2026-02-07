@@ -1,5 +1,17 @@
 <template>
   <div class="notifications-page">
+    <!-- Mobile Header -->
+    <header class="mobile-header">
+      <button class="menu-btn" @click="$emit('open-side-nav')">
+        <MenuIcon />
+      </button>
+      <div class="header-title">
+        <BellIconFilled class="header-icon" />
+        <span>Notifications</span>
+      </div>
+      <div class="header-spacer"></div>
+    </header>
+
     <div class="notifications-page__header">
       <div class="notifications-page__title-row">
         <h1 class="notifications-page__title">Notifications</h1>
@@ -136,10 +148,26 @@ import useNotifications from '@/composables/useNotifications';
 // Icon components with render functions
 import { h } from 'vue';
 
+const MenuIcon = {
+  render() {
+    return h('svg', { xmlns: 'http://www.w3.org/2000/svg', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor', class: 'icon' }, [
+      h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M4 6h16M4 12h16M4 18h7' })
+    ]);
+  }
+};
+
 const BellIcon = {
   render() {
     return h('svg', { xmlns: 'http://www.w3.org/2000/svg', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' }, [
       h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9' })
+    ]);
+  }
+};
+
+const BellIconFilled = {
+  render() {
+    return h('svg', { xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 24 24', fill: 'currentColor', class: 'icon' }, [
+      h('path', { 'fill-rule': 'evenodd', 'clip-rule': 'evenodd', d: 'M5.25 9a6.75 6.75 0 0113.5 0v.75c0 2.123.8 4.057 2.118 5.52a.75.75 0 01-.297 1.206c-1.544.57-3.16.99-4.831 1.243a3.75 3.75 0 11-7.48 0 24.585 24.585 0 01-4.831-1.244.75.75 0 01-.298-1.205A8.217 8.217 0 005.25 9.75V9zm4.502 8.9a2.25 2.25 0 104.496 0 25.057 25.057 0 01-4.496 0z' })
     ]);
   }
 };
@@ -155,9 +183,13 @@ const FilterIcon = {
 export default {
   name: 'NotificationsPage',
 
+  emits: ['open-side-nav'],
+
   components: {
     NotificationItem,
+    MenuIcon,
     BellIcon,
+    BellIconFilled,
     FilterIcon,
   },
 
@@ -325,6 +357,66 @@ export default {
 </script>
 
 <style scoped lang="scss">
+/* Mobile Header - matches dashboard pattern */
+.mobile-header {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.menu-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: #374151;
+  cursor: pointer;
+
+  &:hover {
+    background: #f3f4f6;
+  }
+
+  .icon {
+    width: 24px;
+    height: 24px;
+  }
+}
+
+.header-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+
+  .icon {
+    width: 20px;
+    height: 20px;
+    color: #4f46e5;
+  }
+}
+
+.header-spacer {
+  width: 40px;
+}
+
+@media (max-width: 768px) {
+  .mobile-header {
+    display: flex;
+  }
+}
+
 .notifications-page {
   max-width: 800px;
   margin: 0 auto;
@@ -638,27 +730,29 @@ export default {
 @media (max-width: 640px) {
   .notifications-page {
     padding: 16px;
+    padding-top: 8px;
   }
 
   .notifications-page__header {
-    flex-direction: column;
-    align-items: flex-start;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
     gap: 12px;
+    margin-bottom: 16px;
   }
 
-  .notifications-page__title {
-    font-size: 24px;
+  .notifications-page__title-row {
+    display: none;
   }
 
   .notifications-page__actions {
     width: 100%;
-    justify-content: flex-end;
+    justify-content: space-between;
     gap: 8px;
   }
 
   .notifications-page__filter-dropdown {
     position: static;
-    width: 100%;
   }
 
   .filter-panel {
