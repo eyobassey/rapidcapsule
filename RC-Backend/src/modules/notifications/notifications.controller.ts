@@ -30,7 +30,7 @@ export class NotificationsController {
 
   @Get()
   async findAll(@Request() req, @Query() query: NotificationQueryDto) {
-    const userId = req.user._id.toString();
+    const userId = req.user.sub.toString();
     const result = await this.notificationsService.findAllForUser(userId, query);
     return {
       success: true,
@@ -47,7 +47,7 @@ export class NotificationsController {
 
   @Get('unread-count')
   async getUnreadCount(@Request() req) {
-    const userId = req.user._id.toString();
+    const userId = req.user.sub.toString();
     const count = await this.notificationsService.getUnreadCount(userId);
     return {
       success: true,
@@ -57,7 +57,7 @@ export class NotificationsController {
 
   @Get('stats')
   async getStats(@Request() req) {
-    const userId = req.user._id.toString();
+    const userId = req.user.sub.toString();
     const stats = await this.notificationsService.getNotificationStats(userId);
     return {
       success: true,
@@ -65,77 +65,10 @@ export class NotificationsController {
     };
   }
 
-  @Get(':id')
-  async findOne(@Request() req, @Param('id') id: string) {
-    const userId = req.user._id.toString();
-    const notification = await this.notificationsService.findOne(id, userId);
-    return {
-      success: true,
-      data: notification,
-    };
-  }
-
-  @Patch(':id/read')
-  async markAsRead(@Request() req, @Param('id') id: string) {
-    const userId = req.user._id.toString();
-    const notification = await this.notificationsService.markAsRead(id, userId);
-    return {
-      success: true,
-      message: 'Notification marked as read',
-      data: notification,
-    };
-  }
-
-  @Patch('read-all')
-  @HttpCode(HttpStatus.OK)
-  async markAllAsRead(@Request() req) {
-    const userId = req.user._id.toString();
-    const result = await this.notificationsService.markAllAsRead(userId);
-    return {
-      success: true,
-      message: `${result.modified} notifications marked as read`,
-      data: result,
-    };
-  }
-
-  @Post('read-multiple')
-  @HttpCode(HttpStatus.OK)
-  async markMultipleAsRead(@Request() req, @Body() dto: MarkMultipleAsReadDto) {
-    const userId = req.user._id.toString();
-    const result = await this.notificationsService.markMultipleAsRead(userId, dto);
-    return {
-      success: true,
-      message: `${result.modified} notifications marked as read`,
-      data: result,
-    };
-  }
-
-  @Delete(':id')
-  @HttpCode(HttpStatus.OK)
-  async delete(@Request() req, @Param('id') id: string) {
-    const userId = req.user._id.toString();
-    await this.notificationsService.delete(id, userId);
-    return {
-      success: true,
-      message: 'Notification deleted successfully',
-    };
-  }
-
-  @Post('delete-multiple')
-  @HttpCode(HttpStatus.OK)
-  async deleteMultiple(@Request() req, @Body() body: { notification_ids: string[] }) {
-    const userId = req.user._id.toString();
-    const result = await this.notificationsService.deleteMultiple(userId, body.notification_ids);
-    return {
-      success: true,
-      message: `${result.deleted} notifications deleted`,
-      data: result,
-    };
-  }
-
+  // Preferences routes - MUST be before :id routes
   @Get('preferences')
   async getPreferences(@Request() req) {
-    const userId = req.user._id.toString();
+    const userId = req.user.sub.toString();
     const preferences = await this.orchestratorService.getNotificationPreferences(userId);
     return {
       success: true,
@@ -149,12 +82,81 @@ export class NotificationsController {
     @Request() req,
     @Body() dto: UpdateNotificationPreferencesDto,
   ) {
-    const userId = req.user._id.toString();
+    const userId = req.user.sub.toString();
     const preferences = await this.orchestratorService.updateNotificationPreferences(userId, dto);
     return {
       success: true,
       message: 'Notification preferences updated successfully',
       data: preferences,
+    };
+  }
+
+  @Patch('read-all')
+  @HttpCode(HttpStatus.OK)
+  async markAllAsRead(@Request() req) {
+    const userId = req.user.sub.toString();
+    const result = await this.notificationsService.markAllAsRead(userId);
+    return {
+      success: true,
+      message: `${result.modified} notifications marked as read`,
+      data: result,
+    };
+  }
+
+  @Post('read-multiple')
+  @HttpCode(HttpStatus.OK)
+  async markMultipleAsRead(@Request() req, @Body() dto: MarkMultipleAsReadDto) {
+    const userId = req.user.sub.toString();
+    const result = await this.notificationsService.markMultipleAsRead(userId, dto);
+    return {
+      success: true,
+      message: `${result.modified} notifications marked as read`,
+      data: result,
+    };
+  }
+
+  @Post('delete-multiple')
+  @HttpCode(HttpStatus.OK)
+  async deleteMultiple(@Request() req, @Body() body: { notification_ids: string[] }) {
+    const userId = req.user.sub.toString();
+    const result = await this.notificationsService.deleteMultiple(userId, body.notification_ids);
+    return {
+      success: true,
+      message: `${result.deleted} notifications deleted`,
+      data: result,
+    };
+  }
+
+  // Parameterized routes - MUST be after specific routes
+  @Get(':id')
+  async findOne(@Request() req, @Param('id') id: string) {
+    const userId = req.user.sub.toString();
+    const notification = await this.notificationsService.findOne(id, userId);
+    return {
+      success: true,
+      data: notification,
+    };
+  }
+
+  @Patch(':id/read')
+  async markAsRead(@Request() req, @Param('id') id: string) {
+    const userId = req.user.sub.toString();
+    const notification = await this.notificationsService.markAsRead(id, userId);
+    return {
+      success: true,
+      message: 'Notification marked as read',
+      data: notification,
+    };
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.OK)
+  async delete(@Request() req, @Param('id') id: string) {
+    const userId = req.user.sub.toString();
+    await this.notificationsService.delete(id, userId);
+    return {
+      success: true,
+      message: 'Notification deleted successfully',
     };
   }
 }
