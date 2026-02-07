@@ -318,6 +318,12 @@ const routes = [
         name: "Patient Wallet",
         component: () => import("@/views/Mainapp/Wallet/index.vue"),
       },
+      // Notifications Route
+      {
+        path: "notifications",
+        name: "Patient Notifications",
+        component: () => import("@/views/Mainapp/Notifications/index.vue"),
+      },
       // Advanced Health Score Routes
       {
         path: "advanced-health-score",

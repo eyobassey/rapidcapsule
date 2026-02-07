@@ -45,6 +45,7 @@ import { LanguagesModule } from './modules/languages/languages.module';
 import { SpecialistCategoriesModule } from './modules/specialist-categories/specialist-categories.module';
 import { ConsultationServicesModule } from './modules/consultation-services/consultation-services.module';
 import { HealthTipsModule } from './modules/health-tips/health-tips.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 
 dotenv.config();
 
@@ -93,6 +94,7 @@ dotenv.config();
     SpecialistCategoriesModule,
     ConsultationServicesModule,
     HealthTipsModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [AppService, WebsocketGateway],

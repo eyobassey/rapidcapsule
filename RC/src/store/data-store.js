@@ -10,6 +10,7 @@ import userModule from "./modules/userModule";
 import pharmacy from "./modules/pharmacy";
 import pharmacyPortal from "./modules/pharmacyPortal";
 import whatsapp from "./modules/whatsapp";
+import notifications from "./modules/notifications";
 import axios from "../services/http";
 
 export default createStore({
@@ -275,5 +276,6 @@ export default createStore({
     pharmacy,
     pharmacyPortal,
     whatsapp,
+    notifications,
   },
 });
