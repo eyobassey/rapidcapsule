@@ -9,6 +9,7 @@ import { Notification, NotificationSchema } from './entities/notification.entity
 // Services
 import { NotificationsService } from './notifications.service';
 import { NotificationOrchestratorService } from './services/notification-orchestrator.service';
+import { SmsNotificationService } from './services/sms-notification.service';
 
 // Controller & Gateway
 import { NotificationsController } from './notifications.controller';
@@ -25,6 +26,7 @@ import { UsersModule } from '../users/users.module';
 import { UserSettingsModule } from '../user-settings/user-settings.module';
 import { CommonModule } from '../../common/common.module';
 import { GeneralHelpers } from '../../common/helpers/general.helpers';
+import { WhatsAppModule } from '../whatsapp/whatsapp.module';
 
 // Entities from other modules (for orchestrator service)
 import { User, UserSchema } from '../users/entities/user.entity';
@@ -47,13 +49,16 @@ import { UserSetting, UserSettingSchema } from '../user-settings/entities/user-s
     }),
     forwardRef(() => UsersModule),
     forwardRef(() => UserSettingsModule),
+    forwardRef(() => WhatsAppModule),
     CommonModule,
+    ConfigModule,
   ],
   controllers: [NotificationsController],
   providers: [
     NotificationsGateway,
     NotificationsService,
     NotificationOrchestratorService,
+    SmsNotificationService,
     AppointmentListener,
     PrescriptionListener,
     PaymentListener,

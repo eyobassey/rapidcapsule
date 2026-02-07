@@ -13,15 +13,20 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
+import { NotificationOrchestratorService } from './services/notification-orchestrator.service';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { MarkMultipleAsReadDto } from './dto/update-notification.dto';
 import { NotificationQueryDto } from './dto/notification-query.dto';
+import { UpdateNotificationPreferencesDto } from './dto/notification-preferences.dto';
 import { AuthGuard } from '@nestjs/passport';
 
 @Controller('notifications')
 @UseGuards(AuthGuard('jwt'))
 export class NotificationsController {
-  constructor(private readonly notificationsService: NotificationsService) {}
+  constructor(
+    private readonly notificationsService: NotificationsService,
+    private readonly orchestratorService: NotificationOrchestratorService,
+  ) {}
 
   @Get()
   async findAll(@Request() req, @Query() query: NotificationQueryDto) {
@@ -125,6 +130,31 @@ export class NotificationsController {
       success: true,
       message: `${result.deleted} notifications deleted`,
       data: result,
+    };
+  }
+
+  @Get('preferences')
+  async getPreferences(@Request() req) {
+    const userId = req.user._id.toString();
+    const preferences = await this.orchestratorService.getNotificationPreferences(userId);
+    return {
+      success: true,
+      message: 'Notification preferences retrieved successfully',
+      data: preferences,
+    };
+  }
+
+  @Patch('preferences')
+  async updatePreferences(
+    @Request() req,
+    @Body() dto: UpdateNotificationPreferencesDto,
+  ) {
+    const userId = req.user._id.toString();
+    const preferences = await this.orchestratorService.updateNotificationPreferences(userId, dto);
+    return {
+      success: true,
+      message: 'Notification preferences updated successfully',
+      data: preferences,
     };
   }
 }

@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { User, UserDocument } from '../../users/entities/user.entity';
@@ -6,6 +6,8 @@ import { UserSetting, UserSettingsDocument } from '../../user-settings/entities/
 import { NotificationsService } from '../notifications.service';
 import { NotificationsGateway } from '../notifications.gateway';
 import { GeneralHelpers } from '../../../common/helpers/general.helpers';
+import { SmsNotificationService } from './sms-notification.service';
+import { WhatsAppNotificationService, NotificationType as WhatsAppNotificationType } from '../../whatsapp/services/whatsapp-notification.service';
 import {
   NotificationType,
   NotificationPriority,
@@ -33,6 +35,8 @@ export class NotificationOrchestratorService {
     private notificationsService: NotificationsService,
     private notificationsGateway: NotificationsGateway,
     private generalHelpers: GeneralHelpers,
+    private smsNotificationService: SmsNotificationService,
+    @Optional() private whatsAppNotificationService: WhatsAppNotificationService,
   ) {}
 
   // Main method to send notifications
@@ -289,26 +293,129 @@ export class NotificationOrchestratorService {
     );
   }
 
-  // Send SMS notification (placeholder - extend Twilio service)
+  // Send SMS notification using Twilio
   private async sendSmsNotification(notification: any, user: any): Promise<void> {
     const phone = user.profile?.contact?.phone?.number;
     const countryCode = user.profile?.contact?.phone?.country_code || '+234';
 
-    if (!phone) return;
+    if (!phone) {
+      this.logger.debug(`SMS not sent - no phone number for user ${user._id}`);
+      return;
+    }
 
-    // TODO: Use TwilioService to send SMS
-    this.logger.debug(`SMS notification would be sent to ${countryCode}${phone}: ${notification.message}`);
+    const fullPhone = `${countryCode}${phone}`.replace(/^\+?\+/, '+');
+
+    try {
+      // Use urgent SMS for high/urgent priority notifications
+      const result = notification.priority === NotificationPriority.URGENT
+        ? await this.smsNotificationService.sendUrgentSms(fullPhone, notification.message)
+        : await this.smsNotificationService.sendSms(fullPhone, notification.message);
+
+      if (result.success) {
+        await this.notificationsService.updateDeliveryStatus(
+          notification._id.toString(),
+          NotificationChannel.SMS,
+          'sent' as any,
+        );
+        this.logger.log(`SMS sent to ${fullPhone}`);
+      } else {
+        await this.notificationsService.updateDeliveryStatus(
+          notification._id.toString(),
+          NotificationChannel.SMS,
+          'failed' as any,
+          result.error,
+        );
+      }
+    } catch (error) {
+      this.logger.error(`Failed to send SMS to ${fullPhone}: ${error.message}`);
+      await this.notificationsService.updateDeliveryStatus(
+        notification._id.toString(),
+        NotificationChannel.SMS,
+        'failed' as any,
+        error.message,
+      );
+    }
   }
 
-  // Send WhatsApp notification (uses existing WhatsApp service)
+  // Send WhatsApp notification using WhatsApp service
   private async sendWhatsAppNotification(notification: any, user: any): Promise<void> {
+    if (!this.whatsAppNotificationService) {
+      this.logger.debug('WhatsApp service not available');
+      return;
+    }
+
     const phone = user.profile?.contact?.phone?.number;
     const countryCode = user.profile?.contact?.phone?.country_code || '+234';
 
-    if (!phone) return;
+    if (!phone) {
+      this.logger.debug(`WhatsApp not sent - no phone number for user ${user._id}`);
+      return;
+    }
 
-    // TODO: Use WhatsAppService to send message
-    this.logger.debug(`WhatsApp notification would be sent to ${countryCode}${phone}: ${notification.message}`);
+    const fullPhone = `${countryCode}${phone}`.replace(/^\+?\+/, '+');
+
+    try {
+      // Map notification type to WhatsApp notification type
+      const whatsAppType = this.mapToWhatsAppNotificationType(notification.type);
+
+      const result = await this.whatsAppNotificationService.sendNotification(
+        fullPhone,
+        whatsAppType,
+        {
+          ...notification.data,
+          message: notification.message,
+          title: notification.title,
+        },
+      );
+
+      if (result.success) {
+        await this.notificationsService.updateDeliveryStatus(
+          notification._id.toString(),
+          NotificationChannel.WHATSAPP,
+          'sent' as any,
+        );
+        this.logger.log(`WhatsApp sent to ${fullPhone}`);
+      } else {
+        // If WhatsApp identity not found, silently skip
+        if (result.error?.includes('No verified WhatsApp')) {
+          this.logger.debug(`WhatsApp not sent - user ${user._id} not linked`);
+        } else {
+          await this.notificationsService.updateDeliveryStatus(
+            notification._id.toString(),
+            NotificationChannel.WHATSAPP,
+            'failed' as any,
+            result.error,
+          );
+        }
+      }
+    } catch (error) {
+      this.logger.error(`Failed to send WhatsApp to ${fullPhone}: ${error.message}`);
+      await this.notificationsService.updateDeliveryStatus(
+        notification._id.toString(),
+        NotificationChannel.WHATSAPP,
+        'failed' as any,
+        error.message,
+      );
+    }
+  }
+
+  // Map our notification types to WhatsApp notification types
+  private mapToWhatsAppNotificationType(type: NotificationType): WhatsAppNotificationType {
+    const mapping: Partial<Record<NotificationType, WhatsAppNotificationType>> = {
+      [NotificationType.PRESCRIPTION_CREATED]: WhatsAppNotificationType.PRESCRIPTION_RECEIVED,
+      [NotificationType.PRESCRIPTION_READY]: WhatsAppNotificationType.PRESCRIPTION_VERIFIED,
+      [NotificationType.PHARMACY_ORDER_PLACED]: WhatsAppNotificationType.ORDER_CONFIRMED,
+      [NotificationType.PHARMACY_ORDER_CONFIRMED]: WhatsAppNotificationType.ORDER_CONFIRMED,
+      [NotificationType.PHARMACY_ORDER_PROCESSING]: WhatsAppNotificationType.ORDER_PROCESSING,
+      [NotificationType.PHARMACY_ORDER_SHIPPED]: WhatsAppNotificationType.ORDER_OUT_FOR_DELIVERY,
+      [NotificationType.PHARMACY_ORDER_DELIVERED]: WhatsAppNotificationType.ORDER_DELIVERED,
+      [NotificationType.PHARMACY_ORDER_CANCELLED]: WhatsAppNotificationType.ORDER_CANCELLED,
+      [NotificationType.PAYMENT_RECEIVED]: WhatsAppNotificationType.PAYMENT_RECEIVED,
+      [NotificationType.PAYMENT_FAILED]: WhatsAppNotificationType.PAYMENT_FAILED,
+      [NotificationType.ACCOUNT_VERIFIED]: WhatsAppNotificationType.ACCOUNT_VERIFIED,
+    };
+
+    return mapping[type] || WhatsAppNotificationType.PROMOTIONAL;
   }
 
   // Convenience methods for common notification types
@@ -403,5 +510,60 @@ export class NotificationOrchestratorService {
       priority: data.triageLevel === 'emergency' ? NotificationPriority.URGENT : NotificationPriority.MEDIUM,
       channels: [NotificationChannel.IN_APP, NotificationChannel.EMAIL],
     });
+  }
+
+  // Public method to get user notification preferences
+  async getNotificationPreferences(userId: string): Promise<NotificationPreferences> {
+    return this.getUserPreferences(userId);
+  }
+
+  // Update user notification preferences
+  async updateNotificationPreferences(
+    userId: string,
+    updates: Partial<NotificationPreferences>,
+  ): Promise<NotificationPreferences> {
+    try {
+      // Get or create user settings
+      let settings = await this.userSettingsModel.findOne({
+        userId: new Types.ObjectId(userId),
+      });
+
+      if (!settings) {
+        settings = new this.userSettingsModel({
+          userId: new Types.ObjectId(userId),
+          defaults: {},
+        });
+      }
+
+      // Ensure notification_preferences exists
+      if (!settings.defaults) {
+        settings.defaults = {} as any;
+      }
+
+      // Safely access and update notification preferences
+      const defaults = settings.defaults as any;
+      if (!defaults.notification_preferences) {
+        defaults.notification_preferences = {};
+      }
+
+      // Merge updates
+      Object.keys(updates).forEach((category) => {
+        if (!defaults.notification_preferences[category]) {
+          defaults.notification_preferences[category] = {};
+        }
+        Object.assign(defaults.notification_preferences[category], updates[category]);
+      });
+
+      settings.markModified('defaults');
+      await settings.save();
+
+      this.logger.log(`Updated notification preferences for user ${userId}`);
+
+      // Return the updated preferences
+      return this.getUserPreferences(userId);
+    } catch (error) {
+      this.logger.error(`Failed to update preferences for user ${userId}: ${error.message}`);
+      throw error;
+    }
   }
 }
