@@ -256,7 +256,7 @@
 
             <!-- Linked Records Card -->
             <div
-              v-if="prescription.linked_appointments_populated?.length || prescription.linked_clinical_notes_populated?.length"
+              v-if="prescription.linked_appointments_populated?.length || prescription.linked_health_checkups_populated?.length || prescription.linked_clinical_notes_populated?.length"
               class="bento-card bento-card--linked"
             >
               <div class="card-header">
@@ -292,6 +292,39 @@
                           {{ appt.notes_count }} note{{ appt.notes_count > 1 ? 's' : '' }}
                         </span>
                       </div>
+                    </div>
+                  </div>
+                </div>
+                <div v-if="prescription.linked_health_checkups_populated?.length" class="linked-group">
+                  <div class="linked-group__header">
+                    <v-icon name="hi-shield-check" scale="0.7" />
+                    <span>Health Checkups ({{ prescription.linked_health_checkups_populated.length }})</span>
+                  </div>
+                  <div class="linked-group__items">
+                    <div
+                      v-for="checkup in prescription.linked_health_checkups_populated"
+                      :key="checkup._id"
+                      class="linked-record-item linked-record-item--clickable"
+                      @click="openCheckupModal(checkup._id)"
+                    >
+                      <div class="linked-record-item__main">
+                        <div class="linked-record-item__date">{{ formatDateTime(checkup.created_at) }}</div>
+                        <div class="linked-record-item__condition">
+                          <span v-if="checkup.primary_condition">{{ checkup.primary_condition }}</span>
+                          <span v-if="checkup.probability" class="condition-probability">
+                            {{ Math.round(checkup.probability * 100) }}%
+                          </span>
+                        </div>
+                        <div class="linked-record-item__tags">
+                          <span v-if="checkup.triage_level" :class="['mini-tag', `mini-tag--${getTriageClass(checkup.triage_level)}`]">
+                            {{ formatTriageLevel(checkup.triage_level) }}
+                          </span>
+                          <span v-if="checkup.symptoms_count" class="mini-tag">
+                            {{ checkup.symptoms_count }} symptom{{ checkup.symptoms_count > 1 ? 's' : '' }}
+                          </span>
+                        </div>
+                      </div>
+                      <v-icon name="hi-chevron-right" scale="0.8" class="linked-record-item__arrow" />
                     </div>
                   </div>
                 </div>
@@ -473,6 +506,126 @@
               </div>
             </div>
 
+            <!-- RxGPT AI Analysis Card -->
+            <div v-if="rxgptHistory.length > 0" class="bento-card bento-card--rxgpt">
+              <div class="card-header">
+                <div class="card-header__icon card-header__icon--violet">
+                  <v-icon name="gi-artificial-intelligence" scale="0.9" />
+                </div>
+                <h3>RxGPT AI Analysis</h3>
+                <span class="card-header__count">{{ rxgptHistory.length }} analysis</span>
+              </div>
+              <div class="rxgpt-history">
+                <div
+                  v-for="analysis in rxgptHistory"
+                  :key="analysis._id"
+                  class="rxgpt-analysis-card"
+                  :class="{ 'rxgpt-analysis-card--expanded': expandedAnalysisIds.includes(analysis._id) }"
+                  @click="toggleAnalysisExpand(analysis._id)"
+                >
+                  <div class="rxgpt-analysis-card__header">
+                    <div class="rxgpt-analysis-card__meta">
+                      <span class="rxgpt-analysis-card__type">
+                        <v-icon :name="analysis.analysis_type === 'suggestion' ? 'hi-light-bulb' : 'hi-shield-check'" scale="0.7" />
+                        {{ analysis.analysis_type === 'suggestion' ? 'Medication Suggestion' : 'Safety Analysis' }}
+                      </span>
+                      <span class="rxgpt-analysis-card__date">{{ formatDateTime(analysis.created_at) }}</span>
+                    </div>
+                    <div class="rxgpt-analysis-card__badges">
+                      <span
+                        class="risk-badge"
+                        :class="`risk-badge--${analysis.overall_risk_level}`"
+                        v-if="analysis.overall_risk_level"
+                      >
+                        {{ analysis.overall_risk_level }}
+                      </span>
+                      <span v-if="analysis.confidence_score" class="confidence-badge">
+                        {{ analysis.confidence_score }}% confidence
+                      </span>
+                    </div>
+                  </div>
+
+                  <div v-if="expandedAnalysisIds.includes(analysis._id)" class="rxgpt-analysis-card__content">
+                    <!-- Alerts Summary -->
+                    <div v-if="analysis.total_alerts > 0" class="rxgpt-alerts-summary">
+                      <div class="alert-count alert-count--critical" v-if="analysis.critical_alerts">
+                        <v-icon name="hi-exclamation" scale="0.6" />
+                        {{ analysis.critical_alerts }} critical
+                      </div>
+                      <div class="alert-count alert-count--warning" v-if="analysis.warning_alerts">
+                        <v-icon name="hi-exclamation-circle" scale="0.6" />
+                        {{ analysis.warning_alerts }} warnings
+                      </div>
+                    </div>
+
+                    <!-- Clinical Summary -->
+                    <div v-if="analysis.clinical_summary" class="rxgpt-clinical-summary">
+                      <p>{{ analysis.clinical_summary }}</p>
+                    </div>
+
+                    <!-- Drugs Analyzed -->
+                    <div v-if="analysis.drugs_analyzed?.length" class="rxgpt-drugs-list">
+                      <div class="rxgpt-drugs-label">Medications Analyzed:</div>
+                      <div class="rxgpt-drugs-chips">
+                        <span
+                          v-for="drug in analysis.drugs_analyzed"
+                          :key="drug.drug_name"
+                          class="rxgpt-drug-chip"
+                          :class="{ 'rxgpt-drug-chip--appropriate': drug.is_appropriate }"
+                        >
+                          {{ drug.drug_name }}
+                          <v-icon v-if="drug.is_appropriate" name="hi-check" scale="0.5" />
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="rxgpt-analysis-card__footer">
+                    <span v-if="analysis.credits_used" class="credits-used">
+                      <v-icon name="hi-sparkles" scale="0.6" />
+                      {{ analysis.credits_used }} credit used
+                    </span>
+                    <v-icon
+                      :name="expandedAnalysisIds.includes(analysis._id) ? 'hi-chevron-up' : 'hi-chevron-down'"
+                      scale="0.7"
+                      class="expand-icon"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Download & Share Card -->
+            <div class="bento-card bento-card--share">
+              <div class="card-header">
+                <div class="card-header__icon card-header__icon--violet">
+                  <v-icon name="hi-share" scale="0.9" />
+                </div>
+                <h3>Download & Share</h3>
+              </div>
+              <div class="share-grid">
+                <button class="share-btn share-btn--download" @click="downloadPrescription" :disabled="downloadLoading">
+                  <div class="share-btn__icon">
+                    <v-icon v-if="!downloadLoading" name="hi-download" scale="1.1" />
+                    <div v-else class="spinner-small" />
+                  </div>
+                  <span class="share-btn__label">Download PDF</span>
+                </button>
+                <button class="share-btn share-btn--email" @click="sharePrescriptionEmail" :disabled="shareLoading">
+                  <div class="share-btn__icon">
+                    <v-icon name="hi-mail" scale="1.1" />
+                  </div>
+                  <span class="share-btn__label">Email</span>
+                </button>
+                <button class="share-btn share-btn--whatsapp" @click="sharePrescriptionWhatsApp">
+                  <div class="share-btn__icon">
+                    <v-icon name="co-whatsapp" scale="1.1" />
+                  </div>
+                  <span class="share-btn__label">WhatsApp</span>
+                </button>
+              </div>
+            </div>
+
             <!-- Timeline Card -->
             <div class="bento-card bento-card--timeline">
               <div class="card-header">
@@ -610,6 +763,13 @@
         <textarea v-model="deliverNotes" rows="2" placeholder="Any notes..." />
       </div>
     </PharmacyConfirmDialog>
+
+    <!-- Health Checkup Details Modal -->
+    <HealthCheckupModal
+      :is-open="showCheckupModal"
+      :checkup-id="selectedCheckupId"
+      @close="showCheckupModal = false"
+    />
   </div>
 </template>
 
@@ -621,6 +781,7 @@ import RcAvatar from '@/components/RCAvatar';
 import apiFactory from '@/services/apiFactory';
 import PharmacyStatusBadge from './components/PharmacyStatusBadge.vue';
 import PharmacyConfirmDialog from './components/PharmacyConfirmDialog.vue';
+import HealthCheckupModal from './components/HealthCheckupModal.vue';
 import { usePharmacy } from './composables/usePharmacy';
 
 const route = useRoute();
@@ -648,12 +809,38 @@ const deliverNotes = ref('');
 const expandedNoteIds = ref([]);
 const showManageLinksDialog = ref(false);
 
+// RxGPT Analysis
+const rxgptHistory = ref([]);
+const expandedAnalysisIds = ref([]);
+
+// Download & Share
+const downloadLoading = ref(false);
+const shareLoading = ref(false);
+
+// Health Checkup Modal
+const showCheckupModal = ref(false);
+const selectedCheckupId = ref(null);
+
+function openCheckupModal(checkupId) {
+  selectedCheckupId.value = checkupId;
+  showCheckupModal.value = true;
+}
+
 function toggleNoteExpand(noteId) {
   const index = expandedNoteIds.value.indexOf(noteId);
   if (index >= 0) {
     expandedNoteIds.value.splice(index, 1);
   } else {
     expandedNoteIds.value.push(noteId);
+  }
+}
+
+function toggleAnalysisExpand(analysisId) {
+  const index = expandedAnalysisIds.value.indexOf(analysisId);
+  if (index >= 0) {
+    expandedAnalysisIds.value.splice(index, 1);
+  } else {
+    expandedAnalysisIds.value.push(analysisId);
   }
 }
 
@@ -775,6 +962,26 @@ function formatAge(dateOfBirth) {
     age--;
   }
   return `${age} yrs`;
+}
+
+function getTriageClass(level) {
+  if (!level) return 'unknown';
+  const l = level.toLowerCase();
+  if (l.includes('emergency')) return 'emergency';
+  if (l.includes('24')) return 'urgent';
+  if (l.includes('consultation')) return 'consultation';
+  if (l.includes('self')) return 'self-care';
+  return 'unknown';
+}
+
+function formatTriageLevel(level) {
+  if (!level) return 'N/A';
+  const l = level.toLowerCase();
+  if (l.includes('emergency')) return 'Emergency';
+  if (l.includes('24')) return 'See Doctor (24h)';
+  if (l.includes('consultation')) return 'Consultation';
+  if (l.includes('self')) return 'Self Care';
+  return level.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
 function handleAction(actionId) {
@@ -903,8 +1110,97 @@ async function markDelivered() {
   }
 }
 
+async function fetchRxGPTAnalysis() {
+  try {
+    const response = await apiFactory.$_getRxGPTHistoryByPrescription(prescriptionId);
+    const result = response.data?.data || response.data?.result || response.data;
+    if (result && Array.isArray(result)) {
+      rxgptHistory.value = result;
+    } else if (result?.analyses) {
+      rxgptHistory.value = result.analyses;
+    }
+  } catch (error) {
+    console.error('Error fetching RxGPT analysis:', error);
+    // Silent fail - don't show error toast as this is supplementary data
+  }
+}
+
+async function downloadPrescription() {
+  try {
+    downloadLoading.value = true;
+    const response = await apiFactory.$_getSpecialistPrescriptionPdf(prescriptionId);
+    const result = response.data?.data || response.data?.result || response.data;
+
+    if (result?.url) {
+      // Open the presigned URL in a new tab for download
+      window.open(result.url, '_blank');
+      $toast.success('Prescription PDF opened');
+    } else {
+      throw new Error('PDF URL not available');
+    }
+  } catch (error) {
+    console.error('Error downloading prescription:', error);
+    $toast.error('Failed to download prescription PDF');
+  } finally {
+    downloadLoading.value = false;
+  }
+}
+
+async function sharePrescriptionEmail() {
+  const patientEmail = prescription.value.patient?.email;
+  if (!patientEmail) {
+    $toast.warning('Patient email not available');
+    return;
+  }
+
+  try {
+    shareLoading.value = true;
+    await apiFactory.$_shareSpecialistPrescriptionEmail(prescriptionId, {
+      recipient_email: patientEmail,
+      include_pdf: true,
+    });
+    $toast.success(`Prescription sent to ${patientEmail}`);
+  } catch (error) {
+    console.error('Error sharing prescription via email:', error);
+    $toast.error('Failed to send prescription via email');
+  } finally {
+    shareLoading.value = false;
+  }
+}
+
+function sharePrescriptionWhatsApp() {
+  const patientPhone = prescription.value.patient?.phone;
+  const patientName = prescription.value.patient?.full_name || 'Patient';
+  const prescriptionNumber = prescription.value.prescription_number || 'N/A';
+  const totalAmount = formatCurrency(prescription.value.total_amount);
+  const itemsCount = prescription.value.items?.length || 0;
+
+  // Build WhatsApp message
+  const message = `Hello ${patientName},\n\nYour prescription (${prescriptionNumber}) is ready.\n\n📋 ${itemsCount} medication${itemsCount > 1 ? 's' : ''} prescribed\n💰 Total: NGN ${totalAmount}\n\nPlease complete payment to proceed with your order.\n\n- Rapid Capsule Pharmacy`;
+
+  // Build WhatsApp URL
+  let phoneNumber = patientPhone ? patientPhone.replace(/[^0-9]/g, '') : '';
+
+  // Add Nigeria country code if not present
+  if (phoneNumber && !phoneNumber.startsWith('234')) {
+    if (phoneNumber.startsWith('0')) {
+      phoneNumber = '234' + phoneNumber.substring(1);
+    } else {
+      phoneNumber = '234' + phoneNumber;
+    }
+  }
+
+  const encodedMessage = encodeURIComponent(message);
+  const whatsappUrl = phoneNumber
+    ? `https://wa.me/${phoneNumber}?text=${encodedMessage}`
+    : `https://wa.me/?text=${encodedMessage}`;
+
+  window.open(whatsappUrl, '_blank');
+}
+
 onMounted(() => {
   fetchPrescription();
+  fetchRxGPTAnalysis();
 });
 </script>
 
@@ -2675,6 +2971,185 @@ $rose-light: #FFE4E6;
   &:hover {
     background: rgba(14, 174, 196, 0.12);
   }
+}
+
+// Share Grid Styles
+.share-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+}
+
+.share-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 20px 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  &__icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+    text-align: center;
+  }
+
+  &--download {
+    .share-btn__icon {
+      background: linear-gradient(135deg, #dbeafe 0%, rgba(#3b82f6, 0.2) 100%);
+      color: #2563eb;
+    }
+
+    &:hover:not(:disabled) {
+      border-color: rgba(#3b82f6, 0.3);
+      background: rgba(#3b82f6, 0.04);
+    }
+  }
+
+  &--email {
+    .share-btn__icon {
+      background: linear-gradient(135deg, #fce7f3 0%, rgba(#ec4899, 0.2) 100%);
+      color: #db2777;
+    }
+
+    &:hover:not(:disabled) {
+      border-color: rgba(#ec4899, 0.3);
+      background: rgba(#ec4899, 0.04);
+    }
+  }
+
+  &--whatsapp {
+    .share-btn__icon {
+      background: linear-gradient(135deg, #dcfce7 0%, rgba(#22c55e, 0.2) 100%);
+      color: #16a34a;
+    }
+
+    &:hover:not(:disabled) {
+      border-color: rgba(#22c55e, 0.3);
+      background: rgba(#22c55e, 0.04);
+    }
+  }
+}
+
+.spinner-small {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(#3b82f6, 0.2);
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+// Improved linked record item styles
+.linked-record-item {
+  &--clickable {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    &:hover {
+      background: #f1f5f9;
+      border-color: rgba($sky, 0.3);
+    }
+  }
+
+  &__main {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__arrow {
+    color: #94a3b8;
+    flex-shrink: 0;
+    transition: transform 0.2s;
+  }
+
+  &:hover &__arrow {
+    color: $sky-dark;
+    transform: translateX(2px);
+  }
+
+  &__condition {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #1e293b;
+  }
+}
+
+.condition-probability {
+  font-size: 12px;
+  font-weight: 600;
+  color: $emerald;
+  background: rgba($emerald, 0.1);
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+// Triage-based mini-tag colors
+.mini-tag {
+  &--emergency {
+    background: rgba($rose, 0.1) !important;
+    border-color: rgba($rose, 0.2) !important;
+    color: $rose !important;
+  }
+
+  &--urgent {
+    background: rgba($amber, 0.1) !important;
+    border-color: rgba($amber, 0.2) !important;
+    color: darken($amber, 10%) !important;
+  }
+
+  &--consultation {
+    background: rgba($sky, 0.1) !important;
+    border-color: rgba($sky, 0.2) !important;
+    color: $sky-dark !important;
+  }
+
+  &--self-care {
+    background: rgba($emerald, 0.1) !important;
+    border-color: rgba($emerald, 0.2) !important;
+    color: $emerald !important;
+  }
+}
+
+// Violet icon color for share card
+.card-header__icon--violet {
+  background: linear-gradient(135deg, #ede9fe 0%, rgba(#8b5cf6, 0.2) 100%);
+  color: #7c3aed;
 }
 
 @keyframes shimmer {

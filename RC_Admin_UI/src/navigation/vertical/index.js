@@ -160,6 +160,23 @@ export default [
         title: 'Ratings & Reviews',
         to: { name: 'pharmacy-ratings' },
       },
+      {
+        title: 'RxGPT',
+        children: [
+          {
+            title: 'Analytics',
+            to: { name: 'pharmacy-rxgpt' },
+          },
+          {
+            title: 'Settings',
+            to: { name: 'pharmacy-rxgpt-settings' },
+          },
+          {
+            title: 'Specialist Credits',
+            to: { name: 'pharmacy-rxgpt-specialists' },
+          },
+        ],
+      },
     ],
   },
 ]

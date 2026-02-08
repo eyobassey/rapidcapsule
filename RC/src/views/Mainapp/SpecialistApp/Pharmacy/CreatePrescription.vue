@@ -160,8 +160,24 @@
             :patientId="selectedPatient?._id"
             :preSelectedAppointments="preSelectedAppointments"
             :preSelectedNotes="preSelectedNotes"
+            :preSelectedCheckups="preSelectedCheckups"
             @update:linkedAppointments="linkedAppointments = $event"
             @update:linkedClinicalNotes="linkedClinicalNotes = $event"
+            @update:linkedHealthCheckups="linkedHealthCheckups = $event"
+          />
+
+          <!-- RxGPT AI Prescription Assistant -->
+          <RxGPTPanel
+            v-if="currentStep === 1 && selectedPatient"
+            :patientId="selectedPatient?._id"
+            :proposedDrugs="prescriptionItems"
+            :linkedAppointments="linkedAppointments"
+            :linkedClinicalNotes="linkedClinicalNotes"
+            :linkedHealthCheckups="linkedHealthCheckups"
+            @alert="handleRxGPTAlert"
+            @analysis-complete="handleRxGPTAnalysisComplete"
+            @add-medication="handleAddMedication"
+            @add-medications="handleAddMedications"
           />
 
           <StepPaymentDelivery
@@ -213,6 +229,7 @@
                 :first-name="getFirstName(selectedPatient.full_name)"
                 :last-name="getLastName(selectedPatient.full_name)"
                 size="sm"
+                borderless
               />
               <div class="summary-patient__info">
                 <p class="summary-patient__name">{{ selectedPatient.full_name }}</p>
@@ -261,7 +278,7 @@
               :class="['info-card', patientAllergies.length > 0 ? 'info-card--warning' : 'info-card--success']"
             >
               <div class="info-card__icon">
-                <v-icon :name="patientAllergies.length > 0 ? 'hi-exclamation-triangle' : 'hi-shield-check'" scale="0.9" />
+                <v-icon :name="patientAllergies.length > 0 ? 'hi-exclamation' : 'hi-shield-check'" scale="0.9" />
               </div>
               <div class="info-card__content">
                 <span class="info-card__title">
@@ -275,7 +292,7 @@
 
             <!-- Linked Records -->
             <div
-              v-if="preSelectedAppointments.length > 0 || preSelectedNotes.length > 0"
+              v-if="linkedAppointments.length > 0 || linkedClinicalNotes.length > 0 || linkedHealthCheckups.length > 0"
               class="info-card info-card--violet"
             >
               <div class="info-card__icon">
@@ -283,11 +300,7 @@
               </div>
               <div class="info-card__content">
                 <span class="info-card__title">Linked Records</span>
-                <span class="info-card__text">
-                  {{ preSelectedAppointments.length > 0 ? 'Appointment' : '' }}
-                  {{ preSelectedAppointments.length > 0 && preSelectedNotes.length > 0 ? ' & ' : '' }}
-                  {{ preSelectedNotes.length > 0 ? 'Clinical Note' : '' }}
-                </span>
+                <span class="info-card__text">{{ formatLinkedRecords }}</span>
               </div>
             </div>
 
@@ -372,6 +385,7 @@ import StepPatientSelect from './components/create-prescription/StepPatientSelec
 import StepMedications from './components/create-prescription/StepMedications.vue';
 import StepPaymentDelivery from './components/create-prescription/StepPaymentDelivery.vue';
 import StepLinkRecords from './components/create-prescription/StepLinkRecords.vue';
+import RxGPTPanel from './components/create-prescription/RxGPTPanel.vue';
 
 const router = useRouter();
 const route = useRoute();
@@ -433,8 +447,10 @@ const prescriptionItems = ref([]);
 // Linked Records
 const linkedAppointments = ref([]);
 const linkedClinicalNotes = ref([]);
+const linkedHealthCheckups = ref([]);
 const preSelectedAppointments = ref([]);
 const preSelectedNotes = ref([]);
+const preSelectedCheckups = ref([]);
 
 // Payment & Delivery
 const paymentMethod = ref('specialist_wallet');
@@ -508,6 +524,20 @@ const deliveryAddressForSubmit = computed(() => {
     return selectedAddress.value;
   }
   return { ...newAddress.value, country: 'Nigeria' };
+});
+
+const formatLinkedRecords = computed(() => {
+  const parts = [];
+  if (linkedAppointments.value.length > 0) {
+    parts.push(linkedAppointments.value.length === 1 ? 'Appointment' : `${linkedAppointments.value.length} Appointments`);
+  }
+  if (linkedClinicalNotes.value.length > 0) {
+    parts.push(linkedClinicalNotes.value.length === 1 ? 'Note' : `${linkedClinicalNotes.value.length} Notes`);
+  }
+  if (linkedHealthCheckups.value.length > 0) {
+    parts.push(linkedHealthCheckups.value.length === 1 ? 'Checkup' : `${linkedHealthCheckups.value.length} Checkups`);
+  }
+  return parts.join(', ');
 });
 
 // Lifecycle
@@ -794,13 +824,23 @@ async function submitPrescription() {
     const payload = {
       patient_id: selectedPatient.value._id,
       items: prescriptionItems.value.map(item => ({
-        drug_id: item.drug_id,
+        // Core fields
+        drug_id: item.drug_id || undefined,
         batch_id: item.batch_id || undefined,
         quantity: item.quantity,
         dosage: item.dosage,
         frequency: item.frequency,
         duration: item.duration,
-        instructions: item.notes,
+        instructions: item.notes || item.instructions,
+        // Fields for external medications
+        drug_name: item.drug_name,
+        generic_name: item.generic_name,
+        strength: item.strength,
+        // Source tracking for RxGPT integration
+        source: item.source,
+        is_in_inventory: item.is_in_inventory,
+        rxgpt_suggested: item.rxgpt_suggested,
+        rxgpt_reasoning: item.rxgpt_reasoning,
       })),
       payment_method: paymentMethod.value,
       delivery_address: deliveryAddressForSubmit.value,
@@ -809,6 +849,7 @@ async function submitPrescription() {
       pickup_pharmacy_id: deliveryType.value === 'PICKUP_CENTER' ? selectedPickupCenterId.value : undefined,
       linked_appointments: linkedAppointments.value.length ? linkedAppointments.value : undefined,
       linked_clinical_notes: linkedClinicalNotes.value.length ? linkedClinicalNotes.value : undefined,
+      linked_health_checkups: linkedHealthCheckups.value.length ? linkedHealthCheckups.value : undefined,
     };
 
     const response = await apiFactory.$_createSpecialistPrescription(payload);
@@ -873,6 +914,152 @@ async function saveDeliveryAddress() {
   } catch (error) {
     console.error('Error saving address:', error);
   }
+}
+
+// RxGPT Integration
+const rxgptAlerts = ref([]);
+const rxgptAnalysisResult = ref(null);
+
+function handleRxGPTAlert(alerts) {
+  rxgptAlerts.value = alerts;
+
+  // Show critical alerts as toasts
+  const criticalAlerts = alerts.filter(a => a.severity === 'critical');
+  if (criticalAlerts.length > 0) {
+    criticalAlerts.forEach(alert => {
+      $toast.error(`⚠️ ${alert.drug_name}: ${alert.message}`, {
+        duration: 8000,
+        dismissible: true,
+      });
+    });
+  }
+
+  // Show warnings as info toasts (only first 2 to avoid toast spam)
+  const warningAlerts = alerts.filter(a => a.severity === 'warning');
+  if (warningAlerts.length > 0) {
+    warningAlerts.slice(0, 2).forEach(alert => {
+      $toast.warning(`${alert.drug_name}: ${alert.message}`, {
+        duration: 5000,
+        dismissible: true,
+      });
+    });
+
+    if (warningAlerts.length > 2) {
+      $toast.info(`+${warningAlerts.length - 2} more warnings. See RxGPT panel for details.`);
+    }
+  }
+}
+
+function handleRxGPTAnalysisComplete(result) {
+  rxgptAnalysisResult.value = result;
+
+  if (result.is_safe) {
+    $toast.success('RxGPT: Prescription looks safe ✓', { duration: 3000 });
+  } else if (result.overall_risk_level === 'critical') {
+    $toast.error('RxGPT: Critical safety issues detected! Review the alerts before proceeding.', {
+      duration: 10000,
+      dismissible: true,
+    });
+  } else if (result.overall_risk_level === 'high') {
+    $toast.warning('RxGPT: High-risk issues detected. Please review the alerts.', {
+      duration: 6000,
+      dismissible: true,
+    });
+  }
+}
+
+// Handle adding a single medication from RxGPT suggestions
+function handleAddMedication(medication) {
+  // Check if medication already exists
+  const exists = prescriptionItems.value.some(
+    item => item.drug_name === medication.drug_name && item.strength === medication.strength
+  );
+
+  if (exists) {
+    $toast.warning(`${medication.drug_name} is already in the prescription`);
+    return;
+  }
+
+  // Add to prescription items
+  prescriptionItems.value.push({
+    drug_id: medication.drug_id || null,
+    drug_name: medication.drug_name,
+    generic_name: medication.generic_name,
+    strength: medication.strength || '',
+    dosage_form: medication.dosage_form || 'tablet',
+    dosage: medication.dosage || '',
+    frequency: medication.frequency || '',
+    duration: medication.duration || '',
+    duration_days: parseDurationToDays(medication.duration),
+    instructions: medication.instructions || '',
+    quantity: medication.quantity || 1,
+    unit_price: medication.unit_price || 0,
+    total_price: (medication.unit_price || 0) * (medication.quantity || 1),
+    is_in_inventory: medication.is_in_inventory ?? true,
+    source: medication.source || (medication.is_in_inventory ? 'inventory' : 'external'),
+    rxgpt_suggested: medication.rxgpt_suggested ?? true,
+    rxgpt_reasoning: medication.rxgpt_reasoning || '',
+  });
+
+  $toast.success(`${medication.drug_name} added to prescription`);
+}
+
+// Handle adding multiple medications from RxGPT suggestions
+function handleAddMedications(medications) {
+  let addedCount = 0;
+
+  medications.forEach(medication => {
+    // Check if medication already exists
+    const exists = prescriptionItems.value.some(
+      item => item.drug_name === medication.drug_name && item.strength === medication.strength
+    );
+
+    if (!exists) {
+      prescriptionItems.value.push({
+        drug_id: medication.drug_id || null,
+        drug_name: medication.drug_name,
+        generic_name: medication.generic_name,
+        strength: medication.strength || '',
+        dosage_form: medication.dosage_form || 'tablet',
+        dosage: medication.dosage || '',
+        frequency: medication.frequency || '',
+        duration: medication.duration || '',
+        duration_days: parseDurationToDays(medication.duration),
+        instructions: medication.instructions || '',
+        quantity: medication.quantity || 1,
+        unit_price: medication.unit_price || 0,
+        total_price: (medication.unit_price || 0) * (medication.quantity || 1),
+        is_in_inventory: medication.is_in_inventory ?? true,
+        source: medication.source || (medication.is_in_inventory ? 'inventory' : 'external'),
+        rxgpt_suggested: medication.rxgpt_suggested ?? true,
+        rxgpt_reasoning: medication.rxgpt_reasoning || '',
+      });
+      addedCount++;
+    }
+  });
+
+  if (addedCount > 0) {
+    $toast.success(`${addedCount} medication(s) added to prescription`);
+  }
+}
+
+// Helper to parse duration string to days
+function parseDurationToDays(duration) {
+  if (!duration) return null;
+
+  const durationLower = duration.toLowerCase();
+
+  // Match patterns like "7 days", "2 weeks", "1 month"
+  const dayMatch = durationLower.match(/(\d+)\s*days?/);
+  if (dayMatch) return parseInt(dayMatch[1]);
+
+  const weekMatch = durationLower.match(/(\d+)\s*weeks?/);
+  if (weekMatch) return parseInt(weekMatch[1]) * 7;
+
+  const monthMatch = durationLower.match(/(\d+)\s*months?/);
+  if (monthMatch) return parseInt(monthMatch[1]) * 30;
+
+  return null;
 }
 </script>
 

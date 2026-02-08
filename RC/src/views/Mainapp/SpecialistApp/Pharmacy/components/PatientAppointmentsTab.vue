@@ -100,6 +100,19 @@
               </div>
               <p class="notes-content">{{ truncateNotes(appointment.notes) }}</p>
             </div>
+
+            <!-- Linked Prescriptions Indicator -->
+            <div
+              v-if="linkedPrescriptionsMap[appointment._id]"
+              class="appointment-card__prescriptions"
+              @click.stop="viewLinkedPrescriptions(appointment._id)"
+            >
+              <div class="prescriptions-indicator">
+                <v-icon name="ri-capsule-line" scale="0.7" />
+                <span>{{ linkedPrescriptionsMap[appointment._id] }} prescription{{ linkedPrescriptionsMap[appointment._id] > 1 ? 's' : '' }}</span>
+                <v-icon name="hi-chevron-right" scale="0.6" class="chevron" />
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -158,12 +171,15 @@ const props = defineProps({
   patientId: { type: String, required: true },
 });
 
+const emit = defineEmits(['viewPrescription', 'switchToTab']);
+
 const router = useRouter();
 const $toast = useToast();
 const loading = ref(false);
 const appointments = ref([]);
 const statusFilter = ref('all');
 const sortOrder = ref('desc');
+const linkedPrescriptionsMap = ref({});
 const pagination = ref({
   page: 1,
   limit: 10,
@@ -201,6 +217,8 @@ async function fetchAppointments(page = 1) {
         hasNextPage: result.hasNextPage || false,
         hasPrevPage: result.hasPrevPage || false,
       };
+      // Fetch prescription counts for appointments
+      fetchLinkedPrescriptionCounts();
     }
   } catch (error) {
     console.error('Error fetching appointments:', error);
@@ -208,6 +226,29 @@ async function fetchAppointments(page = 1) {
   } finally {
     loading.value = false;
   }
+}
+
+async function fetchLinkedPrescriptionCounts() {
+  if (!appointments.value.length) return;
+
+  const appointmentIds = appointments.value.map(a => a._id).filter(Boolean);
+  if (!appointmentIds.length) return;
+
+  try {
+    const response = await apiFactory.$_getPrescriptionCountsForAppointments(appointmentIds);
+    const result = response.data?.data || response.data?.result || response.data;
+    if (result && typeof result === 'object') {
+      linkedPrescriptionsMap.value = result;
+    }
+  } catch (error) {
+    console.error('Error fetching prescription counts:', error);
+    // Silent fail - this is supplementary data
+  }
+}
+
+function viewLinkedPrescriptions(appointmentId) {
+  // Emit to parent to switch to prescriptions tab with filter
+  emit('switchToTab', { tab: 'prescriptions', filter: { appointmentId } });
 }
 
 function toggleSort() {
@@ -533,6 +574,47 @@ $orange: #F97316;
       font-size: 13px;
       color: $color-g-44;
       line-height: 1.5;
+    }
+  }
+
+  &__prescriptions {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid rgba($color-g-92, 0.5);
+  }
+}
+
+.prescriptions-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, rgba($violet, 0.08) 0%, rgba($violet, 0.04) 100%);
+  border: 1px solid rgba($violet, 0.15);
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: $violet;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  svg {
+    flex-shrink: 0;
+  }
+
+  .chevron {
+    margin-left: auto;
+    opacity: 0.6;
+    transition: transform 0.2s;
+  }
+
+  &:hover {
+    background: linear-gradient(135deg, rgba($violet, 0.12) 0%, rgba($violet, 0.08) 100%);
+    border-color: rgba($violet, 0.25);
+
+    .chevron {
+      transform: translateX(3px);
+      opacity: 1;
     }
   }
 }

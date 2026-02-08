@@ -658,6 +658,11 @@ const routes = [
         name: "SpecialistPharmacyPrescriptionDetails",
         component: () => import("@/views/Mainapp/SpecialistApp/Pharmacy/PrescriptionDetails.vue"),
       },
+      {
+        path: "pharmacy/rxgpt",
+        name: "SpecialistPharmacyRxGPTHistory",
+        component: () => import("@/views/Mainapp/SpecialistApp/Pharmacy/RxGPTHistory.vue"),
+      },
       // Patient Health Views (for specialists viewing patient data)
       {
         path: "patient-health/checkup/:appointmentId/:checkupId",

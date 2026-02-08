@@ -3,7 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import * as moment from 'moment';
 import { ClaudeSummaryPlan, ClaudeSummaryPlanDocument, PlanType } from './entities/claude-summary-plan.entity';
-import { ClaudeSummaryCredit, ClaudeSummaryCreditDocument } from './entities/claude-summary-credit.entity';
+import { ClaudeSummaryCredit, ClaudeSummaryCreditDocument, CreditUserType } from './entities/claude-summary-credit.entity';
 import { ClaudeSummaryTransaction, ClaudeSummaryTransactionDocument, TransactionType } from './entities/claude-summary-transaction.entity';
 import { WalletsService } from '../wallets/wallets.service';
 import { UsersService } from '../users/users.service';
@@ -982,6 +982,391 @@ export class ClaudeSummaryCreditsService {
       success: true,
       sender_remaining: senderCredit.purchased_credits,
       message: `Successfully sent ${credits} AI credits to ${recipientName}`,
+    };
+  }
+
+  // =====================
+  // Specialist Credit Methods
+  // =====================
+
+  /**
+   * Initialize credits for a specialist
+   */
+  async initializeSpecialistCredits(specialistId: Types.ObjectId | string): Promise<ClaudeSummaryCreditDocument> {
+    const specialistIdObj = typeof specialistId === 'string' ? new Types.ObjectId(specialistId) : specialistId;
+
+    let credit = await this.creditModel.findOne({ userId: specialistIdObj });
+
+    if (!credit) {
+      const nextMonth = moment().add(1, 'month').startOf('month').toDate();
+
+      credit = await this.creditModel.create({
+        userId: specialistIdObj,
+        user_type: CreditUserType.SPECIALIST,
+        free_credits_remaining: 0, // Specialists start with 0 free credits (admin can configure)
+        free_credits_reset_date: nextMonth,
+        purchased_credits: 0,
+        gifted_credits: 0,
+        gifted_credits_expiry: null,
+        gifted_by: null,
+        unlimited_subscription: null,
+        total_summaries_generated: 0,
+        total_amount_spent: 0,
+        rxgpt_credits_used: 0,
+        rxgpt_last_used_at: null,
+        total_rxgpt_analyses: 0,
+      });
+    } else if (!credit.user_type || credit.user_type !== CreditUserType.SPECIALIST) {
+      // Update existing record to mark as specialist
+      credit.user_type = CreditUserType.SPECIALIST;
+      await credit.save();
+    }
+
+    return credit;
+  }
+
+  /**
+   * Get specialist's credit status for RxGPT
+   */
+  async getSpecialistCreditStatus(specialistId: Types.ObjectId | string) {
+    const credit = await this.initializeSpecialistCredits(specialistId);
+
+    // Check if unlimited subscription is still active
+    let hasUnlimited = false;
+    let unlimitedExpiresAt: Date | null = null;
+
+    if (credit.unlimited_subscription?.is_active) {
+      if (moment(credit.unlimited_subscription.expires_at).isAfter(moment())) {
+        hasUnlimited = true;
+        unlimitedExpiresAt = credit.unlimited_subscription.expires_at;
+      } else {
+        await this.expireSubscription(credit);
+      }
+    }
+
+    // Check if gifted credits have expired
+    let giftedCredits = credit.gifted_credits;
+    if (credit.gifted_credits > 0 && credit.gifted_credits_expiry) {
+      if (moment(credit.gifted_credits_expiry).isBefore(moment())) {
+        await this.expireGiftedCredits(credit);
+        giftedCredits = 0;
+      }
+    }
+
+    const totalAvailable = hasUnlimited
+      ? 'unlimited'
+      : credit.free_credits_remaining + credit.purchased_credits + giftedCredits;
+
+    return {
+      free_credits_remaining: credit.free_credits_remaining,
+      free_credits_reset_date: credit.free_credits_reset_date,
+      purchased_credits: credit.purchased_credits,
+      gifted_credits: giftedCredits,
+      gifted_credits_expiry: credit.gifted_credits_expiry,
+      has_unlimited_subscription: hasUnlimited,
+      unlimited_expires_at: unlimitedExpiresAt,
+      unlimited_plan_name: hasUnlimited ? credit.unlimited_subscription?.plan_name : null,
+      total_available: totalAvailable,
+      rxgpt_credits_used: credit.rxgpt_credits_used || 0,
+      rxgpt_last_used_at: credit.rxgpt_last_used_at,
+      total_rxgpt_analyses: credit.total_rxgpt_analyses || 0,
+      total_amount_spent: credit.total_amount_spent,
+    };
+  }
+
+  /**
+   * Check if specialist can use RxGPT
+   */
+  async canUseRxGPT(specialistId: Types.ObjectId | string, creditsRequired: number = 1): Promise<{
+    can_use: boolean;
+    source: 'free' | 'gifted' | 'purchased' | 'unlimited' | 'none';
+    credits_remaining: number | 'unlimited';
+  }> {
+    const status = await this.getSpecialistCreditStatus(specialistId);
+
+    if (status.has_unlimited_subscription) {
+      return { can_use: true, source: 'unlimited', credits_remaining: 'unlimited' };
+    }
+
+    const totalCredits = status.free_credits_remaining + status.gifted_credits + status.purchased_credits;
+    if (totalCredits < creditsRequired) {
+      return { can_use: false, source: 'none', credits_remaining: totalCredits };
+    }
+
+    if (status.free_credits_remaining >= creditsRequired) {
+      return { can_use: true, source: 'free', credits_remaining: status.free_credits_remaining };
+    }
+
+    if (status.gifted_credits >= creditsRequired) {
+      return { can_use: true, source: 'gifted', credits_remaining: status.gifted_credits };
+    }
+
+    if (status.purchased_credits >= creditsRequired) {
+      return { can_use: true, source: 'purchased', credits_remaining: status.purchased_credits };
+    }
+
+    return { can_use: false, source: 'none', credits_remaining: 0 };
+  }
+
+  /**
+   * Consume credits for RxGPT analysis (specialist)
+   */
+  async consumeRxGPTCredit(
+    specialistId: Types.ObjectId | string,
+    creditsToConsume: number,
+    metadata?: { patient_id?: string; prescription_id?: string },
+  ): Promise<{ success: boolean; source: string; remaining: number | 'unlimited' }> {
+    const specialistIdObj = typeof specialistId === 'string' ? new Types.ObjectId(specialistId) : specialistId;
+
+    const canUse = await this.canUseRxGPT(specialistIdObj, creditsToConsume);
+
+    if (!canUse.can_use) {
+      throw new BadRequestException('Insufficient credits for RxGPT analysis');
+    }
+
+    const credit = await this.creditModel.findOne({ userId: specialistIdObj });
+    if (!credit) {
+      throw new NotFoundException('Credit record not found');
+    }
+
+    let remaining = creditsToConsume;
+    let transactionType: TransactionType;
+    let description: string;
+
+    switch (canUse.source) {
+      case 'unlimited':
+        transactionType = TransactionType.UNLIMITED_USAGE;
+        description = 'RxGPT analysis (unlimited subscription)';
+        remaining = 0; // No credits deducted for unlimited
+        break;
+
+      case 'free':
+        const freeDeduct = Math.min(credit.free_credits_remaining, remaining);
+        credit.free_credits_remaining -= freeDeduct;
+        remaining -= freeDeduct;
+        transactionType = TransactionType.FREE_USAGE;
+        description = 'RxGPT analysis (free credit)';
+        break;
+
+      case 'gifted':
+        const giftedDeduct = Math.min(credit.gifted_credits, remaining);
+        credit.gifted_credits -= giftedDeduct;
+        remaining -= giftedDeduct;
+        transactionType = TransactionType.GIFTED_USAGE;
+        description = 'RxGPT analysis (gifted credit)';
+        break;
+
+      case 'purchased':
+        const purchasedDeduct = Math.min(credit.purchased_credits, remaining);
+        credit.purchased_credits -= purchasedDeduct;
+        remaining -= purchasedDeduct;
+        transactionType = TransactionType.PURCHASED_USAGE;
+        description = 'RxGPT analysis (purchased credit)';
+        break;
+
+      default:
+        throw new BadRequestException('Invalid credit source');
+    }
+
+    // Update RxGPT-specific tracking
+    credit.rxgpt_credits_used = (credit.rxgpt_credits_used || 0) + creditsToConsume;
+    credit.rxgpt_last_used_at = new Date();
+    credit.total_rxgpt_analyses = (credit.total_rxgpt_analyses || 0) + 1;
+    await credit.save();
+
+    // Log transaction
+    await this.logTransaction({
+      userId: specialistIdObj,
+      type: transactionType,
+      credits_delta: canUse.source === 'unlimited' ? 0 : -creditsToConsume,
+      description,
+      credit_snapshot: {
+        free_credits: credit.free_credits_remaining,
+        purchased_credits: credit.purchased_credits,
+        gifted_credits: credit.gifted_credits,
+        has_unlimited: credit.unlimited_subscription?.is_active || false,
+      },
+      metadata: {
+        feature: 'rxgpt',
+        ...metadata,
+      },
+    });
+
+    const newStatus = await this.getSpecialistCreditStatus(specialistIdObj);
+
+    return {
+      success: true,
+      source: canUse.source,
+      remaining: newStatus.total_available as number | 'unlimited',
+    };
+  }
+
+  /**
+   * Gift credits to a specialist (called by admin)
+   */
+  async giftCreditsToSpecialist(
+    specialistId: Types.ObjectId | string,
+    credits: number,
+    expiryDays: number | null,
+    reason: string,
+    adminId: Types.ObjectId | string,
+  ) {
+    const specialistIdObj = typeof specialistId === 'string' ? new Types.ObjectId(specialistId) : specialistId;
+    const adminIdObj = typeof adminId === 'string' ? new Types.ObjectId(adminId) : adminId;
+
+    const credit = await this.initializeSpecialistCredits(specialistIdObj);
+
+    credit.gifted_credits += credits;
+    credit.gifted_by = adminIdObj;
+    credit.gift_reason = reason;
+
+    if (expiryDays) {
+      credit.gifted_credits_expiry = moment().add(expiryDays, 'days').toDate();
+    } else {
+      credit.gifted_credits_expiry = null;
+    }
+
+    await credit.save();
+
+    await this.logTransaction({
+      userId: specialistIdObj,
+      type: TransactionType.ADMIN_GIFT,
+      credits_delta: credits,
+      description: `Admin gifted ${credits} RxGPT credits${reason ? `: ${reason}` : ''}`,
+      admin_id: adminIdObj,
+      credit_snapshot: {
+        free_credits: credit.free_credits_remaining,
+        purchased_credits: credit.purchased_credits,
+        gifted_credits: credit.gifted_credits,
+        has_unlimited: credit.unlimited_subscription?.is_active || false,
+      },
+      metadata: { reason, expiry_days: expiryDays, feature: 'rxgpt' },
+    });
+
+    logger.log(`Admin ${adminIdObj} gifted ${credits} RxGPT credits to specialist ${specialistIdObj}`);
+
+    return {
+      success: true,
+      gifted_credits: credit.gifted_credits,
+      expiry: credit.gifted_credits_expiry,
+    };
+  }
+
+  /**
+   * Get all specialists with their credit balances (for admin)
+   */
+  async getAllSpecialistCredits(page = 1, limit = 20, search?: string) {
+    const skip = (page - 1) * limit;
+
+    // Find all specialists first
+    const specialistQuery: any = { user_type: 'Specialist' };
+    if (search) {
+      const searchRegex = new RegExp(search, 'i');
+      specialistQuery.$or = [
+        { 'profile.first_name': searchRegex },
+        { 'profile.last_name': searchRegex },
+        { 'profile.contact.email': searchRegex },
+      ];
+    }
+
+    const specialists = await this.userModel
+      .find(specialistQuery)
+      .select('_id profile.first_name profile.last_name profile.contact.email profile.profile_photo')
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    const specialistIds = specialists.map((s: any) => s._id);
+
+    // Get credits for these specialists
+    const credits = await this.creditModel
+      .find({ userId: { $in: specialistIds } })
+      .lean();
+
+    const creditsMap = new Map(credits.map((c: any) => [c.userId.toString(), c]));
+
+    const results = specialists.map((specialist: any) => {
+      const credit = creditsMap.get(specialist._id.toString());
+      return {
+        specialist_id: specialist._id.toString(),
+        name: `${specialist.profile?.first_name || ''} ${specialist.profile?.last_name || ''}`.trim(),
+        email: specialist.profile?.contact?.email || '',
+        avatar: specialist.profile?.profile_photo || null,
+        credits: credit ? {
+          free_credits: credit.free_credits_remaining || 0,
+          purchased_credits: credit.purchased_credits || 0,
+          gifted_credits: credit.gifted_credits || 0,
+          has_unlimited: credit.unlimited_subscription?.is_active || false,
+          total_rxgpt_analyses: credit.total_rxgpt_analyses || 0,
+          rxgpt_credits_used: credit.rxgpt_credits_used || 0,
+          last_used: credit.rxgpt_last_used_at,
+        } : {
+          free_credits: 0,
+          purchased_credits: 0,
+          gifted_credits: 0,
+          has_unlimited: false,
+          total_rxgpt_analyses: 0,
+          rxgpt_credits_used: 0,
+          last_used: null,
+        },
+      };
+    });
+
+    const total = await this.userModel.countDocuments(specialistQuery);
+
+    return {
+      specialists: results,
+      total,
+      page,
+      limit,
+      total_pages: Math.ceil(total / limit),
+    };
+  }
+
+  /**
+   * Revoke gifted credits from a specialist (called by admin)
+   */
+  async revokeSpecialistGiftedCredits(
+    specialistId: Types.ObjectId | string,
+    reason: string,
+    adminId: Types.ObjectId | string,
+  ) {
+    const specialistIdObj = typeof specialistId === 'string' ? new Types.ObjectId(specialistId) : specialistId;
+    const adminIdObj = typeof adminId === 'string' ? new Types.ObjectId(adminId) : adminId;
+
+    const credit = await this.creditModel.findOne({ userId: specialistIdObj });
+    if (!credit) {
+      throw new NotFoundException('Credit record not found');
+    }
+
+    const revokedCredits = credit.gifted_credits;
+    credit.gifted_credits = 0;
+    credit.gifted_credits_expiry = null;
+    credit.gifted_by = null;
+    credit.gift_reason = null;
+
+    await credit.save();
+
+    await this.logTransaction({
+      userId: specialistIdObj,
+      type: TransactionType.ADMIN_REVOKE,
+      credits_delta: -revokedCredits,
+      description: `Admin revoked ${revokedCredits} RxGPT credits${reason ? `: ${reason}` : ''}`,
+      admin_id: adminIdObj,
+      credit_snapshot: {
+        free_credits: credit.free_credits_remaining,
+        purchased_credits: credit.purchased_credits,
+        gifted_credits: 0,
+        has_unlimited: credit.unlimited_subscription?.is_active || false,
+      },
+      metadata: { reason, revoked_credits: revokedCredits, feature: 'rxgpt' },
+    });
+
+    logger.log(`Admin ${adminIdObj} revoked ${revokedCredits} RxGPT credits from specialist ${specialistIdObj}`);
+
+    return {
+      success: true,
+      revoked_credits: revokedCredits,
     };
   }
 

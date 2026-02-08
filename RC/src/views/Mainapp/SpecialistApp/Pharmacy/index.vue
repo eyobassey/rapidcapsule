@@ -105,6 +105,12 @@
                 </div>
                 <span>Drug Catalog</span>
               </button>
+              <button class="action-btn" @click="$router.push('/app/specialist/pharmacy/rxgpt')">
+                <div class="action-icon rose">
+                  <v-icon name="bi-robot" scale="1.1" />
+                </div>
+                <span>RxGPT AI</span>
+              </button>
               <button class="action-btn" @click="$router.push('/app/specialist/specialist-account')">
                 <div class="action-icon amber">
                   <v-icon name="bi-wallet2" scale="1.1" />
@@ -1024,6 +1030,7 @@ $violet-light: #EDE9FE;
     &.emerald { background: $emerald-light; color: $emerald; }
     &.violet { background: $violet-light; color: $violet; }
     &.amber { background: $amber-light; color: $amber; }
+    &.rose { background: $rose-light; color: $rose; }
   }
 
   span {

@@ -38,11 +38,39 @@ import {
   DrugSafetyInfo,
   DrugSafetyInfoSchema,
 } from './entities/drug-safety-info.entity';
+import {
+  RxGPTSettings,
+  RxGPTSettingsSchema,
+} from './entities/rxgpt-settings.entity';
+import {
+  RxGPTAnalytics,
+  RxGPTAnalyticsSchema,
+} from './entities/rxgpt-analytics.entity';
+import {
+  RxGPTCache,
+  RxGPTCacheSchema,
+} from './entities/rxgpt-cache.entity';
+import {
+  RxGPTFeedback,
+  RxGPTFeedbackSchema,
+} from './entities/rxgpt-feedback.entity';
 import { User, UserSchema } from '../users/entities/user.entity';
 import {
   SpecialistPrescription,
   SpecialistPrescriptionSchema,
 } from '../prescriptions/entities/specialist-prescription.entity';
+import {
+  Appointment,
+  AppointmentSchema,
+} from '../appointments/entities/appointment.entity';
+import {
+  HealthCheckup,
+  HealthCheckupSchema,
+} from '../health-checkup/entities/health-checkup.entity';
+import {
+  ClaudeSummaryCredit,
+  ClaudeSummaryCreditSchema,
+} from '../claude-summary-credits/entities/claude-summary-credit.entity';
 
 // Services
 import { DrugService } from './services/drug.service';
@@ -59,6 +87,7 @@ import { PharmacyScheduledTasksService } from './services/pharmacy-scheduled-tas
 import { OpenFDAService } from './services/openfda.service';
 import { DrugInteractionService } from './services/drug-interaction.service';
 import { OrderConfirmationPdfService } from './services/order-confirmation-pdf.service';
+import { RxGPTService } from './services/rxgpt.service';
 
 // Controllers
 import { DrugController } from './controllers/drug.controller';
@@ -66,6 +95,7 @@ import { PharmacyController } from './controllers/pharmacy.controller';
 import { InventoryController } from './controllers/inventory.controller';
 import { PharmacyOrderController } from './controllers/pharmacy-order.controller';
 import { PrescriptionUploadController } from './controllers/prescription-upload.controller';
+import { RxGPTController } from './controllers/rxgpt.controller';
 
 @Module({
   imports: [
@@ -81,6 +111,13 @@ import { PrescriptionUploadController } from './controllers/prescription-upload.
       { name: DrugSafetyInfo.name, schema: DrugSafetyInfoSchema },
       { name: User.name, schema: UserSchema },
       { name: SpecialistPrescription.name, schema: SpecialistPrescriptionSchema },
+      { name: Appointment.name, schema: AppointmentSchema },
+      { name: HealthCheckup.name, schema: HealthCheckupSchema },
+      { name: ClaudeSummaryCredit.name, schema: ClaudeSummaryCreditSchema },
+      { name: RxGPTSettings.name, schema: RxGPTSettingsSchema },
+      { name: RxGPTAnalytics.name, schema: RxGPTAnalyticsSchema },
+      { name: RxGPTCache.name, schema: RxGPTCacheSchema },
+      { name: RxGPTFeedback.name, schema: RxGPTFeedbackSchema },
     ]),
     forwardRef(() => WalletsModule),
     AccountingModule,
@@ -94,6 +131,7 @@ import { PrescriptionUploadController } from './controllers/prescription-upload.
     InventoryController,
     PharmacyOrderController,
     PrescriptionUploadController,
+    RxGPTController,
   ],
   providers: [
     DrugService,
@@ -110,6 +148,7 @@ import { PrescriptionUploadController } from './controllers/prescription-upload.
     OpenFDAService,
     DrugInteractionService,
     OrderConfirmationPdfService,
+    RxGPTService,
     FileUploadHelper,
     GeneralHelpers,
     PaymentHandler,
@@ -128,6 +167,7 @@ import { PrescriptionUploadController } from './controllers/prescription-upload.
     DocumentProcessorService,
     OpenFDAService,
     DrugInteractionService,
+    RxGPTService,
   ],
 })
 export class PharmacyModule {}

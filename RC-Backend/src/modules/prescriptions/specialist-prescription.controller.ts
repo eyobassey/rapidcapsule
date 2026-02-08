@@ -434,6 +434,95 @@ export class SpecialistPrescriptionController {
     );
     return sendSuccessResponse(Messages.UPDATED, result);
   }
+
+  // ============ PDF & SHARING ============
+
+  /**
+   * GET /api/specialist/prescriptions/:id/pdf
+   * Get PDF for a prescription (specialist access)
+   */
+  @UseGuards(JwtAuthGuard)
+  @Get(':id/pdf')
+  async getPrescriptionPdf(@Request() req, @Param('id') id: string) {
+    const result = await this.prescriptionService.getPrescriptionPdfForSpecialist(
+      new Types.ObjectId(id),
+      new Types.ObjectId(req.user.sub),
+    );
+    return sendSuccessResponse(Messages.RETRIEVED, result);
+  }
+
+  /**
+   * POST /api/specialist/prescriptions/:id/share/email
+   * Share prescription via email to patient
+   */
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/share/email')
+  async sharePrescriptionEmail(
+    @Request() req,
+    @Param('id') id: string,
+    @Body() dto: { recipient_email?: string; include_pdf?: boolean },
+  ) {
+    const result = await this.prescriptionService.sharePrescriptionByEmail(
+      new Types.ObjectId(id),
+      new Types.ObjectId(req.user.sub),
+      dto.recipient_email,
+      dto.include_pdf ?? true,
+    );
+    return sendSuccessResponse('Prescription shared successfully', result);
+  }
+
+  // ============ PRESCRIPTION COUNTS ============
+
+  /**
+   * POST /api/specialist/prescriptions/checkup-counts
+   * Get prescription counts for multiple health checkups
+   */
+  @UseGuards(JwtAuthGuard)
+  @Post('checkup-counts')
+  async getPrescriptionCountsForCheckups(
+    @Request() req,
+    @Body('checkup_ids') checkupIds: string[],
+  ) {
+    const result = await this.prescriptionService.getPrescriptionCountsForCheckups(
+      checkupIds.map((id) => new Types.ObjectId(id)),
+      new Types.ObjectId(req.user.sub),
+    );
+    return sendSuccessResponse(Messages.RETRIEVED, result);
+  }
+
+  /**
+   * POST /api/specialist/prescriptions/appointment-counts
+   * Get prescription counts for multiple appointments
+   */
+  @UseGuards(JwtAuthGuard)
+  @Post('appointment-counts')
+  async getPrescriptionCountsForAppointments(
+    @Request() req,
+    @Body('appointment_ids') appointmentIds: string[],
+  ) {
+    const result = await this.prescriptionService.getPrescriptionCountsForAppointments(
+      appointmentIds.map((id) => new Types.ObjectId(id)),
+      new Types.ObjectId(req.user.sub),
+    );
+    return sendSuccessResponse(Messages.RETRIEVED, result);
+  }
+
+  /**
+   * GET /api/specialist/prescriptions/by-checkup/:checkupId
+   * Get prescriptions linked to a specific health checkup
+   */
+  @UseGuards(JwtAuthGuard)
+  @Get('by-checkup/:checkupId')
+  async getPrescriptionsByCheckup(
+    @Request() req,
+    @Param('checkupId') checkupId: string,
+  ) {
+    const result = await this.prescriptionService.getPrescriptionsByHealthCheckup(
+      new Types.ObjectId(checkupId),
+      new Types.ObjectId(req.user.sub),
+    );
+    return sendSuccessResponse(Messages.RETRIEVED, result);
+  }
 }
 
 // ============ PATIENT ENDPOINTS ============

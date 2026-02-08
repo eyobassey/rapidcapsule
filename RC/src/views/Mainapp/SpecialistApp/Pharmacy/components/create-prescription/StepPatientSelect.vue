@@ -40,6 +40,7 @@
           :lastName="patient.full_name?.split(' ')[1]"
           :modelValue="patient.profile_image"
           size="sm"
+          borderless
         />
         <div class="patient-info">
           <p class="patient-name">{{ patient.full_name }}</p>
@@ -92,6 +93,7 @@
           :lastName="selectedPatient.full_name?.split(' ')[1]"
           :modelValue="selectedPatient.profile_image"
           size="lg"
+          borderless
         />
         <div class="selected-card__info">
           <p class="selected-card__name">{{ selectedPatient.full_name }}</p>

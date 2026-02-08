@@ -24,6 +24,11 @@ export class UnlimitedSubscription {
 
 export const UnlimitedSubscriptionSchema = SchemaFactory.createForClass(UnlimitedSubscription);
 
+export enum CreditUserType {
+  PATIENT = 'Patient',
+  SPECIALIST = 'Specialist',
+}
+
 @Schema({
   collection: 'claude_summary_credits',
   timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' },
@@ -31,6 +36,15 @@ export const UnlimitedSubscriptionSchema = SchemaFactory.createForClass(Unlimite
 export class ClaudeSummaryCredit {
   @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true, index: true })
   userId: Types.ObjectId;
+
+  // User type to distinguish between patients and specialists
+  @Prop({
+    type: String,
+    enum: Object.values(CreditUserType),
+    default: CreditUserType.PATIENT,
+    index: true,
+  })
+  user_type: CreditUserType;
 
   // Monthly free credits tracking
   @Prop({ type: Number, default: 5 })
@@ -66,6 +80,16 @@ export class ClaudeSummaryCredit {
 
   @Prop({ type: Number, default: 0 })
   total_amount_spent: number;
+
+  // RxGPT-specific tracking (for specialists)
+  @Prop({ type: Number, default: 0 })
+  rxgpt_credits_used: number;
+
+  @Prop({ type: Date, default: null })
+  rxgpt_last_used_at: Date | null;
+
+  @Prop({ type: Number, default: 0 })
+  total_rxgpt_analyses: number;
 
   created_at: Date;
   updated_at: Date;

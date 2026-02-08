@@ -113,6 +113,19 @@
               </div>
             </div>
 
+            <!-- Linked Prescriptions Indicator -->
+            <div
+              v-if="linkedPrescriptionsMap[checkup._id]"
+              class="checkup-card__prescriptions"
+              @click.stop="viewLinkedPrescriptions(checkup._id)"
+            >
+              <div class="prescriptions-indicator">
+                <v-icon name="ri-capsule-line" scale="0.7" />
+                <span>{{ linkedPrescriptionsMap[checkup._id] }} prescription{{ linkedPrescriptionsMap[checkup._id] > 1 ? 's' : '' }}</span>
+                <v-icon name="hi-chevron-right" scale="0.6" class="chevron" />
+              </div>
+            </div>
+
             <!-- View Details CTA -->
             <div class="checkup-card__cta">
               <v-icon name="hi-eye" scale="0.7" />
@@ -186,11 +199,14 @@ const props = defineProps({
   patientId: { type: String, required: true },
 });
 
+const emit = defineEmits(['viewPrescription', 'switchToTab']);
+
 const $toast = useToast();
 const loading = ref(false);
 const checkups = ref([]);
 const isModalOpen = ref(false);
 const selectedCheckupId = ref(null);
+const linkedPrescriptionsMap = ref({});
 const pagination = ref({
   page: 1,
   limit: 10,
@@ -226,6 +242,8 @@ async function fetchCheckups(page = 1) {
         hasNextPage: result.hasNextPage || false,
         hasPrevPage: result.hasPrevPage || false,
       };
+      // Fetch prescription counts for checkups
+      fetchLinkedPrescriptionCounts();
     }
   } catch (error) {
     console.error('Error fetching health checkups:', error);
@@ -233,6 +251,29 @@ async function fetchCheckups(page = 1) {
   } finally {
     loading.value = false;
   }
+}
+
+async function fetchLinkedPrescriptionCounts() {
+  if (!checkups.value.length) return;
+
+  const checkupIds = checkups.value.map(c => c._id).filter(Boolean);
+  if (!checkupIds.length) return;
+
+  try {
+    const response = await apiFactory.$_getPrescriptionCountsForCheckups(checkupIds);
+    const result = response.data?.data || response.data?.result || response.data;
+    if (result && typeof result === 'object') {
+      linkedPrescriptionsMap.value = result;
+    }
+  } catch (error) {
+    console.error('Error fetching prescription counts:', error);
+    // Silent fail - this is supplementary data
+  }
+}
+
+function viewLinkedPrescriptions(checkupId) {
+  // Emit to parent to switch to prescriptions tab with filter
+  emit('switchToTab', { tab: 'prescriptions', filter: { checkupId } });
 }
 
 function viewCheckupDetails(checkupId) {
@@ -658,6 +699,48 @@ $blue: #3B82F6;
   font-size: 12px;
   font-weight: 600;
   color: $color-g-54;
+}
+
+// Linked Prescriptions
+.checkup-card__prescriptions {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba($color-g-92, 0.5);
+}
+
+.prescriptions-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, rgba(#8B5CF6, 0.08) 0%, rgba(#8B5CF6, 0.04) 100%);
+  border: 1px solid rgba(#8B5CF6, 0.15);
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #8B5CF6;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  svg {
+    flex-shrink: 0;
+  }
+
+  .chevron {
+    margin-left: auto;
+    opacity: 0.6;
+    transition: transform 0.2s;
+  }
+
+  &:hover {
+    background: linear-gradient(135deg, rgba(#8B5CF6, 0.12) 0%, rgba(#8B5CF6, 0.08) 100%);
+    border-color: rgba(#8B5CF6, 0.25);
+
+    .chevron {
+      transform: translateX(3px);
+      opacity: 1;
+    }
+  }
 }
 
 // Triage Badge

@@ -24,6 +24,7 @@ import { FinanceModule } from './modules/finance/finance.module';
 import { LanguagesModule } from './modules/languages/languages.module';
 import { SpecialistCategoriesModule } from './modules/specialist-categories/specialist-categories.module';
 import { ConsultationServicesModule } from './modules/consultation-services/consultation-services.module';
+import { RxGPTModule } from './modules/rxgpt/rxgpt.module';
 
 dotenv.config();
 @Module({
@@ -50,6 +51,7 @@ dotenv.config();
     LanguagesModule,
     SpecialistCategoriesModule,
     ConsultationServicesModule,
+    RxGPTModule,
   ],
   controllers: [AppController],
   providers: [AppService],

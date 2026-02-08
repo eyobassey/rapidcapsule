@@ -22,12 +22,24 @@ import {
 
 export class PrescriptionItemDto {
   @IsMongoId()
-  @IsNotEmpty()
-  drug_id: string;
+  @IsOptional()
+  drug_id?: string; // Optional - not present for external medications
 
   @IsMongoId()
   @IsOptional()
   batch_id?: string; // Optional - specific batch to reserve from
+
+  @IsString()
+  @IsOptional()
+  drug_name?: string; // Required for external medications
+
+  @IsString()
+  @IsOptional()
+  generic_name?: string;
+
+  @IsString()
+  @IsOptional()
+  strength?: string;
 
   @IsNumber()
   @Min(1)
@@ -48,6 +60,24 @@ export class PrescriptionItemDto {
   @IsString()
   @IsOptional()
   instructions?: string; // Additional instructions
+
+  // ============ SOURCE TRACKING (for RxGPT integration) ============
+
+  @IsString()
+  @IsOptional()
+  source?: 'inventory' | 'external' | 'ai_suggested'; // Where this medication came from
+
+  @IsBoolean()
+  @IsOptional()
+  is_in_inventory?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  rxgpt_suggested?: boolean; // Was this suggested by RxGPT
+
+  @IsString()
+  @IsOptional()
+  rxgpt_reasoning?: string; // RxGPT's reasoning for this medication
 }
 
 // ============ DELIVERY ADDRESS DTOs ============
@@ -105,6 +135,11 @@ export class LinkRecordsDto {
   appointments?: string[];
 
   @IsArray()
+  @IsMongoId({ each: true })
+  @IsOptional()
+  health_checkups?: string[];
+
+  @IsArray()
   @ValidateNested({ each: true })
   @Type(() => LinkedClinicalNoteDto)
   @IsOptional()
@@ -149,6 +184,11 @@ export class CreateSpecialistPrescriptionDto {
   @IsMongoId({ each: true })
   @IsOptional()
   linked_appointments?: string[];
+
+  @IsArray()
+  @IsMongoId({ each: true })
+  @IsOptional()
+  linked_health_checkups?: string[];
 
   @IsArray()
   @ValidateNested({ each: true })

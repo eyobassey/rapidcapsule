@@ -735,8 +735,48 @@ export class SpecialistPrescriptionService {
     // Process items - get drug details and calculate prices
     const processedItems: PrescriptionItem[] = [];
     let subtotal = 0;
+    let hasExternalItems = false;
+    let hasInventoryItems = false;
 
     for (const item of dto.items) {
+      // Check if this is an external medication (no drug_id) or inventory medication
+      const isExternalMedication = !item.drug_id || item.source === 'external' || item.source === 'ai_suggested';
+
+      if (isExternalMedication) {
+        // External medication - use provided details, no stock check
+        hasExternalItems = true;
+
+        if (!item.drug_name) {
+          throw new BadRequestException('Drug name is required for external medications');
+        }
+
+        processedItems.push({
+          drug_id: undefined, // No drug_id for external medications
+          batch_id: undefined,
+          drug_name: item.drug_name,
+          generic_name: item.generic_name,
+          drug_strength: item.strength || '',
+          manufacturer: undefined,
+          quantity: item.quantity,
+          dosage: item.dosage,
+          frequency: item.frequency,
+          duration: item.duration,
+          instructions: item.instructions,
+          unit_price: 0, // External medications have no price in our system
+          total_price: 0,
+          stock_reserved: false,
+          // RxGPT tracking fields
+          source: (item.source as any) || 'external',
+          is_in_inventory: false,
+          rxgpt_suggested: item.rxgpt_suggested || false,
+          rxgpt_reasoning: item.rxgpt_reasoning,
+        } as any);
+
+        continue; // Skip to next item
+      }
+
+      // Inventory medication - existing logic
+      hasInventoryItems = true;
       const drug = await this.getDrug(new Types.ObjectId(item.drug_id));
 
       // If batch_id is provided, check that specific batch
@@ -797,6 +837,11 @@ export class SpecialistPrescriptionService {
         unit_price: unitPrice,
         total_price: totalPrice,
         stock_reserved: false,
+        // Source tracking
+        source: 'inventory' as any,
+        is_in_inventory: true,
+        rxgpt_suggested: item.rxgpt_suggested || false,
+        rxgpt_reasoning: item.rxgpt_reasoning,
       });
 
       subtotal = currency(subtotal).add(totalPrice).value;
@@ -883,6 +928,22 @@ export class SpecialistPrescriptionService {
       }));
     }
 
+    // Resolve linked health checkups
+    let linkedHealthCheckups: Types.ObjectId[] = [];
+    if (dto.linked_health_checkups?.length) {
+      const HealthCheckupsCollection = this.connection.collection('health_checkups');
+      const checkupIds = dto.linked_health_checkups.map(id => new Types.ObjectId(id));
+      // Validate all health checkups belong to this patient
+      const validCheckups = await HealthCheckupsCollection.find({
+        _id: { $in: checkupIds },
+        user: new Types.ObjectId(dto.patient_id),
+      }).toArray();
+      if (validCheckups.length !== checkupIds.length) {
+        throw new BadRequestException('One or more linked health checkups are invalid or do not belong to this patient');
+      }
+      linkedHealthCheckups = checkupIds;
+    }
+
     // Create prescription
     const prescription = await this.prescriptionModel.create({
       prescription_number: prescriptionNumber,
@@ -901,6 +962,7 @@ export class SpecialistPrescriptionService {
         ? new Types.ObjectId(dto.appointment_id)
         : undefined,
       linked_appointments: linkedAppointments.length ? linkedAppointments : undefined,
+      linked_health_checkups: linkedHealthCheckups.length ? linkedHealthCheckups : undefined,
       linked_clinical_notes: linkedClinicalNotes.length ? linkedClinicalNotes : undefined,
       // Pickup order fields
       is_pickup_order: isPickupOrder,
@@ -917,17 +979,33 @@ export class SpecialistPrescriptionService {
         },
       ],
       created_by: specialistId,
+      // Prescription source tracking (inventory, external, or mixed)
+      prescription_source: hasExternalItems && hasInventoryItems ? 'mixed' : (hasExternalItems ? 'external' : 'inventory'),
     });
 
-    // Reserve stock
-    const { reservations } = await this.reserveStock(
-      prescription._id,
-      processedItems,
-      specialistId,
-    );
+    // Reserve stock only for inventory items (items with drug_id)
+    const inventoryItems = processedItems.filter((item: any) => item.drug_id);
+    let reservations: any[] = [];
 
-    // Update items with reservation info
-    const updatedItems = processedItems.map((item) => {
+    if (inventoryItems.length > 0) {
+      const reserveResult = await this.reserveStock(
+        prescription._id,
+        inventoryItems,
+        specialistId,
+      );
+      reservations = reserveResult.reservations;
+    }
+
+    // Update items with reservation info (only for inventory items)
+    const updatedItems = processedItems.map((item: any) => {
+      if (!item.drug_id) {
+        // External medication - no stock reservation
+        return {
+          ...item,
+          stock_reserved: false,
+        };
+      }
+
       const itemReservation = reservations.find(
         (r) => r.drug_id.toString() === item.drug_id.toString(),
       );
@@ -961,6 +1039,51 @@ export class SpecialistPrescriptionService {
     if (result) {
       const specialist = await this.usersService.findById(specialistId);
       this.sendPrescriptionCreatedEmail(result, patient, specialist);
+    }
+
+    // Link RxGPT analytics to this prescription if any items were AI-suggested
+    const hasRxGPTSuggestedItems = processedItems.some((item: any) => item.rxgpt_suggested);
+    if (hasRxGPTSuggestedItems) {
+      try {
+        const RxGPTAnalyticsCollection = this.connection.collection('rxgpt_analytics');
+
+        // Build query to find matching analytics record
+        // Use $or to handle both non-existent and null prescription_id
+        const analyticsQuery: any = {
+          specialist_id: new Types.ObjectId(specialistId),
+          patient_id: new Types.ObjectId(dto.patient_id),
+          $or: [
+            { prescription_id: { $exists: false } },
+            { prescription_id: null },
+          ],
+        };
+
+        // Match by linked health checkups if present
+        if (linkedHealthCheckups.length > 0) {
+          analyticsQuery.linked_health_checkups = { $in: linkedHealthCheckups };
+        }
+
+        // Match by linked appointments if present
+        if (linkedAppointments.length > 0) {
+          analyticsQuery.linked_appointments = { $in: linkedAppointments };
+        }
+
+        // Find the most recent unlinked analytics record and update it
+        const updateResult = await RxGPTAnalyticsCollection.findOneAndUpdate(
+          analyticsQuery,
+          { $set: { prescription_id: prescription._id } },
+          { sort: { created_at: -1 } },
+        );
+
+        if (updateResult?.value) {
+          this.logger.log(`Linked RxGPT analytics ${updateResult.value._id} to prescription ${prescription._id}`);
+        } else {
+          this.logger.log(`No unlinked RxGPT analytics found for prescription ${prescription._id}`);
+        }
+      } catch (error) {
+        // Don't fail prescription creation if analytics linking fails
+        this.logger.warn(`Failed to link RxGPT analytics to prescription: ${error.message}`);
+      }
     }
 
     return {
@@ -1102,6 +1225,29 @@ export class SpecialistPrescriptionService {
       }
     }
 
+    // Populate linked health checkups
+    let populatedLinkedCheckups: any[] = [];
+    if (prescription.linked_health_checkups?.length) {
+      const HealthCheckupsCollection = this.connection.collection('health_checkups');
+      const checkups = await HealthCheckupsCollection.find({
+        _id: { $in: prescription.linked_health_checkups },
+      }).project({
+        _id: 1,
+        created_at: 1,
+        'response.data.conditions': 1,
+        'response.data.triage_level': 1,
+        'request.symptoms': 1,
+      }).toArray();
+      populatedLinkedCheckups = checkups.map(checkup => ({
+        _id: checkup._id,
+        created_at: checkup.created_at,
+        triage_level: checkup.response?.data?.triage_level,
+        primary_condition: checkup.response?.data?.conditions?.[0]?.common_name || null,
+        probability: checkup.response?.data?.conditions?.[0]?.probability || null,
+        symptoms_count: checkup.request?.symptoms?.length || 0,
+      }));
+    }
+
     // Determine if this is the requesting specialist's own prescription
     const isOwnPrescription = requestingSpecialistId
       ? prescription.specialist_id?.toString() === requestingSpecialistId.toString()
@@ -1110,6 +1256,7 @@ export class SpecialistPrescriptionService {
     return {
       ...prescription,
       linked_appointments_populated: populatedLinkedAppointments,
+      linked_health_checkups_populated: populatedLinkedCheckups,
       linked_clinical_notes_populated: populatedLinkedNotes,
       is_own_prescription: isOwnPrescription,
       patient: patient ? {
@@ -1224,6 +1371,28 @@ export class SpecialistPrescriptionService {
       }
     }
 
+    // Link health checkups
+    if (dto.health_checkups?.length) {
+      const HealthCheckupsCollection = this.connection.collection('health_checkups');
+      const checkupIds = dto.health_checkups.map(id => new Types.ObjectId(id));
+      const validCheckups = await HealthCheckupsCollection.find({
+        _id: { $in: checkupIds },
+        user: patientId,
+      }).toArray();
+
+      if (validCheckups.length !== checkupIds.length) {
+        throw new BadRequestException('One or more health checkups are invalid or do not belong to this patient');
+      }
+
+      // Append only new ones (no duplicates)
+      const existingIds = (prescription.linked_health_checkups || []).map(id => id.toString());
+      const newIds = checkupIds.filter(id => !existingIds.includes(id.toString()));
+      if (newIds.length) {
+        updateOps.$push = updateOps.$push || {};
+        updateOps.$push.linked_health_checkups = { $each: newIds };
+      }
+    }
+
     // Link clinical notes
     if (dto.clinical_notes?.length) {
       for (const noteRef of dto.clinical_notes) {
@@ -1285,6 +1454,12 @@ export class SpecialistPrescriptionService {
       const removeIds = dto.appointments.map(id => new Types.ObjectId(id));
       updateOps.$pull = updateOps.$pull || {};
       updateOps.$pull.linked_appointments = { $in: removeIds };
+    }
+
+    if (dto.health_checkups?.length) {
+      const removeIds = dto.health_checkups.map(id => new Types.ObjectId(id));
+      updateOps.$pull = updateOps.$pull || {};
+      updateOps.$pull.linked_health_checkups = { $in: removeIds };
     }
 
     if (dto.clinical_notes?.length) {
@@ -4669,5 +4844,353 @@ export class SpecialistPrescriptionService {
       page,
       limit,
     };
+  }
+
+  // ============ SPECIALIST PDF & SHARING ============
+
+  /**
+   * Get PDF for a prescription (specialist access)
+   * Verifies the specialist has access to this prescription
+   */
+  async getPrescriptionPdfForSpecialist(
+    prescriptionId: Types.ObjectId,
+    specialistId: Types.ObjectId,
+  ) {
+    const UsersCollection = this.connection.collection('users');
+
+    const prescription = await this.prescriptionModel.findOne({
+      _id: prescriptionId,
+      specialist_id: specialistId,
+    });
+
+    if (!prescription) {
+      throw new NotFoundException('Prescription not found');
+    }
+
+    // Generate PDF if not exists
+    if (!prescription.pdf_url) {
+      // Build PDF data
+      const [patient, specialist] = await Promise.all([
+        UsersCollection.findOne(
+          { _id: new Types.ObjectId(prescription.patient_id) },
+          { projection: { profile: 1, email: 1 } },
+        ),
+        UsersCollection.findOne(
+          { _id: specialistId },
+          { projection: { profile: 1, professional_practice: 1 } },
+        ),
+      ]);
+
+      // Extract patient_id properly (handle both ObjectId and populated object)
+      const patientIdStr = typeof prescription.patient_id === 'object' && prescription.patient_id !== null
+        ? (prescription.patient_id._id || prescription.patient_id).toString()
+        : String(prescription.patient_id);
+
+      // Format date of birth
+      const dobDate = patient?.profile?.date_of_birth;
+      const formattedDob = dobDate
+        ? new Date(dobDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+        : undefined;
+
+      const pdfData: PdfPrescriptionData = {
+        prescription_number: prescription.prescription_number,
+        created_at: (prescription as any).created_at || new Date(),
+        valid_until: prescription.expires_at || new Date(Date.now() + 28 * 24 * 60 * 60 * 1000),
+        status: prescription.status,
+        patient: {
+          full_name: `${patient?.profile?.first_name || ''} ${patient?.profile?.last_name || ''}`.trim() || 'Unknown Patient',
+          patient_id: patientIdStr,
+          date_of_birth: formattedDob,
+          email: patient?.email,
+          phone: patient?.profile?.contact?.phone?.number,
+        },
+        prescriber: {
+          full_name: `Dr. ${specialist?.profile?.first_name || ''} ${specialist?.profile?.last_name || ''}`.trim() || 'Unknown',
+          specialization: specialist?.professional_practice?.category,
+          license_number: specialist?.professional_practice?.license_number,
+        },
+        items: prescription.items.map((item: PrescriptionItem) => ({
+          drug_name: item.drug_name,
+          generic_name: item.generic_name,
+          strength: item.drug_strength,
+          quantity: item.quantity,
+          dosage: item.dosage,
+          frequency: item.frequency,
+          duration: item.duration,
+          instructions: item.instructions,
+          unit_price: item.unit_price,
+          total_price: item.total_price,
+        })),
+        subtotal: prescription.subtotal,
+        delivery_fee: prescription.delivery_fee || 0,
+        total_amount: prescription.total_amount,
+        currency: 'NGN',
+        notes: prescription.clinical_notes,
+      };
+
+      try {
+        const pdfResult = await this.prescriptionPdfService.generateAndUploadPdf(pdfData);
+        await this.prescriptionModel.updateOne(
+          { _id: prescriptionId },
+          {
+            pdf_url: pdfResult.pdf_url,
+            pdf_hash: pdfResult.pdf_hash,
+            pdf_generated_at: new Date(),
+          },
+        );
+        prescription.pdf_url = pdfResult.pdf_url;
+      } catch (error) {
+        this.logger.error(`Failed to generate PDF: ${error.message}`);
+        throw new Error('Failed to generate PDF');
+      }
+    }
+
+    // Generate presigned URL for secure download (24 hours expiry)
+    const presignedUrl = await this.prescriptionPdfService.getPresignedPdfUrl(
+      prescription.pdf_url,
+      86400, // 24 hours
+    );
+
+    return {
+      url: presignedUrl,
+      prescription_number: prescription.prescription_number,
+    };
+  }
+
+  /**
+   * Share prescription via email to patient
+   */
+  async sharePrescriptionByEmail(
+    prescriptionId: Types.ObjectId,
+    specialistId: Types.ObjectId,
+    recipientEmail?: string,
+    includePdf: boolean = true,
+  ) {
+    const UsersCollection = this.connection.collection('users');
+
+    const prescription = await this.prescriptionModel.findOne({
+      _id: prescriptionId,
+      specialist_id: specialistId,
+    });
+
+    if (!prescription) {
+      throw new NotFoundException('Prescription not found');
+    }
+
+    // Get patient email if not provided
+    let email = recipientEmail;
+    if (!email) {
+      const patient = await UsersCollection.findOne(
+        { _id: new Types.ObjectId(prescription.patient_id) },
+        { projection: { email: 1 } },
+      );
+      if (!patient?.email) {
+        throw new BadRequestException('Patient email not available');
+      }
+      email = patient.email;
+    }
+
+    // Generate PDF if needed and includePdf is true
+    let pdfUrl: string | undefined;
+    if (includePdf) {
+      if (!prescription.pdf_url) {
+        // Generate PDF using the same method
+        try {
+          const pdfResult = await this.getPrescriptionPdfForSpecialist(prescriptionId, specialistId);
+          pdfUrl = pdfResult.url;
+        } catch (error) {
+          this.logger.warn(`Failed to generate PDF for email: ${error.message}`);
+          // Continue without PDF
+        }
+      } else {
+        pdfUrl = await this.prescriptionPdfService.getPresignedPdfUrl(
+          prescription.pdf_url,
+          604800, // 7 days for email
+        );
+      }
+    }
+
+    // Get specialist info
+    const specialist = await UsersCollection.findOne(
+      { _id: specialistId },
+      { projection: { 'profile.first_name': 1, 'profile.last_name': 1 } },
+    );
+    const specialistName = specialist
+      ? `Dr. ${specialist.profile?.first_name || ''} ${specialist.profile?.last_name || ''}`.trim()
+      : 'Your Specialist';
+
+    // Get patient info
+    const patient = await UsersCollection.findOne(
+      { _id: new Types.ObjectId(prescription.patient_id) },
+      { projection: { 'profile.first_name': 1 } },
+    );
+    const patientFirstName = patient?.profile?.first_name || 'Patient';
+
+    // Send email using Brevo
+    const subject = `Your Prescription ${prescription.prescription_number} from Rapid Capsule`;
+    const htmlContent = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background: linear-gradient(135deg, #4FC3F7 0%, #0288D1 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 24px;">Rapid Capsule</h1>
+          <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0; font-size: 14px;">Your Health, Our Priority</p>
+        </div>
+        <div style="background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 10px 10px;">
+          <p style="font-size: 16px; color: #333;">Dear ${patientFirstName},</p>
+          <p style="font-size: 14px; color: #555; line-height: 1.6;">
+            ${specialistName} has shared a prescription with you.
+          </p>
+          <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 0; font-size: 14px; color: #666;">
+              <strong>Prescription Number:</strong> ${prescription.prescription_number}
+            </p>
+            <p style="margin: 10px 0 0; font-size: 14px; color: #666;">
+              <strong>Medications:</strong> ${prescription.items.length} item${prescription.items.length > 1 ? 's' : ''}
+            </p>
+            <p style="margin: 10px 0 0; font-size: 14px; color: #666;">
+              <strong>Total Amount:</strong> NGN ${prescription.total_amount?.toLocaleString() || '0'}
+            </p>
+          </div>
+          ${pdfUrl ? `
+            <div style="text-align: center; margin: 25px 0;">
+              <a href="${pdfUrl}" style="display: inline-block; padding: 14px 30px; background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: white; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px;">
+                Download Prescription PDF
+              </a>
+            </div>
+          ` : ''}
+          <p style="font-size: 14px; color: #555; line-height: 1.6;">
+            Log in to your Rapid Capsule account to view full details and make payment.
+          </p>
+          <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 25px 0;">
+          <p style="font-size: 12px; color: #999; text-align: center;">
+            This is an automated message from Rapid Capsule. Please do not reply to this email.
+          </p>
+        </div>
+      </div>
+    `;
+
+    // Send via email service
+    try {
+      await this.generalHelpers.generateEmailAndSend({
+        email: email as string, // email is guaranteed to be set at this point
+        subject,
+        emailBody: htmlContent,
+        attachments: [],
+      });
+    } catch (error) {
+      this.logger.error(`Failed to send prescription email: ${error.message}`);
+      throw new Error('Failed to send email');
+    }
+
+    return { success: true, email: email as string };
+  }
+
+  // ============ PRESCRIPTION COUNTS FOR LINKED RECORDS ============
+
+  /**
+   * Get prescription counts for multiple health checkups
+   * Returns an object mapping checkup IDs to prescription counts
+   */
+  async getPrescriptionCountsForCheckups(
+    checkupIds: Types.ObjectId[],
+    specialistId: Types.ObjectId,
+  ): Promise<Record<string, number>> {
+    if (!checkupIds.length) return {};
+
+    // Aggregate prescriptions linked to these checkups
+    const results = await this.prescriptionModel.aggregate([
+      {
+        $match: {
+          specialist_id: specialistId,
+          linked_health_checkups: { $in: checkupIds },
+        },
+      },
+      { $unwind: '$linked_health_checkups' },
+      {
+        $match: {
+          linked_health_checkups: { $in: checkupIds },
+        },
+      },
+      {
+        $group: {
+          _id: '$linked_health_checkups',
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    // Convert to object
+    const counts: Record<string, number> = {};
+    for (const result of results) {
+      counts[result._id.toString()] = result.count;
+    }
+
+    return counts;
+  }
+
+  /**
+   * Get prescription counts for multiple appointments
+   * Returns an object mapping appointment IDs to prescription counts
+   */
+  async getPrescriptionCountsForAppointments(
+    appointmentIds: Types.ObjectId[],
+    specialistId: Types.ObjectId,
+  ): Promise<Record<string, number>> {
+    if (!appointmentIds.length) return {};
+
+    // Aggregate prescriptions linked to these appointments
+    const results = await this.prescriptionModel.aggregate([
+      {
+        $match: {
+          specialist_id: specialistId,
+          linked_appointments: { $in: appointmentIds },
+        },
+      },
+      { $unwind: '$linked_appointments' },
+      {
+        $match: {
+          linked_appointments: { $in: appointmentIds },
+        },
+      },
+      {
+        $group: {
+          _id: '$linked_appointments',
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    // Convert to object
+    const counts: Record<string, number> = {};
+    for (const result of results) {
+      counts[result._id.toString()] = result.count;
+    }
+
+    return counts;
+  }
+
+  /**
+   * Get prescriptions linked to a specific health checkup
+   */
+  async getPrescriptionsByHealthCheckup(
+    checkupId: Types.ObjectId,
+    specialistId: Types.ObjectId,
+  ) {
+    const prescriptions = await this.prescriptionModel
+      .find({
+        specialist_id: specialistId,
+        linked_health_checkups: checkupId,
+      })
+      .select('prescription_number status created_at total_amount items')
+      .sort({ created_at: -1 })
+      .exec();
+
+    return prescriptions.map((p) => ({
+      _id: p._id,
+      prescription_number: p.prescription_number,
+      status: p.status,
+      created_at: (p as any).created_at,
+      total_amount: p.total_amount,
+      items_count: p.items.length,
+    }));
   }
 }

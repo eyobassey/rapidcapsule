@@ -50,6 +50,20 @@ export enum StockReservationStatus {
   EXPIRED = 'expired',
 }
 
+// Prescription source type - identifies if medications are from inventory or external
+export enum PrescriptionSourceType {
+  INVENTORY = 'inventory',         // All medications from platform's drug database
+  EXTERNAL = 'external',           // All medications not in inventory (PDF prescription)
+  MIXED = 'mixed',                 // Some from inventory, some external
+}
+
+// Individual item source - tracks where each medication came from
+export enum PrescriptionItemSource {
+  INVENTORY = 'inventory',         // From platform's drug inventory
+  EXTERNAL = 'external',           // Not in inventory, manually entered or from AI suggestion
+  AI_SUGGESTED = 'ai_suggested',   // Suggested by RxGPT (can be inventory or external)
+}
+
 // ============ SUB-SCHEMAS ============
 
 export interface PrescriptionItem {
@@ -75,6 +89,11 @@ export interface PrescriptionItem {
   // Price tracking for recalculation
   original_unit_price?: number;
   price_updated_at?: Date;
+  // Source tracking - inventory vs external
+  source?: PrescriptionItemSource;
+  is_in_inventory?: boolean;          // Whether this drug exists in platform inventory
+  rxgpt_suggested?: boolean;          // Whether this was suggested by RxGPT
+  rxgpt_reasoning?: string;           // RxGPT's reasoning for suggesting this drug
 }
 
 export interface DeliveryAddress {
@@ -128,7 +147,7 @@ export class SpecialistPrescription {
         drug_id: {
           type: mongoose.Schema.Types.ObjectId,
           ref: 'DrugEntity',
-          required: true,
+          required: false, // Not required for external medications
         },
         drug_name: { type: String, required: true },
         generic_name: { type: String },
@@ -151,6 +170,15 @@ export class SpecialistPrescription {
         // Price tracking
         original_unit_price: { type: Number },
         price_updated_at: { type: Date },
+        // Source tracking - inventory vs external
+        source: {
+          type: String,
+          enum: Object.values(PrescriptionItemSource),
+          default: PrescriptionItemSource.INVENTORY,
+        },
+        is_in_inventory: { type: Boolean, default: true },
+        rxgpt_suggested: { type: Boolean, default: false },
+        rxgpt_reasoning: { type: String },
       },
     ]),
   )
@@ -238,6 +266,23 @@ export class SpecialistPrescription {
     index: true,
   })
   status: SpecialistPrescriptionStatus;
+
+  // Prescription source type - identifies if this prescription has inventory, external, or mixed medications
+  @Prop({
+    type: String,
+    enum: Object.values(PrescriptionSourceType),
+    default: PrescriptionSourceType.INVENTORY,
+    index: true,
+  })
+  prescription_source: PrescriptionSourceType;
+
+  // Whether this prescription was created with RxGPT assistance
+  @Prop({ type: Boolean, default: false })
+  rxgpt_assisted: boolean;
+
+  // RxGPT analysis ID if RxGPT was used
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'RxGPTAnalytics' })
+  rxgpt_analysis_id: mongoose.Types.ObjectId;
 
   @Prop(
     raw([
@@ -460,6 +505,9 @@ export class SpecialistPrescription {
 
   @Prop([{ type: mongoose.Schema.Types.ObjectId, ref: 'Appointment' }])
   linked_appointments: mongoose.Types.ObjectId[];
+
+  @Prop([{ type: mongoose.Schema.Types.ObjectId, ref: 'HealthCheckup' }])
+  linked_health_checkups: mongoose.Types.ObjectId[];
 
   @Prop(
     raw([

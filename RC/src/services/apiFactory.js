@@ -763,6 +763,131 @@ const apiFactory = {
     return http.get("/pharmacy/drugs/interaction-settings");
   },
 
+  // ============ RxGPT AI Prescription Assistant APIs ============
+
+  /**
+   * Analyze prescription for safety using RxGPT
+   * @param {Object} payload - { patient_id, proposed_drugs, linked_appointments, linked_health_checkups }
+   * @returns {Promise} - RxGPT analysis result with alerts, recommendations, and drug analyses
+   */
+  $_rxgptAnalyze(payload) {
+    return http.post("/pharmacy/rxgpt/analyze", payload);
+  },
+
+  /**
+   * Quick safety check for a single drug
+   * @param {Object} payload - { patient_id, drug_name, generic_name, strength, dosage }
+   * @returns {Promise} - Quick check result with is_safe flag and alerts
+   */
+  $_rxgptQuickCheck(payload) {
+    return http.post("/pharmacy/rxgpt/quick-check", payload);
+  },
+
+  /**
+   * Get specialist's RxGPT credit balance
+   * @returns {Promise} - Credit balance info
+   */
+  $_getRxGPTCredits() {
+    return http.get("/pharmacy/rxgpt/credits");
+  },
+
+  /**
+   * Get RxGPT settings (specialist view)
+   * @returns {Promise} - RxGPT settings relevant to specialists
+   */
+  $_getRxGPTSettings() {
+    return http.get("/pharmacy/rxgpt/settings");
+  },
+
+  /**
+   * Get RxGPT availability status
+   * @returns {Promise} - { is_available, is_enabled, credits_per_analysis, credit_balance }
+   */
+  $_getRxGPTStatus() {
+    return http.get("/pharmacy/rxgpt/status");
+  },
+
+  /**
+   * Get AI-powered medication suggestions based on patient context
+   * @param {Object} payload - { patient_id, linked_appointments, linked_health_checkups, diagnosis, symptoms, treatment_goal, max_suggestions, prefer_inventory }
+   * @returns {Promise} - Medication suggestions with inventory status and pricing
+   */
+  $_rxgptSuggestMedications(payload) {
+    return http.post("/pharmacy/rxgpt/suggest-medications", payload);
+  },
+
+  /**
+   * Get RxGPT analysis history for a prescription
+   * @param {string} prescriptionId - The prescription ID
+   * @returns {Promise} - RxGPT analysis history for the prescription
+   */
+  $_getRxGPTHistoryByPrescription(prescriptionId) {
+    return http.get(`/pharmacy/rxgpt/prescription/${prescriptionId}/history`);
+  },
+
+  /**
+   * Get RxGPT stats for the specialist
+   * @returns {Promise} - RxGPT usage stats
+   */
+  $_getRxGPTStats() {
+    return http.get('/pharmacy/rxgpt/stats');
+  },
+
+  /**
+   * Get RxGPT analysis history for the specialist
+   * @param {Object} params - { page, limit, risk_level }
+   * @returns {Promise} - RxGPT analysis history with pagination
+   */
+  $_getRxGPTHistory(params = {}) {
+    return http.get('/pharmacy/rxgpt/history', { params });
+  },
+
+  /**
+   * Get specialist prescription PDF
+   * @param {string} prescriptionId - The prescription ID
+   * @returns {Promise} - PDF blob or URL
+   */
+  $_getSpecialistPrescriptionPdf(prescriptionId) {
+    return http.get(`/specialist/prescriptions/${prescriptionId}/pdf`);
+  },
+
+  /**
+   * Share prescription via email
+   * @param {string} prescriptionId - The prescription ID
+   * @param {Object} payload - { recipient_email, include_pdf }
+   * @returns {Promise} - Success response
+   */
+  $_shareSpecialistPrescriptionEmail(prescriptionId, payload = {}) {
+    return http.post(`/specialist/prescriptions/${prescriptionId}/share/email`, payload);
+  },
+
+  /**
+   * Get prescriptions linked to a health checkup
+   * @param {string} checkupId - The health checkup ID
+   * @returns {Promise} - Array of linked prescriptions
+   */
+  $_getPrescriptionsByHealthCheckup(checkupId) {
+    return http.get(`/specialist/prescriptions/by-checkup/${checkupId}`);
+  },
+
+  /**
+   * Batch get prescription counts for health checkups
+   * @param {string[]} checkupIds - Array of health checkup IDs
+   * @returns {Promise} - Object mapping checkup IDs to prescription counts
+   */
+  $_getPrescriptionCountsForCheckups(checkupIds) {
+    return http.post('/specialist/prescriptions/checkup-counts', { checkup_ids: checkupIds });
+  },
+
+  /**
+   * Batch get prescription counts for appointments
+   * @param {string[]} appointmentIds - Array of appointment IDs
+   * @returns {Promise} - Object mapping appointment IDs to prescription counts
+   */
+  $_getPrescriptionCountsForAppointments(appointmentIds) {
+    return http.post('/specialist/prescriptions/appointment-counts', { appointment_ids: appointmentIds });
+  },
+
   // ============ WhatsApp Integration APIs ============
 
   /**
