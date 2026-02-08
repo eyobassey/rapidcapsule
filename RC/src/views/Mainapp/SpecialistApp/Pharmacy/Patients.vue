@@ -1,117 +1,222 @@
 <template>
-  <div class="page-content">
-    <TopBar showButtons type="title-only" title="Pharmacy / Patients" @open-side-nav="$emit('openSideNav')" />
-    <div class="page-content__body">
-      <div class="patients-container">
-        <!-- Hero Section -->
-        <div class="hero-section">
-          <div class="hero-content">
-            <button class="hero-back" @click="router.push('/app/specialist/pharmacy')">
-              <v-icon name="hi-arrow-left" scale="0.75" />
-              Pharmacy
-            </button>
-            <h1 class="hero-title">
-              <v-icon name="hi-user-group" scale="1" />
-              My Patients
-            </h1>
-            <p class="hero-subtitle">Search and manage patient prescriptions</p>
-          </div>
-          <div class="hero-actions">
-            <button class="hero-action-btn" @click="router.push('/app/specialist/pharmacy/prescriptions/create')">
-              <v-icon name="hi-plus" scale="0.85" />
-              New Prescription
-            </button>
-          </div>
-        </div>
-
-        <!-- Search & Filters -->
-        <div class="search-card">
-          <div class="search-input-wrapper">
-            <v-icon name="hi-search" scale="0.9" class="search-icon" />
-            <input
-              v-model="searchQuery"
-              type="text"
-              placeholder="Search by name, email, or phone..."
-              @input="handleSearch"
-            />
-            <button v-if="searchQuery" class="clear-btn" @click="clearSearch">
-              <v-icon name="hi-x" scale="0.8" />
-            </button>
-          </div>
-          <div class="filter-tabs">
-            <button
-              :class="['filter-tab', { active: searchType === 'my_patients' }]"
-              @click="setSearchType('my_patients')"
-            >
-              My Patients
-            </button>
-            <button
-              :class="['filter-tab', { active: searchType === 'all' }]"
-              @click="setSearchType('all')"
-            >
-              All Patients
-            </button>
-          </div>
-        </div>
-
-        <!-- Shimmer Loading -->
-        <template v-if="isLoading">
-          <div class="skeleton-card" v-for="i in 4" :key="i" />
-        </template>
-
-        <!-- Results -->
-        <template v-else>
-          <p v-if="patients.length" class="results-count">
-            Showing {{ patients.length }} of {{ pagination.total }} patients
-          </p>
-
-          <div v-if="patients.length" class="patients-list">
-            <div
-              v-for="patient in patients"
-              :key="patient._id"
-              class="patient-card"
-              @click="viewPatient(patient._id)"
-            >
-              <div class="patient-card__left">
-                <RcAvatar
-                  :model-value="patient.profile_image"
-                  :first-name="patient.first_name || getFirstName(patient.full_name)"
-                  :last-name="patient.last_name || getLastName(patient.full_name)"
-                  size="sm"
-                />
-                <div class="patient-card__info">
-                  <h3>{{ patient.full_name }}</h3>
-                  <p class="email">{{ patient.email }}</p>
-                  <p class="phone">{{ patient.phone || 'No phone' }}</p>
-                </div>
-              </div>
-              <div class="patient-card__right">
-                <div class="patient-card__meta">
-                  <span v-if="patient.gender" class="meta-tag">{{ patient.gender }}</span>
-                  <span v-if="patient.date_of_birth" class="meta-tag">{{ calculateAge(patient.date_of_birth) }}</span>
-                </div>
-                <v-icon name="hi-chevron-right" scale="0.85" class="patient-card__arrow" />
-              </div>
-            </div>
-          </div>
-
-          <!-- Empty State -->
-          <div v-else class="empty-section">
-            <div class="empty-section__icon">
-              <v-icon name="hi-user-group" scale="1.8" />
-            </div>
-            <h3>{{ searchQuery ? 'No patients found' : 'No patients yet' }}</h3>
-            <p>{{ searchQuery ? 'Try adjusting your search criteria' : 'Start by searching for a patient' }}</p>
-          </div>
-        </template>
-
-        <PharmacyPagination
-          :current-page="pagination.page"
-          :total-pages="pagination.totalPages"
-          @page-change="handlePageChange"
-        />
+  <div class="patients-page">
+    <!-- Mobile Header -->
+    <header class="mobile-header">
+      <button class="menu-btn" @click="$emit('openSideNav')">
+        <v-icon name="hi-menu-alt-2" scale="1.2" />
+      </button>
+      <div class="header-logo">
+        <v-icon name="hi-user-group" scale="1" />
+        <span>Patients</span>
       </div>
+      <button class="action-btn" @click="router.push('/app/specialist/pharmacy/prescriptions/create')">
+        <v-icon name="hi-plus" scale="1" />
+      </button>
+    </header>
+
+    <!-- Page Content -->
+    <div class="page-content">
+      <!-- Loading State -->
+      <div v-if="isLoading" class="loading-state">
+        <div class="loading-spinner">
+          <div class="spinner-ring"></div>
+          <v-icon name="hi-user-group" scale="1.2" class="spinner-icon" />
+        </div>
+        <p>Loading patients...</p>
+      </div>
+
+      <template v-else>
+        <!-- Hero Section -->
+        <section class="hero">
+          <div class="hero__content">
+            <button class="back-link desktop-only" @click="$router.push('/app/specialist/pharmacy')">
+              <v-icon name="hi-arrow-left" scale="0.85" />
+              <span>Pharmacy</span>
+            </button>
+            <div class="hero__badge">
+              <div class="badge-pulse"></div>
+              <v-icon name="hi-user-group" />
+              <span>Patient Directory</span>
+            </div>
+            <h1 class="hero__title">
+              My<br/>
+              <span class="hero__title-accent">Patients</span>
+            </h1>
+            <p class="hero__subtitle">
+              Search and manage patient prescriptions all in one place.
+            </p>
+            <div class="hero__stats">
+              <div class="hero-stat">
+                <span class="hero-stat__value">{{ pagination.total || 0 }}</span>
+                <span class="hero-stat__label">Total</span>
+              </div>
+              <div class="hero-stat__divider"></div>
+              <div class="hero-stat">
+                <span class="hero-stat__value hero-stat__value--info">{{ myPatientsCount }}</span>
+                <span class="hero-stat__label">My Patients</span>
+              </div>
+            </div>
+          </div>
+          <div class="hero__visual">
+            <div class="patients-orb">
+              <div class="orb-ring orb-ring--1"></div>
+              <div class="orb-ring orb-ring--2"></div>
+              <div class="orb-ring orb-ring--3"></div>
+              <div class="orb-core">
+                <v-icon name="hi-user-group" />
+              </div>
+            </div>
+            <div class="floating-icons">
+              <div class="float-icon float-icon--1"><v-icon name="ri-capsule-line" /></div>
+              <div class="float-icon float-icon--2"><v-icon name="hi-clipboard-list" /></div>
+              <div class="float-icon float-icon--3"><v-icon name="hi-heart" /></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Bento Grid -->
+        <section class="bento-grid">
+          <!-- Quick Actions Card -->
+          <div class="bento-card actions-card">
+            <div class="card-header">
+              <h3>Quick Actions</h3>
+            </div>
+            <div class="actions-row">
+              <button class="action-btn" @click="router.push('/app/specialist/pharmacy/prescriptions/create')">
+                <div class="action-icon sky">
+                  <v-icon name="hi-plus-circle" scale="1.1" />
+                </div>
+                <span>New Prescription</span>
+              </button>
+              <button class="action-btn" @click="router.push('/app/specialist/pharmacy/drugs')">
+                <div class="action-icon emerald">
+                  <v-icon name="ri-capsule-line" scale="1.1" />
+                </div>
+                <span>Drug Catalog</span>
+              </button>
+              <button class="action-btn" @click="router.push('/app/specialist/pharmacy/prescriptions')">
+                <div class="action-icon violet">
+                  <v-icon name="hi-clipboard-list" scale="1.1" />
+                </div>
+                <span>All Prescriptions</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Filters Card -->
+          <div class="bento-card filters-card">
+            <div class="card-header">
+              <h3>Search Patients</h3>
+              <span class="results-count">{{ patients.length }} results</span>
+            </div>
+            <div class="search-bar">
+              <v-icon name="hi-search" scale="0.9" class="search-icon" />
+              <input
+                v-model="searchQuery"
+                type="text"
+                placeholder="Search by name, email, or phone..."
+                @input="handleSearch"
+              />
+              <button v-if="searchQuery" class="clear-btn" @click="clearSearch">
+                <v-icon name="hi-x" scale="0.8" />
+              </button>
+            </div>
+            <div class="filter-pills">
+              <button
+                :class="['filter-pill', { active: searchType === 'my_patients' }]"
+                @click="setSearchType('my_patients')"
+              >
+                <span class="pill-label">My Patients</span>
+              </button>
+              <button
+                :class="['filter-pill', { active: searchType === 'all' }]"
+                @click="setSearchType('all')"
+              >
+                <span class="pill-label">All Patients</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Patients List Card -->
+          <div class="bento-card patients-card">
+            <div class="card-header">
+              <h3>{{ searchType === 'my_patients' ? 'My Patients' : 'All Patients' }}</h3>
+            </div>
+
+            <!-- Patient Items -->
+            <div v-if="patients.length" class="patients-list">
+              <div
+                v-for="patient in patients"
+                :key="patient._id"
+                class="patient-item"
+                @click="viewPatient(patient._id)"
+              >
+                <div class="patient-item__left">
+                  <div class="patient-avatar">
+                    <RcAvatar
+                      :model-value="patient.profile_image"
+                      :first-name="patient.first_name || getFirstName(patient.full_name)"
+                      :last-name="patient.last_name || getLastName(patient.full_name)"
+                      size="sm"
+                    />
+                  </div>
+
+                  <div class="patient-info">
+                    <div class="patient-header">
+                      <span class="patient-name">{{ patient.full_name }}</span>
+                      <span v-if="patient.prescription_count" class="rx-badge">
+                        {{ patient.prescription_count }} Rx
+                      </span>
+                    </div>
+                    <p class="patient-email">{{ patient.email }}</p>
+                    <div class="patient-meta">
+                      <span v-if="patient.gender" class="meta-tag">
+                        <v-icon :name="patient.gender === 'Male' ? 'io-male' : 'io-female'" scale="0.6" />
+                        {{ patient.gender }}
+                      </span>
+                      <span v-if="patient.date_of_birth" class="meta-tag">
+                        {{ calculateAge(patient.date_of_birth) }} yrs
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="patient-item__right">
+                  <span v-if="patient.phone" class="patient-phone">{{ patient.phone }}</span>
+                  <v-icon name="hi-chevron-right" scale="0.9" class="chevron" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Empty State -->
+            <div v-else class="empty-state">
+              <div class="empty-icon">
+                <v-icon name="hi-user-group" scale="2" />
+              </div>
+              <h3>{{ searchQuery ? 'No patients found' : 'No patients yet' }}</h3>
+              <p>{{ searchQuery ? 'Try adjusting your search criteria' : 'Patients will appear here after you create prescriptions for them' }}</p>
+              <button v-if="!searchQuery" class="empty-action" @click="router.push('/app/specialist/pharmacy/prescriptions/create')">
+                <v-icon name="hi-plus" scale="0.9" />
+                Create Prescription
+              </button>
+            </div>
+
+            <!-- Pagination -->
+            <PharmacyPagination
+              v-if="pagination.totalPages > 1"
+              :current-page="pagination.page"
+              :total-pages="pagination.totalPages"
+              @page-change="handlePageChange"
+            />
+          </div>
+        </section>
+      </template>
     </div>
+
+    <!-- Mobile FAB -->
+    <button class="fab" @click="router.push('/app/specialist/pharmacy/prescriptions/create')">
+      <v-icon name="hi-plus" scale="1.2" />
+    </button>
   </div>
 </template>
 
@@ -119,7 +224,6 @@
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useToast } from 'vue-toast-notification';
-import TopBar from '@/components/Navigation/top-bar';
 import RcAvatar from '@/components/RCAvatar';
 import apiFactory from '@/services/apiFactory';
 import PharmacyPagination from './components/PharmacyPagination.vue';
@@ -129,10 +233,11 @@ const router = useRouter();
 const $toast = useToast();
 const { calculateAge } = usePharmacy();
 
-const isLoading = ref(false);
+const isLoading = ref(true);
 const searchQuery = ref('');
 const searchType = ref('my_patients');
 const patients = ref([]);
+const myPatientsCount = ref(0);
 const pagination = ref({ page: 1, limit: 20, total: 0, totalPages: 0 });
 let debounceTimer = null;
 
@@ -200,372 +305,907 @@ async function searchPatients() {
   }
 }
 
+async function fetchMyPatientsCount() {
+  try {
+    const response = await apiFactory.$_searchPharmacyPatients({ type: 'my_patients', limit: 1 });
+    const result = response.data?.data || response.data?.result;
+    if (result) {
+      myPatientsCount.value = result.total || 0;
+    }
+  } catch (error) {
+    console.error('Error fetching patients count:', error);
+  }
+}
+
 onMounted(() => {
-  searchPatients();
+  Promise.all([searchPatients(), fetchMyPatientsCount()]);
 });
 </script>
 
 <style scoped lang="scss">
-.page-content {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  height: 100vh;
-  padding: 0 128px;
+// Design Tokens
+$sky: #4FC3F7;
+$sky-light: #E1F5FE;
+$sky-dark: #0288D1;
+$sky-darker: #01579B;
+$navy: #0F172A;
+$slate: #334155;
+$gray: #64748B;
+$light-gray: #94A3B8;
+$bg: #F8FAFC;
+$emerald: #10B981;
+$emerald-light: #D1FAE5;
+$amber: #F59E0B;
+$amber-light: #FEF3C7;
+$rose: #F43F5E;
+$rose-light: #FFE4E6;
+$violet: #8B5CF6;
+$violet-light: #EDE9FE;
 
-  @include responsive(tab-portrait) {
-    padding: 0;
-  }
-
-  @include responsive(phone) {
-    padding: 0;
-  }
-
-  &__body {
-    width: 100%;
-    padding: $size-24 $size-32;
-    overflow-y: auto;
-
-    @include responsive(phone) {
-      padding: $size-16;
-    }
-
-    &::-webkit-scrollbar {
-      display: none;
-    }
-  }
+@mixin glass-card {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
 }
 
-.patients-container {
+// Page Container
+.patients-page {
   width: 100%;
-  max-width: 700px;
-  display: flex;
-  flex-direction: column;
-  gap: $size-24;
-  padding-bottom: $size-32;
+  min-height: 100vh;
+  background: $bg;
 }
 
-// Hero Section
-.hero-section {
-  background: linear-gradient(135deg, #0EAEC4 0%, #0891b2 50%, #0e7490 100%);
-  border-radius: $size-20;
-  padding: $size-24 $size-28;
-  display: flex;
-  justify-content: space-between;
+// Mobile Header
+.mobile-header {
+  display: none;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  padding: 12px 16px;
+  background: white;
   align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #F1F5F9;
+
+  @media (max-width: 768px) {
+    display: flex;
+  }
+
+  .menu-btn, .action-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    border: none;
+    background: $bg;
+    color: $slate;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+
+    &:active {
+      background: #E2E8F0;
+    }
+  }
+
+  .header-logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    color: $navy;
+
+    svg {
+      color: $sky-dark;
+    }
+  }
+}
+
+// Page Content
+.page-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px 32px 100px;
+
+  @media (max-width: 768px) {
+    padding: 16px 16px 120px;
+  }
+}
+
+// Loading State
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  gap: 16px;
+
+  .loading-spinner {
+    position: relative;
+    width: 64px;
+    height: 64px;
+
+    .spinner-ring {
+      position: absolute;
+      inset: 0;
+      border: 3px solid $sky-light;
+      border-top-color: $sky;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    .spinner-icon {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: $sky;
+    }
+  }
+
+  p {
+    color: $gray;
+    font-size: 14px;
+  }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+// ============================================
+// HERO SECTION
+// ============================================
+.hero {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+  padding: 48px 40px 56px;
+  background: linear-gradient(135deg, $sky 0%, $sky-dark 50%, $sky-darker 100%);
+  border-radius: 28px;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 10px 40px rgba(14, 174, 196, 0.25);
-  color: white;
+  min-height: 460px;
+  margin-bottom: 24px;
+  box-shadow:
+    0 20px 60px rgba(2, 136, 209, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.1) inset;
 
-  &::before {
-    content: '';
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    padding: 24px 20px;
+    gap: 0;
+    text-align: center;
+    min-height: auto;
+    border-radius: 20px;
+    margin-bottom: 16px;
+  }
+}
+
+.hero__content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  z-index: 2;
+}
+
+.hero__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border-radius: 24px;
+  width: fit-content;
+  margin-bottom: 20px;
+  position: relative;
+
+  @media (max-width: 768px) {
+    margin: 0 auto 12px;
+    padding: 6px 14px;
+  }
+
+  .badge-pulse {
     position: absolute;
-    top: -50%;
-    right: -10%;
-    width: 300px;
-    height: 300px;
-    background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, transparent 70%);
-    pointer-events: none;
-  }
+    left: 12px;
+    width: 8px;
+    height: 8px;
+    background: $emerald;
+    border-radius: 50%;
+    animation: pulse 2s ease-in-out infinite;
 
-  @include responsive(tab-portrait) {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: $size-16;
-    padding: $size-20;
-    border-radius: $size-16;
-  }
-
-  @include responsive(phone) {
-    padding: $size-16;
-    border-radius: $size-12;
-  }
-
-  .hero-content {
-    z-index: 1;
-
-    .hero-back {
-      display: inline-flex;
-      align-items: center;
-      gap: $size-4;
-      background: rgba(255, 255, 255, 0.15);
-      border: none;
-      color: white;
-      font-size: $size-12;
-      font-weight: $fw-medium;
-      padding: $size-4 $size-10;
-      border-radius: $size-8;
-      cursor: pointer;
-      margin-bottom: $size-12;
-      transition: background 0.2s;
-
-      &:hover {
-        background: rgba(255, 255, 255, 0.25);
-      }
+    &::after {
+      content: '';
+      position: absolute;
+      inset: -4px;
+      background: rgba($emerald, 0.4);
+      border-radius: 50%;
+      animation: pulse-ring 2s ease-out infinite;
     }
 
-    .hero-title {
-      display: flex;
-      align-items: center;
-      gap: $size-8;
-      font-size: $size-20;
-      font-weight: $fw-bold;
-      margin-bottom: $size-4;
-    }
-
-    .hero-subtitle {
-      font-size: $size-13;
-      opacity: 0.85;
+    @media (max-width: 768px) {
+      left: 10px;
+      width: 6px;
+      height: 6px;
     }
   }
 
-  .hero-actions {
-    z-index: 1;
+  svg {
+    width: 16px;
+    height: 16px;
+    color: white;
+    margin-left: 12px;
 
-    .hero-action-btn {
-      display: flex;
-      align-items: center;
-      gap: $size-8;
-      background: rgba(255, 255, 255, 0.2);
-      color: white;
-      border: 1px solid rgba(255, 255, 255, 0.3);
-      border-radius: $size-10;
-      padding: $size-10 $size-20;
-      font-size: $size-14;
-      font-weight: $fw-semi-bold;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      white-space: nowrap;
+    @media (max-width: 768px) {
+      width: 14px;
+      height: 14px;
+      margin-left: 10px;
+    }
+  }
 
-      &:hover {
-        background: rgba(255, 255, 255, 0.3);
-      }
+  span {
+    font-size: 13px;
+    font-weight: 600;
+    color: white;
+    letter-spacing: 0.3px;
+
+    @media (max-width: 768px) {
+      font-size: 12px;
     }
   }
 }
 
-// Search Card
-.search-card {
-  background: white;
-  border-radius: $size-16;
-  padding: $size-20;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+.hero__title {
+  font-size: 48px;
+  font-weight: 800;
+  color: white;
+  line-height: 1.1;
+  margin: 0 0 16px;
+  letter-spacing: -1px;
+
+  @media (max-width: 768px) {
+    font-size: 28px;
+    margin: 0 0 8px;
+    letter-spacing: -0.5px;
+
+    br { display: none; }
+  }
+
+  .hero__title-accent {
+    background: linear-gradient(90deg, #fff 0%, rgba(255,255,255,0.7) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+
+    @media (max-width: 768px) {
+      display: inline;
+      margin-left: 6px;
+    }
+  }
 }
 
-.search-input-wrapper {
+.hero__subtitle {
+  font-size: 18px;
+  color: white;
+  line-height: 1.6;
+  margin: 0 0 24px;
+  max-width: 400px;
+  opacity: 0.95;
+
+  @media (max-width: 768px) {
+    font-size: 14px;
+    max-width: 100%;
+    margin: 0 0 16px;
+    opacity: 0.9;
+  }
+}
+
+.hero__stats {
   display: flex;
   align-items: center;
-  gap: $size-12;
-  padding: $size-12 $size-16;
-  background: $color-g-97;
-  border-radius: $size-10;
-  margin-bottom: $size-14;
-  transition: background 0.2s ease;
+  gap: 20px;
+  padding: 16px 20px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  width: fit-content;
 
-  &:focus-within {
-    background: rgba(14, 174, 196, 0.04);
-  }
-
-  .search-icon {
-    color: $color-g-54;
-  }
-
-  input {
-    flex: 1;
-    border: none;
-    outline: none;
-    font-size: $size-14;
-    color: $color-g-21;
-    background: transparent;
-
-    &::placeholder {
-      color: $color-g-67;
-    }
-  }
-
-  .clear-btn {
-    background: $color-g-92;
-    border: none;
-    cursor: pointer;
-    padding: $size-4 $size-6;
-    color: $color-g-54;
-    border-radius: $size-4;
-
-    &:hover {
-      background: $color-g-85;
-      color: $color-g-36;
-    }
+  @media (max-width: 768px) {
+    width: 100%;
+    justify-content: center;
+    padding: 14px 16px;
+    gap: 20px;
+    border-radius: 12px;
   }
 }
 
-.filter-tabs {
+.hero__visual {
   display: flex;
-  gap: $size-8;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+
+  @media (max-width: 768px) {
+    display: none;
+  }
 }
 
-.filter-tab {
-  padding: $size-8 $size-16;
-  border-radius: $size-8;
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
   border: none;
-  background: $color-g-97;
-  font-size: $size-13;
-  font-weight: $fw-medium;
-  color: $color-g-44;
+  border-radius: 12px;
+  padding: 10px 16px;
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
+  margin-bottom: 20px;
+  width: fit-content;
   transition: all 0.2s ease;
 
   &:hover {
-    color: #0EAEC4;
-  }
-
-  &.active {
-    background: rgba(14, 174, 196, 0.1);
-    color: #0EAEC4;
+    background: rgba(255, 255, 255, 0.25);
   }
 }
 
-// Results Count
-.results-count {
-  font-size: $size-13;
-  color: $color-g-54;
-  font-weight: $fw-medium;
+.desktop-only {
+  @media (max-width: 768px) {
+    display: none !important;
+  }
+}
+
+.hero-stat {
+  text-align: center;
+
+  &__value {
+    display: block;
+    font-size: 24px;
+    font-weight: 700;
+    color: white;
+    line-height: 1;
+
+    @media (max-width: 768px) {
+      font-size: 20px;
+    }
+
+    &--warning { color: $amber-light; }
+    &--info { color: $sky-light; }
+    &--success { color: $emerald-light; }
+  }
+
+  &__label {
+    display: block;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.7);
+    margin-top: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+
+    @media (max-width: 768px) {
+      font-size: 10px;
+    }
+  }
+
+  &__divider {
+    width: 1px;
+    height: 32px;
+    background: rgba(255, 255, 255, 0.2);
+
+    @media (max-width: 768px) {
+      height: 28px;
+    }
+  }
+}
+
+// Orb Animation
+.patients-orb {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.orb-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+
+  &--1 {
+    width: 100%;
+    height: 100%;
+    animation: spin-slow 20s linear infinite;
+  }
+
+  &--2 {
+    width: 80%;
+    height: 80%;
+    animation: spin-slow 15s linear infinite reverse;
+  }
+
+  &--3 {
+    width: 60%;
+    height: 60%;
+    animation: spin-slow 10s linear infinite;
+  }
+}
+
+.orb-core {
+  width: 100px;
+  height: 100px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(20px);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    0 0 40px rgba(255, 255, 255, 0.3),
+    0 0 80px rgba(79, 195, 247, 0.3);
+  animation: pulse-glow 3s ease-in-out infinite;
+
+  svg {
+    width: 48px;
+    height: 48px;
+    color: white;
+  }
+}
+
+.floating-icons {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.float-icon {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: float 3s ease-in-out infinite;
+
+  svg {
+    width: 20px;
+    height: 20px;
+    color: white;
+  }
+
+  &--1 { top: 10%; right: 10%; animation-delay: 0s; }
+  &--2 { bottom: 20%; right: 5%; animation-delay: 1s; }
+  &--3 { bottom: 10%; left: 10%; animation-delay: 2s; }
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.1); opacity: 0.8; }
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(1); opacity: 0.8; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 40px rgba(255, 255, 255, 0.3), 0 0 80px rgba(79, 195, 247, 0.3); }
+  50% { box-shadow: 0 0 60px rgba(255, 255, 255, 0.4), 0 0 100px rgba(79, 195, 247, 0.4); }
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+// ============================================
+// BENTO GRID
+// ============================================
+.bento-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+
+  @media (max-width: 768px) {
+    gap: 16px;
+  }
+}
+
+.bento-card {
+  @include glass-card;
+  border-radius: 20px;
+  padding: 20px;
+
+  @media (max-width: 768px) {
+    padding: 16px;
+    border-radius: 16px;
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+
+    @media (max-width: 768px) {
+      margin-bottom: 12px;
+    }
+
+    h3 {
+      font-size: 15px;
+      font-weight: 600;
+      color: $navy;
+      margin: 0;
+    }
+
+    .results-count {
+      font-size: 13px;
+      color: $gray;
+    }
+  }
+}
+
+// Actions Card
+.actions-card {
+  @media (max-width: 768px) {
+    display: none;
+  }
+
+  .actions-row {
+    display: flex;
+    gap: 12px;
+  }
+
+  .action-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 20px 16px;
+    background: $bg;
+    border: 1px solid #E2E8F0;
+    border-radius: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+      background: white;
+      border-color: $sky;
+      box-shadow: 0 4px 12px rgba($sky, 0.15);
+      transform: translateY(-2px);
+    }
+
+    span {
+      font-size: 13px;
+      font-weight: 500;
+      color: $slate;
+    }
+  }
+
+  .action-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &.sky { background: $sky-light; color: $sky-dark; }
+    &.emerald { background: $emerald-light; color: $emerald; }
+    &.violet { background: $violet-light; color: $violet; }
+    &.amber { background: $amber-light; color: $amber; }
+  }
+}
+
+// Filters Card
+.filters-card {
+  .search-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: $bg;
+    padding: 12px 16px;
+    border-radius: 12px;
+    border: 1px solid #E2E8F0;
+    margin-bottom: 16px;
+    transition: all 0.2s;
+
+    &:focus-within {
+      border-color: $sky;
+      box-shadow: 0 0 0 3px rgba($sky, 0.1);
+    }
+
+    .search-icon {
+      color: $gray;
+    }
+
+    input {
+      flex: 1;
+      border: none;
+      outline: none;
+      font-size: 14px;
+      color: $navy;
+      background: transparent;
+
+      &::placeholder {
+        color: $light-gray;
+      }
+    }
+
+    .clear-btn {
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      border: none;
+      background: #E2E8F0;
+      color: $gray;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      &:hover {
+        background: $rose-light;
+        color: $rose;
+      }
+    }
+  }
+
+  .filter-pills {
+    display: flex;
+    gap: 8px;
+  }
+
+  .filter-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 20px;
+    border-radius: 20px;
+    border: 1px solid #E2E8F0;
+    background: white;
+    font-size: 13px;
+    font-weight: 500;
+    color: $slate;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+      border-color: $sky;
+      color: $sky-dark;
+    }
+
+    &.active {
+      background: linear-gradient(135deg, $sky, $sky-dark);
+      border-color: transparent;
+      color: white;
+    }
+  }
 }
 
 // Patients List
 .patients-list {
   display: flex;
   flex-direction: column;
-  gap: $size-10;
+  gap: 12px;
 }
 
-.patient-card {
+.patient-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: white;
-  border-radius: $size-16;
-  padding: $size-20;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  padding: 16px;
+  background: $bg;
+  border-radius: 14px;
+  border: 1px solid #E2E8F0;
   cursor: pointer;
-  transition: all 0.2s ease;
-  border-left: 3px solid #0EAEC4;
+  transition: all 0.2s;
+
+  @media (max-width: 768px) {
+    padding: 14px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
 
   &:hover {
-    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
-
-    .patient-card__arrow {
-      color: #0EAEC4;
-      transform: translateX(2px);
-    }
+    background: white;
+    border-color: $sky-light;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    transform: translateX(4px);
   }
 
   &__left {
     display: flex;
     align-items: center;
-    gap: $size-14;
+    gap: 14px;
     flex: 1;
     min-width: 0;
-  }
 
-  &__info {
-    min-width: 0;
-
-    h3 {
-      font-size: $size-15;
-      font-weight: $fw-semi-bold;
-      color: $color-g-21;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .email {
-      font-size: $size-12;
-      color: $color-g-54;
-      margin-top: $size-2;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .phone {
-      font-size: $size-12;
-      color: $color-g-67;
-      margin-top: $size-2;
+    @media (max-width: 768px) {
+      width: 100%;
     }
   }
 
   &__right {
     display: flex;
     align-items: center;
-    gap: $size-12;
+    gap: 16px;
     flex-shrink: 0;
-  }
 
-  &__meta {
-    display: flex;
-    gap: $size-6;
+    @media (max-width: 768px) {
+      width: 100%;
+      justify-content: space-between;
+      padding-top: 12px;
+      border-top: 1px solid #E2E8F0;
+    }
 
-    .meta-tag {
-      font-size: $size-11;
-      padding: $size-4 $size-10;
-      background: $color-g-97;
-      border-radius: $size-6;
-      color: $color-g-44;
-      font-weight: $fw-medium;
+    .chevron {
+      color: $light-gray;
+
+      @media (max-width: 768px) {
+        display: none;
+      }
     }
   }
+}
 
-  &__arrow {
-    color: $color-g-67;
-    transition: all 0.2s ease;
+.patient-avatar {
+  flex-shrink: 0;
+}
+
+.patient-info {
+  flex: 1;
+  min-width: 0;
+
+  .patient-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 4px;
+    flex-wrap: wrap;
   }
+
+  .patient-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: $navy;
+  }
+
+  .patient-email {
+    font-size: 13px;
+    color: $gray;
+    margin: 0 0 8px;
+  }
+}
+
+.rx-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  background: $sky-light;
+  color: $sky-dark;
+}
+
+.patient-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.meta-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  padding: 4px 10px;
+  background: white;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  color: $slate;
+}
+
+.patient-phone {
+  font-size: 13px;
+  color: $gray;
 }
 
 // Empty State
-.empty-section {
+.empty-state {
   text-align: center;
-  padding: $size-32 $size-20;
-  background: $color-g-97;
-  border-radius: $size-12;
+  padding: 48px 24px;
 
-  &__icon {
-    width: 64px;
-    height: 64px;
-    margin: 0 auto $size-14;
+  .empty-icon {
+    width: 80px;
+    height: 80px;
+    background: $sky-light;
     border-radius: 50%;
-    background: rgba(14, 174, 196, 0.08);
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #0EAEC4;
+    margin: 0 auto 20px;
+    color: $sky;
   }
 
   h3 {
-    font-size: $size-15;
-    font-weight: $fw-semi-bold;
-    color: $color-g-21;
-    margin-bottom: $size-6;
+    font-size: 18px;
+    font-weight: 600;
+    color: $navy;
+    margin: 0 0 8px;
   }
 
   p {
-    font-size: $size-13;
-    color: $color-g-54;
+    font-size: 14px;
+    color: $gray;
+    margin: 0 0 20px;
+  }
+
+  .empty-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    background: linear-gradient(135deg, $sky, $sky-dark);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba($sky, 0.3);
+    }
   }
 }
 
-// Skeleton
-.skeleton-card {
-  height: 90px;
-  border-radius: $size-16;
-  background: linear-gradient(90deg, $color-g-92 25%, $color-g-97 50%, $color-g-92 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-}
+// Mobile FAB
+.fab {
+  display: none;
+  position: fixed;
+  bottom: 90px;
+  right: 20px;
+  width: 56px;
+  height: 56px;
+  background: linear-gradient(135deg, $sky, $sky-dark);
+  color: white;
+  border: none;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba($sky, 0.4);
+  cursor: pointer;
+  z-index: 50;
+  transition: all 0.2s;
 
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  @media (max-width: 768px) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
 }
 </style>

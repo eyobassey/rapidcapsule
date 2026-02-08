@@ -1,10 +1,19 @@
 <template>
   <div class="step-medications">
-    <div class="medications-header">
-      <h2>Add Medications</h2>
-      <button class="btn btn-secondary" @click="showDrugSearch = true">
-        <v-icon name="hi-plus" scale="0.8" />
-        Add Drug
+    <!-- Section Header -->
+    <div class="section-header">
+      <div class="section-header__left">
+        <div class="section-header__icon emerald">
+          <v-icon name="ri-capsule-line" scale="1.1" />
+        </div>
+        <div class="section-header__content">
+          <h2>Add Medications</h2>
+          <p>Add drugs with dosage and frequency instructions</p>
+        </div>
+      </div>
+      <button class="add-drug-btn" @click="showDrugSearch = true">
+        <v-icon name="hi-plus" scale="0.9" />
+        <span>Add Drug</span>
       </button>
     </div>
 
@@ -20,12 +29,20 @@
     </div>
 
     <!-- Empty State -->
-    <div v-else class="empty-medications">
-      <v-icon name="ri-capsule-line" scale="2" />
-      <p>No medications added yet</p>
-      <button class="btn btn-primary" @click="showDrugSearch = true">
-        <v-icon name="hi-plus" scale="0.8" />
-        Add First Medication
+    <div v-else class="empty-state">
+      <div class="empty-state__visual">
+        <div class="empty-orb">
+          <div class="orb-ring"></div>
+          <div class="orb-core">
+            <v-icon name="ri-capsule-line" scale="1.5" />
+          </div>
+        </div>
+      </div>
+      <p class="empty-state__title">No medications added yet</p>
+      <p class="empty-state__text">Start by adding drugs to the prescription</p>
+      <button class="add-drug-btn add-drug-btn--primary" @click="showDrugSearch = true">
+        <v-icon name="hi-plus" scale="0.9" />
+        <span>Add First Medication</span>
       </button>
     </div>
 
@@ -100,70 +117,165 @@ function onDrugSelect(drug) {
 </script>
 
 <style scoped lang="scss">
+// Design Tokens
+$sky: #4FC3F7;
+$sky-light: #E1F5FE;
+$sky-dark: #0288D1;
+$navy: #0F172A;
+$slate: #334155;
+$gray: #64748B;
+$light-gray: #94A3B8;
+$bg: #F8FAFC;
+$emerald: #10B981;
+$emerald-light: #D1FAE5;
+
 .step-medications {
-  background: $color-white;
-  padding: $size-24;
-  border-radius: $size-12;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }
 
-.medications-header {
+// Section Header
+.section-header {
   display: flex;
+  align-items: flex-start;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: $size-20;
+  gap: 16px;
+  flex-wrap: wrap;
 
-  h2 {
-    font-size: $size-20;
-    font-weight: $fw-semi-bold;
-    color: $color-g-21;
+  &__left {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  &__icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+
+    &.emerald { background: $emerald-light; color: $emerald; }
+  }
+
+  &__content {
+    h2 {
+      font-size: 20px;
+      font-weight: 700;
+      color: $navy;
+      margin: 0 0 4px;
+    }
+
+    p {
+      font-size: 14px;
+      color: $gray;
+      margin: 0;
+    }
   }
 }
 
+// Add Drug Button
+.add-drug-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: $bg;
+  border: 2px solid #E2E8F0;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: $slate;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: white;
+    border-color: $emerald;
+    color: $emerald;
+    box-shadow: 0 4px 12px rgba($emerald, 0.15);
+  }
+
+  &--primary {
+    background: linear-gradient(135deg, $emerald, darken($emerald, 8%));
+    border: none;
+    color: white;
+    box-shadow: 0 4px 15px rgba($emerald, 0.3);
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba($emerald, 0.4);
+      color: white;
+    }
+  }
+}
+
+// Medications List
 .medications-list {
   display: flex;
   flex-direction: column;
-  gap: $size-16;
+  gap: 16px;
 }
 
-.empty-medications {
-  text-align: center;
-  padding: $size-48 $size-24;
-  color: $color-g-54;
-
-  p {
-    margin: $size-16 0;
-    font-size: $size-15;
-  }
-}
-
-.btn {
-  padding: $size-10 $size-20;
-  border-radius: $size-8;
-  font-size: $size-14;
-  font-weight: $fw-medium;
-  cursor: pointer;
-  border: none;
-  transition: all 0.2s ease;
-  display: inline-flex;
+// Empty State
+.empty-state {
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: $size-6;
+  text-align: center;
+  padding: 48px 24px;
 
-  &-primary {
-    background: $color-pri;
-    color: $color-white;
-
-    &:hover {
-      background: darken($color-pri, 10%);
-    }
+  &__visual {
+    margin-bottom: 24px;
   }
 
-  &-secondary {
-    background: $color-g-92;
-    color: $color-g-36;
-
-    &:hover {
-      background: $color-g-85;
-    }
+  &__title {
+    font-size: 18px;
+    font-weight: 600;
+    color: $navy;
+    margin: 0 0 8px;
   }
+
+  &__text {
+    font-size: 14px;
+    color: $gray;
+    margin: 0 0 24px;
+  }
+}
+
+.empty-orb {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  .orb-ring {
+    position: absolute;
+    inset: 0;
+    border: 2px solid $emerald-light;
+    border-radius: 50%;
+    animation: spin-slow 20s linear infinite;
+  }
+
+  .orb-core {
+    width: 64px;
+    height: 64px;
+    background: $emerald-light;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: $emerald;
+  }
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 </style>

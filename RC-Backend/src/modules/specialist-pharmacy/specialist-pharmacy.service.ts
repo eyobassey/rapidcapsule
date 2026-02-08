@@ -243,19 +243,60 @@ export class SpecialistPharmacyService {
     );
 
     // Get allergies from either root or profile level
-    const allergies = patient?.allergies || patient?.profile?.allergies || [];
+    const rawAllergies = patient?.allergies || patient?.profile?.allergies;
+
+    // Extract allergies from the structured format
+    let allergies: string[] = [];
+    if (rawAllergies) {
+      if (Array.isArray(rawAllergies)) {
+        // Simple array format
+        allergies = rawAllergies;
+      } else if (typeof rawAllergies === 'object') {
+        // Structured format with drug_allergies, food_allergies, etc.
+        if (Array.isArray(rawAllergies.drug_allergies)) {
+          allergies.push(...rawAllergies.drug_allergies.map((a: any) =>
+            a.drug_name ? `${a.drug_name} (Drug${a.severity ? ' - ' + a.severity : ''})` : a
+          ));
+        }
+        if (Array.isArray(rawAllergies.food_allergies)) {
+          allergies.push(...rawAllergies.food_allergies.map((a: any) =>
+            a.food_name ? `${a.food_name} (Food${a.severity ? ' - ' + a.severity : ''})` : a
+          ));
+        }
+        if (Array.isArray(rawAllergies.environmental_allergies)) {
+          allergies.push(...rawAllergies.environmental_allergies.map((a: any) =>
+            a.allergen_name ? `${a.allergen_name} (Environmental)` : a
+          ));
+        }
+        if (Array.isArray(rawAllergies.other_allergies)) {
+          allergies.push(...rawAllergies.other_allergies.map((a: any) =>
+            a.name || a.allergen_name || a
+          ));
+        }
+      }
+    }
+
+    // Extract height and weight from basic_health_info
+    const healthInfo = patient?.profile?.basic_health_info || {};
+    const height = healthInfo.height;
+    const weight = healthInfo.weight;
 
     return {
       conditions,
-      allergies: Array.isArray(allergies) ? allergies : [],
+      allergies,
       risk_factors: patient?.profile?.health_risk_factors || {},
-      health_info: patient?.profile?.basic_health_info || {},
+      health_info: healthInfo,
       current_medications: patient?.profile?.medications || [],
+      // Include formatted height/weight for easy display
+      height: height ? `${height.value} ${height.unit || 'cm'}` : null,
+      weight: weight ? `${weight.value} ${weight.unit || 'kg'}` : null,
+      blood_type: patient?.profile?.blood_type || patient?.blood_type || null,
     };
   }
 
   /**
-   * Get patient's prescription history from this specialist
+   * Get patient's prescription history from ALL specialists (not just current one)
+   * Enriched with prescribing specialist info
    */
   async getPatientPrescriptions(
     specialistId: Types.ObjectId,
@@ -263,10 +304,12 @@ export class SpecialistPharmacyService {
     page = 1,
     limit = 20,
   ) {
+    // Only filter by patient - show prescriptions from ALL specialists
     const filter = {
-      specialist_id: specialistId,
       patient_id: patientId,
     };
+
+    const UsersCollection = this.connection.collection('users');
 
     const [prescriptions, total] = await Promise.all([
       this.prescriptionModel
@@ -278,7 +321,45 @@ export class SpecialistPharmacyService {
       this.prescriptionModel.countDocuments(filter),
     ]);
 
-    return this.generalHelpers.paginate(prescriptions, page, limit, total);
+    // Enrich prescriptions with specialist info
+    // Note: Mongoose populate hooks already populate specialist_id as an object
+    const enrichedPrescriptions = await Promise.all(
+      prescriptions.map(async (prescription: any) => {
+        let prescribingSpecialistName = 'Unknown Specialist';
+        let prescribingSpecialistAvatar: string | null = null;
+        let prescribingSpecialistId: string | null = null;
+
+        if (prescription.specialist_id) {
+          // Check if specialist_id is already populated (object with profile)
+          if (typeof prescription.specialist_id === 'object' && prescription.specialist_id.profile) {
+            const profile = prescription.specialist_id.profile;
+            const firstName = profile.first_name || '';
+            const lastName = profile.last_name || '';
+            prescribingSpecialistName = `${firstName} ${lastName}`.trim() || 'Unknown Specialist';
+            // Resolve the profile photo URL through presigned URL generator
+            const rawAvatar = profile.profile_photo || null;
+            prescribingSpecialistAvatar = rawAvatar ? await this.fileUploadHelper.resolveProfileImage(rawAvatar) : null;
+            prescribingSpecialistId = prescription.specialist_id._id?.toString() || null;
+          } else if (typeof prescription.specialist_id === 'object' && prescription.specialist_id._id) {
+            // Object but no profile (shouldn't happen, but handle it)
+            prescribingSpecialistId = prescription.specialist_id._id?.toString() || null;
+          } else {
+            // Raw ObjectId or string
+            prescribingSpecialistId = prescription.specialist_id?.toString() || null;
+          }
+        }
+
+        return {
+          ...prescription,
+          specialist_name: prescribingSpecialistName,
+          specialist_avatar: prescribingSpecialistAvatar,
+          prescribing_specialist_id: prescribingSpecialistId,
+          is_own_prescription: prescribingSpecialistId === specialistId?.toString(),
+        };
+      }),
+    );
+
+    return this.generalHelpers.paginate(enrichedPrescriptions, page, limit, total);
   }
 
   /**
@@ -300,59 +381,75 @@ export class SpecialistPharmacyService {
       .limit(10)
       .toArray();
 
+    // Helper to get the latest reading that has a value
+    const getLatestWithValue = (readings: any[]) => {
+      if (!Array.isArray(readings) || readings.length === 0) return null;
+      // Iterate from end to find the latest with a value
+      for (let i = readings.length - 1; i >= 0; i--) {
+        if (readings[i].value !== undefined && readings[i].value !== null && readings[i].value !== '') {
+          return readings[i];
+        }
+      }
+      return null;
+    };
+
     // Transform to frontend-friendly format
     // Each vital field (blood_pressure, pulse_rate, etc.) is an array of { value, unit, updatedAt }
     const records: any[] = [];
 
     for (const vital of vitals) {
-      if (Array.isArray(vital.blood_pressure) && vital.blood_pressure.length > 0) {
-        const latest = vital.blood_pressure[vital.blood_pressure.length - 1];
+      const bpReading = getLatestWithValue(vital.blood_pressure);
+      if (bpReading) {
         records.push({
           _id: `${vital._id}_bp`,
           type: 'blood_pressure',
-          value: latest.value || 'N/A',
-          unit: latest.unit || 'mmHg',
-          recorded_at: latest.updatedAt || vital.created_at,
+          value: bpReading.value,
+          unit: bpReading.unit || 'mmHg',
+          recorded_at: bpReading.updatedAt || vital.created_at,
         });
       }
-      if (Array.isArray(vital.pulse_rate) && vital.pulse_rate.length > 0) {
-        const latest = vital.pulse_rate[vital.pulse_rate.length - 1];
+
+      const hrReading = getLatestWithValue(vital.pulse_rate);
+      if (hrReading) {
         records.push({
           _id: `${vital._id}_hr`,
           type: 'heart_rate',
-          value: latest.value || 'N/A',
-          unit: latest.unit || 'bpm',
-          recorded_at: latest.updatedAt || vital.created_at,
+          value: hrReading.value,
+          unit: hrReading.unit || 'bpm',
+          recorded_at: hrReading.updatedAt || vital.created_at,
         });
       }
-      if (Array.isArray(vital.body_temp) && vital.body_temp.length > 0) {
-        const latest = vital.body_temp[vital.body_temp.length - 1];
+
+      const tempReading = getLatestWithValue(vital.body_temp);
+      if (tempReading) {
         records.push({
           _id: `${vital._id}_temp`,
           type: 'temperature',
-          value: latest.value || 'N/A',
-          unit: latest.unit || '°C',
-          recorded_at: latest.updatedAt || vital.created_at,
+          value: tempReading.value,
+          unit: tempReading.unit || '°C',
+          recorded_at: tempReading.updatedAt || vital.created_at,
         });
       }
-      if (Array.isArray(vital.body_weight) && vital.body_weight.length > 0) {
-        const latest = vital.body_weight[vital.body_weight.length - 1];
+
+      const weightReading = getLatestWithValue(vital.body_weight);
+      if (weightReading) {
         records.push({
           _id: `${vital._id}_weight`,
           type: 'weight',
-          value: latest.value || 'N/A',
-          unit: latest.unit || 'kg',
-          recorded_at: latest.updatedAt || vital.created_at,
+          value: weightReading.value,
+          unit: weightReading.unit || 'kg',
+          recorded_at: weightReading.updatedAt || vital.created_at,
         });
       }
-      if (Array.isArray(vital.blood_sugar_level) && vital.blood_sugar_level.length > 0) {
-        const latest = vital.blood_sugar_level[vital.blood_sugar_level.length - 1];
+
+      const sugarReading = getLatestWithValue(vital.blood_sugar_level);
+      if (sugarReading) {
         records.push({
           _id: `${vital._id}_sugar`,
           type: 'blood_sugar',
-          value: latest.value || 'N/A',
-          unit: latest.unit || 'mg/dL',
-          recorded_at: latest.updatedAt || vital.created_at,
+          value: sugarReading.value,
+          unit: sugarReading.unit || 'mg/dL',
+          recorded_at: sugarReading.updatedAt || vital.created_at,
         });
       }
     }
@@ -363,20 +460,31 @@ export class SpecialistPharmacyService {
   /**
    * Get patient's health checkups (only completed ones with diagnosis)
    */
-  async getPatientHealthCheckups(patientId: Types.ObjectId, limit = 5) {
+  async getPatientHealthCheckups(
+    patientId: Types.ObjectId,
+    page = 1,
+    limit = 10,
+  ) {
     const HealthCheckupsCollection = this.connection.collection('health_checkups');
 
-    // Only get completed checkups (those with conditions/diagnosis)
-    const checkups = await HealthCheckupsCollection.find({
+    // Filter for completed checkups (those with conditions/diagnosis)
+    const filter = {
       user: patientId,
       'response.data.conditions.0': { $exists: true },
-    })
+    };
+
+    // Get total count for pagination
+    const total = await HealthCheckupsCollection.countDocuments(filter);
+
+    // Get paginated checkups
+    const checkups = await HealthCheckupsCollection.find(filter)
       .sort({ created_at: -1 })
+      .skip((page - 1) * limit)
       .limit(limit)
       .toArray();
 
     // Transform to frontend-friendly format
-    return checkups.map((checkup: any) => {
+    const docs = checkups.map((checkup: any) => {
       const response = checkup.response?.data || {};
       const conditions = response.conditions || [];
       const primaryCondition = conditions[0];
@@ -404,6 +512,128 @@ export class SpecialistPharmacyService {
         has_emergency_evidence: response.has_emergency_evidence,
       };
     });
+
+    return {
+      docs,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+      hasNextPage: page * limit < total,
+      hasPrevPage: page > 1,
+    };
+  }
+
+  /**
+   * Get detailed health checkup by ID
+   * Includes full AI assessment, all conditions, symptoms, and recommendations
+   */
+  async getHealthCheckupDetails(checkupId: Types.ObjectId) {
+    const HealthCheckupsCollection = this.connection.collection('health_checkups');
+
+    const checkup = await HealthCheckupsCollection.findOne({ _id: checkupId });
+
+    if (!checkup) {
+      throw new NotFoundException('Health checkup not found');
+    }
+
+    const response = checkup.response?.data || {};
+    const conditions = response.conditions || [];
+    const primaryCondition = conditions[0];
+
+    // Extract all symptoms with details
+    const symptoms = (checkup.request?.evidence || [])
+      .filter((e: any) => e.choice_id === 'present')
+      .map((e: any) => ({
+        id: e.id,
+        name: e.label || e.common_name || e.name || e.id,
+        source: e.source || 'unknown',
+        duration: e.duration,
+      }));
+
+    // Extract risk factors
+    const riskFactors = (checkup.request?.evidence || [])
+      .filter((e: any) => e.source === 'predefined' || e.source === 'risk_factor')
+      .map((e: any) => ({
+        id: e.id,
+        name: e.label || e.common_name || e.name || e.id,
+      }));
+
+    // Get triage info
+    const triage = response.triage || {};
+
+    // Get specialist recommendations
+    const specialistRecommendations = response.specialist_recommendations || [];
+
+    return {
+      _id: checkup._id,
+      created_at: checkup.created_at,
+      updated_at: checkup.updated_at,
+      health_check_for: checkup.health_check_for,
+      patient_info: checkup.request?.patient_info || checkup.patient_info,
+
+      // Triage Assessment
+      triage_level: response.triage_level || triage.level || (response.should_stop ? 'consultation' : null),
+      has_emergency_evidence: response.has_emergency_evidence,
+      should_stop: response.should_stop,
+
+      // Primary Diagnosis
+      primary_condition: primaryCondition ? {
+        name: primaryCondition.common_name || primaryCondition.name,
+        probability: primaryCondition.probability,
+        icd10: primaryCondition.icd10_code,
+        acuity: primaryCondition.acuity,
+        severity: primaryCondition.severity,
+        categories: primaryCondition.categories,
+      } : null,
+
+      // All Conditions (Full AI Assessment)
+      conditions: conditions.map((c: any) => ({
+        id: c.id,
+        name: c.common_name || c.name,
+        probability: c.probability,
+        icd10: c.icd10_code,
+        acuity: c.acuity,
+        severity: c.severity,
+        categories: c.categories,
+      })),
+
+      // Symptoms Reported
+      symptoms,
+      symptoms_count: symptoms.length,
+
+      // Risk Factors
+      risk_factors: riskFactors,
+
+      // Triage Details
+      triage_details: {
+        level: triage.level || response.triage_level,
+        description: triage.description,
+        serious: triage.serious,
+        teleconsultation_applicable: triage.teleconsultation_applicable,
+      },
+
+      // Specialist Recommendations
+      specialist_recommendations: specialistRecommendations,
+
+      // Interview Stats
+      interview_stats: {
+        question_count: response.question_counter || checkup.request?.question_count,
+        interview_duration: checkup.interview_duration,
+      },
+
+      // AI Summary (Claude-generated detailed explanation)
+      ai_summary: checkup.claude_summary?.content ? {
+        overview: checkup.claude_summary.content.overview,
+        key_findings: checkup.claude_summary.content.key_findings || [],
+        possible_conditions_explained: checkup.claude_summary.content.possible_conditions_explained || [],
+        recommendations: checkup.claude_summary.content.recommendations || [],
+        when_to_seek_care: checkup.claude_summary.content.when_to_seek_care,
+        lifestyle_tips: checkup.claude_summary.content.lifestyle_tips || [],
+        generated_at: checkup.claude_summary.generated_at,
+        model: checkup.claude_summary.model,
+      } : null,
+    };
   }
 
   // ============ DRUG CATALOG ============
@@ -1048,12 +1278,29 @@ export class SpecialistPharmacyService {
           }
         }
 
+        // Extract specialist info from populated specialist_id
+        let specialistName = 'Unknown Specialist';
+        let specialistAvatar: string | null = null;
+        if (typeof prescription.specialist_id === 'object' && prescription.specialist_id?.profile) {
+          const specProfile = prescription.specialist_id.profile;
+          const specFirstName = specProfile.first_name || '';
+          const specLastName = specProfile.last_name || '';
+          specialistName = `${specFirstName} ${specLastName}`.trim() || 'Unknown Specialist';
+          // Resolve the profile photo URL through presigned URL generator
+          const rawSpecAvatar = specProfile.profile_photo || null;
+          specialistAvatar = rawSpecAvatar ? await this.fileUploadHelper.resolveProfileImage(rawSpecAvatar) : null;
+        }
+
         return {
           _id: prescription._id,
           prescription_number: prescription.prescription_number,
           patient_id: prescription.patient_id,
           patient_name: patientName,
           patient_avatar: patientAvatar,
+          specialist_id: prescription.specialist_id?._id || prescription.specialist_id,
+          specialist_name: specialistName,
+          specialist_avatar: specialistAvatar,
+          items: prescription.items || [],
           items_count: prescription.items?.length || 0,
           total_amount: prescription.total_amount,
           status: prescription.status,
@@ -1262,5 +1509,315 @@ export class SpecialistPharmacyService {
     }
 
     return { success: true };
+  }
+
+  // ============ PATIENT APPOINTMENTS ============
+
+  /**
+   * Get patient's appointment history (all specialists)
+   */
+  async getPatientAppointments(
+    specialistId: Types.ObjectId,
+    patientId: Types.ObjectId,
+    page = 1,
+    limit = 10,
+    status?: string,
+    sortOrder: 'asc' | 'desc' = 'desc',
+  ) {
+    const AppointmentsCollection = this.connection.collection('appointments');
+    const UsersCollection = this.connection.collection('users');
+
+    // Build filter - show ALL appointments for this patient
+    const filter: any = { patient: patientId };
+
+    // Add status filter if provided
+    if (status && status !== 'all') {
+      filter.status = status.toUpperCase();
+    }
+
+    // Get total count for pagination
+    const total = await AppointmentsCollection.countDocuments(filter);
+
+    // Get paginated appointments
+    const appointments = await AppointmentsCollection.find(filter)
+      .sort({ start_time: sortOrder === 'asc' ? 1 : -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .toArray();
+
+    // Get unique specialist IDs to fetch their info
+    const specialistIds = [...new Set(appointments.map((a: any) => a.specialist?.toString()))].filter(Boolean);
+
+    // Fetch specialist info
+    const specialists = await UsersCollection.find({
+      _id: { $in: specialistIds.map((id: string) => new Types.ObjectId(id)) },
+    }, {
+      projection: {
+        'profile.first_name': 1,
+        'profile.last_name': 1,
+        'profile.profile_photo': 1,
+        'profile.bio.profile_image': 1,
+      },
+    }).toArray();
+
+    // Create specialist lookup map
+    const specialistMap = new Map();
+    for (const spec of specialists) {
+      const firstName = spec.profile?.first_name || '';
+      const lastName = spec.profile?.last_name || '';
+      const rawImage = spec.profile?.profile_photo || spec.profile?.bio?.profile_image || null;
+      const profileImage = await this.fileUploadHelper.resolveProfileImage(rawImage);
+      specialistMap.set(spec._id.toString(), {
+        _id: spec._id,
+        name: `Dr. ${firstName} ${lastName}`.trim(),
+        profile_image: profileImage,
+      });
+    }
+
+    const enrichedAppointments = appointments.map((apt: any) => {
+      // Extract time from start_time
+      let appointmentTime: string | null = null;
+      if (apt.start_time) {
+        const date = new Date(apt.start_time);
+        appointmentTime = date.toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true,
+        });
+      }
+
+      const specialist = specialistMap.get(apt.specialist?.toString()) || null;
+
+      return {
+        _id: apt._id,
+        appointment_date: apt.start_time,
+        appointment_time: appointmentTime,
+        duration: apt.duration_minutes || apt.duration || 30,
+        status: apt.status,
+        type: apt.appointment_type || apt.category || 'general',
+        reason: apt.patient_notes || apt.reason,
+        notes: apt.private_notes || apt.clinical_notes,
+        is_follow_up: apt.is_follow_up || false,
+        meeting_type: apt.meeting_type,
+        specialist,
+        created_at: apt.created_at,
+      };
+    });
+
+    return {
+      docs: enrichedAppointments,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+      hasNextPage: page * limit < total,
+      hasPrevPage: page > 1,
+    };
+  }
+
+  // ============ PATIENT HEALTH SCORES ============
+
+  /**
+   * Get patient's health scores (basic and advanced)
+   */
+  async getPatientHealthScores(patientId: Types.ObjectId) {
+    const BasicHealthScoreCollection = this.connection.collection('basic_health_score_history');
+    const AdvancedHealthScoreCollection = this.connection.collection('advanced_health_scores');
+
+    // Get latest basic health score
+    const latestBasic = await BasicHealthScoreCollection.findOne(
+      { user_id: patientId },
+      { sort: { created_at: -1 } },
+    );
+
+    // Get basic score history (last 6)
+    const basicHistory = await BasicHealthScoreCollection.find({ user_id: patientId })
+      .sort({ created_at: -1 })
+      .limit(6)
+      .toArray();
+
+    // Get latest advanced health score
+    const latestAdvanced = await AdvancedHealthScoreCollection.findOne(
+      { user_id: patientId, status: 'completed' },
+      { sort: { created_at: -1 } },
+    );
+
+    // Get advanced score history (last 6)
+    const advancedHistory = await AdvancedHealthScoreCollection.find({
+      user_id: patientId,
+      status: 'completed',
+    })
+      .sort({ created_at: -1 })
+      .limit(6)
+      .toArray();
+
+    return {
+      basic: latestBasic
+        ? {
+            score: latestBasic.score,
+            label: this.getScoreLabel(latestBasic.score),
+            breakdown: latestBasic.breakdown || {},
+            last_updated: latestBasic.created_at,
+          }
+        : null,
+      basic_history: basicHistory.map((h: any) => ({
+        score: h.score,
+        date: h.created_at,
+      })),
+      advanced: latestAdvanced
+        ? {
+            overall_score: latestAdvanced.report?.overall_score || latestAdvanced.overall_score,
+            label: this.getScoreLabel(latestAdvanced.report?.overall_score || latestAdvanced.overall_score),
+            overall_status: latestAdvanced.report?.overall_status,
+            overall_summary: latestAdvanced.report?.overall_summary,
+            domain_scores: latestAdvanced.report?.domain_scores || latestAdvanced.category_scores || {},
+            last_updated: latestAdvanced.created_at,
+          }
+        : null,
+      advanced_history: advancedHistory.map((h: any) => ({
+        score: h.report?.overall_score || h.overall_score,
+        date: h.created_at,
+      })),
+    };
+  }
+
+  private getScoreLabel(score: number): string {
+    if (score >= 80) return 'Excellent';
+    if (score >= 60) return 'Good';
+    if (score >= 40) return 'Fair';
+    if (score >= 20) return 'Poor';
+    return 'Critical';
+  }
+
+  // ============ PATIENT VITALS HISTORY ============
+
+  /**
+   * Get patient's vitals history for a specific vital type
+   */
+  async getPatientVitalsHistory(
+    patientId: Types.ObjectId,
+    vitalType: string,
+    limit = 30,
+  ) {
+    const VitalsCollection = this.connection.collection('vitals');
+
+    // Map frontend vital type to database field
+    const fieldMapping: Record<string, string> = {
+      blood_pressure: 'blood_pressure',
+      heart_rate: 'pulse_rate',
+      temperature: 'body_temp',
+      weight: 'body_weight',
+      blood_sugar: 'blood_sugar_level',
+      oxygen_saturation: 'blood_oxygen',
+      height: 'height',
+    };
+
+    const dbField = fieldMapping[vitalType] || vitalType;
+
+    // Get vitals that have the requested field
+    const vitals = await VitalsCollection.find({
+      $or: [
+        { userId: patientId },
+        { userId: patientId.toString() },
+        { user: patientId },
+        { user_id: patientId },
+      ],
+      [`${dbField}.0`]: { $exists: true },
+    })
+      .sort({ created_at: -1 })
+      .limit(limit)
+      .toArray();
+
+    // Extract all readings from the field arrays (only those with values)
+    const readings: any[] = [];
+    for (const vital of vitals) {
+      const fieldData = vital[dbField];
+      if (Array.isArray(fieldData)) {
+        for (const reading of fieldData) {
+          // Only include readings that have a value
+          if (reading.value !== undefined && reading.value !== null && reading.value !== '') {
+            readings.push({
+              value: reading.value,
+              unit: reading.unit,
+              recorded_at: reading.updatedAt || vital.created_at,
+            });
+          }
+        }
+      }
+    }
+
+    // Sort by date descending and limit
+    readings.sort((a, b) => new Date(b.recorded_at).getTime() - new Date(a.recorded_at).getTime());
+
+    const limitedReadings = readings.slice(0, limit);
+
+    return {
+      type: vitalType,
+      readings: limitedReadings,
+      count: limitedReadings.length,
+      stats: this.calculateVitalStats(readings, vitalType),
+    };
+  }
+
+  private calculateVitalStats(readings: any[], vitalType: string) {
+    if (readings.length === 0) return null;
+
+    // For blood pressure, handle systolic/diastolic
+    if (vitalType === 'blood_pressure') {
+      const systolicValues = readings
+        .map((r) => {
+          if (typeof r.value === 'string' && r.value.includes('/')) {
+            return parseInt(r.value.split('/')[0], 10);
+          }
+          return r.value?.systolic || null;
+        })
+        .filter((v) => v !== null && !isNaN(v));
+
+      if (systolicValues.length === 0) return null;
+
+      return {
+        latest: readings[0]?.value || null,
+        average: Math.round(systolicValues.reduce((a, b) => a + b, 0) / systolicValues.length),
+        min: Math.min(...systolicValues),
+        max: Math.max(...systolicValues),
+        trend: this.calculateTrend(systolicValues),
+      };
+    }
+
+    // For numeric values
+    const numericValues = readings
+      .map((r) => {
+        const val = typeof r.value === 'string' ? parseFloat(r.value) : r.value;
+        return isNaN(val) ? null : val;
+      })
+      .filter((v) => v !== null);
+
+    if (numericValues.length === 0) return null;
+
+    return {
+      latest: readings[0]?.value || null,
+      average: Math.round((numericValues.reduce((a, b) => a + b, 0) / numericValues.length) * 10) / 10,
+      min: Math.min(...numericValues),
+      max: Math.max(...numericValues),
+      trend: this.calculateTrend(numericValues),
+    };
+  }
+
+  private calculateTrend(values: number[]): 'up' | 'down' | 'stable' {
+    if (values.length < 2) return 'stable';
+
+    const recent = values.slice(0, Math.min(3, values.length));
+    const older = values.slice(Math.min(3, values.length), Math.min(6, values.length));
+
+    if (older.length === 0) return 'stable';
+
+    const recentAvg = recent.reduce((a, b) => a + b, 0) / recent.length;
+    const olderAvg = older.reduce((a, b) => a + b, 0) / older.length;
+
+    const diff = ((recentAvg - olderAvg) / olderAvg) * 100;
+
+    if (diff > 5) return 'up';
+    if (diff < -5) return 'down';
+    return 'stable';
   }
 }

@@ -454,8 +454,22 @@ const apiFactory = {
   $_getPharmacyPatientVitals(patientId) {
     return http.get(`/specialist/pharmacy/patients/${patientId}/vitals`);
   },
-  $_getPharmacyPatientHealthCheckups(patientId, limit) {
-    return http.get(`/specialist/pharmacy/patients/${patientId}/health-checkups`, { params: { limit } });
+  $_getPharmacyPatientHealthCheckups(patientId, { page = 1, limit = 10 } = {}) {
+    return http.get(`/specialist/pharmacy/patients/${patientId}/health-checkups`, { params: { page, limit } });
+  },
+  $_getPharmacyHealthCheckupDetails(checkupId) {
+    return http.get(`/specialist/pharmacy/health-checkups/${checkupId}`);
+  },
+  $_getPharmacyPatientAppointments(patientId, { page = 1, limit = 10, status, sort } = {}) {
+    return http.get(`/specialist/pharmacy/patients/${patientId}/appointments`, {
+      params: { page, limit, status, sort },
+    });
+  },
+  $_getPharmacyPatientHealthScores(patientId) {
+    return http.get(`/specialist/pharmacy/patients/${patientId}/health-scores`);
+  },
+  $_getPharmacyPatientVitalsHistory(patientId, vitalType, limit) {
+    return http.get(`/specialist/pharmacy/patients/${patientId}/vitals/${vitalType}`, { params: { limit } });
   },
 
   // Patient Delivery Addresses

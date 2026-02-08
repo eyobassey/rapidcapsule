@@ -124,16 +124,85 @@ export class SpecialistPharmacyController {
 
   /**
    * GET /api/specialist/pharmacy/patients/:id/health-checkups
-   * Get patient health checkup history
+   * Get patient health checkup history with pagination
    */
   @Get('patients/:id/health-checkups')
   async getPatientHealthCheckups(
     @Param('id') id: string,
+    @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
     const result = await this.pharmacyService.getPatientHealthCheckups(
       new Types.ObjectId(id),
-      limit ? parseInt(limit, 10) : 5,
+      page ? parseInt(page, 10) : 1,
+      limit ? parseInt(limit, 10) : 10,
+    );
+    return sendSuccessResponse(Messages.RETRIEVED, result);
+  }
+
+  /**
+   * GET /api/specialist/pharmacy/health-checkups/:id
+   * Get detailed health checkup by ID with full AI assessment
+   */
+  @Get('health-checkups/:id')
+  async getHealthCheckupDetails(@Param('id') id: string) {
+    const result = await this.pharmacyService.getHealthCheckupDetails(
+      new Types.ObjectId(id),
+    );
+    return sendSuccessResponse(Messages.RETRIEVED, result);
+  }
+
+  /**
+   * GET /api/specialist/pharmacy/patients/:id/appointments
+   * Get patient appointment history (all specialists)
+   * Query params: page, limit, status, sort
+   */
+  @Get('patients/:id/appointments')
+  async getPatientAppointments(
+    @Request() req,
+    @Param('id') id: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('status') status?: string,
+    @Query('sort') sort?: 'asc' | 'desc',
+  ) {
+    const result = await this.pharmacyService.getPatientAppointments(
+      new Types.ObjectId(req.user.sub),
+      new Types.ObjectId(id),
+      page ? parseInt(page, 10) : 1,
+      limit ? parseInt(limit, 10) : 10,
+      status,
+      sort || 'desc',
+    );
+    return sendSuccessResponse(Messages.RETRIEVED, result);
+  }
+
+  /**
+   * GET /api/specialist/pharmacy/patients/:id/health-scores
+   * Get patient health scores (basic and advanced)
+   */
+  @Get('patients/:id/health-scores')
+  async getPatientHealthScores(@Param('id') id: string) {
+    const result = await this.pharmacyService.getPatientHealthScores(
+      new Types.ObjectId(id),
+    );
+    return sendSuccessResponse(Messages.RETRIEVED, result);
+  }
+
+  /**
+   * GET /api/specialist/pharmacy/patients/:id/vitals/:type
+   * Get patient vitals history for a specific vital type
+   */
+  @Get('patients/:id/vitals/:type')
+  async getPatientVitalsHistory(
+    @Param('id') id: string,
+    @Param('type') type: string,
+    @Query('limit') limit?: string,
+  ) {
+    const result = await this.pharmacyService.getPatientVitalsHistory(
+      new Types.ObjectId(id),
+      type,
+      limit ? parseInt(limit, 10) : 30,
     );
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }

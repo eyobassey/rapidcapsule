@@ -1,7 +1,43 @@
 <template>
-  <div class="page-content">
-    <TopBar showButtons type="title-only" title="Pharmacy / Drug Details" @open-side-nav="$emit('openSideNav')" />
-    <div class="page-content__body">
+  <div class="drug-details-page">
+    <!-- Ambient Background -->
+    <div class="ambient-bg">
+      <div class="orb orb--1" />
+      <div class="orb orb--2" />
+      <div class="orb orb--3" />
+    </div>
+
+    <!-- Mobile Header -->
+    <header class="mobile-header">
+      <button class="back-btn" @click="router.push('/app/specialist/pharmacy/drugs')">
+        <v-icon name="hi-arrow-left" scale="1.1" />
+      </button>
+      <h1 class="mobile-title">Drug Details</h1>
+      <button class="menu-btn" @click="$emit('openSideNav')">
+        <v-icon name="hi-menu-alt-2" scale="1.1" />
+      </button>
+    </header>
+
+    <!-- Page Container -->
+    <div class="page-container">
+      <!-- Breadcrumbs -->
+      <nav class="breadcrumbs">
+        <router-link to="/app/specialist" class="breadcrumb-item">
+          <v-icon name="hi-home" scale="0.7" />
+          Home
+        </router-link>
+        <span class="breadcrumb-separator">/</span>
+        <router-link to="/app/specialist/pharmacy" class="breadcrumb-item">
+          Pharmacy
+        </router-link>
+        <span class="breadcrumb-separator">/</span>
+        <router-link to="/app/specialist/pharmacy/drugs" class="breadcrumb-item">
+          Drugs
+        </router-link>
+        <span class="breadcrumb-separator">/</span>
+        <span class="breadcrumb-current">{{ drug.name || 'Details' }}</span>
+      </nav>
+
       <div class="drug-details-container">
         <!-- Shimmer Loading -->
         <template v-if="isLoading">
@@ -12,96 +48,122 @@
 
         <template v-else>
           <!-- Hero Section -->
-          <div class="hero-section">
-            <div class="hero-content">
-              <button class="hero-back" @click="router.push('/app/specialist/pharmacy/drugs')">
-                <v-icon name="hi-arrow-left" scale="0.75" />
-                Catalog
+          <section class="hero">
+            <div class="hero__content">
+              <button class="back-link desktop-only" @click="router.push('/app/specialist/pharmacy/drugs')">
+                <v-icon name="hi-arrow-left" scale="0.8" />
+                <span>Back to Catalog</span>
               </button>
-              <h1 class="hero-title">
-                <v-icon name="ri-capsule-line" scale="1" />
-                {{ drug.name }}
+              <div class="hero__badge">
+                <div class="badge-pulse"></div>
+                <v-icon name="ri-capsule-line" />
+                <span>{{ drug.dosage_form || 'Medication' }}</span>
+              </div>
+              <h1 class="hero__title">
+                {{ drug.name?.split(' ').slice(0, 2).join(' ') }}<br/>
+                <span class="hero__title-accent">{{ drug.name?.split(' ').slice(2).join(' ') || drug.strength }}</span>
               </h1>
-              <p class="hero-subtitle">{{ drug.generic_name }} | {{ drug.strength }} | {{ drug.dosage_form }}</p>
-              <div class="hero-meta">
-                <span class="hero-price">
-                  NGN {{ formatCurrency(drug.selling_price) }}
-                  <small>/ unit</small>
-                </span>
-                <span class="hero-stock-badge" :class="getStockClass(drug)">
-                  {{ getStockLabel(drug) }}
-                </span>
+              <p class="hero__subtitle">{{ drug.generic_name }}</p>
+              <div class="hero__stats">
+                <div class="hero-stat hero-stat--price">
+                  <span class="hero-stat__value">NGN {{ formatCurrency(drug.selling_price) }}</span>
+                  <span class="hero-stat__label">Per Unit</span>
+                </div>
+                <div class="hero-stat">
+                  <span class="hero-stat__value">{{ drug.quantity || 0 }}</span>
+                  <span class="hero-stat__label">In Stock</span>
+                </div>
+                <div class="hero-stat">
+                  <span class="hero-stat__value">{{ batches.length || 0 }}</span>
+                  <span class="hero-stat__label">Batches</span>
+                </div>
               </div>
             </div>
-            <div class="hero-actions">
+            <div class="hero__visual">
+              <div class="drug-orb">
+                <div class="orb-glow"></div>
+                <div class="orb-ring orb-ring--1"></div>
+                <div class="orb-ring orb-ring--2"></div>
+                <div class="orb-center">
+                  <img
+                    v-if="drug.primary_image || drug.images?.[0]?.url"
+                    :src="drug.primary_image || drug.images?.[0]?.url"
+                    :alt="drug.name"
+                    class="orb-image"
+                  />
+                  <v-icon v-else name="ri-capsule-line" scale="2.5" />
+                </div>
+              </div>
               <button
-                class="hero-action-btn"
+                class="prescribe-fab"
                 :disabled="drug.is_out_of_stock || drug.quantity === 0"
                 @click="prescribeDrug"
               >
-                <v-icon name="ri-capsule-line" scale="0.85" />
-                Prescribe
+                <v-icon name="hi-plus-circle" scale="1" />
+                <span>Prescribe</span>
               </button>
             </div>
-          </div>
+          </section>
 
-          <!-- Drug Info Section -->
-          <div class="drug-info-card">
-            <div class="drug-image">
-              <img
-                v-if="drug.primary_image || drug.images?.[0]?.url"
-                :src="drug.primary_image || drug.images?.[0]?.url"
-                :alt="drug.name"
-              />
-              <div v-else class="drug-placeholder">
-                <v-icon name="ri-capsule-line" scale="2.5" />
+          <!-- Drug Image & Info Card -->
+          <div class="drug-main-card glass-card">
+            <div class="drug-image-section">
+              <div class="drug-image">
+                <img
+                  v-if="drug.primary_image || drug.images?.[0]?.url"
+                  :src="drug.primary_image || drug.images?.[0]?.url"
+                  :alt="drug.name"
+                />
+                <div v-else class="drug-placeholder">
+                  <v-icon name="ri-capsule-line" scale="3" />
+                </div>
+                <span v-if="drug.requires_prescription" class="rx-badge">
+                  <v-icon name="hi-clipboard-check" scale="0.6" />
+                  Rx Required
+                </span>
               </div>
-              <span v-if="drug.requires_prescription" class="rx-badge">
-                <v-icon name="ri-capsule-line" scale="0.7" />
-                Rx Required
-              </span>
             </div>
 
-            <div class="drug-details">
-              <div class="section-title">
+            <div class="drug-info-section">
+              <div class="section-header">
                 <v-icon name="hi-information-circle" scale="0.85" />
                 <h3>Drug Information</h3>
               </div>
-              <div class="details-grid">
-                <div class="detail-item">
-                  <div class="detail-icon">
+              <div class="info-grid">
+                <div class="info-item">
+                  <div class="info-icon info-icon--sky">
                     <v-icon name="hi-beaker" scale="0.7" />
                   </div>
-                  <div class="detail-text">
-                    <span class="label">Strength</span>
-                    <span class="value">{{ drug.strength }}</span>
+                  <div class="info-content">
+                    <span class="info-label">Strength</span>
+                    <span class="info-value">{{ drug.strength }}</span>
                   </div>
                 </div>
-                <div class="detail-item">
-                  <div class="detail-icon">
+                <div class="info-item">
+                  <div class="info-icon info-icon--violet">
                     <v-icon name="ri-capsule-line" scale="0.7" />
                   </div>
-                  <div class="detail-text">
-                    <span class="label">Dosage Form</span>
-                    <span class="value">{{ drug.dosage_form }}</span>
+                  <div class="info-content">
+                    <span class="info-label">Dosage Form</span>
+                    <span class="info-value">{{ drug.dosage_form }}</span>
                   </div>
                 </div>
-                <div class="detail-item">
-                  <div class="detail-icon">
+                <div class="info-item">
+                  <div class="info-icon info-icon--emerald">
                     <v-icon name="hi-office-building" scale="0.7" />
                   </div>
-                  <div class="detail-text">
-                    <span class="label">Manufacturer</span>
-                    <span class="value">{{ drug.manufacturer }}</span>
+                  <div class="info-content">
+                    <span class="info-label">Manufacturer</span>
+                    <span class="info-value">{{ drug.manufacturer }}</span>
                   </div>
                 </div>
-                <div v-if="drug.brand_name" class="detail-item">
-                  <div class="detail-icon">
+                <div v-if="drug.brand_name" class="info-item">
+                  <div class="info-icon info-icon--amber">
                     <v-icon name="hi-tag" scale="0.7" />
                   </div>
-                  <div class="detail-text">
-                    <span class="label">Brand</span>
-                    <span class="value">{{ drug.brand_name }}</span>
+                  <div class="info-content">
+                    <span class="info-label">Brand</span>
+                    <span class="info-value">{{ drug.brand_name }}</span>
                   </div>
                 </div>
               </div>
@@ -109,8 +171,8 @@
           </div>
 
           <!-- Categories -->
-          <div v-if="drug.categories?.length" class="info-card">
-            <div class="section-title">
+          <div v-if="drug.categories?.length" class="info-card glass-card">
+            <div class="section-header">
               <v-icon name="hi-tag" scale="0.85" />
               <h3>Categories</h3>
             </div>
@@ -120,65 +182,67 @@
           </div>
 
           <!-- Description -->
-          <div v-if="drug.description" class="info-card">
-            <div class="section-title">
+          <div v-if="drug.description" class="info-card glass-card">
+            <div class="section-header">
               <v-icon name="hi-document-text" scale="0.85" />
               <h3>Description</h3>
             </div>
-            <p class="info-text">{{ drug.description }}</p>
+            <p class="description-text">{{ drug.description }}</p>
           </div>
 
           <!-- Dosage Guidance -->
-          <div v-if="drug.dosage_guidance" class="info-card">
-            <div class="section-title">
+          <div v-if="drug.dosage_guidance" class="info-card glass-card">
+            <div class="section-header">
               <v-icon name="hi-clipboard-list" scale="0.85" />
               <h3>Dosage Guidance</h3>
             </div>
             <div class="dosage-sections">
-              <div v-if="drug.dosage_guidance.adult" class="dosage-section">
+              <div v-if="drug.dosage_guidance.adult" class="dosage-section dosage-section--adult">
                 <h4>
                   <v-icon name="hi-user" scale="0.7" />
                   Adult Dosage
                 </h4>
                 <div class="dosage-grid">
                   <div v-if="drug.dosage_guidance.adult.dose" class="dosage-item">
-                    <span class="label">Dose</span>
-                    <span class="value">{{ drug.dosage_guidance.adult.dose }}</span>
+                    <span class="dosage-label">Dose</span>
+                    <span class="dosage-value">{{ drug.dosage_guidance.adult.dose }}</span>
                   </div>
                   <div v-if="drug.dosage_guidance.adult.frequency" class="dosage-item">
-                    <span class="label">Frequency</span>
-                    <span class="value">{{ drug.dosage_guidance.adult.frequency }}</span>
+                    <span class="dosage-label">Frequency</span>
+                    <span class="dosage-value">{{ drug.dosage_guidance.adult.frequency }}</span>
                   </div>
                   <div v-if="drug.dosage_guidance.adult.max_daily_dose" class="dosage-item">
-                    <span class="label">Max Daily Dose</span>
-                    <span class="value">{{ drug.dosage_guidance.adult.max_daily_dose }}</span>
+                    <span class="dosage-label">Max Daily Dose</span>
+                    <span class="dosage-value">{{ drug.dosage_guidance.adult.max_daily_dose }}</span>
                   </div>
                 </div>
-                <p v-if="drug.dosage_guidance.adult.instructions" class="instructions">
+                <p v-if="drug.dosage_guidance.adult.instructions" class="dosage-instructions">
+                  <v-icon name="hi-information-circle" scale="0.65" />
                   {{ drug.dosage_guidance.adult.instructions }}
                 </p>
               </div>
 
-              <div v-if="drug.dosage_guidance.pediatric" class="dosage-section">
+              <div v-if="drug.dosage_guidance.pediatric" class="dosage-section dosage-section--pediatric">
                 <h4>
                   <v-icon name="hi-user" scale="0.6" />
                   Pediatric Dosage
                 </h4>
                 <div class="dosage-grid">
                   <div v-if="drug.dosage_guidance.pediatric.dose" class="dosage-item">
-                    <span class="label">Dose</span>
-                    <span class="value">{{ drug.dosage_guidance.pediatric.dose }}</span>
+                    <span class="dosage-label">Dose</span>
+                    <span class="dosage-value">{{ drug.dosage_guidance.pediatric.dose }}</span>
                   </div>
                   <div v-if="drug.dosage_guidance.pediatric.frequency" class="dosage-item">
-                    <span class="label">Frequency</span>
-                    <span class="value">{{ drug.dosage_guidance.pediatric.frequency }}</span>
+                    <span class="dosage-label">Frequency</span>
+                    <span class="dosage-value">{{ drug.dosage_guidance.pediatric.frequency }}</span>
                   </div>
                   <div v-if="drug.dosage_guidance.pediatric.min_age_months" class="dosage-item">
-                    <span class="label">Minimum Age</span>
-                    <span class="value">{{ drug.dosage_guidance.pediatric.min_age_months }} months</span>
+                    <span class="dosage-label">Minimum Age</span>
+                    <span class="dosage-value">{{ drug.dosage_guidance.pediatric.min_age_months }} months</span>
                   </div>
                 </div>
-                <p v-if="drug.dosage_guidance.pediatric.instructions" class="instructions">
+                <p v-if="drug.dosage_guidance.pediatric.instructions" class="dosage-instructions">
+                  <v-icon name="hi-information-circle" scale="0.65" />
                   {{ drug.dosage_guidance.pediatric.instructions }}
                 </p>
               </div>
@@ -186,8 +250,8 @@
           </div>
 
           <!-- Warnings -->
-          <div v-if="drug.warnings?.length" class="info-card warning-card">
-            <div class="section-title">
+          <div v-if="drug.warnings?.length" class="info-card glass-card warning-card">
+            <div class="section-header section-header--warning">
               <v-icon name="hi-exclamation" scale="0.85" />
               <h3>Warnings</h3>
             </div>
@@ -197,19 +261,19 @@
           </div>
 
           <!-- Contraindications -->
-          <div v-if="drug.contraindications?.length" class="info-card">
-            <div class="section-title">
+          <div v-if="drug.contraindications?.length" class="info-card glass-card">
+            <div class="section-header section-header--rose">
               <v-icon name="hi-ban" scale="0.85" />
               <h3>Contraindications</h3>
             </div>
-            <ul class="info-list">
+            <ul class="info-list info-list--rose">
               <li v-for="item in drug.contraindications" :key="item">{{ item }}</li>
             </ul>
           </div>
 
           <!-- Side Effects -->
-          <div v-if="drug.side_effects?.length" class="info-card">
-            <div class="section-title">
+          <div v-if="drug.side_effects?.length" class="info-card glass-card">
+            <div class="section-header">
               <v-icon name="hi-exclamation-circle" scale="0.85" />
               <h3>Side Effects</h3>
             </div>
@@ -219,22 +283,22 @@
           </div>
 
           <!-- Stock Batches -->
-          <div v-if="batches.length" class="info-card">
-            <div class="section-title">
+          <div v-if="batches.length" class="info-card glass-card">
+            <div class="section-header section-header--emerald">
               <v-icon name="hi-cube" scale="0.85" />
-              <h3>Available Batches</h3>
+              <h3>Available Batches ({{ batches.length }})</h3>
             </div>
             <div class="batches-list">
               <div v-for="batch in batches" :key="batch._id" class="batch-item">
-                <div class="batch-item__info">
+                <div class="batch-info">
                   <span class="batch-number">{{ batch.batch_number }}</span>
                   <span class="batch-qty">{{ batch.quantity_available }} units</span>
                 </div>
-                <div class="batch-item__expiry" :class="{ 'expiring-soon': isExpiringSoon(batch.expiry_date) }">
-                  <v-icon name="hi-calendar" scale="0.7" />
+                <div class="batch-expiry" :class="{ 'batch-expiry--warning': isExpiringSoon(batch.expiry_date) }">
+                  <v-icon name="hi-calendar" scale="0.65" />
                   {{ batch.no_expiry ? 'No Expiry' : formatDate(batch.expiry_date) }}
                 </div>
-                <PharmacyStatusBadge :status="batch.status" />
+                <PharmacyStatusBadge :status="batch.status" size="sm" />
               </div>
             </div>
           </div>
@@ -249,7 +313,6 @@ import { ref, computed, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useToast } from 'vue-toast-notification';
 import { differenceInDays, parseISO } from 'date-fns';
-import TopBar from '@/components/Navigation/top-bar';
 import apiFactory from '@/services/apiFactory';
 import PharmacyStatusBadge from './components/PharmacyStatusBadge.vue';
 import { usePharmacy } from './composables/usePharmacy';
@@ -318,228 +381,494 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
-.page-content {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  height: 100vh;
-  padding: 0 128px;
+// Design System Tokens
+$sky: #4FC3F7;
+$sky-light: #E1F5FE;
+$sky-dark: #0288D1;
+$sky-darker: #01579B;
+$emerald: #10B981;
+$emerald-light: #D1FAE5;
+$amber: #F59E0B;
+$amber-light: #FEF3C7;
+$violet: #8B5CF6;
+$violet-light: #EDE9FE;
+$rose: #F43F5E;
+$rose-light: #FFE4E6;
+
+// Base Layout
+.drug-details-page {
+  position: relative;
+  min-height: 100vh;
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  overflow-x: hidden;
+}
+
+// Ambient Background
+.ambient-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.5;
+  animation: float 20s ease-in-out infinite;
+
+  &--1 {
+    width: 400px;
+    height: 400px;
+    background: $sky-light;
+    top: -100px;
+    right: -100px;
+  }
+
+  &--2 {
+    width: 300px;
+    height: 300px;
+    background: rgba($violet, 0.15);
+    bottom: 20%;
+    left: -80px;
+    animation-delay: -7s;
+  }
+
+  &--3 {
+    width: 250px;
+    height: 250px;
+    background: rgba($emerald, 0.12);
+    top: 50%;
+    right: 15%;
+    animation-delay: -14s;
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(20px, -20px) scale(1.05); }
+  50% { transform: translate(-10px, 15px) scale(0.95); }
+  75% { transform: translate(15px, 10px) scale(1.02); }
+}
+
+// Mobile Header
+.mobile-header {
+  display: none;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  padding: $size-12 $size-16;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  align-items: center;
+  justify-content: space-between;
 
   @include responsive(tab-portrait) {
-    padding: 0;
+    display: flex;
   }
 
-  @include responsive(phone) {
-    padding: 0;
-  }
+  .back-btn, .menu-btn {
+    width: 40px;
+    height: 40px;
+    border: none;
+    background: transparent;
+    border-radius: $size-10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: $color-g-36;
+    cursor: pointer;
+    transition: all 0.2s;
 
-  &__body {
-    width: 100%;
-    padding: $size-24 $size-32;
-    overflow-y: auto;
-
-    @include responsive(phone) {
-      padding: $size-16;
+    &:hover {
+      background: rgba($sky, 0.1);
+      color: $sky-dark;
     }
+  }
 
-    &::-webkit-scrollbar {
+  .mobile-title {
+    font-size: $size-16;
+    font-weight: $fw-semi-bold;
+    color: $color-g-21;
+  }
+}
+
+// Page Container
+.page-container {
+  position: relative;
+  z-index: 1;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px 32px 100px;
+
+  @media (max-width: 768px) {
+    padding: 16px 16px 100px;
+  }
+}
+
+// Breadcrumbs
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: $size-8;
+  margin-bottom: $size-20;
+  font-size: $size-13;
+
+  @include responsive(tab-portrait) {
+    display: none;
+  }
+
+  .breadcrumb-item {
+    display: flex;
+    align-items: center;
+    gap: $size-4;
+    color: $color-g-54;
+    text-decoration: none;
+    transition: color 0.2s;
+
+    &:hover {
+      color: $sky-dark;
+    }
+  }
+
+  .breadcrumb-separator {
+    color: $color-g-67;
+  }
+
+  .breadcrumb-current {
+    color: $color-g-21;
+    font-weight: $fw-medium;
+  }
+}
+
+.drug-details-container {
+  display: flex;
+  flex-direction: column;
+  gap: $size-20;
+}
+
+// Hero Section
+.hero {
+  background: linear-gradient(135deg, $sky 0%, $sky-dark 50%, $sky-darker 100%);
+  border-radius: 32px;
+  padding: 48px 56px;
+  margin-bottom: 12px;
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 48px;
+  align-items: center;
+  min-height: 320px;
+  box-shadow:
+    0 25px 80px rgba($sky-dark, 0.35),
+    0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -60%;
+    right: -20%;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  @media (max-width: 1024px) {
+    grid-template-columns: 1fr;
+    gap: 32px;
+    padding: 36px 32px;
+    min-height: auto;
+  }
+
+  @media (max-width: 768px) {
+    padding: 28px 24px;
+    border-radius: 24px;
+  }
+}
+
+.hero__content {
+  position: relative;
+  z-index: 2;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 20px;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.25);
+    transform: translateX(-4px);
+  }
+
+  &.desktop-only {
+    @media (max-width: 768px) {
       display: none;
     }
   }
 }
 
-.drug-details-container {
-  width: 100%;
-  max-width: 700px;
+.hero__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(12px);
+  padding: 8px 16px;
+  border-radius: 24px;
+  font-size: 13px;
+  font-weight: 600;
+  color: white;
+  margin-bottom: 16px;
+
+  .badge-pulse {
+    width: 8px;
+    height: 8px;
+    background: #4ade80;
+    border-radius: 50%;
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.4); }
+  50% { opacity: 0.8; box-shadow: 0 0 0 8px rgba(74, 222, 128, 0); }
+}
+
+.hero__title {
+  font-size: 48px;
+  font-weight: 800;
+  color: white;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  margin-bottom: 12px;
+
+  @media (max-width: 1024px) {
+    font-size: 38px;
+  }
+
+  @media (max-width: 768px) {
+    font-size: 30px;
+  }
+}
+
+.hero__title-accent {
+  background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 50%, #7dd3fc 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero__subtitle {
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.8);
+  font-style: italic;
+  margin-bottom: 24px;
+}
+
+.hero__stats {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+
+  @media (max-width: 768px) {
+    gap: 10px;
+  }
+}
+
+.hero-stat {
   display: flex;
   flex-direction: column;
-  gap: $size-24;
-  padding-bottom: $size-32;
-}
+  padding: 12px 18px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
 
-// Skeleton Hero
-.skeleton-hero {
-  border-radius: $size-20;
-  height: 160px;
-  background: linear-gradient(135deg, rgba(14, 174, 196, 0.15) 0%, rgba(14, 174, 196, 0.08) 100%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
+  &--price {
+    background: rgba(255, 255, 255, 0.25);
+  }
 
-  @include responsive(phone) {
-    height: 200px;
-    border-radius: $size-12;
+  &__value {
+    font-size: 20px;
+    font-weight: 700;
+    color: white;
+    line-height: 1.1;
+
+    @media (max-width: 768px) {
+      font-size: 16px;
+    }
+  }
+
+  &__label {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.7);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 4px;
   }
 }
 
-// Hero Section
-.hero-section {
-  background: linear-gradient(135deg, #0EAEC4 0%, #0891b2 50%, #0e7490 100%);
-  border-radius: $size-20;
-  padding: $size-24 $size-28;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.hero__visual {
   position: relative;
-  overflow: hidden;
-  box-shadow: 0 10px 40px rgba(14, 174, 196, 0.25);
-  color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
 
-  &::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    right: -10%;
-    width: 300px;
-    height: 300px;
-    background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, transparent 70%);
-    pointer-events: none;
-  }
-
-  @include responsive(tab-portrait) {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: $size-16;
-    padding: $size-20;
-    border-radius: $size-16;
-  }
-
-  @include responsive(phone) {
-    padding: $size-16;
-    border-radius: $size-12;
-  }
-
-  .hero-content {
-    z-index: 1;
-    flex: 1;
-    min-width: 0;
-
-    .hero-back {
-      display: inline-flex;
-      align-items: center;
-      gap: $size-4;
-      background: rgba(255, 255, 255, 0.15);
-      border: none;
-      color: white;
-      font-size: $size-12;
-      font-weight: $fw-medium;
-      padding: $size-4 $size-10;
-      border-radius: $size-8;
-      cursor: pointer;
-      margin-bottom: $size-12;
-      transition: background 0.2s;
-
-      &:hover {
-        background: rgba(255, 255, 255, 0.25);
-      }
-    }
-
-    .hero-title {
-      display: flex;
-      align-items: center;
-      gap: $size-8;
-      font-size: $size-20;
-      font-weight: $fw-bold;
-      margin-bottom: $size-4;
-
-      @include responsive(phone) {
-        font-size: $size-18;
-      }
-    }
-
-    .hero-subtitle {
-      font-size: $size-13;
-      opacity: 0.85;
-      margin-bottom: $size-10;
-    }
-
-    .hero-meta {
-      display: flex;
-      align-items: center;
-      gap: $size-12;
-      flex-wrap: wrap;
-
-      .hero-price {
-        font-size: $size-16;
-        font-weight: $fw-bold;
-
-        small {
-          font-size: $size-12;
-          font-weight: $fw-medium;
-          opacity: 0.75;
-        }
-      }
-
-      .hero-stock-badge {
-        font-size: $size-11;
-        font-weight: $fw-semi-bold;
-        padding: $size-4 $size-10;
-        border-radius: $size-6;
-        background: rgba(255, 255, 255, 0.2);
-
-        &.delivered, &.in_stock { background: rgba(16, 185, 129, 0.3); }
-        &.cancelled, &.out_of_stock { background: rgba(239, 68, 68, 0.3); }
-        &.pending_payment, &.low_stock { background: rgba(245, 158, 11, 0.3); }
-      }
-    }
-  }
-
-  .hero-actions {
-    z-index: 1;
-
-    .hero-action-btn {
-      display: flex;
-      align-items: center;
-      gap: $size-8;
-      padding: $size-12 $size-20;
-      background: rgba(255, 255, 255, 0.2);
-      border: 1px solid rgba(255, 255, 255, 0.3);
-      color: white;
-      border-radius: $size-10;
-      font-size: $size-14;
-      font-weight: $fw-semi-bold;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      white-space: nowrap;
-
-      &:hover:not(:disabled) {
-        background: rgba(255, 255, 255, 0.3);
-      }
-
-      &:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-      }
-    }
+  @media (max-width: 1024px) {
+    display: none;
   }
 }
 
-// Drug Info Card
-.drug-info-card {
+.drug-orb {
+  position: relative;
+  width: 160px;
+  height: 160px;
+}
+
+.orb-glow {
+  position: absolute;
+  inset: -20px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.3) 0%, transparent 70%);
+  border-radius: 50%;
+  animation: pulse 3s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.1); opacity: 0.4; }
+}
+
+.orb-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+
+  &--1 {
+    inset: 0;
+    animation: spin-slow 20s linear infinite;
+  }
+
+  &--2 {
+    inset: 12px;
+    border-style: dashed;
+    animation: spin-slow 15s linear infinite reverse;
+  }
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.orb-center {
+  position: absolute;
+  inset: 28px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(12px);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  overflow: hidden;
+}
+
+.orb-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.prescribe-fab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 28px;
+  padding: 12px 24px;
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+
+  &:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.05);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+// Glass Card
+.glass-card {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  border-radius: $size-16;
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.06),
+    0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+// Drug Main Card
+.drug-main-card {
   display: flex;
   gap: $size-24;
-  background: white;
-  border-radius: $size-16;
   padding: $size-24;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 
   @include responsive(phone) {
     flex-direction: column;
     padding: $size-16;
   }
+}
+
+.drug-image-section {
+  flex-shrink: 0;
 }
 
 .drug-image {
   position: relative;
-  width: 180px;
-  height: 180px;
-  border-radius: $size-12;
+  width: 200px;
+  height: 200px;
+  border-radius: $size-16;
   overflow: hidden;
-  background: $color-g-97;
-  flex-shrink: 0;
+  background: linear-gradient(135deg, $color-g-97 0%, $color-g-92 100%);
 
   @include responsive(phone) {
     width: 100%;
-    height: 200px;
+    height: 220px;
   }
 
   img {
@@ -547,106 +876,46 @@ onMounted(() => {
     height: 100%;
     object-fit: cover;
   }
-
-  .drug-placeholder {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: $color-g-77;
-  }
-
-  .rx-badge {
-    position: absolute;
-    bottom: $size-8;
-    left: $size-8;
-    display: flex;
-    align-items: center;
-    gap: $size-4;
-    background: rgba(0, 0, 0, 0.7);
-    color: white;
-    font-size: $size-11;
-    font-weight: $fw-medium;
-    padding: $size-4 $size-10;
-    border-radius: $size-6;
-  }
 }
 
-.drug-details {
+.drug-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: $color-g-67;
+}
+
+.rx-badge {
+  position: absolute;
+  bottom: $size-12;
+  left: $size-12;
+  display: flex;
+  align-items: center;
+  gap: $size-4;
+  background: rgba($sky-darker, 0.9);
+  backdrop-filter: blur(8px);
+  color: white;
+  font-size: $size-11;
+  font-weight: $fw-medium;
+  padding: $size-6 $size-10;
+  border-radius: $size-8;
+}
+
+.drug-info-section {
   flex: 1;
   min-width: 0;
 }
 
-.details-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: $size-12;
-  margin-bottom: $size-16;
-
-  @include responsive(phone) {
-    grid-template-columns: 1fr;
-  }
-}
-
-.detail-item {
-  display: flex;
-  align-items: center;
-  gap: $size-10;
-  padding: $size-10;
-  background: $color-g-97;
-  border-radius: $size-8;
-
-  .detail-icon {
-    width: 28px;
-    height: 28px;
-    border-radius: $size-6;
-    background: rgba(14, 174, 196, 0.1);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #0EAEC4;
-    flex-shrink: 0;
-  }
-
-  .detail-text {
-    display: flex;
-    flex-direction: column;
-
-    .label {
-      font-size: $size-11;
-      color: $color-g-54;
-    }
-
-    .value {
-      font-size: $size-13;
-      font-weight: $fw-semi-bold;
-      color: $color-g-21;
-    }
-  }
-}
-
-
-// Info Cards
-.info-card {
-  background: white;
-  border-radius: $size-16;
-  padding: $size-24;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-
-  @include responsive(phone) {
-    padding: $size-16;
-  }
-}
-
-.section-title {
+.section-header {
   display: flex;
   align-items: center;
   gap: $size-8;
   margin-bottom: $size-16;
 
   svg {
-    color: #0EAEC4;
+    color: $sky-dark;
   }
 
   h3 {
@@ -655,14 +924,89 @@ onMounted(() => {
     color: $color-g-21;
     margin: 0;
   }
+
+  &--warning svg { color: $amber; }
+  &--rose svg { color: $rose; }
+  &--emerald svg { color: $emerald; }
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: $size-12;
+
+  @include responsive(phone) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: $size-12;
+  padding: $size-12;
+  background: rgba($color-g-97, 0.7);
+  border-radius: $size-10;
+}
+
+.info-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: $size-8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  &--sky {
+    background: $sky-light;
+    color: $sky-dark;
+  }
+
+  &--violet {
+    background: $violet-light;
+    color: $violet;
+  }
+
+  &--emerald {
+    background: $emerald-light;
+    color: $emerald;
+  }
+
+  &--amber {
+    background: $amber-light;
+    color: $amber;
+  }
+}
+
+.info-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.info-label {
+  font-size: $size-11;
+  color: $color-g-54;
+}
+
+.info-value {
+  font-size: $size-13;
+  font-weight: $fw-semi-bold;
+  color: $color-g-21;
+}
+
+// Info Card
+.info-card {
+  padding: $size-24;
+
+  @include responsive(phone) {
+    padding: $size-16;
+  }
 }
 
 .warning-card {
-  border-left: 4px solid #f59e0b;
-
-  .section-title svg {
-    color: #f59e0b;
-  }
+  border-left: 4px solid $amber;
 }
 
 .tags-list {
@@ -673,47 +1017,17 @@ onMounted(() => {
 
 .tag {
   font-size: $size-12;
-  padding: $size-6 $size-12;
-  background: rgba(14, 174, 196, 0.08);
-  border-radius: $size-6;
-  color: #0891b2;
+  padding: $size-6 $size-14;
+  background: rgba($sky, 0.1);
+  border-radius: $size-8;
+  color: $sky-dark;
   font-weight: $fw-medium;
 }
 
-.info-text {
+.description-text {
   font-size: $size-14;
   color: $color-g-44;
-  line-height: 1.6;
-}
-
-.info-list, .warning-list {
-  list-style: none;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: $size-8;
-
-  li {
-    font-size: $size-13;
-    color: $color-g-44;
-    padding-left: $size-16;
-    position: relative;
-
-    &::before {
-      content: '';
-      position: absolute;
-      left: 0;
-      top: 8px;
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: #0EAEC4;
-    }
-  }
-}
-
-.warning-list li::before {
-  background: #f59e0b;
+  line-height: 1.7;
 }
 
 // Dosage Sections
@@ -725,30 +1039,34 @@ onMounted(() => {
 
 .dosage-section {
   padding: $size-16;
-  background: $color-g-97;
+  background: rgba($color-g-97, 0.7);
   border-radius: $size-12;
-  border-left: 3px solid #0EAEC4;
+  border-left: 3px solid $sky-dark;
+
+  &--pediatric {
+    border-left-color: $violet;
+  }
 
   h4 {
     display: flex;
     align-items: center;
-    gap: $size-6;
+    gap: $size-8;
     font-size: $size-14;
     font-weight: $fw-semi-bold;
     color: $color-g-21;
     margin-bottom: $size-12;
 
-    svg {
-      color: #0EAEC4;
-    }
+    svg { color: $sky-dark; }
   }
+
+  &--pediatric h4 svg { color: $violet; }
 }
 
 .dosage-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: $size-10;
-  margin-bottom: $size-10;
+  gap: $size-12;
+  margin-bottom: $size-12;
 
   @include responsive(phone) {
     grid-template-columns: 1fr;
@@ -758,26 +1076,73 @@ onMounted(() => {
 .dosage-item {
   display: flex;
   flex-direction: column;
-  gap: $size-2;
+  gap: 2px;
+}
 
-  .label {
-    font-size: $size-11;
-    color: $color-g-54;
-    font-weight: $fw-medium;
-  }
+.dosage-label {
+  font-size: $size-11;
+  color: $color-g-54;
+  font-weight: $fw-medium;
+}
 
-  .value {
-    font-size: $size-13;
-    font-weight: $fw-semi-bold;
-    color: $color-g-21;
+.dosage-value {
+  font-size: $size-13;
+  font-weight: $fw-semi-bold;
+  color: $color-g-21;
+}
+
+.dosage-instructions {
+  display: flex;
+  align-items: flex-start;
+  gap: $size-8;
+  font-size: $size-13;
+  color: $color-g-54;
+  font-style: italic;
+  line-height: 1.5;
+  padding: $size-10 $size-12;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: $size-8;
+
+  svg {
+    color: $sky-dark;
+    flex-shrink: 0;
+    margin-top: 2px;
   }
 }
 
-.instructions {
-  font-size: $size-13;
-  color: $color-g-44;
-  font-style: italic;
-  line-height: 1.5;
+// Lists
+.info-list, .warning-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $size-10;
+
+  li {
+    font-size: $size-13;
+    color: $color-g-44;
+    padding-left: $size-18;
+    position: relative;
+    line-height: 1.5;
+
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 7px;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: $sky-dark;
+    }
+  }
+
+  &--rose li::before { background: $rose; }
+}
+
+.warning-list li::before {
+  background: $amber;
 }
 
 // Batches
@@ -790,60 +1155,64 @@ onMounted(() => {
 .batch-item {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: $size-12 $size-14;
-  background: $color-g-97;
-  border-radius: $size-10;
+  gap: $size-16;
+  padding: $size-14 $size-16;
+  background: rgba($color-g-97, 0.7);
+  border-radius: $size-12;
 
   @include responsive(phone) {
     flex-wrap: wrap;
-    gap: $size-8;
   }
+}
 
-  &__info {
-    display: flex;
-    flex-direction: column;
-    gap: $size-2;
+.batch-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
 
-    .batch-number {
-      font-size: $size-13;
-      font-weight: $fw-semi-bold;
-      color: $color-g-21;
-    }
+.batch-number {
+  font-size: $size-14;
+  font-weight: $fw-semi-bold;
+  color: $color-g-21;
+}
 
-    .batch-qty {
-      font-size: $size-12;
-      color: $color-g-54;
-    }
-  }
+.batch-qty {
+  font-size: $size-12;
+  color: $color-g-54;
+}
 
-  &__expiry {
-    display: flex;
-    align-items: center;
-    gap: $size-4;
-    font-size: $size-12;
-    color: $color-g-44;
+.batch-expiry {
+  display: flex;
+  align-items: center;
+  gap: $size-6;
+  font-size: $size-12;
+  color: $color-g-44;
 
-    svg {
-      color: $color-g-54;
-    }
+  svg { color: $color-g-54; }
 
-    &.expiring-soon {
-      color: #d97706;
-      svg { color: #d97706; }
-    }
+  &--warning {
+    color: $amber;
+    svg { color: $amber; }
   }
 }
 
 // Skeleton
+.skeleton-hero {
+  height: 180px;
+  border-radius: $size-20;
+  background: linear-gradient(90deg, rgba($sky, 0.1) 25%, rgba($sky, 0.2) 50%, rgba($sky, 0.1) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
 .skeleton-card {
-  height: 160px;
+  height: 180px;
   border-radius: $size-16;
   background: linear-gradient(90deg, $color-g-92 25%, $color-g-97 50%, $color-g-92 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
-
-  &--lg { height: 260px; }
 }
 
 @keyframes shimmer {

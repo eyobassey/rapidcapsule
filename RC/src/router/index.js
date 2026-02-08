@@ -551,7 +551,7 @@ const routes = [
       {
         path: "patients/:patientId",
         name: "SpecialistPatientDashboard",
-        component: () => import("@/views/Mainapp/SpecialistApp/Patients/PatientDashboard.vue"),
+        redirect: to => ({ path: `/app/specialist/pharmacy/patients/${to.params.patientId}` }),
       },
       {
         path: "clinical-notes",

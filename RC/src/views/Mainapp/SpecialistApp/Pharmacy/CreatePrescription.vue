@@ -1,217 +1,360 @@
 <template>
-  <div class="page-content">
-    <TopBar showButtons type="title-only" title="Create Prescription" @open-side-nav="$emit('openSideNav')" />
-    <div class="page-content__body">
-      <div class="create-prescription-container">
-        <!-- Hero Banner -->
-        <div class="hero-banner">
-          <div class="hero-top">
-            <button @click="goBack" class="back-link">
-              <v-icon name="hi-arrow-left" scale="0.9" />
-              <span>{{ currentStep > 0 ? steps[currentStep - 1].label : 'Back to Pharmacy' }}</span>
-            </button>
-            <div class="hero-step-indicator">
-              Step {{ currentStep + 1 }} of {{ steps.length }}
-            </div>
-          </div>
-          <div class="hero-main">
-            <div class="hero-info">
-              <span class="hero-badge">
-                <v-icon name="ri-capsule-line" scale="0.7" />
-                New Prescription
-              </span>
-              <h1 class="hero-title">{{ steps[currentStep].label }}</h1>
-              <p class="hero-subtitle">
-                <template v-if="selectedPatient">
-                  Prescribing for <strong>{{ selectedPatient.full_name }}</strong>
-                </template>
-                <template v-else-if="currentStep === 0">
-                  Select a patient to begin creating their prescription
-                </template>
-                <template v-else-if="currentStep === 1">
-                  Add medications and dosage instructions
-                </template>
-                <template v-else>
-                  Choose payment method and delivery options
-                </template>
-              </p>
-            </div>
-            <div class="hero-stats">
-              <div v-if="selectedPatient" class="patient-card">
-                <div class="patient-avatar">
-                  <RcAvatar
-                    :model-value="selectedPatient.profile_image"
-                    :first-name="getFirstName(selectedPatient.full_name)"
-                    :last-name="getLastName(selectedPatient.full_name)"
-                    size="sm"
-                  />
-                </div>
-                <div class="patient-info">
-                  <span class="patient-name">{{ selectedPatient.full_name }}</span>
-                  <span class="patient-label">Patient</span>
-                </div>
-              </div>
-              <div v-if="prescriptionItems.length > 0" class="stat-card">
-                <span class="stat-value">{{ prescriptionItems.length }}</span>
-                <span class="stat-label">Medications</span>
-              </div>
-              <div v-if="subtotal > 0" class="stat-card">
-                <span class="stat-value">{{ formatCurrency(subtotal) }}</span>
-                <span class="stat-label">Subtotal</span>
-              </div>
-            </div>
-          </div>
-          <!-- Linked Records Indicator -->
-          <div v-if="preSelectedAppointments.length > 0 || preSelectedNotes.length > 0" class="linked-records-badge">
-            <v-icon name="hi-link" scale="0.7" />
-            <span>Linked to {{ preSelectedAppointments.length > 0 ? 'appointment' : '' }}{{ preSelectedAppointments.length > 0 && preSelectedNotes.length > 0 ? ' & ' : '' }}{{ preSelectedNotes.length > 0 ? 'clinical note' : '' }}</span>
-          </div>
-        </div>
+  <div class="create-prescription-page">
+    <!-- Ambient Background -->
+    <div class="ambient-bg">
+      <div class="orb orb--1"></div>
+      <div class="orb orb--2"></div>
+      <div class="orb orb--3"></div>
+    </div>
 
-        <!-- Allergy Status Banner -->
-        <div v-if="selectedPatient && !allergyWarningDismissed" :class="['allergy-banner', patientAllergies.length > 0 ? 'allergy-banner--warning' : 'allergy-banner--safe']">
-          <div class="allergy-icon">
-            <v-icon :name="patientAllergies.length > 0 ? 'hi-exclamation-triangle' : 'hi-shield-check'" scale="1.2" />
-          </div>
-          <div class="allergy-content">
-            <h4 class="allergy-title">
-              {{ patientAllergies.length > 0 ? 'Allergy Warning' : 'Allergy Status' }}
-            </h4>
-            <p class="allergy-text">
-              <template v-if="patientAllergies.length > 0">
-                Patient has documented allergies:
-                <strong>{{ formatAllergies(patientAllergies) }}</strong>.
-                Review medication selection carefully.
-              </template>
-              <template v-else>
-                No known allergies documented for this patient. Always verify with patient before prescribing.
-              </template>
-            </p>
-          </div>
-          <button class="allergy-dismiss" @click="dismissAllergyWarning" title="Dismiss">
-            <v-icon name="hi-x" scale="0.9" />
-          </button>
-        </div>
+    <!-- Mobile Header -->
+    <header class="mobile-header">
+      <button class="back-btn" @click="goBack">
+        <v-icon name="hi-arrow-left" scale="1.1" />
+      </button>
+      <div class="header-title">
+        <v-icon name="ri-capsule-line" scale="0.9" />
+        <span>New Prescription</span>
+      </div>
+      <div class="step-badge">
+        {{ currentStep + 1 }}/{{ steps.length }}
+      </div>
+    </header>
 
-        <!-- Progress Steps -->
-        <div class="progress-container">
-          <div class="progress-steps-enhanced">
+    <!-- Page Container -->
+    <div class="page-container">
+      <!-- Breadcrumbs -->
+      <nav class="breadcrumbs">
+        <router-link to="/app/specialist/dashboard" class="breadcrumb-item">
+          <v-icon name="hi-home" scale="0.75" />
+          <span>Dashboard</span>
+        </router-link>
+        <v-icon name="hi-chevron-right" scale="0.6" class="breadcrumb-sep" />
+        <router-link to="/app/specialist/pharmacy" class="breadcrumb-item">
+          Pharmacy
+        </router-link>
+        <v-icon name="hi-chevron-right" scale="0.6" class="breadcrumb-sep" />
+        <router-link to="/app/specialist/pharmacy/prescriptions" class="breadcrumb-item">
+          Prescriptions
+        </router-link>
+        <v-icon name="hi-chevron-right" scale="0.6" class="breadcrumb-sep" />
+        <span class="breadcrumb-current">Create</span>
+      </nav>
+
+      <!-- Hero Section -->
+      <section class="hero">
+        <div class="hero__content">
+          <div class="hero__badge">
+            <div class="badge-pulse"></div>
+            <v-icon name="ri-capsule-line" scale="0.85" />
+            <span>New Prescription</span>
+          </div>
+          <h1 class="hero__title">
+            {{ steps[currentStep].label }}
+            <span class="hero__title-accent">{{ currentStep === 0 ? '' : currentStep === 1 ? '' : '' }}</span>
+          </h1>
+          <p class="hero__subtitle">
+            <template v-if="selectedPatient">
+              Prescribing for <strong>{{ selectedPatient.full_name }}</strong>
+            </template>
+            <template v-else-if="currentStep === 0">
+              Select a patient to begin creating their prescription
+            </template>
+            <template v-else-if="currentStep === 1">
+              Add medications and dosage instructions
+            </template>
+            <template v-else>
+              Choose payment method and delivery options
+            </template>
+          </p>
+
+          <!-- Progress Steps (Inline) -->
+          <div class="hero__progress">
             <div
               v-for="(step, index) in steps"
               :key="step.id"
-              :class="['step', { active: currentStep === index, completed: currentStep > index }]"
+              :class="['progress-step', { active: currentStep === index, completed: currentStep > index }]"
               @click="goToStep(index)"
             >
-              <div class="step-circle">
-                <v-icon v-if="currentStep > index" name="hi-check" scale="0.8" />
+              <div class="progress-step__circle">
+                <v-icon v-if="currentStep > index" name="hi-check" scale="0.7" />
                 <span v-else>{{ index + 1 }}</span>
               </div>
-              <div class="step-info">
-                <span class="step-label">{{ step.label }}</span>
-                <span class="step-desc">{{ getStepDescription(index) }}</span>
-              </div>
+              <span class="progress-step__label">{{ step.label }}</span>
             </div>
           </div>
         </div>
 
-        <!-- Main Content Area -->
-        <div class="main-content">
-          <!-- Step Content -->
-          <div class="step-content">
-            <StepPatientSelect
-              v-if="currentStep === 0"
-              :selectedPatient="selectedPatient"
-              :preSelectedDrug="preSelectedDrug"
-              :loadingPreSelectedDrug="loadingPreSelectedDrug"
-              @select-patient="onPatientSelect"
-            />
-
-            <StepMedications
-              v-if="currentStep === 1"
-              :items="prescriptionItems"
-              :subtotal="subtotal"
-              @add-drug="addDrug"
-              @remove-drug="removeDrug"
-              @update-drug="updateDrug"
-            />
-
-            <StepLinkRecords
-              v-if="currentStep === 1 && selectedPatient"
-              :patientId="selectedPatient?._id"
-              :preSelectedAppointments="preSelectedAppointments"
-              :preSelectedNotes="preSelectedNotes"
-              @update:linkedAppointments="linkedAppointments = $event"
-              @update:linkedClinicalNotes="linkedClinicalNotes = $event"
-            />
-
-            <StepPaymentDelivery
-              v-if="currentStep === 2"
-              :paymentMethod="paymentMethod"
-              :deliveryType="deliveryType"
-              :prescriptionNotes="prescriptionNotes"
-              :walletBalance="walletBalance"
-              :patientWalletBalance="patientWalletBalance"
-              :loadingPatientWallet="loadingPatientWallet"
-              :allowPatientWalletCharge="allowPatientWalletCharge"
-              :remainingPaymentMethod="remainingPaymentMethod"
-              :subtotal="subtotal"
-              :itemCount="prescriptionItems.length"
-              :patientName="selectedPatient?.full_name || ''"
-              :savedAddresses="savedAddresses"
-              :profileAddress="profileAddress"
-              :selectedAddressId="selectedAddressId"
-              :selectedAddress="selectedAddress"
-              :newAddress="newAddress"
-              :saveNewAddress="saveNewAddress"
-              :selectedPickupCenter="selectedPickupCenter"
-              :selectedPickupCenterId="selectedPickupCenterId"
-              @update:paymentMethod="paymentMethod = $event"
-              @update:deliveryType="onDeliveryTypeChange($event)"
-              @update:prescriptionNotes="prescriptionNotes = $event"
-              @update:remainingPaymentMethod="remainingPaymentMethod = $event"
-              @update:saveNewAddress="saveNewAddress = $event"
-              @select-address="selectAddress"
-              @select-new-address="selectNewAddress"
-              @update-address-field="updateAddressField"
-              @select-pickup-center="selectPickupCenter"
-              @clear-pickup-center="clearPickupCenter"
-            />
+        <!-- Hero Visual -->
+        <div class="hero__visual">
+          <div class="prescription-orb">
+            <!-- Glow Effect -->
+            <div class="orb-glow"></div>
+            <!-- Rotating Rings -->
+            <div class="orb-ring orb-ring--1"></div>
+            <div class="orb-ring orb-ring--2"></div>
+            <div class="orb-ring orb-ring--3"></div>
+            <!-- Center -->
+            <div class="orb-center">
+              <v-icon name="ri-capsule-line" scale="2" />
+            </div>
+            <!-- Floating Icons -->
+            <div class="floating-icons">
+              <div class="float-icon float-icon--1">
+                <v-icon name="hi-user" scale="1" />
+              </div>
+              <div class="float-icon float-icon--2">
+                <v-icon name="bi-wallet2" scale="0.9" />
+              </div>
+              <div class="float-icon float-icon--3">
+                <v-icon name="hi-truck" scale="0.9" />
+              </div>
+            </div>
+          </div>
+          <!-- Floating Stats -->
+          <div class="floating-stats">
+            <div v-if="selectedPatient" class="float-stat float-stat--patient">
+              <RcAvatar
+                :model-value="selectedPatient.profile_image"
+                :first-name="getFirstName(selectedPatient.full_name)"
+                :last-name="getLastName(selectedPatient.full_name)"
+                size="xs"
+              />
+              <span>{{ getFirstName(selectedPatient.full_name) }}</span>
+            </div>
+            <div v-if="prescriptionItems.length > 0" class="float-stat float-stat--meds">
+              <v-icon name="ri-capsule-line" scale="0.7" />
+              <span>{{ prescriptionItems.length }}</span>
+            </div>
+            <div v-if="subtotal > 0" class="float-stat float-stat--price">
+              <span>{{ formatCompact(subtotal) }}</span>
+            </div>
           </div>
         </div>
+      </section>
 
-        <!-- Navigation Footer -->
-        <div class="navigation-footer">
-          <div class="nav-left">
-            <button
-              v-if="currentStep > 0"
-              class="nav-btn nav-btn--secondary"
-              @click="prevStep"
-            >
-              <v-icon name="hi-arrow-left" scale="0.8" />
-              Back
-            </button>
+      <!-- Bento Grid -->
+      <div class="bento-grid">
+        <!-- Main Content Area (8 cols) -->
+        <div class="bento-card bento-card--main">
+          <!-- Step Content -->
+          <StepPatientSelect
+            v-if="currentStep === 0"
+            :selectedPatient="selectedPatient"
+            :preSelectedDrug="preSelectedDrug"
+            :loadingPreSelectedDrug="loadingPreSelectedDrug"
+            @select-patient="onPatientSelect"
+          />
+
+          <StepMedications
+            v-if="currentStep === 1"
+            :items="prescriptionItems"
+            :subtotal="subtotal"
+            @add-drug="addDrug"
+            @remove-drug="removeDrug"
+            @update-drug="updateDrug"
+          />
+
+          <StepLinkRecords
+            v-if="currentStep === 1 && selectedPatient"
+            :patientId="selectedPatient?._id"
+            :preSelectedAppointments="preSelectedAppointments"
+            :preSelectedNotes="preSelectedNotes"
+            @update:linkedAppointments="linkedAppointments = $event"
+            @update:linkedClinicalNotes="linkedClinicalNotes = $event"
+          />
+
+          <StepPaymentDelivery
+            v-if="currentStep === 2"
+            :paymentMethod="paymentMethod"
+            :deliveryType="deliveryType"
+            :prescriptionNotes="prescriptionNotes"
+            :walletBalance="walletBalance"
+            :patientWalletBalance="patientWalletBalance"
+            :loadingPatientWallet="loadingPatientWallet"
+            :allowPatientWalletCharge="allowPatientWalletCharge"
+            :remainingPaymentMethod="remainingPaymentMethod"
+            :subtotal="subtotal"
+            :itemCount="prescriptionItems.length"
+            :patientName="selectedPatient?.full_name || ''"
+            :savedAddresses="savedAddresses"
+            :profileAddress="profileAddress"
+            :selectedAddressId="selectedAddressId"
+            :selectedAddress="selectedAddress"
+            :newAddress="newAddress"
+            :saveNewAddress="saveNewAddress"
+            :selectedPickupCenter="selectedPickupCenter"
+            :selectedPickupCenterId="selectedPickupCenterId"
+            @update:paymentMethod="paymentMethod = $event"
+            @update:deliveryType="onDeliveryTypeChange($event)"
+            @update:prescriptionNotes="prescriptionNotes = $event"
+            @update:remainingPaymentMethod="remainingPaymentMethod = $event"
+            @update:saveNewAddress="saveNewAddress = $event"
+            @select-address="selectAddress"
+            @select-new-address="selectNewAddress"
+            @update-address-field="updateAddressField"
+            @select-pickup-center="selectPickupCenter"
+            @clear-pickup-center="clearPickupCenter"
+          />
+        </div>
+
+        <!-- Sidebar (4 cols) -->
+        <div class="bento-sidebar">
+          <!-- Summary Card -->
+          <div class="bento-card bento-card--summary">
+            <div class="card-header">
+              <h3>Prescription Summary</h3>
+            </div>
+
+            <!-- Patient Info -->
+            <div v-if="selectedPatient" class="summary-patient">
+              <RcAvatar
+                :model-value="selectedPatient.profile_image"
+                :first-name="getFirstName(selectedPatient.full_name)"
+                :last-name="getLastName(selectedPatient.full_name)"
+                size="sm"
+              />
+              <div class="summary-patient__info">
+                <p class="summary-patient__name">{{ selectedPatient.full_name }}</p>
+                <p class="summary-patient__email">{{ selectedPatient.email }}</p>
+              </div>
+            </div>
+            <div v-else class="summary-empty">
+              <v-icon name="hi-user" scale="1" />
+              <span>No patient selected</span>
+            </div>
+
+            <!-- Summary Stats -->
+            <div class="summary-stats">
+              <div class="summary-stat">
+                <div class="summary-stat__icon emerald">
+                  <v-icon name="ri-capsule-line" scale="0.9" />
+                </div>
+                <div class="summary-stat__info">
+                  <span class="summary-stat__value">{{ prescriptionItems.length }}</span>
+                  <span class="summary-stat__label">Medications</span>
+                </div>
+              </div>
+              <div class="summary-stat">
+                <div class="summary-stat__icon sky">
+                  <v-icon name="bi-wallet2" scale="0.9" />
+                </div>
+                <div class="summary-stat__info">
+                  <span class="summary-stat__value">{{ formatCurrency(subtotal) }}</span>
+                  <span class="summary-stat__label">Total Amount</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Delivery Type -->
+            <div v-if="currentStep === 2" class="summary-delivery">
+              <v-icon :name="deliveryType === 'DELIVERY' ? 'hi-truck' : 'hi-office-building'" scale="0.85" />
+              <span>{{ deliveryType === 'DELIVERY' ? 'Home Delivery' : deliveryType === 'PICKUP_CENTER' ? 'Pickup Center' : 'Self Pickup' }}</span>
+            </div>
           </div>
-          <div class="nav-right">
-            <button
-              v-if="currentStep < steps.length - 1"
-              class="nav-btn nav-btn--primary"
-              :disabled="!canProceed"
-              @click="nextStep"
+
+          <!-- Info Cards -->
+          <div class="info-cards">
+            <!-- Allergy Status -->
+            <div
+              v-if="selectedPatient"
+              :class="['info-card', patientAllergies.length > 0 ? 'info-card--warning' : 'info-card--success']"
             >
-              Continue
-              <v-icon name="hi-arrow-right" scale="0.8" />
-            </button>
-            <button
-              v-else
-              class="nav-btn nav-btn--success"
-              :disabled="!canSubmit || submitting"
-              @click="submitPrescription"
+              <div class="info-card__icon">
+                <v-icon :name="patientAllergies.length > 0 ? 'hi-exclamation-triangle' : 'hi-shield-check'" scale="0.9" />
+              </div>
+              <div class="info-card__content">
+                <span class="info-card__title">
+                  {{ patientAllergies.length > 0 ? 'Allergy Alert' : 'No Allergies' }}
+                </span>
+                <span class="info-card__text">
+                  {{ patientAllergies.length > 0 ? formatAllergies(patientAllergies) : 'No known allergies' }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Linked Records -->
+            <div
+              v-if="preSelectedAppointments.length > 0 || preSelectedNotes.length > 0"
+              class="info-card info-card--violet"
             >
-              <v-icon v-if="!submitting" name="hi-check" scale="0.9" />
-              <span v-if="submitting" class="spinner"></span>
-              {{ submitting ? 'Creating...' : 'Create Prescription' }}
-            </button>
+              <div class="info-card__icon">
+                <v-icon name="hi-link" scale="0.9" />
+              </div>
+              <div class="info-card__content">
+                <span class="info-card__title">Linked Records</span>
+                <span class="info-card__text">
+                  {{ preSelectedAppointments.length > 0 ? 'Appointment' : '' }}
+                  {{ preSelectedAppointments.length > 0 && preSelectedNotes.length > 0 ? ' & ' : '' }}
+                  {{ preSelectedNotes.length > 0 ? 'Clinical Note' : '' }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Wallet Balance -->
+            <div class="info-card info-card--sky">
+              <div class="info-card__icon">
+                <v-icon name="bi-wallet2" scale="0.9" />
+              </div>
+              <div class="info-card__content">
+                <span class="info-card__title">Wallet Balance</span>
+                <span class="info-card__text">{{ formatCurrency(walletBalance) }}</span>
+              </div>
+            </div>
           </div>
+        </div>
+      </div>
+
+      <!-- Navigation Footer -->
+      <div class="nav-footer">
+        <div class="nav-left">
+          <button
+            v-if="currentStep > 0"
+            class="nav-btn nav-btn--secondary"
+            @click="prevStep"
+          >
+            <v-icon name="hi-arrow-left" scale="0.85" />
+            <span>Back</span>
+          </button>
+          <button
+            v-else
+            class="nav-btn nav-btn--ghost"
+            @click="$router.back()"
+          >
+            <v-icon name="hi-x" scale="0.85" />
+            <span>Cancel</span>
+          </button>
+        </div>
+
+        <!-- Progress Dots (Mobile) -->
+        <div class="nav-progress">
+          <div
+            v-for="(step, index) in steps"
+            :key="step.id"
+            :class="['progress-dot', { active: currentStep === index, completed: currentStep > index }]"
+          ></div>
+        </div>
+
+        <div class="nav-right">
+          <button
+            v-if="currentStep < steps.length - 1"
+            class="nav-btn nav-btn--primary"
+            :disabled="!canProceed"
+            @click="nextStep"
+          >
+            <span>Continue</span>
+            <v-icon name="hi-arrow-right" scale="0.85" />
+          </button>
+          <button
+            v-else
+            class="nav-btn nav-btn--success"
+            :disabled="!canSubmit || submitting"
+            @click="submitPrescription"
+          >
+            <span v-if="submitting" class="btn-spinner"></span>
+            <v-icon v-else name="hi-check" scale="0.9" />
+            <span>{{ submitting ? 'Creating...' : 'Create Prescription' }}</span>
+          </button>
         </div>
       </div>
     </div>
@@ -222,11 +365,9 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useToast } from 'vue-toast-notification';
-import TopBar from '@/components/Navigation/top-bar';
 import RcAvatar from '@/components/RCAvatar';
 import apiFactory from '@/services/apiFactory';
 import { usePharmacy } from './composables/usePharmacy';
-import ProgressSteps from './components/create-prescription/ProgressSteps.vue';
 import StepPatientSelect from './components/create-prescription/StepPatientSelect.vue';
 import StepMedications from './components/create-prescription/StepMedications.vue';
 import StepPaymentDelivery from './components/create-prescription/StepPaymentDelivery.vue';
@@ -248,33 +389,21 @@ function getLastName(name) {
   return parts.length > 1 ? parts[parts.length - 1] : '';
 }
 
-// Format allergies for display
+function formatCompact(amount) {
+  if (amount >= 1000000) return (amount / 1000000).toFixed(1) + 'M';
+  if (amount >= 1000) return (amount / 1000).toFixed(1) + 'K';
+  return amount.toLocaleString();
+}
+
 function formatAllergies(allergies) {
   if (!allergies || allergies.length === 0) return '';
-  return allergies.map(a => {
+  const formatted = allergies.slice(0, 2).map(a => {
     if (typeof a === 'string') return a;
-    const name = a.name || a.allergen || a;
-    const severity = a.severity ? ` (${a.severity})` : '';
-    return `${name}${severity}`;
+    return a.name || a.allergen || a;
   }).join(', ');
+  return allergies.length > 2 ? `${formatted} +${allergies.length - 2}` : formatted;
 }
 
-// Dismiss allergy warning (temporarily)
-function dismissAllergyWarning() {
-  allergyWarningDismissed.value = true;
-}
-
-// Step descriptions for progress indicator
-function getStepDescription(index) {
-  const descriptions = [
-    'Choose patient',
-    'Add drugs & dosage',
-    'Payment options',
-  ];
-  return descriptions[index] || '';
-}
-
-// Navigate to a specific step (only if completed or current)
 function goToStep(index) {
   if (index < currentStep.value) {
     currentStep.value = index;
@@ -293,7 +422,6 @@ const currentStep = ref(0);
 const selectedPatient = ref(null);
 const patientAllergies = ref([]);
 const loadingAllergies = ref(false);
-const allergyWarningDismissed = ref(false);
 
 // Pre-selected Drug
 const preSelectedDrug = ref(null);
@@ -396,7 +524,6 @@ onMounted(async () => {
     await loadPreSelectedDrug(drugId, batchId);
   }
 
-  // Handle linked appointment/note pre-selection
   const linkAppointment = route.query.linkAppointment;
   if (linkAppointment) {
     preSelectedAppointments.value = [linkAppointment];
@@ -404,7 +531,6 @@ onMounted(async () => {
   }
   const linkNote = route.query.linkNote;
   if (linkNote) {
-    // Format: appointmentId:noteId
     const [apptId, noteId] = linkNote.split(':');
     if (apptId && noteId) {
       preSelectedNotes.value = [{ appointment_id: apptId, note_id: noteId }];
@@ -479,7 +605,6 @@ async function fetchPatientWalletBalance(patientId) {
 
 function onPatientSelect(patient) {
   selectedPatient.value = patient;
-  allergyWarningDismissed.value = false; // Reset warning for new patient
   resetDeliveryAddresses();
   loadPatientAddresses(patient._id);
   fetchPatientWalletBalance(patient._id);
@@ -662,7 +787,6 @@ async function submitPrescription() {
   try {
     submitting.value = true;
 
-    // Save new address if needed
     if (deliveryType.value === 'DELIVERY' && selectedAddressId.value === 'new' && saveNewAddress.value) {
       await saveDeliveryAddress();
     }
@@ -753,573 +877,936 @@ async function saveDeliveryAddress() {
 </script>
 
 <style scoped lang="scss">
-.page-content {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  height: 100%;
-  background: #F8FAFC;
+// ============================================
+// DESIGN SYSTEM TOKENS
+// ============================================
+$sky: #4FC3F7;
+$sky-light: #E1F5FE;
+$sky-dark: #0288D1;
+$sky-darker: #01579B;
+$navy: #0F172A;
+$slate: #334155;
+$gray: #64748B;
+$light-gray: #94A3B8;
+$bg: #F8FAFC;
+$emerald: #10B981;
+$emerald-light: #D1FAE5;
+$amber: #F59E0B;
+$amber-light: #FEF3C7;
+$rose: #F43F5E;
+$rose-light: #FFE4E6;
+$violet: #8B5CF6;
+$violet-light: #EDE9FE;
 
-  &__body {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    max-width: 1200px;
-    margin: 0 auto;
-    height: 100%;
-    overflow-y: auto;
-    padding: 0 $size-24 $size-48;
-
-    &::-webkit-scrollbar {
-      width: 6px;
-    }
-
-    &::-webkit-scrollbar-track {
-      background: transparent;
-    }
-
-    &::-webkit-scrollbar-thumb {
-      background: #CBD5E1;
-      border-radius: 3px;
-    }
-
-    @include responsive(phone) {
-      padding: 0 $size-16 $size-32;
-    }
-  }
+// ============================================
+// MIXINS
+// ============================================
+@mixin glass-card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
 }
 
-.create-prescription-container {
-  width: 100%;
-  max-width: 900px;
-  margin: 0 auto;
-}
-
-// Hero Banner - Sky Blue Theme
-.hero-banner {
-  background: linear-gradient(135deg, #4FC3F7 0%, #29B6F6 50%, #0288D1 100%);
-  border-radius: $size-24;
-  padding: $size-24 $size-32;
-  margin-top: $size-24;
-  color: white;
-  box-shadow: 0 10px 40px rgba(79, 195, 247, 0.3);
+// ============================================
+// BASE LAYOUT
+// ============================================
+.create-prescription-page {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
   position: relative;
-  overflow: hidden;
+  overflow-x: hidden;
+}
 
-  &::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    right: -10%;
+// ============================================
+// AMBIENT BACKGROUND
+// ============================================
+.ambient-bg {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.5;
+  animation: float-orb 20s ease-in-out infinite;
+
+  &--1 {
     width: 400px;
     height: 400px;
-    background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
-    pointer-events: none;
+    background: linear-gradient(135deg, rgba($sky, 0.3), rgba($sky-dark, 0.2));
+    top: -100px;
+    right: -100px;
   }
 
-  &::after {
-    content: '';
-    position: absolute;
-    bottom: -30%;
-    left: -5%;
-    width: 200px;
-    height: 200px;
-    background: radial-gradient(circle, rgba(255, 255, 255, 0.06) 0%, transparent 70%);
-    pointer-events: none;
+  &--2 {
+    width: 300px;
+    height: 300px;
+    background: linear-gradient(135deg, rgba($violet, 0.2), rgba($sky, 0.15));
+    bottom: 30%;
+    left: -80px;
+    animation-delay: -7s;
   }
 
-  @media (max-width: 768px) {
-    padding: $size-20;
-    border-radius: $size-16;
-    margin-top: $size-16;
+  &--3 {
+    width: 250px;
+    height: 250px;
+    background: linear-gradient(135deg, rgba($emerald, 0.15), rgba($sky, 0.1));
+    bottom: -50px;
+    right: 20%;
+    animation-delay: -14s;
   }
 }
 
-.hero-top {
-  display: flex;
+@keyframes float-orb {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(20px, -20px) scale(1.05); }
+  50% { transform: translate(-10px, 10px) scale(0.95); }
+  75% { transform: translate(-20px, -10px) scale(1.02); }
+}
+
+// ============================================
+// MOBILE HEADER
+// ============================================
+.mobile-header {
+  display: none;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  align-items: center;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: $size-20;
-  position: relative;
-  z-index: 1;
-}
-
-.back-link {
-  display: inline-flex;
-  align-items: center;
-  gap: $size-8;
-  background: rgba(255, 255, 255, 0.15);
-  border: none;
-  padding: $size-10 $size-16;
-  border-radius: $size-10;
-  color: white;
-  font-size: $size-14;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.25);
-    transform: translateX(-2px);
-  }
-}
-
-.hero-step-indicator {
-  background: rgba(255, 255, 255, 0.2);
-  padding: $size-8 $size-16;
-  border-radius: $size-20;
-  font-size: $size-13;
-  font-weight: 600;
-}
-
-.hero-main {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: $size-24;
-  position: relative;
-  z-index: 1;
 
   @media (max-width: 768px) {
-    flex-direction: column;
-  }
-}
-
-.hero-info {
-  flex: 1;
-
-  .hero-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: $size-6;
-    background: rgba(255, 255, 255, 0.2);
-    padding: $size-6 $size-14;
-    border-radius: $size-16;
-    font-size: $size-12;
-    font-weight: 600;
-    margin-bottom: $size-12;
-  }
-
-  .hero-title {
-    font-size: $size-28;
-    font-weight: 700;
-    margin: 0 0 $size-8;
-    line-height: 1.2;
-
-    @media (max-width: 768px) {
-      font-size: $size-24;
-    }
-  }
-
-  .hero-subtitle {
-    font-size: $size-15;
-    opacity: 0.9;
-    margin: 0;
-    line-height: 1.5;
-
-    strong {
-      font-weight: 600;
-    }
-  }
-}
-
-.hero-stats {
-  display: flex;
-  gap: $size-12;
-  flex-wrap: wrap;
-
-  @media (max-width: 768px) {
-    width: 100%;
-  }
-}
-
-.patient-card {
-  display: flex;
-  align-items: center;
-  gap: $size-12;
-  background: rgba(255, 255, 255, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  padding: $size-12 $size-16;
-  border-radius: $size-12;
-
-  .patient-avatar {
-    flex-shrink: 0;
-
-    :deep(.rc-avatar) {
-      border: 2px solid rgba(255, 255, 255, 0.4);
-    }
-  }
-
-  .patient-info {
     display: flex;
-    flex-direction: column;
-    gap: 2px;
-
-    .patient-name {
-      font-weight: 600;
-      font-size: $size-14;
-    }
-
-    .patient-label {
-      font-size: $size-11;
-      opacity: 0.8;
-    }
-  }
-}
-
-.stat-card {
-  background: rgba(255, 255, 255, 0.15);
-  padding: $size-12 $size-20;
-  border-radius: $size-12;
-  text-align: center;
-  min-width: 90px;
-
-  .stat-value {
-    display: block;
-    font-size: $size-22;
-    font-weight: 700;
-    line-height: 1.2;
   }
 
-  .stat-label {
-    display: block;
-    font-size: $size-11;
-    opacity: 0.85;
-    margin-top: 2px;
-  }
-}
-
-.linked-records-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: $size-8;
-  background: rgba(255, 255, 255, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  padding: $size-8 $size-16;
-  border-radius: $size-20;
-  font-size: $size-12;
-  font-weight: 500;
-  margin-top: $size-16;
-  position: relative;
-  z-index: 1;
-}
-
-// Allergy Status Banner
-.allergy-banner {
-  display: flex;
-  align-items: flex-start;
-  gap: $size-16;
-  border-radius: $size-12;
-  padding: $size-16 $size-20;
-  margin-top: $size-20;
-  position: relative;
-  animation: slideIn 0.3s ease;
-
-  @keyframes slideIn {
-    from {
-      opacity: 0;
-      transform: translateY(-10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  .allergy-icon {
-    flex-shrink: 0;
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-  }
-
-  .allergy-content {
-    flex: 1;
-
-    .allergy-title {
-      font-size: $size-16;
-      font-weight: 700;
-      margin: 0 0 $size-6;
-      display: flex;
-      align-items: center;
-      gap: $size-8;
-    }
-
-    .allergy-text {
-      font-size: $size-14;
-      margin: 0;
-      line-height: 1.5;
-
-      strong {
-        font-weight: 600;
-      }
-    }
-  }
-
-  .allergy-dismiss {
-    flex-shrink: 0;
-    width: 32px;
-    height: 32px;
+  .back-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
     border: none;
-    border-radius: 50%;
+    background: $bg;
+    color: $slate;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.2s;
 
-    &:hover {
-      transform: scale(1.1);
+    &:active {
+      background: #E2E8F0;
     }
   }
 
-  // Warning state (has allergies)
-  &--warning {
-    background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
-    border: 1px solid #F59E0B;
-    border-left: 4px solid #D97706;
-    box-shadow: 0 4px 15px rgba(245, 158, 11, 0.15);
+  .header-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    color: $navy;
 
-    .allergy-icon {
-      background: #F59E0B;
-      box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
-    }
-
-    .allergy-title {
-      color: #92400E;
-    }
-
-    .allergy-text {
-      color: #78350F;
-
-      strong {
-        color: #92400E;
-      }
-    }
-
-    .allergy-dismiss {
-      background: rgba(146, 64, 14, 0.1);
-      color: #92400E;
-
-      &:hover {
-        background: rgba(146, 64, 14, 0.2);
-      }
-    }
+    svg { color: $sky-dark; }
   }
 
-  // Safe state (no allergies)
-  &--safe {
-    background: linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%);
-    border: 1px solid #10B981;
-    border-left: 4px solid #059669;
-    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.15);
-
-    .allergy-icon {
-      background: #10B981;
-      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-    }
-
-    .allergy-title {
-      color: #065F46;
-    }
-
-    .allergy-text {
-      color: #047857;
-
-      strong {
-        color: #065F46;
-      }
-    }
-
-    .allergy-dismiss {
-      background: rgba(6, 95, 70, 0.1);
-      color: #065F46;
-
-      &:hover {
-        background: rgba(6, 95, 70, 0.2);
-      }
-    }
-  }
-
-  @media (max-width: 600px) {
-    flex-direction: column;
-    text-align: center;
-
-    .allergy-icon {
-      margin: 0 auto;
-    }
-
-    .allergy-dismiss {
-      position: absolute;
-      top: $size-12;
-      right: $size-12;
-    }
+  .step-badge {
+    padding: 6px 12px;
+    background: linear-gradient(135deg, $sky, $sky-dark);
+    color: white;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 16px;
   }
 }
 
-// Progress Steps - Enhanced
-.progress-container {
-  margin: $size-24 0;
-}
-
-.progress-steps-enhanced {
-  display: flex;
-  justify-content: space-between;
-  background: white;
-  border-radius: $size-16;
-  padding: $size-20 $size-24;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+// ============================================
+// PAGE CONTAINER
+// ============================================
+.page-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px 32px 120px;
+  position: relative;
+  z-index: 1;
 
   @media (max-width: 768px) {
-    flex-direction: column;
-    gap: $size-16;
+    padding: 16px 16px 140px;
   }
 }
 
-.step {
+// ============================================
+// BREADCRUMBS
+// ============================================
+.breadcrumbs {
   display: flex;
   align-items: center;
-  gap: $size-14;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  flex: 1;
-  position: relative;
+  gap: 8px;
+  margin-bottom: 20px;
+  font-size: 13px;
 
-  &:not(:last-child)::after {
+  @media (max-width: 768px) {
+    display: none;
+  }
+
+  .breadcrumb-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: $gray;
+    text-decoration: none;
+    transition: color 0.2s;
+
+    &:hover {
+      color: $sky-dark;
+    }
+  }
+
+  .breadcrumb-sep {
+    color: $light-gray;
+  }
+
+  .breadcrumb-current {
+    color: $navy;
+    font-weight: 500;
+  }
+}
+
+// ============================================
+// HERO SECTION
+// ============================================
+.hero {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 48px;
+  padding: 48px 56px;
+  min-height: 320px;
+  background: linear-gradient(135deg, $sky 0%, $sky-dark 50%, $sky-darker 100%);
+  border-radius: 32px;
+  margin-bottom: 32px;
+  position: relative;
+  overflow: hidden;
+  align-items: center;
+  box-shadow:
+    0 25px 80px rgba($sky-dark, 0.35),
+    0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+
+  &::before {
     content: '';
     position: absolute;
-    right: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 40px;
-    height: 2px;
-    background: #E2E8F0;
+    top: -60%;
+    right: -20%;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, transparent 70%);
+    pointer-events: none;
+  }
 
-    @media (max-width: 768px) {
+  @media (max-width: 1024px) {
+    grid-template-columns: 1fr;
+    padding: 36px 32px;
+    gap: 32px;
+    min-height: auto;
+  }
+
+  @media (max-width: 768px) {
+    padding: 28px 24px;
+    border-radius: 24px;
+    margin-bottom: 20px;
+  }
+}
+
+.hero__content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  z-index: 2;
+  position: relative;
+}
+
+.hero__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(12px);
+  border-radius: 24px;
+  margin-bottom: 16px;
+  width: fit-content;
+
+  .badge-pulse {
+    width: 8px;
+    height: 8px;
+    background: #4ade80;
+    border-radius: 50%;
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+
+  svg { color: white; }
+
+  span {
+    font-size: 13px;
+    font-weight: 600;
+    color: white;
+    letter-spacing: 0.3px;
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.4); }
+  50% { opacity: 0.8; box-shadow: 0 0 0 8px rgba(74, 222, 128, 0); }
+}
+
+.hero__title {
+  font-size: 56px;
+  font-weight: 800;
+  color: white;
+  margin: 0 0 16px;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+
+  @media (max-width: 1024px) {
+    font-size: 44px;
+  }
+
+  @media (max-width: 768px) {
+    font-size: 36px;
+  }
+}
+
+.hero__title-accent {
+  background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 50%, #7dd3fc 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero__subtitle {
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0 0 24px;
+  line-height: 1.5;
+  max-width: 320px;
+
+  strong {
+    color: white;
+    font-weight: 600;
+  }
+
+  @media (max-width: 1024px) {
+    max-width: 100%;
+  }
+
+  @media (max-width: 768px) {
+    font-size: 14px;
+    margin-bottom: 20px;
+  }
+}
+
+// Progress Steps (Inline in Hero)
+.hero__progress {
+  display: flex;
+  gap: 8px;
+
+  @media (max-width: 768px) {
+    display: none;
+  }
+}
+
+.progress-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+
+  &:hover:not(.active) {
+    background: rgba(255, 255, 255, 0.18);
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+
+  &__circle {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    transition: all 0.2s;
+  }
+
+  &__label {
+    font-size: 14px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.85);
+    transition: color 0.2s;
+
+    @media (max-width: 1100px) {
       display: none;
     }
   }
 
-  &.completed:not(:last-child)::after {
-    background: #10B981;
-  }
-
-  .step-circle {
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    background: #F1F5F9;
-    color: #64748B;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: $size-16;
-    font-weight: 600;
-    transition: all 0.3s ease;
-    flex-shrink: 0;
-  }
-
-  .step-info {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-
-    .step-label {
-      font-size: $size-14;
-      font-weight: 600;
-      color: #64748B;
-      transition: color 0.2s;
-    }
-
-    .step-desc {
-      font-size: $size-12;
-      color: #94A3B8;
-    }
-  }
-
   &.active {
-    .step-circle {
-      background: linear-gradient(135deg, #4FC3F7 0%, #29B6F6 100%);
-      color: white;
-      box-shadow: 0 4px 15px rgba(79, 195, 247, 0.4);
+    background: rgba(255, 255, 255, 0.25);
+    border-color: rgba(255, 255, 255, 0.3);
+
+    .progress-step__circle {
+      background: white;
+      color: $sky-dark;
     }
 
-    .step-label {
-      color: #1E293B;
+    .progress-step__label {
+      color: white;
+      font-weight: 600;
     }
   }
 
   &.completed {
-    .step-circle {
-      background: #10B981;
+    .progress-step__circle {
+      background: $emerald;
       color: white;
     }
-
-    .step-label {
-      color: #1E293B;
-    }
-  }
-
-  &:hover:not(.active) .step-circle {
-    transform: scale(1.05);
   }
 }
 
-// Main Content
-.main-content {
-  margin-bottom: $size-24;
+// Hero Visual
+.hero__visual {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  height: 240px;
+
+  @media (max-width: 1024px) {
+    display: none;
+  }
 }
 
-.step-content {
+// Prescription Orb (Enhanced)
+.prescription-orb {
+  position: relative;
+  width: 180px;
+  height: 180px;
+}
+
+.orb-glow {
+  position: absolute;
+  inset: -20px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.3) 0%, transparent 70%);
+  border-radius: 50%;
+  animation: orb-pulse 3s ease-in-out infinite;
+}
+
+@keyframes orb-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.1); opacity: 0.4; }
+}
+
+.orb-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+
+  &--1 {
+    inset: 0;
+    animation: spin-slow 20s linear infinite;
+  }
+
+  &--2 {
+    inset: 15px;
+    border-style: dashed;
+    animation: spin-slow 15s linear infinite reverse;
+  }
+
+  &--3 {
+    inset: 30px;
+    animation: spin-slow 25s linear infinite;
+  }
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.orb-center {
+  position: absolute;
+  inset: 45px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(12px);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 0 50px rgba(255, 255, 255, 0.25);
+}
+
+// Floating Icons
+.floating-icons {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.float-icon {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(8px);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  animation: float 6s ease-in-out infinite;
+
+  &--1 {
+    width: 52px;
+    height: 52px;
+    top: 0;
+    left: 0;
+    animation-delay: 0s;
+  }
+
+  &--2 {
+    width: 46px;
+    height: 46px;
+    top: 20px;
+    right: -10px;
+    animation-delay: -2s;
+  }
+
+  &--3 {
+    width: 44px;
+    height: 44px;
+    bottom: 10px;
+    left: 10px;
+    animation-delay: -4s;
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25% { transform: translateY(-8px) rotate(3deg); }
+  75% { transform: translateY(6px) rotate(-2deg); }
+}
+
+// Floating Stats
+.floating-stats {
+  position: absolute;
+  inset: -30px;
+  z-index: 5;
+}
+
+.float-stat {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  animation: float-subtle 3s ease-in-out infinite;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+
+  &--patient {
+    top: -15px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  &--meds {
+    bottom: 25px;
+    right: -20px;
+    animation-delay: 1s;
+  }
+
+  &--price {
+    bottom: 25px;
+    left: -20px;
+    animation-delay: 2s;
+  }
+}
+
+@keyframes float-subtle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+// ============================================
+// BENTO GRID
+// ============================================
+.bento-grid {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 24px;
+  margin-bottom: 24px;
+
+  @media (max-width: 1200px) {
+    grid-template-columns: 1fr 320px;
+    gap: 20px;
+  }
+
+  @media (max-width: 1024px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.bento-card {
+  @include glass-card;
+  border-radius: 20px;
+  padding: 24px;
+
+  @media (max-width: 768px) {
+    padding: 20px;
+    border-radius: 16px;
+  }
+}
+
+.bento-card--main {
   display: flex;
   flex-direction: column;
-  gap: $size-20;
+  gap: 20px;
 
-  :deep(.step-medications),
   :deep(.step-patient-select),
+  :deep(.step-medications),
   :deep(.step-payment-delivery),
   :deep(.step-link-records) {
-    background: white;
-    border-radius: $size-16;
-    padding: $size-24;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+    background: transparent;
+    padding: 0;
+    border-radius: 0;
   }
 }
 
-// Navigation Footer
-.navigation-footer {
+// ============================================
+// SIDEBAR
+// ============================================
+.bento-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+
+  @media (max-width: 1024px) {
+    order: -1;
+  }
+}
+
+.bento-card--summary {
+  .card-header {
+    margin-bottom: 20px;
+
+    h3 {
+      font-size: 15px;
+      font-weight: 600;
+      color: $navy;
+      margin: 0;
+    }
+  }
+}
+
+// Summary Patient
+.summary-patient {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: $bg;
+  border-radius: 14px;
+  margin-bottom: 20px;
+
+  &__info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__name {
+    font-size: 15px;
+    font-weight: 600;
+    color: $navy;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__email {
+    font-size: 12px;
+    color: $gray;
+    margin: 4px 0 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+.summary-empty {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 20px;
+  background: $bg;
+  border-radius: 14px;
+  margin-bottom: 20px;
+  color: $gray;
+
+  span {
+    font-size: 14px;
+  }
+}
+
+// Summary Stats
+.summary-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.summary-stat {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: $bg;
+  border-radius: 12px;
+
+  &__icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+
+    &.emerald { background: $emerald-light; color: $emerald; }
+    &.sky { background: $sky-light; color: $sky-dark; }
+    &.amber { background: $amber-light; color: $amber; }
+    &.violet { background: $violet-light; color: $violet; }
+  }
+
+  &__info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &__value {
+    font-size: 16px;
+    font-weight: 700;
+    color: $navy;
+  }
+
+  &__label {
+    font-size: 12px;
+    color: $gray;
+  }
+}
+
+// Summary Delivery
+.summary-delivery {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: $sky-light;
+  border-radius: 10px;
+  margin-top: 16px;
+  color: $sky-dark;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+// ============================================
+// INFO CARDS
+// ============================================
+.info-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.info-card {
+  @include glass-card;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 14px;
+
+  &__icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  &__content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__title {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+
+  &__text {
+    display: block;
+    font-size: 12px;
+    opacity: 0.8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  // Color variants
+  &--success {
+    background: linear-gradient(135deg, $emerald-light, lighten($emerald-light, 3%));
+    border-color: rgba($emerald, 0.2);
+
+    .info-card__icon { background: $emerald; color: white; }
+    .info-card__title { color: darken($emerald, 15%); }
+    .info-card__text { color: darken($emerald, 10%); }
+  }
+
+  &--warning {
+    background: linear-gradient(135deg, $amber-light, lighten($amber-light, 3%));
+    border-color: rgba($amber, 0.2);
+
+    .info-card__icon { background: $amber; color: white; }
+    .info-card__title { color: darken($amber, 20%); }
+    .info-card__text { color: darken($amber, 15%); }
+  }
+
+  &--violet {
+    background: linear-gradient(135deg, $violet-light, lighten($violet-light, 3%));
+    border-color: rgba($violet, 0.2);
+
+    .info-card__icon { background: $violet; color: white; }
+    .info-card__title { color: darken($violet, 15%); }
+    .info-card__text { color: darken($violet, 10%); }
+  }
+
+  &--sky {
+    background: linear-gradient(135deg, $sky-light, lighten($sky-light, 3%));
+    border-color: rgba($sky, 0.2);
+
+    .info-card__icon { background: $sky-dark; color: white; }
+    .info-card__title { color: $sky-darker; }
+    .info-card__text { color: $sky-dark; }
+  }
+}
+
+// ============================================
+// NAVIGATION FOOTER
+// ============================================
+.nav-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: white;
-  border-radius: $size-16;
-  padding: $size-20 $size-24;
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.04);
-  position: sticky;
-  bottom: 0;
-  margin-top: auto;
+  padding: 16px 32px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  z-index: 50;
+
+  @media (min-width: 769px) {
+    position: sticky;
+    bottom: 0;
+    max-width: 1400px;
+    margin: 0 auto;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+  }
+
+  @media (max-width: 768px) {
+    padding: 12px 16px;
+  }
 
   .nav-left, .nav-right {
     display: flex;
-    gap: $size-12;
+    gap: 12px;
+  }
+
+  .nav-progress {
+    display: none;
+
+    @media (max-width: 768px) {
+      display: flex;
+      gap: 6px;
+    }
+
+    .progress-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #E2E8F0;
+      transition: all 0.2s;
+
+      &.active {
+        background: $sky;
+        width: 24px;
+        border-radius: 4px;
+      }
+
+      &.completed {
+        background: $emerald;
+      }
+    }
   }
 }
 
 .nav-btn {
   display: inline-flex;
   align-items: center;
-  gap: $size-8;
-  padding: $size-14 $size-28;
-  border-radius: $size-12;
-  font-size: $size-15;
+  gap: 8px;
+  padding: 14px 24px;
+  border-radius: 14px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   border: none;
   transition: all 0.2s ease;
+
+  @media (max-width: 768px) {
+    padding: 12px 16px;
+    font-size: 13px;
+  }
 
   &:disabled {
     opacity: 0.5;
@@ -1327,40 +1814,50 @@ async function saveDeliveryAddress() {
   }
 
   &--primary {
-    background: linear-gradient(135deg, #4FC3F7 0%, #29B6F6 100%);
+    background: linear-gradient(135deg, $sky, $sky-dark);
     color: white;
-    box-shadow: 0 4px 15px rgba(79, 195, 247, 0.3);
+    box-shadow: 0 4px 15px rgba($sky, 0.3);
 
     &:hover:not(:disabled) {
       transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(79, 195, 247, 0.4);
+      box-shadow: 0 6px 20px rgba($sky, 0.4);
     }
   }
 
   &--secondary {
     background: #F1F5F9;
-    color: #64748B;
+    color: $slate;
 
     &:hover:not(:disabled) {
       background: #E2E8F0;
     }
   }
 
+  &--ghost {
+    background: transparent;
+    color: $gray;
+
+    &:hover:not(:disabled) {
+      background: #F1F5F9;
+      color: $slate;
+    }
+  }
+
   &--success {
-    background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+    background: linear-gradient(135deg, $emerald, darken($emerald, 10%));
     color: white;
-    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+    box-shadow: 0 4px 15px rgba($emerald, 0.3);
 
     &:hover:not(:disabled) {
       transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+      box-shadow: 0 6px 20px rgba($emerald, 0.4);
     }
   }
 }
 
-.spinner {
-  width: 18px;
-  height: 18px;
+.btn-spinner {
+  width: 16px;
+  height: 16px;
   border: 2px solid rgba(255, 255, 255, 0.3);
   border-top-color: white;
   border-radius: 50%;
@@ -1369,43 +1866,5 @@ async function saveDeliveryAddress() {
 
 @keyframes spin {
   to { transform: rotate(360deg); }
-}
-
-// Mobile adjustments
-@media (max-width: 600px) {
-  .hero-banner {
-    margin: $size-12;
-    padding: $size-16;
-    border-radius: $size-12;
-  }
-
-  .hero-top {
-    flex-direction: column;
-    gap: $size-12;
-    align-items: stretch;
-  }
-
-  .back-link {
-    justify-content: center;
-  }
-
-  .hero-step-indicator {
-    text-align: center;
-  }
-
-  .navigation-footer {
-    flex-direction: column;
-    gap: $size-12;
-    padding: $size-16;
-
-    .nav-left, .nav-right {
-      width: 100%;
-    }
-
-    .nav-btn {
-      width: 100%;
-      justify-content: center;
-    }
-  }
 }
 </style>

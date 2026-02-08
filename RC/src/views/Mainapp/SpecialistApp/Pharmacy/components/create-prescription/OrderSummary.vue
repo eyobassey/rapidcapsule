@@ -1,6 +1,12 @@
 <template>
   <div :class="['order-summary', { final: isFinal }]">
-    <h3>{{ isFinal ? 'Final Summary' : 'Order Summary' }}</h3>
+    <div class="summary-header">
+      <div class="summary-header__icon">
+        <v-icon name="hi-receipt-tax" scale="0.9" />
+      </div>
+      <h3>{{ isFinal ? 'Final Summary' : 'Order Summary' }}</h3>
+    </div>
+
     <div class="summary-details">
       <!-- Patient (final only) -->
       <div v-if="isFinal && patientName" class="summary-item">
@@ -10,8 +16,8 @@
 
       <!-- Items count -->
       <div class="summary-item">
-        <span class="label">{{ isFinal ? 'Items' : `Subtotal (${itemCount} items)` }}</span>
-        <span class="value">{{ isFinal ? `${itemCount} medications` : `NGN ${formatCurrency(total)}` }}</span>
+        <span class="label">{{ isFinal ? 'Medications' : `Items (${itemCount})` }}</span>
+        <span class="value">{{ isFinal ? `${itemCount} items` : `NGN ${formatCurrency(total)}` }}</span>
       </div>
 
       <!-- Payment Method (final only) -->
@@ -67,70 +73,124 @@ defineProps({
 </script>
 
 <style scoped lang="scss">
+// Design Tokens
+$sky: #4FC3F7;
+$sky-light: #E1F5FE;
+$sky-dark: #0288D1;
+$navy: #0F172A;
+$slate: #334155;
+$gray: #64748B;
+$bg: #F8FAFC;
+$emerald: #10B981;
+$emerald-light: #D1FAE5;
+
 .order-summary {
-  margin-top: $size-24;
-  padding: $size-20;
-  background: $color-g-97;
-  border-radius: $size-12;
+  margin-top: 24px;
+  padding: 20px;
+  background: $bg;
+  border-radius: 16px;
+  border: 2px solid #E2E8F0;
 
   &.final {
-    background: rgba($color-pri, 0.05);
-    border: 1px solid rgba($color-pri, 0.2);
+    background: linear-gradient(135deg, $sky-light, lighten($sky-light, 3%));
+    border-color: rgba($sky, 0.3);
+  }
+}
+
+.summary-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+
+  &__icon {
+    width: 36px;
+    height: 36px;
+    background: rgba($sky-dark, 0.1);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: $sky-dark;
+
+    .final & {
+      background: $sky-dark;
+      color: white;
+    }
   }
 
   h3 {
-    font-size: $size-16;
-    font-weight: $fw-semi-bold;
-    color: $color-g-21;
-    margin-bottom: $size-16;
+    font-size: 16px;
+    font-weight: 700;
+    color: $navy;
+    margin: 0;
   }
 }
 
 .summary-details {
   display: flex;
   flex-direction: column;
-  gap: $size-10;
+  gap: 12px;
 }
 
 .summary-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: $size-15;
+  font-size: 14px;
 
   .label {
-    color: $color-g-54;
+    color: $gray;
+    font-weight: 500;
   }
 
   .value {
-    font-weight: $fw-medium;
-    color: $color-g-21;
+    font-weight: 600;
+    color: $navy;
   }
 
   &.total {
-    border-top: 1px solid $color-g-85;
-    padding-top: $size-12;
-    margin-top: $size-8;
-    font-size: $size-16;
+    border-top: 2px solid rgba($sky, 0.2);
+    padding-top: 14px;
+    margin-top: 4px;
+    font-size: 16px;
+
+    .label {
+      color: $slate;
+      font-weight: 600;
+    }
 
     .value {
-      font-weight: $fw-bold;
-      color: $color-pri;
+      font-weight: 800;
+      color: $sky-dark;
+      font-size: 18px;
+    }
+
+    .final & {
+      border-top-color: $sky;
+
+      .value {
+        color: $sky-dark;
+      }
     }
   }
 
   &.address {
     flex-direction: column;
     align-items: flex-start;
-    gap: $size-8;
+    gap: 8px;
 
     .address-preview {
       font-weight: normal;
+      padding: 10px 14px;
+      background: rgba(255, 255, 255, 0.6);
+      border-radius: 10px;
+      width: 100%;
 
       p {
-        font-size: $size-14;
+        font-size: 13px;
         line-height: 1.5;
-        color: $color-g-44;
+        color: $slate;
         margin: 0;
       }
     }

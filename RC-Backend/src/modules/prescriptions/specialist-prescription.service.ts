@@ -1017,27 +1017,29 @@ export class SpecialistPrescriptionService {
   }
 
   /**
-   * Get single prescription with patient details
+   * Get single prescription with patient and prescribing specialist details
+   * Any specialist can view any prescription (for cross-specialist care)
    */
   async getPrescription(
     prescriptionId: Types.ObjectId,
-    specialistId?: Types.ObjectId,
+    requestingSpecialistId?: Types.ObjectId,
   ): Promise<any> {
-    const filter: any = { _id: prescriptionId };
-    if (specialistId) {
-      filter.specialist_id = specialistId;
-    }
-
-    const prescription = await this.prescriptionModel.findOne(filter).lean();
+    // Don't filter by specialist - allow any specialist to view any prescription
+    const prescription = await this.prescriptionModel.findOne({ _id: prescriptionId }).lean();
     if (!prescription) {
       throw new NotFoundException('Prescription not found');
     }
 
     // Fetch patient details
     const patient = await this.usersService.findById(prescription.patient_id);
-
     const patientProfileImage = patient
       ? await this.fileUploadHelper.resolveProfileImage(patient.profile?.profile_photo)
+      : null;
+
+    // Fetch prescribing specialist details
+    const prescribingSpecialist = await this.usersService.findById(prescription.specialist_id);
+    const specialistProfileImage = prescribingSpecialist
+      ? await this.fileUploadHelper.resolveProfileImage(prescribingSpecialist.profile?.profile_photo)
       : null;
 
     // Populate linked appointments
@@ -1100,10 +1102,16 @@ export class SpecialistPrescriptionService {
       }
     }
 
+    // Determine if this is the requesting specialist's own prescription
+    const isOwnPrescription = requestingSpecialistId
+      ? prescription.specialist_id?.toString() === requestingSpecialistId.toString()
+      : false;
+
     return {
       ...prescription,
       linked_appointments_populated: populatedLinkedAppointments,
       linked_clinical_notes_populated: populatedLinkedNotes,
+      is_own_prescription: isOwnPrescription,
       patient: patient ? {
         _id: patient._id,
         full_name: patient.full_name,
@@ -1112,6 +1120,18 @@ export class SpecialistPrescriptionService {
           ? `${patient.profile.contact.phone.country_code || ''}${patient.profile.contact.phone.number}`
           : null,
         profile_image: patientProfileImage,
+        date_of_birth: patient.profile?.date_of_birth || null,
+        gender: patient.profile?.gender || null,
+      } : null,
+      prescribing_specialist: prescribingSpecialist ? {
+        _id: prescribingSpecialist._id,
+        full_name: prescribingSpecialist.full_name,
+        email: prescribingSpecialist.profile?.contact?.email,
+        phone: prescribingSpecialist.profile?.contact?.phone?.number
+          ? `${prescribingSpecialist.profile.contact.phone.country_code || ''}${prescribingSpecialist.profile.contact.phone.number}`
+          : null,
+        profile_image: specialistProfileImage,
+        specialization: prescribingSpecialist.professional_practice?.area_of_specialty || null,
       } : null,
     };
   }
@@ -2890,21 +2910,33 @@ export class SpecialistPrescriptionService {
 
     const walletBalance = await this.walletService.getWalletBalance(specialistId);
 
+    // Convert aggregation result to object with status as key
+    const byStatus = statusCounts.reduce(
+      (acc, item) => ({ ...acc, [item._id]: item.count }),
+      {} as Record<string, number>,
+    );
+
     return {
-      // Fields expected by frontend
+      // Total count
       total: totalCount,
-      pending_payment: pendingPayment,
-      processing: processingCount,
-      delivered: deliveredCount,
+      // Individual status counts (flatten by_status for frontend)
+      draft: byStatus[SpecialistPrescriptionStatus.DRAFT] || 0,
+      pending_acceptance: byStatus[SpecialistPrescriptionStatus.PENDING_ACCEPTANCE] || 0,
+      accepted: byStatus[SpecialistPrescriptionStatus.ACCEPTED] || 0,
+      pending_payment: byStatus[SpecialistPrescriptionStatus.PENDING_PAYMENT] || 0,
+      paid: byStatus[SpecialistPrescriptionStatus.PAID] || 0,
+      processing: byStatus[SpecialistPrescriptionStatus.PROCESSING] || 0,
+      dispensed: byStatus[SpecialistPrescriptionStatus.DISPENSED] || 0,
+      shipped: byStatus[SpecialistPrescriptionStatus.SHIPPED] || 0,
+      delivered: byStatus[SpecialistPrescriptionStatus.DELIVERED] || 0,
+      cancelled: byStatus[SpecialistPrescriptionStatus.CANCELLED] || 0,
+      expired: byStatus[SpecialistPrescriptionStatus.EXPIRED] || 0,
       // Additional fields for dashboard
       prescriptions_today: todayCount,
       prescriptions_this_week: weekCount,
       prescriptions_this_month: monthCount,
       wallet_balance: walletBalance.available_balance,
-      by_status: statusCounts.reduce(
-        (acc, item) => ({ ...acc, [item._id]: item.count }),
-        {},
-      ),
+      by_status: byStatus,
     };
   }
 
