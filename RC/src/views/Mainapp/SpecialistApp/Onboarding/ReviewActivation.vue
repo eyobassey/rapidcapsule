@@ -395,9 +395,11 @@
 <script setup>
 import { computed, ref, reactive, onMounted, inject, watch } from 'vue';
 import { useRouter } from 'vue-router';
+import { useStore } from 'vuex';
 import { useOnboardingState } from './composables/useOnboardingState';
 
 const router = useRouter();
+const store = useStore();
 const $http = inject('$http');
 const $toast = inject('$toast');
 
@@ -978,6 +980,17 @@ const activatePractice = async () => {
     // Mark review step as complete
     completeStep('review');
     saveProgress();
+
+    // Refresh user profile in Vuex store so side-nav detects onboarding_completed
+    try {
+      const userRes = await $http.$_getCurrentUser();
+      const userData = userRes.data?.data || userRes.data;
+      if (userData) {
+        store.commit('SET_USER', userData);
+      }
+    } catch (e) {
+      // Non-blocking - the redirect will still work
+    }
 
     $toast.success('Congratulations! Your practice is now live.');
 

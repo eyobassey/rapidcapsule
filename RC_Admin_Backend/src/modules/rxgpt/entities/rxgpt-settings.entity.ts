@@ -74,12 +74,20 @@ export class RxGPTSettings {
       use_openfda: { type: Boolean, default: true },
       use_claude_ai: { type: Boolean, default: true },
       use_local_drug_db: { type: Boolean, default: true },
+      use_pubmed: { type: Boolean, default: true },
+      use_nice_guidelines: { type: Boolean, default: false },
+      use_bnf: { type: Boolean, default: false },
+      use_hallucination_detection: { type: Boolean, default: true },
     }),
   )
   data_sources: {
     use_openfda: boolean;
     use_claude_ai: boolean;
     use_local_drug_db: boolean;
+    use_pubmed: boolean;
+    use_nice_guidelines: boolean;
+    use_bnf: boolean;
+    use_hallucination_detection: boolean;
   };
 
   // ============ THRESHOLDS ============

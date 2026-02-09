@@ -9,6 +9,14 @@ import { RxGPTCache, RxGPTCacheDocument } from '../entities/rxgpt-cache.entity';
 import { RxGPTFeedback, RxGPTFeedbackDocument } from '../entities/rxgpt-feedback.entity';
 import { DrugInteractionService } from './drug-interaction.service';
 import { OpenFDAService } from './openfda.service';
+import { PubMedService } from './pubmed.service';
+import { PubMedCitation, DrugEvidenceSummary } from '../dto/pubmed.dto';
+import { NICEService } from './nice.service';
+import { NICEValidationResult, NICEComplianceSummary } from '../dto/nice.dto';
+import { BNFService } from './bnf.service';
+import { BNFValidationResult, BNFComplianceSummary } from '../dto/bnf.dto';
+import { HallucinationDetectorService } from './hallucination-detector.service';
+import { HallucinationReport } from '../dto/hallucination.dto';
 import {
   RxGPTAnalyzeDto,
   RxGPTQuickCheckDto,
@@ -27,6 +35,7 @@ import {
   RxGPTSuggestMedicationsDto,
   RxGPTSuggestMedicationsResponseDto,
   SuggestedMedicationDto,
+  RxGPTStandaloneAnalyzeDto,
 } from '../dto/rxgpt.dto';
 
 // Patient context interface for building analysis
@@ -136,6 +145,10 @@ export class RxGPTService {
     private readonly creditModel: Model<any>,
     private readonly drugInteractionService: DrugInteractionService,
     private readonly openFDAService: OpenFDAService,
+    private readonly pubmedService: PubMedService,
+    private readonly niceService: NICEService,
+    private readonly bnfService: BNFService,
+    private readonly hallucinationDetector: HallucinationDetectorService,
   ) {
     this.initializeClient();
   }
@@ -209,6 +222,10 @@ export class RxGPTService {
           use_openfda: true,
           use_claude_ai: true,
           use_local_drug_db: true,
+          use_pubmed: true,
+          use_nice_guidelines: false,
+          use_bnf: false,
+          use_hallucination_detection: true,
         },
         thresholds: {
           min_confidence_score: 70,
@@ -342,6 +359,15 @@ export class RxGPTService {
       gifted_credits: giftedCredits,
       has_unlimited: hasUnlimited,
     };
+  }
+
+  /**
+   * Consume 1 credit for an interaction check (public wrapper)
+   */
+  async consumeInteractionCheckCredit(
+    specialistId: string,
+  ): Promise<{ success: boolean; remaining: number }> {
+    return this.consumeCredits(specialistId, 1);
   }
 
   /**
@@ -1090,12 +1116,70 @@ export class RxGPTService {
       dto.prefer_inventory !== false,
     );
 
+    // Fact-Check Layer: Validate drug names against trusted databases (uses OpenFDA)
+    const verifiedSuggestions = settings.data_sources?.use_openfda !== false
+      ? await this.validateDrugNames(enrichedSuggestions)
+      : enrichedSuggestions;
+
+    // Dosage Validation: Check dosages against FDA guidelines for patient population
+    const dosageValidatedSuggestions = settings.data_sources?.use_openfda !== false
+      ? await this.validateDosages(verifiedSuggestions, patientContext)
+      : verifiedSuggestions;
+
+    // PubMed Evidence: Enrich suggestions with clinical evidence citations
+    const condition = dto.diagnosis || clinicalContext?.diagnosis || healthCheckupContext?.primary_condition?.name;
+    const pubmedEnrichedSuggestions = settings.data_sources?.use_pubmed !== false
+      ? await this.enrichWithPubMedCitations(dosageValidatedSuggestions, condition)
+      : dosageValidatedSuggestions;
+
+    // NICE Guidelines: Validate against UK clinical standards
+    let niceValidatedSuggestions = pubmedEnrichedSuggestions;
+    let niceValidationResults: any[] = [];
+    if (settings.data_sources?.use_nice_guidelines) {
+      const niceResult = await this.validateWithNICEGuidelines(pubmedEnrichedSuggestions, condition);
+      niceValidatedSuggestions = niceResult.suggestions;
+      niceValidationResults = niceResult.validationResults;
+    }
+
+    // BNF: Validate against UK prescribing guidelines
+    let bnfValidatedSuggestions = niceValidatedSuggestions;
+    let bnfValidationResults: any[] = [];
+    if (settings.data_sources?.use_bnf) {
+      const bnfResult = await this.validateWithBNF(niceValidatedSuggestions, condition, patientContext);
+      bnfValidatedSuggestions = bnfResult.suggestions;
+      bnfValidationResults = bnfResult.validationResults;
+    }
+
+    // Evidence-Based Confidence: Calculate grounded confidence scores
+    const validatedSuggestions = this.calculateEvidenceBasedConfidence(bnfValidatedSuggestions, condition);
+
+    // Hallucination Detection: Check for potential AI errors
+    const hallucinationReport = settings.data_sources?.use_hallucination_detection !== false
+      ? await this.hallucinationDetector.detectHallucinations(
+          validatedSuggestions,
+          specialistId,
+          dto.patient_id,
+        )
+      : {
+          recommendation: 'safe' as const,
+          hallucinations_detected: 0,
+          critical_count: 0,
+          high_count: 0,
+          medium_count: 0,
+          low_count: 0,
+          overall_suspicion_score: 0,
+          summary: 'Hallucination detection disabled',
+          drug_checks: [],
+          timestamp: new Date(),
+          total_items_checked: 0,
+        };
+
     // Consume credits
     const creditResult = await this.consumeCredits(specialistId, creditsRequired);
 
-    // Build response
+    // Build response with validated suggestions
     const response: RxGPTSuggestMedicationsResponseDto = {
-      suggestions: enrichedSuggestions,
+      suggestions: validatedSuggestions,
       clinical_context: {
         diagnosis: dto.diagnosis || clinicalContext?.diagnosis,
         symptoms: dto.symptoms || healthCheckupContext?.symptoms?.map(s => s.name),
@@ -1109,14 +1193,51 @@ export class RxGPTService {
         age: patientContext.age,
         gender: patientContext.gender,
       },
-      clinical_summary: this.buildSuggestionsSummary(enrichedSuggestions, patientContext),
+      clinical_summary: this.buildSuggestionsSummary(validatedSuggestions, patientContext),
       disclaimer: settings.disclaimer_text || 'RxGPT suggestions are for informational purposes only. All treatment decisions should be made by licensed healthcare professionals.',
       generated_at: new Date(),
       model: settings.ai_model,
-      confidence_score: this.calculateOverallConfidence(enrichedSuggestions),
+      confidence_score: this.calculateOverallConfidence(validatedSuggestions),
       credits_used: creditsRequired,
       credits_remaining: creditResult.remaining,
+      // Fact-Check Layer summary
+      verification_summary: this.buildVerificationSummary(validatedSuggestions),
+      // Dosage Validation summary
+      dosage_validation_summary: this.buildDosageValidationSummary(validatedSuggestions),
+      // PubMed Evidence summary
+      pubmed_evidence_summary: this.buildPubMedEvidenceSummary(validatedSuggestions),
+      // NICE Guidelines Compliance summary
+      nice_compliance_summary: this.niceService.buildComplianceSummary(niceValidationResults),
+      // BNF (British National Formulary) summary
+      bnf_compliance_summary: this.bnfService.buildComplianceSummary(bnfValidationResults),
+      // Evidence-based confidence summary
+      evidence_summary: this.buildOverallEvidenceSummary(validatedSuggestions),
+      // Hallucination detection report
+      hallucination_check: {
+        passed: hallucinationReport.recommendation !== 'reject',
+        total_flags: hallucinationReport.hallucinations_detected,
+        critical_count: hallucinationReport.critical_count,
+        high_count: hallucinationReport.high_count,
+        medium_count: hallucinationReport.medium_count,
+        low_count: hallucinationReport.low_count,
+        suspicion_score: hallucinationReport.overall_suspicion_score,
+        recommendation: hallucinationReport.recommendation,
+        summary: hallucinationReport.summary,
+        flagged_drugs: hallucinationReport.drug_checks
+          .filter(c => c.flags.length > 0)
+          .map(c => ({
+            drug_name: c.drug_name,
+            issues: c.flags.map(f => ({
+              type: f.type,
+              severity: f.severity,
+              reason: f.reason,
+            })),
+          })),
+      },
     };
+
+    // Update confidence_score with evidence-based average
+    response.confidence_score = response.evidence_summary?.overall_evidence_score || response.confidence_score;
 
     // Store analytics
     const responseTime = Date.now() - startTime;
@@ -1129,6 +1250,276 @@ export class RxGPTService {
       responseTime,
       creditsRequired,
     );
+
+    return response;
+  }
+
+  /**
+   * Standalone analysis - works without a patient ID
+   * Builds patient context from inline demographics instead of DB lookup
+   */
+  async standaloneAnalyze(
+    dto: RxGPTStandaloneAnalyzeDto,
+    specialistId: string,
+  ): Promise<RxGPTSuggestMedicationsResponseDto> {
+    const startTime = Date.now();
+    const settings = await this.getSettings();
+
+    if (!settings.is_enabled || !settings.is_enabled_for_specialists) {
+      throw new ForbiddenException('RxGPT is currently disabled');
+    }
+
+    if (!this.isAvailable()) {
+      throw new BadRequestException('RxGPT AI service is not available');
+    }
+
+    // Check rate limit
+    const rateLimit = settings.usage_limits?.rate_limit_per_minute || 10;
+    if (!this.checkRateLimit(specialistId, rateLimit)) {
+      throw new ForbiddenException(
+        `Rate limit exceeded. Maximum ${rateLimit} requests per minute allowed.`,
+      );
+    }
+
+    // Check usage limits
+    const usageLimitCheck = await this.checkUsageLimits(specialistId, settings);
+    if (!usageLimitCheck.allowed) {
+      throw new ForbiddenException(usageLimitCheck.reason);
+    }
+
+    // Check credits
+    const creditBalance = await this.getSpecialistCreditBalance(specialistId);
+    const creditsRequired = settings.credit_settings.credits_per_analysis;
+
+    if (creditBalance.available < creditsRequired && !creditBalance.has_unlimited) {
+      throw new ForbiddenException(
+        `Insufficient credits. Required: ${creditsRequired}, Available: ${creditBalance.available}`,
+      );
+    }
+
+    // Build patient context from inline data (no DB lookup)
+    const ctx = dto.patient_context || {};
+    const patientContext: PatientContext = {
+      patient_id: 'standalone',
+      age: ctx.age || 30,
+      gender: ctx.gender || 'unknown',
+      weight: ctx.weight,
+      allergies: {
+        drug: (ctx.allergies || []).map(a => ({ allergen: a })),
+        food: [],
+        environmental: [],
+      },
+      chronic_conditions: ctx.chronic_conditions || [],
+      current_medications: (ctx.current_medications || []).map(m => ({
+        name: m.name,
+        dosage: m.dosage,
+        frequency: m.frequency,
+        reason: m.reason,
+      })),
+      family_history: [],
+    };
+
+    // Build clinical context from diagnosis
+    const clinicalContext: ClinicalContext = {
+      diagnosis: dto.diagnosis,
+      treatment_plan: dto.treatment_goal,
+    };
+
+    // Build health checkup context from symptoms
+    const healthCheckupContext: HealthCheckupContext | null = dto.symptoms?.length
+      ? {
+          symptoms: dto.symptoms.map(s => ({ name: s })),
+          risk_factors: [
+            ...(ctx.renal_impairment ? ['Renal impairment'] : []),
+            ...(ctx.hepatic_impairment ? ['Hepatic impairment'] : []),
+            ...(ctx.pregnant ? ['Pregnancy'] : []),
+          ],
+        }
+      : null;
+
+    // Build a compatible suggest-medications DTO for AI generation
+    const suggestDto: RxGPTSuggestMedicationsDto = {
+      patient_id: 'standalone',
+      diagnosis: dto.diagnosis,
+      treatment_goal: dto.treatment_goal,
+      symptoms: dto.symptoms,
+      max_suggestions: dto.max_suggestions || 5,
+      prefer_inventory: dto.prefer_inventory,
+    };
+
+    // Generate suggestions using AI
+    const suggestions = await this.generateMedicationSuggestions(
+      patientContext,
+      clinicalContext,
+      healthCheckupContext,
+      suggestDto,
+      settings,
+    );
+
+    // Enrich with inventory
+    const enrichedSuggestions = await this.enrichSuggestionsWithInventory(
+      suggestions,
+      dto.prefer_inventory !== false,
+    );
+
+    // Run full verification pipeline (same as suggestMedications)
+    const condition = dto.diagnosis;
+
+    const verifiedSuggestions = settings.data_sources?.use_openfda !== false
+      ? await this.validateDrugNames(enrichedSuggestions)
+      : enrichedSuggestions;
+
+    const dosageValidatedSuggestions = settings.data_sources?.use_openfda !== false
+      ? await this.validateDosages(verifiedSuggestions, patientContext)
+      : verifiedSuggestions;
+
+    const pubmedEnrichedSuggestions = settings.data_sources?.use_pubmed !== false
+      ? await this.enrichWithPubMedCitations(dosageValidatedSuggestions, condition)
+      : dosageValidatedSuggestions;
+
+    let niceValidatedSuggestions = pubmedEnrichedSuggestions;
+    let niceValidationResults: any[] = [];
+    if (settings.data_sources?.use_nice_guidelines) {
+      const niceResult = await this.validateWithNICEGuidelines(pubmedEnrichedSuggestions, condition);
+      niceValidatedSuggestions = niceResult.suggestions;
+      niceValidationResults = niceResult.validationResults;
+    }
+
+    let bnfValidatedSuggestions = niceValidatedSuggestions;
+    let bnfValidationResults: any[] = [];
+    if (settings.data_sources?.use_bnf) {
+      const bnfResult = await this.validateWithBNF(niceValidatedSuggestions, condition, patientContext);
+      bnfValidatedSuggestions = bnfResult.suggestions;
+      bnfValidationResults = bnfResult.validationResults;
+    }
+
+    const validatedSuggestions = this.calculateEvidenceBasedConfidence(bnfValidatedSuggestions, condition);
+
+    const hallucinationReport = settings.data_sources?.use_hallucination_detection !== false
+      ? await this.hallucinationDetector.detectHallucinations(
+          validatedSuggestions,
+          specialistId,
+          'standalone',
+        )
+      : {
+          recommendation: 'safe' as const,
+          hallucinations_detected: 0,
+          critical_count: 0,
+          high_count: 0,
+          medium_count: 0,
+          low_count: 0,
+          overall_suspicion_score: 0,
+          summary: 'Hallucination detection disabled',
+          drug_checks: [],
+          timestamp: new Date(),
+          total_items_checked: 0,
+        };
+
+    // Consume credits
+    const creditResult = await this.consumeCredits(specialistId, creditsRequired);
+
+    // Build response
+    const response: RxGPTSuggestMedicationsResponseDto = {
+      suggestions: validatedSuggestions,
+      clinical_context: {
+        diagnosis: dto.diagnosis,
+        symptoms: dto.symptoms,
+      },
+      patient_considerations: {
+        allergies: patientContext.allergies.drug.map(a => a.allergen),
+        current_medications: patientContext.current_medications.map(m => m.name),
+        chronic_conditions: patientContext.chronic_conditions,
+        age: patientContext.age,
+        gender: patientContext.gender,
+      },
+      clinical_summary: this.buildSuggestionsSummary(validatedSuggestions, patientContext),
+      disclaimer: settings.disclaimer_text || 'RxGPT suggestions are for informational purposes only. All treatment decisions should be made by licensed healthcare professionals.',
+      generated_at: new Date(),
+      model: settings.ai_model,
+      confidence_score: this.calculateOverallConfidence(validatedSuggestions),
+      credits_used: creditsRequired,
+      credits_remaining: creditResult.remaining,
+      verification_summary: this.buildVerificationSummary(validatedSuggestions),
+      dosage_validation_summary: this.buildDosageValidationSummary(validatedSuggestions),
+      pubmed_evidence_summary: this.buildPubMedEvidenceSummary(validatedSuggestions),
+      nice_compliance_summary: this.niceService.buildComplianceSummary(niceValidationResults),
+      bnf_compliance_summary: this.bnfService.buildComplianceSummary(bnfValidationResults),
+      evidence_summary: this.buildOverallEvidenceSummary(validatedSuggestions),
+      hallucination_check: {
+        passed: hallucinationReport.recommendation !== 'reject',
+        total_flags: hallucinationReport.hallucinations_detected,
+        critical_count: hallucinationReport.critical_count,
+        high_count: hallucinationReport.high_count,
+        medium_count: hallucinationReport.medium_count,
+        low_count: hallucinationReport.low_count,
+        suspicion_score: hallucinationReport.overall_suspicion_score,
+        recommendation: hallucinationReport.recommendation,
+        summary: hallucinationReport.summary,
+        flagged_drugs: hallucinationReport.drug_checks
+          .filter(c => c.flags.length > 0)
+          .map(c => ({
+            drug_name: c.drug_name,
+            issues: c.flags.map(f => ({
+              type: f.type,
+              severity: f.severity,
+              reason: f.reason,
+            })),
+          })),
+      },
+    };
+
+    response.confidence_score = response.evidence_summary?.overall_evidence_score || response.confidence_score;
+
+    // Store analytics (use specialist ID as patient_id placeholder for standalone)
+    const responseTime = Date.now() - startTime;
+    try {
+      await this.analyticsModel.create({
+        specialist_id: new Types.ObjectId(specialistId),
+        analysis_type: 'standalone',
+        tokens_used: 0,
+        drugs_analyzed: response.suggestions.map((s) => ({
+          drug_name: s.drug_name,
+          generic_name: s.generic_name,
+          strength: s.strength,
+          dosage: s.suggested_dosage
+            ? `${s.suggested_dosage}${s.suggested_frequency ? ` ${s.suggested_frequency}` : ''}`
+            : '',
+          is_appropriate: true,
+          confidence: s.confidence,
+          is_in_inventory: s.is_in_inventory,
+        })),
+        is_safe: true,
+        overall_risk_level: 'low',
+        confidence_score: response.confidence_score,
+        alerts: response.suggestions.flatMap((s) =>
+          (s.safety_alerts || []).map((alert: any) => ({
+            type: alert.type || 'info',
+            severity: alert.severity || 'info',
+            drug_name: s.drug_name,
+            message: alert.message || alert,
+          }))
+        ),
+        total_alerts: response.suggestions.reduce((sum, s) => sum + (s.safety_alerts?.length || 0), 0),
+        critical_alerts: 0,
+        warning_alerts: 0,
+        info_alerts: 0,
+        recommendations_count: response.suggestions.length,
+        ai_model: settings.ai_model,
+        response_time_ms: responseTime,
+        credits_used: creditsRequired,
+        clinical_summary: response.clinical_summary,
+        from_cache: false,
+        standalone_context: {
+          subject_name: dto.subject_name,
+          diagnosis: dto.diagnosis,
+          treatment_goal: dto.treatment_goal,
+          patient_context: dto.patient_context,
+          symptoms: dto.symptoms,
+        },
+      });
+    } catch (error) {
+      this.logger.error('Failed to store standalone analytics:', error);
+    }
 
     return response;
   }
@@ -1397,18 +1788,60 @@ Based on the above information, suggest ${dto.max_suggestions || 5} appropriate 
       }
 
       if (matchingDrug) {
-        // Get stock information from Inventory
-        const InventoryModel = this.userModel.db.model('Inventory');
-        const inventoryItems = await InventoryModel.find({
-          drug: matchingDrug._id,
-          quantity_on_hand: { $gt: 0 },
-          expiry_date: { $gt: new Date() },
-        }).lean();
+        // Get stock information — primary source is the drug document's `quantity` field,
+        // with fallback to stockbatchentities for batch-level tracking
+        let totalAvailable = matchingDrug.quantity || 0;
+        let lowestPrice = matchingDrug.selling_price || 0;
 
-        const totalAvailable = inventoryItems.reduce((sum: number, item: any) => sum + (item.quantity_on_hand || 0), 0);
-        const lowestPrice = inventoryItems.length > 0
-          ? Math.min(...inventoryItems.map((item: any) => item.selling_price || matchingDrug?.selling_price || 0))
-          : matchingDrug?.selling_price || 0;
+        // If drug has no direct quantity, check stock batch entities
+        if (totalAvailable <= 0) {
+          try {
+            const batchCollection = this.userModel.db.collection('stockbatchentities');
+            const batches = await batchCollection.find({
+              drug_id: matchingDrug._id,
+              status: { $ne: 'depleted' },
+              quantity_available: { $gt: 0 },
+            }).toArray();
+            totalAvailable = batches.reduce((sum: number, b: any) => sum + (b.quantity_available || 0), 0);
+            if (batches.length > 0) {
+              const batchPrices = batches
+                .map((b: any) => b.selling_price_override)
+                .filter((p: any) => p && p > 0);
+              if (batchPrices.length > 0) {
+                lowestPrice = Math.min(...batchPrices);
+              }
+            }
+          } catch (e) {
+            // stockbatchentities may not exist — that's fine
+          }
+        }
+
+        // Resolve dosage_form - may be an ObjectId reference to dosageformentities
+        let resolvedDosageForm = suggestion.dosage_form || 'tablet';
+        if (matchingDrug.dosage_form) {
+          try {
+            const DosageFormCollection = this.userModel.db.collection('dosageformentities');
+            const formId = matchingDrug.dosage_form instanceof Types.ObjectId
+              ? matchingDrug.dosage_form
+              : new Types.ObjectId(String(matchingDrug.dosage_form));
+            const dosageFormDoc = await DosageFormCollection.findOne({ _id: formId });
+            if (dosageFormDoc) {
+              resolvedDosageForm = dosageFormDoc.name || dosageFormDoc.code || 'tablet';
+            } else {
+              // Not an ObjectId reference - use the value directly if it's a readable string
+              const formStr = String(matchingDrug.dosage_form);
+              if (!formStr.match(/^[0-9a-fA-F]{24}$/)) {
+                resolvedDosageForm = formStr;
+              }
+            }
+          } catch (e) {
+            // Value is not a valid ObjectId - use it directly as a string
+            const formStr = String(matchingDrug.dosage_form);
+            if (!formStr.match(/^[0-9a-fA-F]{24}$/)) {
+              resolvedDosageForm = formStr;
+            }
+          }
+        }
 
         enrichedSuggestions.push({
           ...suggestion,
@@ -1416,7 +1849,7 @@ Based on the above information, suggest ${dto.max_suggestions || 5} appropriate 
           drug_name: matchingDrug.name,
           generic_name: matchingDrug.generic_name || suggestion.generic_name,
           strength: matchingDrug.strength || suggestion.strength,
-          dosage_form: matchingDrug.dosage_form || suggestion.dosage_form,
+          dosage_form: resolvedDosageForm,
           is_in_inventory: true,
           inventory_status: totalAvailable > 10 ? 'available' : totalAvailable > 0 ? 'low_stock' : 'out_of_stock',
           available_quantity: totalAvailable,
@@ -1448,6 +1881,1002 @@ Based on the above information, suggest ${dto.max_suggestions || 5} appropriate 
     }
 
     return enrichedSuggestions;
+  }
+
+  /**
+   * Fact-Check Layer: Validate drug names against trusted databases
+   * Checks if suggested drugs exist in:
+   * 1. Local drug inventory (drugentities collection)
+   * 2. OpenFDA database (US FDA approved drugs)
+   *
+   * This helps prevent hallucinated drug names from being presented to specialists
+   */
+  private async validateDrugNames(
+    suggestions: SuggestedMedicationDto[],
+  ): Promise<SuggestedMedicationDto[]> {
+    this.logger.log(`[Fact-Check] Validating ${suggestions.length} drug suggestions`);
+
+    const DrugModel = this.userModel.db.model('Drug');
+    const validatedSuggestions: SuggestedMedicationDto[] = [];
+
+    for (const suggestion of suggestions) {
+      const verifiedSources: string[] = [];
+      const verificationWarnings: string[] = [];
+      let fdaApproved = false;
+
+      const drugName = suggestion.drug_name?.toLowerCase()?.trim();
+      const genericName = suggestion.generic_name?.toLowerCase()?.trim();
+
+      if (!drugName) {
+        // No drug name - cannot verify
+        validatedSuggestions.push({
+          ...suggestion,
+          verification: {
+            is_verified: false,
+            verified_sources: [],
+            fda_approved: false,
+            verification_warnings: ['Drug name is missing or empty'],
+            verified_at: new Date(),
+          },
+        });
+        continue;
+      }
+
+      // Check 1: Local Drug Inventory
+      try {
+        const localDrug = await DrugModel.findOne({
+          $or: [
+            { name: { $regex: new RegExp(`^${drugName}$`, 'i') } },
+            { generic_name: { $regex: new RegExp(`^${drugName}$`, 'i') } },
+            ...(genericName ? [
+              { name: { $regex: new RegExp(`^${genericName}$`, 'i') } },
+              { generic_name: { $regex: new RegExp(`^${genericName}$`, 'i') } },
+            ] : []),
+          ],
+          is_active: { $ne: false },
+        }).lean();
+
+        if (localDrug) {
+          verifiedSources.push('local_inventory');
+          this.logger.log(`[Fact-Check] "${drugName}" found in local inventory`);
+        }
+      } catch (error) {
+        this.logger.warn(`[Fact-Check] Error checking local inventory for "${drugName}": ${error.message}`);
+      }
+
+      // Check 2: OpenFDA Database
+      try {
+        const fdaResult = await this.openFDAService.fetchFromFDA(
+          genericName || drugName,
+          suggestion.drug_name,
+        );
+
+        if (fdaResult) {
+          verifiedSources.push('openfda');
+          fdaApproved = true;
+          this.logger.log(`[Fact-Check] "${drugName}" found in OpenFDA database`);
+
+          // Extract FDA generic/brand names for additional verification
+          const fdaGenericNames = fdaResult.openfda?.generic_name || [];
+          const fdaBrandNames = fdaResult.openfda?.brand_name || [];
+
+          if (fdaGenericNames.length > 0 || fdaBrandNames.length > 0) {
+            this.logger.log(
+              `[Fact-Check] FDA names - Generic: ${fdaGenericNames.join(', ')}, Brand: ${fdaBrandNames.join(', ')}`,
+            );
+          }
+        }
+      } catch (error) {
+        this.logger.warn(`[Fact-Check] Error checking OpenFDA for "${drugName}": ${error.message}`);
+        verificationWarnings.push('OpenFDA lookup failed - drug may still be valid');
+      }
+
+      // Determine verification status
+      const isVerified = verifiedSources.length > 0;
+
+      if (!isVerified) {
+        verificationWarnings.push(
+          `Drug "${suggestion.drug_name}" not found in local inventory or FDA database. ` +
+          `This may be an international drug name, newly approved medication, or requires verification.`,
+        );
+        this.logger.warn(`[Fact-Check] UNVERIFIED: "${drugName}" not found in any trusted database`);
+      }
+
+      validatedSuggestions.push({
+        ...suggestion,
+        verification: {
+          is_verified: isVerified,
+          verified_sources: verifiedSources,
+          fda_approved: fdaApproved,
+          verification_warnings: verificationWarnings,
+          verified_at: new Date(),
+        },
+      });
+    }
+
+    // Log summary
+    const verifiedCount = validatedSuggestions.filter(s => s.verification?.is_verified).length;
+    const unverifiedCount = validatedSuggestions.length - verifiedCount;
+    this.logger.log(
+      `[Fact-Check] Validation complete: ${verifiedCount} verified, ${unverifiedCount} unverified`,
+    );
+
+    return validatedSuggestions;
+  }
+
+  /**
+   * Build verification summary for the response
+   */
+  private buildVerificationSummary(suggestions: SuggestedMedicationDto[]): {
+    total_suggestions: number;
+    verified_count: number;
+    unverified_count: number;
+    fda_approved_count: number;
+    has_unverified_drugs: boolean;
+    warning?: string;
+  } {
+    const verifiedCount = suggestions.filter(s => s.verification?.is_verified).length;
+    const unverifiedCount = suggestions.length - verifiedCount;
+    const fdaApprovedCount = suggestions.filter(s => s.verification?.fda_approved).length;
+    const hasUnverified = unverifiedCount > 0;
+
+    let warning: string | undefined;
+    if (hasUnverified) {
+      const unverifiedNames = suggestions
+        .filter(s => !s.verification?.is_verified)
+        .map(s => s.drug_name)
+        .join(', ');
+      warning = `${unverifiedCount} drug(s) could not be verified in trusted databases: ${unverifiedNames}. ` +
+        `Please verify these medications before prescribing.`;
+    }
+
+    return {
+      total_suggestions: suggestions.length,
+      verified_count: verifiedCount,
+      unverified_count: unverifiedCount,
+      fda_approved_count: fdaApprovedCount,
+      has_unverified_drugs: hasUnverified,
+      warning,
+    };
+  }
+
+  /**
+   * Build dosage validation summary for the response
+   */
+  private buildDosageValidationSummary(suggestions: SuggestedMedicationDto[]): {
+    total_validated: number;
+    safe_count: number;
+    warning_count: number;
+    danger_count: number;
+    has_dosage_concerns: boolean;
+    warning?: string;
+  } {
+    const safeCount = suggestions.filter(s => s.dosage_validation?.status === 'safe').length;
+    const warningCount = suggestions.filter(s => s.dosage_validation?.status === 'warning').length;
+    const dangerCount = suggestions.filter(s => s.dosage_validation?.status === 'danger').length;
+    const hasConcerns = warningCount > 0 || dangerCount > 0;
+
+    let warning: string | undefined;
+    if (dangerCount > 0) {
+      const dangerDrugs = suggestions
+        .filter(s => s.dosage_validation?.status === 'danger')
+        .map(s => s.drug_name)
+        .join(', ');
+      warning = `CRITICAL: ${dangerCount} medication(s) have dosages exceeding FDA recommended limits: ${dangerDrugs}. ` +
+        `Review and adjust dosages before prescribing.`;
+    } else if (warningCount > 0) {
+      const warningDrugs = suggestions
+        .filter(s => s.dosage_validation?.status === 'warning')
+        .map(s => s.drug_name)
+        .join(', ');
+      warning = `${warningCount} medication(s) have dosage warnings: ${warningDrugs}. ` +
+        `Consider reviewing FDA guidelines for patient-specific adjustments.`;
+    }
+
+    return {
+      total_validated: suggestions.length,
+      safe_count: safeCount,
+      warning_count: warningCount,
+      danger_count: dangerCount,
+      has_dosage_concerns: hasConcerns,
+      warning,
+    };
+  }
+
+  /**
+   * Enrich suggestions with PubMed evidence citations
+   * Searches for clinical evidence for each suggested drug
+   */
+  private async enrichWithPubMedCitations(
+    suggestions: SuggestedMedicationDto[],
+    condition?: string,
+  ): Promise<SuggestedMedicationDto[]> {
+    this.logger.log(`[PubMed] Enriching ${suggestions.length} suggestions with clinical evidence`);
+
+    const enrichedSuggestions: SuggestedMedicationDto[] = [];
+
+    for (const suggestion of suggestions) {
+      const drugName = suggestion.generic_name || suggestion.drug_name;
+
+      try {
+        const evidence = await this.pubmedService.searchDrugEvidence({
+          drug_name: drugName,
+          condition: condition,
+          max_results: 3, // Top 3 citations per drug
+          sort: 'relevance',
+        });
+
+        enrichedSuggestions.push({
+          ...suggestion,
+          pubmed_citations: {
+            total_found: evidence.total_articles_found,
+            citations: evidence.citations.map(c => ({
+              pmid: c.pmid,
+              title: c.title,
+              authors_short: c.authors_short,
+              journal: c.journal_abbrev,
+              year: c.year,
+              url: c.url,
+              evidence_level: c.evidence.level,
+              relevance_score: c.relevance_score,
+            })),
+            evidence_summary: evidence.evidence_summary,
+            search_condition: condition,
+          },
+        });
+
+        if (evidence.total_articles_found > 0) {
+          this.logger.log(
+            `[PubMed] Found ${evidence.total_articles_found} articles for ${drugName} ` +
+            `(${evidence.evidence_summary.high_quality_count} high quality)`
+          );
+        }
+      } catch (error) {
+        this.logger.warn(`[PubMed] Error fetching evidence for ${drugName}: ${error.message}`);
+        // Continue without citations if PubMed fails
+        enrichedSuggestions.push({
+          ...suggestion,
+          pubmed_citations: {
+            total_found: 0,
+            citations: [],
+          },
+        });
+      }
+    }
+
+    return enrichedSuggestions;
+  }
+
+  /**
+   * Build PubMed evidence summary for the response
+   */
+  private buildPubMedEvidenceSummary(suggestions: SuggestedMedicationDto[]): {
+    total_drugs_with_evidence: number;
+    total_citations: number;
+    high_quality_evidence_count: number;
+    drugs_without_evidence: string[];
+    has_strong_evidence: boolean;
+  } {
+    const drugsWithEvidence = suggestions.filter(
+      s => s.pubmed_citations && s.pubmed_citations.total_found > 0
+    );
+    const drugsWithoutEvidence = suggestions
+      .filter(s => !s.pubmed_citations || s.pubmed_citations.total_found === 0)
+      .map(s => s.drug_name);
+
+    const totalCitations = suggestions.reduce(
+      (sum, s) => sum + (s.pubmed_citations?.citations?.length || 0),
+      0
+    );
+
+    const highQualityCount = suggestions.reduce(
+      (sum, s) => sum + (s.pubmed_citations?.evidence_summary?.high_quality_count || 0),
+      0
+    );
+
+    // Strong evidence = at least half the drugs have high-quality evidence
+    const hasStrongEvidence = highQualityCount >= Math.ceil(suggestions.length / 2);
+
+    return {
+      total_drugs_with_evidence: drugsWithEvidence.length,
+      total_citations: totalCitations,
+      high_quality_evidence_count: highQualityCount,
+      drugs_without_evidence: drugsWithoutEvidence,
+      has_strong_evidence: hasStrongEvidence,
+    };
+  }
+
+  /**
+   * Validate suggestions against NICE (UK) guidelines
+   */
+  private async validateWithNICEGuidelines(
+    suggestions: SuggestedMedicationDto[],
+    condition?: string,
+  ): Promise<{ suggestions: SuggestedMedicationDto[]; validationResults: NICEValidationResult[] }> {
+    this.logger.log(`[NICE] Validating ${suggestions.length} suggestions against UK guidelines`);
+
+    const enrichedSuggestions: SuggestedMedicationDto[] = [];
+    const validationResults: NICEValidationResult[] = [];
+
+    for (const suggestion of suggestions) {
+      const drugName = suggestion.generic_name || suggestion.drug_name;
+
+      try {
+        const validation = await this.niceService.validateDrugForCondition(drugName, condition);
+        validationResults.push(validation);
+
+        // Get the primary recommendation if any
+        const primaryRec = validation.recommendations[0];
+
+        enrichedSuggestions.push({
+          ...suggestion,
+          nice_compliance: {
+            is_compliant: validation.is_nice_compliant,
+            compliance_level: validation.compliance_level,
+            recommendation_type: primaryRec?.recommendation_type,
+            line_of_treatment: primaryRec?.line_of_treatment,
+            guideline_references: validation.guidelines_checked.map(g => ({
+              id: g.id,
+              title: g.title,
+              url: g.url,
+            })),
+            warnings: validation.warnings,
+            recommendation_text: primaryRec?.recommendation_text,
+          },
+        });
+
+        if (validation.warnings.length > 0) {
+          this.logger.warn(`[NICE] ${drugName}: ${validation.warnings.join('; ')}`);
+        } else if (validation.compliance_level === 'full') {
+          this.logger.log(`[NICE] ${drugName}: Fully compliant with NICE guidelines`);
+        }
+      } catch (error) {
+        this.logger.warn(`[NICE] Error validating ${drugName}: ${error.message}`);
+        enrichedSuggestions.push({
+          ...suggestion,
+          nice_compliance: {
+            is_compliant: true, // Assume compliant if check fails
+            compliance_level: 'unknown',
+            guideline_references: [],
+            warnings: ['Unable to validate against NICE guidelines'],
+          },
+        });
+      }
+    }
+
+    const compliantCount = validationResults.filter(r => r.is_nice_compliant).length;
+    const nonCompliantCount = validationResults.filter(r => !r.is_nice_compliant).length;
+    this.logger.log(
+      `[NICE] Validation complete: ${compliantCount} compliant, ${nonCompliantCount} non-compliant`
+    );
+
+    return { suggestions: enrichedSuggestions, validationResults };
+  }
+
+  /**
+   * Validate suggestions against BNF (British National Formulary)
+   * Provides UK-specific prescribing information
+   */
+  private async validateWithBNF(
+    suggestions: SuggestedMedicationDto[],
+    condition?: string,
+    patientContext?: PatientContext,
+  ): Promise<{ suggestions: SuggestedMedicationDto[]; validationResults: BNFValidationResult[] }> {
+    this.logger.log(`[BNF] Validating ${suggestions.length} suggestions against UK prescribing guidelines`);
+
+    const enrichedSuggestions: SuggestedMedicationDto[] = [];
+    const validationResults: BNFValidationResult[] = [];
+
+    // Determine patient population
+    const population = patientContext
+      ? patientContext.age < 18 ? 'child' : patientContext.age >= 65 ? 'elderly' : 'adult'
+      : 'adult';
+
+    for (const suggestion of suggestions) {
+      const drugName = suggestion.generic_name || suggestion.drug_name;
+
+      try {
+        const validation = await this.bnfService.validateDrug(
+          drugName,
+          condition,
+          suggestion.suggested_dosage,
+          population,
+        );
+        validationResults.push(validation);
+
+        // Get drug info for additional details
+        const drugInfo = this.bnfService.getDrugInfo(drugName);
+
+        enrichedSuggestions.push({
+          ...suggestion,
+          bnf_info: {
+            found_in_bnf: validation.found_in_bnf,
+            uk_approved: validation.uk_approved,
+            drug_class: drugInfo?.drug_class,
+            bnf_url: validation.bnf_url,
+            indications: validation.indications_checked,
+            indication_match: validation.indication_match,
+            dosage_appropriate: validation.dosage_appropriate,
+            dosage_warnings: validation.dosage_warnings,
+            cautions: validation.cautions,
+            contraindications: validation.contraindication_flags,
+            interactions: validation.interaction_alerts.map(i => ({
+              drug: i.interacting_drug,
+              severity: i.severity,
+              effect: i.effect,
+              action: i.action,
+            })),
+            side_effects: drugInfo?.side_effects ? {
+              common: drugInfo.side_effects.common,
+              uncommon: drugInfo.side_effects.uncommon,
+              rare: drugInfo.side_effects.rare,
+            } : undefined,
+            special_population_warnings: validation.special_population_warnings,
+          },
+        });
+
+        if (!validation.found_in_bnf) {
+          this.logger.warn(`[BNF] ${drugName}: Not found in BNF database`);
+        } else if (validation.dosage_warnings.length > 0) {
+          this.logger.warn(`[BNF] ${drugName}: ${validation.dosage_warnings.join('; ')}`);
+        } else {
+          this.logger.log(`[BNF] ${drugName}: Validated against BNF`);
+        }
+      } catch (error) {
+        this.logger.warn(`[BNF] Error validating ${drugName}: ${error.message}`);
+        enrichedSuggestions.push({
+          ...suggestion,
+          bnf_info: {
+            found_in_bnf: false,
+            uk_approved: false,
+            indications: [],
+            indication_match: false,
+            dosage_appropriate: true,
+            dosage_warnings: ['Unable to validate against BNF'],
+            cautions: [],
+            contraindications: [],
+            interactions: [],
+            special_population_warnings: [],
+          },
+        });
+      }
+    }
+
+    const foundCount = validationResults.filter(r => r.found_in_bnf).length;
+    const notFoundCount = validationResults.length - foundCount;
+    this.logger.log(
+      `[BNF] Validation complete: ${foundCount} found in BNF, ${notFoundCount} not found`
+    );
+
+    return { suggestions: enrichedSuggestions, validationResults };
+  }
+
+  /**
+   * Calculate evidence-based confidence scores
+   * ADJUSTS (not replaces) AI-generated confidence based on evidence
+   *
+   * Philosophy: AI confidence is the starting point, evidence adjusts it:
+   * - If evidence strongly supports: boost confidence
+   * - If evidence contradicts or is missing: reduce confidence
+   * - If no evidence data available: keep AI confidence with note
+   *
+   * Evidence adjustments (applied to AI base):
+   * - FDA approved for indication: +15%
+   * - NICE recommended: +10%
+   * - PubMed high-quality evidence: +10%
+   * - BNF listed with indication match: +5%
+   * - Off-label use: -15%
+   * - Unverified drug: -20%
+   * - Dosage concerns: -10%
+   * - NICE advises against: -20%
+   */
+  private calculateEvidenceBasedConfidence(
+    suggestions: SuggestedMedicationDto[],
+    condition?: string,
+  ): SuggestedMedicationDto[] {
+    this.logger.log(`[Evidence Confidence] Adjusting confidence with evidence for ${suggestions.length} suggestions`);
+
+    return suggestions.map(suggestion => {
+      const adjustments: Array<{ source: string; adjustment: number; reason: string }> = [];
+
+      // Keep AI confidence as the BASE - don't cap it
+      const aiConfidence = suggestion.confidence || 70;
+      let totalScore = aiConfidence;
+      let evidenceSourcesChecked = 0;
+      let evidenceSourcesFound = 0;
+
+      // Track evidence quality
+      let hasStrongEvidence = false;
+      let isOffLabel = false;
+
+      // 1. FDA Verification
+      if (suggestion.verification) {
+        evidenceSourcesChecked++;
+        if (suggestion.verification.fda_approved) {
+          adjustments.push({
+            source: 'fda_approved',
+            adjustment: 15,
+            reason: 'Drug is FDA approved',
+          });
+          totalScore += 15;
+          hasStrongEvidence = true;
+          evidenceSourcesFound++;
+        } else if (suggestion.verification.is_verified) {
+          // Found in inventory but not FDA
+          adjustments.push({
+            source: 'inventory_verified',
+            adjustment: 5,
+            reason: 'Drug verified in platform inventory',
+          });
+          totalScore += 5;
+          evidenceSourcesFound++;
+        } else if (!suggestion.verification.is_verified) {
+          // Drug not verified anywhere
+          adjustments.push({
+            source: 'unverified',
+            adjustment: -20,
+            reason: 'Drug could not be verified in trusted databases',
+          });
+          totalScore -= 20;
+        }
+      }
+
+      // 2. NICE Guidelines (if data available)
+      if (suggestion.nice_compliance) {
+        evidenceSourcesChecked++;
+        if (suggestion.nice_compliance.recommendation_type === 'recommended') {
+          adjustments.push({
+            source: 'nice_recommended',
+            adjustment: 10,
+            reason: `NICE recommends this drug${suggestion.nice_compliance.line_of_treatment === 'first_line' ? ' as first-line treatment' : ''}`,
+          });
+          totalScore += 10;
+          hasStrongEvidence = true;
+          evidenceSourcesFound++;
+        } else if (suggestion.nice_compliance.recommendation_type === 'consider') {
+          adjustments.push({
+            source: 'nice_consider',
+            adjustment: 5,
+            reason: 'NICE suggests considering this drug',
+          });
+          totalScore += 5;
+          evidenceSourcesFound++;
+        } else if (suggestion.nice_compliance.recommendation_type === 'do_not_offer') {
+          adjustments.push({
+            source: 'nice_not_recommended',
+            adjustment: -20,
+            reason: 'NICE recommends AGAINST this drug for this indication',
+          });
+          totalScore -= 20;
+        } else if (suggestion.nice_compliance.recommendation_type === 'caution') {
+          adjustments.push({
+            source: 'nice_caution',
+            adjustment: -5,
+            reason: 'NICE advises caution with this drug',
+          });
+          totalScore -= 5;
+        }
+
+        // Check for off-label use
+        if (!suggestion.nice_compliance.is_compliant && suggestion.nice_compliance.compliance_level === 'none') {
+          isOffLabel = true;
+        }
+      }
+
+      // 3. PubMed Evidence (if data available)
+      if (suggestion.pubmed_citations) {
+        evidenceSourcesChecked++;
+        if (suggestion.pubmed_citations.total_found > 0) {
+          evidenceSourcesFound++;
+          const highQualityCount = suggestion.pubmed_citations.evidence_summary?.high_quality_count || 0;
+          const moderateQualityCount = suggestion.pubmed_citations.evidence_summary?.moderate_quality_count || 0;
+
+          if (highQualityCount > 0) {
+            // Has meta-analysis or systematic review
+            adjustments.push({
+              source: 'pubmed_high_quality',
+              adjustment: 10,
+              reason: `${highQualityCount} high-quality evidence (meta-analysis/systematic review) found`,
+            });
+            totalScore += 10;
+            hasStrongEvidence = true;
+          } else if (moderateQualityCount >= 2) {
+            // Multiple RCTs
+            adjustments.push({
+              source: 'pubmed_multiple_rcts',
+              adjustment: 8,
+              reason: `${moderateQualityCount} clinical trials/RCTs found`,
+            });
+            totalScore += 8;
+            hasStrongEvidence = true;
+          } else if (moderateQualityCount === 1) {
+            adjustments.push({
+              source: 'pubmed_single_rct',
+              adjustment: 5,
+              reason: '1 clinical trial found',
+            });
+            totalScore += 5;
+          } else {
+            adjustments.push({
+              source: 'pubmed_other',
+              adjustment: 3,
+              reason: `${suggestion.pubmed_citations.citations?.length || 0} publication(s) found`,
+            });
+            totalScore += 3;
+          }
+        }
+        // Note: No penalty for no PubMed results - absence of evidence is not evidence of absence
+      }
+
+      // 4. BNF (if data available)
+      if (suggestion.bnf_info) {
+        evidenceSourcesChecked++;
+        if (suggestion.bnf_info.found_in_bnf) {
+          evidenceSourcesFound++;
+          adjustments.push({
+            source: 'bnf_listed',
+            adjustment: 5,
+            reason: 'Drug is listed in British National Formulary',
+          });
+          totalScore += 5;
+
+          // Check indication match
+          if (suggestion.bnf_info.indication_match) {
+            adjustments.push({
+              source: 'bnf_indication_match',
+              adjustment: 3,
+              reason: 'BNF confirms indication match',
+            });
+            totalScore += 3;
+          } else if (condition && !suggestion.bnf_info.indication_match) {
+            isOffLabel = true;
+          }
+        }
+      }
+
+      // 5. Off-label penalty (moderate reduction)
+      if (isOffLabel) {
+        adjustments.push({
+          source: 'off_label',
+          adjustment: -15,
+          reason: 'Off-label use - not a standard indication for this drug',
+        });
+        totalScore -= 15;
+      }
+
+      // 6. Dosage concerns
+      if (suggestion.dosage_validation?.status === 'danger') {
+        adjustments.push({
+          source: 'dosage_danger',
+          adjustment: -10,
+          reason: 'Dosage exceeds recommended limits',
+        });
+        totalScore -= 10;
+      } else if (suggestion.dosage_validation?.status === 'warning') {
+        adjustments.push({
+          source: 'dosage_warning',
+          adjustment: -5,
+          reason: 'Dosage may need adjustment for patient',
+        });
+        totalScore -= 5;
+      }
+
+      // Clamp final score between 0 and 100
+      const finalScore = Math.max(0, Math.min(100, Math.round(totalScore)));
+
+      // Determine evidence level based on final score AND evidence coverage
+      let evidenceLevel: 'very_high' | 'high' | 'moderate' | 'low' | 'very_low';
+      if (finalScore >= 85 && hasStrongEvidence) evidenceLevel = 'very_high';
+      else if (finalScore >= 70 && evidenceSourcesFound >= 2) evidenceLevel = 'high';
+      else if (finalScore >= 55) evidenceLevel = 'moderate';
+      else if (finalScore >= 35) evidenceLevel = 'low';
+      else evidenceLevel = 'very_low';
+
+      // Build evidence summary
+      const positiveSources = adjustments.filter(a => a.adjustment > 0).map(a => a.source);
+      const evidenceSummary = this.buildEvidenceSummaryText(
+        positiveSources,
+        hasStrongEvidence,
+        isOffLabel,
+        evidenceSourcesChecked,
+        evidenceSourcesFound,
+      );
+
+      // Keep BOTH original AI confidence and evidence-adjusted confidence
+      return {
+        ...suggestion,
+        confidence: finalScore, // Updated with evidence adjustments
+        evidence_confidence: {
+          final_score: finalScore,
+          base_score: aiConfidence, // Original AI confidence preserved here
+          adjustments,
+          evidence_level: evidenceLevel,
+          evidence_summary: evidenceSummary,
+          is_off_label: isOffLabel,
+          grounded_in_evidence: hasStrongEvidence,
+        },
+      };
+    });
+  }
+
+  /**
+   * Build human-readable evidence summary text
+   */
+  private buildEvidenceSummaryText(
+    sources: string[],
+    hasStrongEvidence: boolean,
+    isOffLabel: boolean,
+    sourcesChecked: number = 0,
+    sourcesFound: number = 0,
+  ): string {
+    const sourceDescriptions: Record<string, string> = {
+      'fda_approved': 'FDA approved',
+      'nice_recommended': 'NICE recommended',
+      'nice_consider': 'NICE considers appropriate',
+      'pubmed_high_quality': 'high-quality clinical evidence',
+      'pubmed_multiple_rcts': 'multiple clinical trials',
+      'pubmed_single_rct': 'clinical trial data',
+      'pubmed_other': 'published literature',
+      'bnf_listed': 'BNF listed',
+      'bnf_indication_match': 'indication confirmed',
+      'inventory_verified': 'inventory verified',
+    };
+
+    const descriptions = sources
+      .filter(s => sourceDescriptions[s])
+      .map(s => sourceDescriptions[s]);
+
+    let summary = '';
+
+    if (sourcesChecked === 0) {
+      // No evidence sources were checked - use AI confidence only
+      summary = 'Based on AI clinical reasoning (no external validation performed)';
+    } else if (sources.length === 0 && sourcesFound === 0) {
+      // Sources were checked but none had data
+      summary = 'Limited evidence available in checked databases. Use clinical judgment.';
+    } else if (hasStrongEvidence) {
+      summary = `Strong evidence: ${descriptions.slice(0, 3).join(', ')}`;
+    } else if (descriptions.length > 0) {
+      summary = `Supported by: ${descriptions.slice(0, 3).join(', ')}`;
+    } else {
+      summary = 'Moderate evidence support';
+    }
+
+    if (isOffLabel) {
+      summary += ' (off-label use)';
+    }
+
+    return summary;
+  }
+
+  /**
+   * Build overall evidence summary for response
+   */
+  private buildOverallEvidenceSummary(suggestions: SuggestedMedicationDto[]): {
+    overall_evidence_score: number;
+    overall_evidence_level: 'very_high' | 'high' | 'moderate' | 'low' | 'very_low';
+    drugs_with_strong_evidence: number;
+    drugs_with_weak_evidence: number;
+    off_label_count: number;
+    evidence_sources_used: string[];
+    confidence_methodology: string;
+  } {
+    const scores = suggestions.map(s => s.evidence_confidence?.final_score || s.confidence || 50);
+    const avgScore = scores.length > 0
+      ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
+      : 50;
+
+    let overallLevel: 'very_high' | 'high' | 'moderate' | 'low' | 'very_low';
+    if (avgScore >= 85) overallLevel = 'very_high';
+    else if (avgScore >= 70) overallLevel = 'high';
+    else if (avgScore >= 50) overallLevel = 'moderate';
+    else if (avgScore >= 30) overallLevel = 'low';
+    else overallLevel = 'very_low';
+
+    const strongEvidence = suggestions.filter(s =>
+      s.evidence_confidence?.evidence_level === 'high' ||
+      s.evidence_confidence?.evidence_level === 'very_high'
+    ).length;
+
+    const weakEvidence = suggestions.filter(s =>
+      s.evidence_confidence?.evidence_level === 'low' ||
+      s.evidence_confidence?.evidence_level === 'very_low'
+    ).length;
+
+    const offLabelCount = suggestions.filter(s => s.evidence_confidence?.is_off_label).length;
+
+    // Collect all evidence sources used
+    const sourcesSet = new Set<string>();
+    for (const suggestion of suggestions) {
+      if (suggestion.verification?.fda_approved) sourcesSet.add('FDA');
+      if (suggestion.nice_compliance?.is_compliant) sourcesSet.add('NICE');
+      if (suggestion.pubmed_citations?.total_found) sourcesSet.add('PubMed');
+      if (suggestion.bnf_info?.found_in_bnf) sourcesSet.add('BNF');
+    }
+
+    return {
+      overall_evidence_score: avgScore,
+      overall_evidence_level: overallLevel,
+      drugs_with_strong_evidence: strongEvidence,
+      drugs_with_weak_evidence: weakEvidence,
+      off_label_count: offLabelCount,
+      evidence_sources_used: Array.from(sourcesSet),
+      confidence_methodology: 'AI confidence adjusted by evidence: FDA approval (+15), NICE recommendation (+10), ' +
+        'PubMed high-quality evidence (+10), clinical trials (+5-8), BNF listing (+5), ' +
+        'off-label use (-15), unverified drugs (-20), dosage concerns (-5 to -10). ' +
+        'Original AI confidence preserved when no evidence data available.',
+    };
+  }
+
+  /**
+   * Dosage Validation: Check if suggested dosages are within FDA-recommended ranges
+   * Validates against patient age, weight, and any organ impairment
+   */
+  private async validateDosages(
+    suggestions: SuggestedMedicationDto[],
+    patientContext: PatientContext,
+  ): Promise<SuggestedMedicationDto[]> {
+    this.logger.log(`[Dosage Validation] Validating dosages for ${suggestions.length} suggestions`);
+
+    const DrugSafetyModel = this.userModel.db.model('DrugSafetyInfo');
+    const validatedSuggestions: SuggestedMedicationDto[] = [];
+
+    for (const suggestion of suggestions) {
+      const dosageWarnings: string[] = [];
+      let dosageStatus: 'safe' | 'warning' | 'danger' = 'safe';
+      let fdaDosageInfo: any = null;
+
+      const drugName = suggestion.generic_name || suggestion.drug_name;
+
+      try {
+        // Fetch FDA dosage information
+        const safetyInfo = await DrugSafetyModel.findOne({
+          $or: [
+            { generic_name: { $regex: new RegExp(`^${drugName}$`, 'i') } },
+            { brand_name: { $regex: new RegExp(`^${suggestion.drug_name}$`, 'i') } },
+          ],
+        }).lean();
+
+        if (safetyInfo?.parsed_dosage) {
+          fdaDosageInfo = safetyInfo.parsed_dosage;
+
+          // Determine which dosage guidelines to use based on patient age
+          const age = patientContext.age;
+          let applicableDosage: any = null;
+
+          if (age < 18 && fdaDosageInfo.pediatric) {
+            applicableDosage = fdaDosageInfo.pediatric;
+            this.logger.log(`[Dosage Validation] Using pediatric dosage for ${drugName}`);
+          } else if (age >= 65 && fdaDosageInfo.geriatric) {
+            applicableDosage = fdaDosageInfo.geriatric;
+            this.logger.log(`[Dosage Validation] Using geriatric dosage for ${drugName}`);
+          } else if (fdaDosageInfo.adult) {
+            applicableDosage = fdaDosageInfo.adult;
+            this.logger.log(`[Dosage Validation] Using adult dosage for ${drugName}`);
+          }
+
+          if (applicableDosage) {
+            // Parse suggested dosage to compare
+            const suggestedDoseMatch = suggestion.suggested_dosage?.match(/(\d+(?:\.\d+)?)\s*(mg|mcg|g|ml|units?)/i);
+            if (suggestedDoseMatch) {
+              const suggestedValue = parseFloat(suggestedDoseMatch[1]);
+              const suggestedUnit = suggestedDoseMatch[2].toLowerCase();
+
+              // Check against max dose
+              if (applicableDosage.max_dose) {
+                const maxMatch = applicableDosage.max_dose.match(/(\d+(?:\.\d+)?)/);
+                if (maxMatch) {
+                  const maxValue = parseFloat(maxMatch[1]);
+                  if (suggestedValue > maxValue) {
+                    dosageWarnings.push(
+                      `Suggested dose (${suggestion.suggested_dosage}) exceeds FDA maximum of ${applicableDosage.max_dose}`,
+                    );
+                    dosageStatus = 'danger';
+                  }
+                }
+              }
+
+              // Check against max daily dose
+              if (applicableDosage.max_daily_dose) {
+                const maxDailyMatch = applicableDosage.max_daily_dose.match(/(\d+(?:\.\d+)?)/);
+                if (maxDailyMatch) {
+                  const maxDailyValue = parseFloat(maxDailyMatch[1]);
+                  // Estimate daily dose based on frequency
+                  const frequency = suggestion.suggested_frequency?.toLowerCase() || '';
+                  let multiplier = 1;
+                  if (frequency.includes('twice') || frequency.includes('bid') || frequency.includes('2 times')) {
+                    multiplier = 2;
+                  } else if (frequency.includes('three') || frequency.includes('tid') || frequency.includes('3 times')) {
+                    multiplier = 3;
+                  } else if (frequency.includes('four') || frequency.includes('qid') || frequency.includes('4 times')) {
+                    multiplier = 4;
+                  }
+
+                  const estimatedDaily = suggestedValue * multiplier;
+                  if (estimatedDaily > maxDailyValue) {
+                    dosageWarnings.push(
+                      `Estimated daily dose (~${estimatedDaily}${suggestedUnit}) may exceed FDA maximum daily dose of ${applicableDosage.max_daily_dose}`,
+                    );
+                    if (dosageStatus !== 'danger') dosageStatus = 'warning';
+                  }
+                }
+              }
+
+              // For pediatric, check weight-based dosing
+              if (age < 18 && applicableDosage.dose_per_kg && patientContext.weight) {
+                const perKgMatch = applicableDosage.dose_per_kg.match(/(\d+(?:\.\d+)?)/);
+                if (perKgMatch) {
+                  const perKgValue = parseFloat(perKgMatch[1]);
+                  const weightBasedMax = perKgValue * patientContext.weight;
+                  if (suggestedValue > weightBasedMax * 1.2) { // 20% tolerance
+                    dosageWarnings.push(
+                      `Suggested pediatric dose may exceed weight-based maximum (${perKgValue}mg/kg × ${patientContext.weight}kg = ${weightBasedMax.toFixed(1)}mg)`,
+                    );
+                    if (dosageStatus !== 'danger') dosageStatus = 'warning';
+                  }
+                }
+              }
+            }
+          }
+
+          // Check for renal impairment warnings if patient has kidney conditions
+          const hasRenalIssues = patientContext.chronic_conditions.some(c =>
+            /kidney|renal|ckd|dialysis/i.test(c),
+          );
+          if (hasRenalIssues && fdaDosageInfo.renal_impairment?.notes) {
+            dosageWarnings.push(
+              `Patient has renal condition - FDA notes: ${fdaDosageInfo.renal_impairment.notes.substring(0, 200)}...`,
+            );
+            if (dosageStatus === 'safe') dosageStatus = 'warning';
+          }
+
+          // Check for hepatic impairment warnings if patient has liver conditions
+          const hasHepaticIssues = patientContext.chronic_conditions.some(c =>
+            /liver|hepatic|cirrhosis|hepatitis/i.test(c),
+          );
+          if (hasHepaticIssues && fdaDosageInfo.hepatic_impairment?.notes) {
+            dosageWarnings.push(
+              `Patient has hepatic condition - FDA notes: ${fdaDosageInfo.hepatic_impairment.notes.substring(0, 200)}...`,
+            );
+            if (dosageStatus === 'safe') dosageStatus = 'warning';
+          }
+        }
+      } catch (error) {
+        this.logger.warn(`[Dosage Validation] Error validating dosage for ${drugName}: ${error.message}`);
+      }
+
+      // Add dosage validation to suggestion
+      validatedSuggestions.push({
+        ...suggestion,
+        dosage_validation: {
+          status: dosageStatus,
+          fda_dosage_info: fdaDosageInfo ? {
+            adult: fdaDosageInfo.adult,
+            pediatric: fdaDosageInfo.pediatric,
+            geriatric: fdaDosageInfo.geriatric,
+          } : undefined,
+          warnings: dosageWarnings,
+          validated_for_patient: {
+            age: patientContext.age,
+            weight: patientContext.weight,
+            population: patientContext.age < 18 ? 'pediatric' : patientContext.age >= 65 ? 'geriatric' : 'adult',
+          },
+          validated_at: new Date(),
+        },
+      });
+
+      if (dosageWarnings.length > 0) {
+        this.logger.warn(`[Dosage Validation] ${drugName}: ${dosageWarnings.join('; ')}`);
+      }
+    }
+
+    const dangerCount = validatedSuggestions.filter(s => s.dosage_validation?.status === 'danger').length;
+    const warningCount = validatedSuggestions.filter(s => s.dosage_validation?.status === 'warning').length;
+    this.logger.log(
+      `[Dosage Validation] Complete: ${dangerCount} danger, ${warningCount} warnings, ${validatedSuggestions.length - dangerCount - warningCount} safe`,
+    );
+
+    return validatedSuggestions;
   }
 
   /**
@@ -2176,10 +3605,13 @@ Analyze each proposed drug for safety issues and provide your assessment.`;
 
     // Transform the results for the response
     const transformedAnalyses = analyses.map((analysis: any) => {
+      const isStandalone = analysis.analysis_type === 'standalone' || !analysis.patient_id;
       const patientProfile = analysis.patient_id?.profile;
-      const patientName = patientProfile
-        ? `${patientProfile.first_name || ''} ${patientProfile.last_name || ''}`.trim()
-        : 'Unknown';
+      const patientName = isStandalone
+        ? (analysis.standalone_context?.subject_name || analysis.standalone_context?.diagnosis || 'Standalone Analysis')
+        : patientProfile
+          ? `${patientProfile.first_name || ''} ${patientProfile.last_name || ''}`.trim()
+          : 'Unknown';
 
       // Normalize confidence score (if stored as 85, convert to 0.85)
       let confidenceScore = analysis.confidence_score;
@@ -2194,13 +3626,20 @@ Analyze each proposed drug for safety issues and provide your assessment.`;
 
       return {
         _id: analysis._id,
+        analysis_type: analysis.analysis_type || 'prescription',
         // Flat patient_name for easy frontend access
         patient_name: patientName,
-        patient: {
+        patient: isStandalone ? null : {
           _id: analysis.patient_id?._id || analysis.patient_id,
           name: patientName,
           profile_image: patientProfile?.profile_image,
         },
+        // Standalone context for frontend display
+        standalone_context: analysis.standalone_context || null,
+        clinical_context: analysis.standalone_context ? {
+          diagnosis: analysis.standalone_context.diagnosis,
+          subject_name: analysis.standalone_context.subject_name,
+        } : null,
         // Flat prescription_id for frontend navigation
         prescription_id: prescriptionId,
         drugs_analyzed: analysis.drugs_analyzed?.map((d: any) => ({
@@ -2260,10 +3699,17 @@ Analyze each proposed drug for safety issues and provide your assessment.`;
     }
 
     // Transform the result
+    const isStandalone = (analysis as any).analysis_type === 'standalone' || !analysis.patient_id;
     const patientProfile = (analysis as any).patient_id?.profile;
     return {
       _id: analysis._id,
-      patient: {
+      analysis_type: (analysis as any).analysis_type || 'prescription',
+      standalone_context: (analysis as any).standalone_context || null,
+      clinical_context: (analysis as any).standalone_context ? {
+        diagnosis: (analysis as any).standalone_context.diagnosis,
+        subject_name: (analysis as any).standalone_context.subject_name,
+      } : null,
+      patient: isStandalone ? null : {
         _id: (analysis as any).patient_id?._id || analysis.patient_id,
         name: patientProfile
           ? `${patientProfile.first_name || ''} ${patientProfile.last_name || ''}`.trim()

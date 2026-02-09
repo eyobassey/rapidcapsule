@@ -88,6 +88,7 @@ import {
 	HiChevronUp,
 	HiChevronDown,
 	HiBeaker,
+	HiAdjustments,
 	// Dashboard icons
 	HiClipboardCheck,
 	HiChartBar,
@@ -235,6 +236,9 @@ import {
 	// Active Sessions icons
 	HiLogout,
 	HiDeviceTablet,
+	// RxGPT icons
+	BiRobot,
+	BiCoin,
 } from "oh-vue-icons/icons";
 addIcons(
 	BiCreditCard2Back,
@@ -280,6 +284,9 @@ addIcons(
 	// Health Checkup UI icons
 	FaHeartbeat,
 	FaRobot,
+	// RxGPT icons
+	BiRobot,
+	BiCoin,
 	HiClipboardList,
 	HiCheckCircle,
 	HiArrowRight,
@@ -311,6 +318,7 @@ addIcons(
 	HiChevronUp,
 	HiChevronDown,
 	HiBeaker,
+	HiAdjustments,
 	// Dashboard icons
 	HiClipboardCheck,
 	HiChartBar,

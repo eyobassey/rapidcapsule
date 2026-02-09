@@ -817,6 +817,33 @@ const apiFactory = {
   },
 
   /**
+   * Standalone RxGPT analysis - works without patient ID
+   * @param {Object} payload - { diagnosis, treatment_goal, patient_context, proposed_drugs, max_suggestions, symptoms }
+   * @returns {Promise} - Full analysis with suggestions and verification
+   */
+  $_rxgptStandaloneAnalyze(payload) {
+    return http.post("/pharmacy/rxgpt/standalone-analyze", payload);
+  },
+
+  /**
+   * Check drug interactions (standalone, no credits charged)
+   * @param {Object} payload - { drugs: [{ name, dose?, route? }] }
+   * @returns {Promise} - Detailed interaction results
+   */
+  $_rxgptCheckInteractions(payload) {
+    return http.post("/pharmacy/rxgpt/check-interactions", payload);
+  },
+
+  /**
+   * Get a specific RxGPT analysis by ID
+   * @param {string} id - Analysis ID
+   * @returns {Promise} - Full analysis details
+   */
+  $_getRxGPTAnalysisById(id) {
+    return http.get(`/pharmacy/rxgpt/history/${id}`);
+  },
+
+  /**
    * Get RxGPT analysis history for a prescription
    * @param {string} prescriptionId - The prescription ID
    * @returns {Promise} - RxGPT analysis history for the prescription

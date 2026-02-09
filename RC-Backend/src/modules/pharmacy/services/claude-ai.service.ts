@@ -844,6 +844,156 @@ If no interactions are found, return: {"interactions": []}`;
     }
   }
 
+  /**
+   * Enhanced drug interaction check — returns rich clinical data
+   * Used by the standalone Interaction Checker page
+   */
+  async checkDrugInteractionsDetailed(
+    drugs: Array<{ name: string; dose?: string; route?: string }>,
+  ): Promise<{
+    hasInteractions: boolean;
+    interactions: Array<{
+      severity: 'major' | 'moderate' | 'minor';
+      drug1: string;
+      drug2: string;
+      description: string;
+      mechanism: string;
+      enzyme_involved?: string;
+      clinical_significance: {
+        risk_level: 'major' | 'moderate' | 'minor';
+        onset: string;
+        documentation: string;
+        primary_risk: string;
+      };
+      management: Array<{
+        type: 'dose_adjustment' | 'monitoring' | 'patient_education' | 'alternative' | 'general';
+        title: string;
+        detail: string;
+      }>;
+      monitoring: Array<{ test: string; detail: string }>;
+      alternatives: Array<{ suggestion: string; detail: string }>;
+      source: string;
+    }>;
+    summary: string;
+  }> {
+    if (!this.isAvailable()) {
+      this.logger.warn('Claude AI not available for detailed interaction check');
+      return { hasInteractions: false, interactions: [], summary: '' };
+    }
+
+    if (!drugs || drugs.length < 2) {
+      return { hasInteractions: false, interactions: [], summary: '' };
+    }
+
+    const drugList = drugs.map(d => {
+      let s = d.name;
+      if (d.dose) s += ` ${d.dose}`;
+      if (d.route) s += ` (${d.route})`;
+      return s;
+    }).join(', ');
+
+    try {
+      const prompt = `Analyze potential drug interactions between these medications: ${drugList}
+
+For EACH pair of drugs that may interact, provide comprehensive clinical interaction data.
+
+Respond with ONLY a valid JSON object (no markdown, no explanation) in this exact format:
+{
+  "interactions": [
+    {
+      "drug1": "Drug Name 1",
+      "drug2": "Drug Name 2",
+      "severity": "major" | "moderate" | "minor",
+      "description": "Clear explanation of the interaction",
+      "mechanism": "Pharmacological mechanism (e.g., CYP3A4 inhibition)",
+      "enzyme_involved": "Specific enzyme if applicable (e.g., CYP3A4) or null",
+      "clinical_significance": {
+        "risk_level": "major" | "moderate" | "minor",
+        "onset": "e.g., Delayed (days to weeks) or Rapid (hours)",
+        "documentation": "Well-established | Probable | Suspected | Possible",
+        "primary_risk": "e.g., Myopathy, rhabdomyolysis"
+      },
+      "management": [
+        { "type": "dose_adjustment|monitoring|patient_education|alternative|general", "title": "Short title", "detail": "Specific guidance" }
+      ],
+      "monitoring": [
+        { "test": "Test name", "detail": "When and how to monitor" }
+      ],
+      "alternatives": [
+        { "suggestion": "Alternative drug or approach", "detail": "Why this is a good alternative" }
+      ]
+    }
+  ],
+  "summary": "One-paragraph overall clinical assessment of this drug combination"
+}
+
+Severity guidelines:
+- "major": Life-threatening or serious adverse effects, generally avoid combination or use with extreme caution
+- "moderate": May cause significant problems, monitor closely or consider alternatives
+- "minor": Minor interaction, usually manageable with standard monitoring
+
+If no clinically significant interactions are found, return: {"interactions": [], "summary": "No clinically significant interactions identified between these medications."}`;
+
+      const response = await this.client!.messages.create({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4000,
+        system: 'You are a clinical pharmacology expert specialising in drug interactions. Provide accurate, evidence-based interaction analysis. Only report known, documented interactions — do not speculate. Include specific clinical guidance for each interaction.',
+        messages: [{ role: 'user', content: prompt }],
+      });
+
+      const textContent = response.content.find(
+        (block) => block.type === 'text',
+      );
+      if (!textContent || textContent.type !== 'text') {
+        throw new Error('No text response from Claude');
+      }
+
+      let jsonStr = textContent.text.trim();
+      if (jsonStr.startsWith('```json')) jsonStr = jsonStr.slice(7);
+      if (jsonStr.startsWith('```')) jsonStr = jsonStr.slice(3);
+      if (jsonStr.endsWith('```')) jsonStr = jsonStr.slice(0, -3);
+
+      const parsed = JSON.parse(jsonStr.trim());
+      const interactions = (parsed.interactions || []).map((i: any) => ({
+        severity: i.severity || 'moderate',
+        drug1: i.drug1,
+        drug2: i.drug2,
+        description: i.description || '',
+        mechanism: i.mechanism || '',
+        enzyme_involved: i.enzyme_involved || null,
+        clinical_significance: {
+          risk_level: i.clinical_significance?.risk_level || i.severity || 'moderate',
+          onset: i.clinical_significance?.onset || 'Variable',
+          documentation: i.clinical_significance?.documentation || 'Probable',
+          primary_risk: i.clinical_significance?.primary_risk || i.description || '',
+        },
+        management: (i.management || []).map((m: any) => ({
+          type: m.type || 'general',
+          title: m.title || '',
+          detail: m.detail || '',
+        })),
+        monitoring: (i.monitoring || []).map((m: any) => ({
+          test: m.test || '',
+          detail: m.detail || '',
+        })),
+        alternatives: (i.alternatives || []).map((a: any) => ({
+          suggestion: a.suggestion || '',
+          detail: a.detail || '',
+        })),
+        source: 'Claude AI',
+      }));
+
+      return {
+        hasInteractions: interactions.length > 0,
+        interactions,
+        summary: parsed.summary || '',
+      };
+    } catch (error) {
+      this.logger.error('Error checking detailed drug interactions:', error);
+      return { hasInteractions: false, interactions: [], summary: '' };
+    }
+  }
+
   private parseSafetySummaryResponse(responseText: string): DrugSafetySummary {
     try {
       let jsonStr = responseText.trim();

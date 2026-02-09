@@ -101,6 +101,10 @@ export class RxGPTAdminService {
         use_openfda: true,
         use_claude_ai: true,
         use_local_drug_db: true,
+        use_pubmed: true,
+        use_nice_guidelines: false,
+        use_bnf: false,
+        use_hallucination_detection: true,
       },
       thresholds: {
         min_confidence_score: 70,

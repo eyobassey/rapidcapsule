@@ -22,10 +22,16 @@ interface FDALabelResult {
   geriatric_use?: string[];
   pediatric_use?: string[];
   overdosage?: string[];
+  // Dosage information
+  dosage_and_administration?: string[];
+  dosage_forms_and_strengths?: string[];
+  indications_and_usage?: string[];
   openfda?: {
     generic_name?: string[];
     brand_name?: string[];
     spl_id?: string[];
+    route?: string[];  // e.g., "ORAL", "TOPICAL"
+    dosage_form?: string[]; // e.g., "TABLET", "CAPSULE"
   };
 }
 
@@ -73,7 +79,7 @@ function getAlternateNames(drugName: string): string[] {
 export class OpenFDAService {
   private readonly logger = new Logger(OpenFDAService.name);
   private readonly FDA_LABEL_API = 'https://api.fda.gov/drug/label.json';
-  private readonly SYNC_INTERVAL_DAYS = 30;
+  private readonly SYNC_INTERVAL_DAYS = 1; // Daily sync for up-to-date FDA data
   private readonly MAX_RETRIES = 3;
 
   constructor(
@@ -234,6 +240,142 @@ export class OpenFDAService {
   }
 
   /**
+   * Parse dosage information from FDA text using AI
+   * Extracts structured dosage data for adult, pediatric, geriatric, and impairment adjustments
+   */
+  private async parseDosageWithAI(
+    dosageText: string | string[] | undefined,
+    pediatricText: string | string[] | undefined,
+    geriatricText: string | string[] | undefined,
+    drugName: string,
+  ): Promise<Record<string, any>> {
+    // If no dosage text, return empty object
+    if (!dosageText && !pediatricText && !geriatricText) {
+      return {};
+    }
+
+    try {
+      const dosageStr = Array.isArray(dosageText) ? dosageText.join(' ') : (dosageText || '');
+      const pediatricStr = Array.isArray(pediatricText) ? pediatricText.join(' ') : (pediatricText || '');
+      const geriatricStr = Array.isArray(geriatricText) ? geriatricText.join(' ') : (geriatricText || '');
+
+      // Use regex patterns to extract common dosage patterns
+      const parsedDosage: Record<string, any> = {};
+
+      // Extract adult dosage patterns
+      const adultDosage = this.extractDosagePatterns(dosageStr, 'adult');
+      if (Object.keys(adultDosage).length > 0) {
+        parsedDosage.adult = adultDosage;
+      }
+
+      // Extract pediatric dosage patterns
+      const pediatricDosage = this.extractDosagePatterns(pediatricStr || dosageStr, 'pediatric');
+      if (Object.keys(pediatricDosage).length > 0) {
+        parsedDosage.pediatric = pediatricDosage;
+      }
+
+      // Extract geriatric dosage patterns
+      const geriatricDosage = this.extractDosagePatterns(geriatricStr || dosageStr, 'geriatric');
+      if (Object.keys(geriatricDosage).length > 0) {
+        parsedDosage.geriatric = geriatricDosage;
+      }
+
+      // Extract renal impairment info
+      const renalMatch = dosageStr.match(/renal\s+impairment[:\s]*(.*?)(?=hepatic|$)/is);
+      if (renalMatch) {
+        parsedDosage.renal_impairment = {
+          notes: this.cleanFDAText(renalMatch[1]).substring(0, 500),
+        };
+      }
+
+      // Extract hepatic impairment info
+      const hepaticMatch = dosageStr.match(/hepatic\s+impairment[:\s]*(.*?)(?=renal|$)/is);
+      if (hepaticMatch) {
+        parsedDosage.hepatic_impairment = {
+          notes: this.cleanFDAText(hepaticMatch[1]).substring(0, 500),
+        };
+      }
+
+      return parsedDosage;
+    } catch (error) {
+      this.logger.warn(`Failed to parse dosage for ${drugName}: ${error.message}`);
+      return {};
+    }
+  }
+
+  /**
+   * Extract dosage patterns from text using regex
+   */
+  private extractDosagePatterns(text: string, population: 'adult' | 'pediatric' | 'geriatric'): Record<string, any> {
+    const result: Record<string, any> = {};
+
+    if (!text) return result;
+
+    // Common dosage pattern: "25 mg to 50 mg" or "25-50 mg" or "25 mg once daily"
+    const doseRangePattern = /(\d+(?:\.\d+)?)\s*(?:mg|mcg|g|ml|units?)(?:\s*(?:to|-)\s*(\d+(?:\.\d+)?)\s*(?:mg|mcg|g|ml|units?))?/gi;
+    const doses: string[] = [];
+    let match;
+
+    while ((match = doseRangePattern.exec(text)) !== null) {
+      doses.push(match[0]);
+    }
+
+    if (doses.length > 0) {
+      // Try to identify min and max doses
+      const numericDoses = doses.map(d => {
+        const num = parseFloat(d.replace(/[^\d.]/g, ''));
+        return { dose: d, value: num };
+      }).sort((a, b) => a.value - b.value);
+
+      if (numericDoses.length >= 2) {
+        result.min_dose = numericDoses[0].dose;
+        result.max_dose = numericDoses[numericDoses.length - 1].dose;
+      } else if (numericDoses.length === 1) {
+        result.typical_dose = numericDoses[0].dose;
+      }
+    }
+
+    // Extract frequency patterns
+    const frequencyPattern = /(?:once|twice|three times|four times|every\s+\d+\s+hours?|daily|weekly|monthly|(?:q|every)\s*\d+h?)/i;
+    const freqMatch = text.match(frequencyPattern);
+    if (freqMatch) {
+      result.frequency = freqMatch[0];
+    }
+
+    // Extract maximum daily dose
+    const maxDailyPattern = /max(?:imum)?\s*(?:daily)?\s*(?:dose)?[:\s]*(\d+(?:\.\d+)?)\s*(?:mg|mcg|g|ml|units?)/i;
+    const maxDailyMatch = text.match(maxDailyPattern);
+    if (maxDailyMatch) {
+      result.max_daily_dose = maxDailyMatch[0];
+    }
+
+    // For pediatric, look for weight-based dosing
+    if (population === 'pediatric') {
+      const weightPattern = /(\d+(?:\.\d+)?)\s*(?:mg|mcg)\/kg/i;
+      const weightMatch = text.match(weightPattern);
+      if (weightMatch) {
+        result.dose_per_kg = weightMatch[0];
+      }
+
+      // Look for age restrictions
+      const agePattern = /(?:children|pediatric|patients?)\s*(?:aged?|over|under)?\s*(\d+)\s*(?:years?|months?)/i;
+      const ageMatch = text.match(agePattern);
+      if (ageMatch) {
+        result.min_age = ageMatch[0];
+      }
+    }
+
+    // Extract route if mentioned
+    const routePattern = /\b(oral(?:ly)?|intravenous(?:ly)?|intramuscular(?:ly)?|subcutaneous(?:ly)?|topical(?:ly)?|rectal(?:ly)?)\b/i;
+    const routeMatch = text.match(routePattern);
+    if (routeMatch) {
+      result.route = routeMatch[0];
+    }
+
+    return result;
+  }
+
+  /**
    * Sync safety info for a single drug
    */
   async syncDrugSafetyInfo(
@@ -296,6 +438,17 @@ export class OpenFDAService {
         geriatric_use: this.parseTextToArray(fdaData.geriatric_use),
         pediatric_use: this.parseTextToArray(fdaData.pediatric_use),
         overdosage: this.parseTextToArray(fdaData.overdosage),
+        // Dosage information
+        dosage_and_administration: this.parseTextToArray(fdaData.dosage_and_administration),
+        dosage_forms_and_strengths: this.parseTextToArray(fdaData.dosage_forms_and_strengths),
+        indications_and_usage: this.parseTextToArray(fdaData.indications_and_usage),
+        // Parse structured dosage info using AI
+        parsed_dosage: await this.parseDosageWithAI(
+          fdaData.dosage_and_administration,
+          fdaData.pediatric_use,
+          fdaData.geriatric_use,
+          genericName,
+        ),
       };
 
       const updateData = {

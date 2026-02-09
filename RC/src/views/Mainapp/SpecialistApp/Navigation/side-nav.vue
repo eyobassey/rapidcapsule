@@ -23,6 +23,18 @@
 						<p>Setup Dashboard</p>
 					</router-link>
 
+					<router-link
+						class="nav__item nav__item--parent"
+						:class="{ 'active__parent': getRoute === '/app/specialist/specialist-dashboard' }"
+						to="/app/specialist/specialist-dashboard"
+						@click="$emit('closeSideNav')"
+					>
+						<div class="nav__item--icon-main icon-vue">
+							<v-icon name="hi-solid-home" scale="1.1" />
+						</div>
+						<p>Main Dashboard</p>
+					</router-link>
+
 					<div
 						class="nav__item nav__item--parent disabled"
 						v-for="item in disabledNavItems"
@@ -196,6 +208,17 @@ export default {
 					icon: "pill",
 					isExpanded: false
 				},
+				{
+					link: "",
+					label: "RxGPT AI",
+					children: [
+						{ link: "/app/specialist/rxgpt", label: "Quick Analysis" },
+						{ link: "/app/specialist/rxgpt/interactions", label: "Interaction Checker" },
+						{ link: "/app/specialist/rxgpt/history", label: "My Analyses" }
+					],
+					icon: "stethoscope",
+					isExpanded: false
+				},
 			],
 			secondaryNav: [
 				{
@@ -251,18 +274,27 @@ export default {
 		},
 
 		isOnboardingComplete() {
+			// 1. Check backend flag (set when specialist activates practice)
 			if (this.userprofile?.onboarding_completed) {
 				return true;
 			}
+
+			// 2. Check localStorage (works for current device session)
 			const saved = localStorage.getItem('specialist_onboarding_state');
 			if (saved) {
 				try {
 					const state = JSON.parse(saved);
-					return state.stepCompletion?.review === true;
-				} catch (e) {
-					return false;
-				}
+					if (state.stepCompletion?.review === true) return true;
+				} catch (e) {}
 			}
+
+			// 3. Infer from user profile data (cross-device fallback)
+			// If specialist has professional practice + verification docs submitted, they're past onboarding
+			const profile = this.userprofile;
+			if (profile?.professional_practice?.category && profile?.identity_verification?.medical_license?.license_number) {
+				return true;
+			}
+
 			return false;
 		},
 

@@ -12,6 +12,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { RxGPTService } from '../services/rxgpt.service';
+import { ClaudeAIService } from '../services/claude-ai.service';
 import {
   RxGPTAnalyzeDto,
   RxGPTQuickCheckDto,
@@ -19,6 +20,7 @@ import {
   RxGPTAnalyticsQueryDto,
   SubmitRxGPTFeedbackDto,
   RxGPTSuggestMedicationsDto,
+  RxGPTStandaloneAnalyzeDto,
 } from '../dto/rxgpt.dto';
 import { sendSuccessResponse } from '../../../core/responses/success.responses';
 import { Messages } from '../../../core/messages/messages';
@@ -27,7 +29,10 @@ import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 @Controller('pharmacy/rxgpt')
 @UseGuards(JwtAuthGuard)
 export class RxGPTController {
-  constructor(private readonly rxgptService: RxGPTService) {}
+  constructor(
+    private readonly rxgptService: RxGPTService,
+    private readonly claudeAIService: ClaudeAIService,
+  ) {}
 
   // ============ SPECIALIST ENDPOINTS ============
 
@@ -77,6 +82,57 @@ export class RxGPTController {
 
     const result = await this.rxgptService.suggestMedications(dto, req.user.sub);
     return sendSuccessResponse('Medication suggestions generated', result);
+  }
+
+  /**
+   * Standalone analysis - works without a patient ID
+   * Accepts inline patient demographics + diagnosis for quick analysis
+   */
+  @Post('standalone-analyze')
+  async standaloneAnalyze(
+    @Body() dto: RxGPTStandaloneAnalyzeDto,
+    @Request() req: any,
+  ) {
+    if (req.user?.user_type !== 'Specialist') {
+      throw new ForbiddenException('Only specialists can use RxGPT');
+    }
+
+    const result = await this.rxgptService.standaloneAnalyze(dto, req.user.sub);
+    return sendSuccessResponse('Standalone analysis completed', result);
+  }
+
+  /**
+   * Standalone drug interaction checker
+   * Accepts drug names directly — charges 1 credit per check
+   */
+  @Post('check-interactions')
+  async checkInteractions(
+    @Body('drugs') drugs: Array<{ name: string; dose?: string; route?: string }>,
+    @Request() req: any,
+  ) {
+    if (req.user?.user_type !== 'Specialist') {
+      throw new ForbiddenException('Only specialists can use the interaction checker');
+    }
+
+    if (!drugs || drugs.length < 2) {
+      return sendSuccessResponse('At least two drugs are required', {
+        hasInteractions: false,
+        interactions: [],
+        summary: 'Please provide at least two medications to check for interactions.',
+      });
+    }
+
+    // Deduct 1 credit
+    const creditResult = await this.rxgptService.consumeInteractionCheckCredit(req.user.sub);
+    if (!creditResult.success) {
+      throw new ForbiddenException('Insufficient credits. You need at least 1 credit to run an interaction check.');
+    }
+
+    const result = await this.claudeAIService.checkDrugInteractionsDetailed(drugs);
+    return sendSuccessResponse('Interaction check completed', {
+      ...result,
+      credits_remaining: creditResult.remaining,
+    });
   }
 
   /**

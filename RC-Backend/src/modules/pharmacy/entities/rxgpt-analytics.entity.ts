@@ -41,11 +41,24 @@ export class RxGPTAnalytics {
   @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true })
   specialist_id: Types.ObjectId;
 
-  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true })
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true })
   patient_id: Types.ObjectId;
 
   @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'SpecialistPrescription' })
   prescription_id: Types.ObjectId;
+
+  // ============ ANALYSIS TYPE ============
+
+  @Prop({ type: String, enum: ['prescription', 'standalone'], default: 'prescription' })
+  analysis_type: string;
+
+  @Prop({ type: mongoose.Schema.Types.Mixed })
+  standalone_context: {
+    diagnosis?: string;
+    treatment_goal?: string;
+    patient_context?: any;
+    symptoms?: string[];
+  };
 
   // ============ ANALYSIS CONTEXT ============
 
@@ -124,7 +137,7 @@ export class RxGPTAnalytics {
   @Prop({ type: String, required: true })
   ai_model: string;
 
-  @Prop({ type: Number, required: true })
+  @Prop({ type: Number, default: 0 })
   tokens_used: number;
 
   @Prop({ type: Number, required: true })

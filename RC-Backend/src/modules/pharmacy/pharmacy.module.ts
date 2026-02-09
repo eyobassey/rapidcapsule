@@ -88,6 +88,10 @@ import { OpenFDAService } from './services/openfda.service';
 import { DrugInteractionService } from './services/drug-interaction.service';
 import { OrderConfirmationPdfService } from './services/order-confirmation-pdf.service';
 import { RxGPTService } from './services/rxgpt.service';
+import { PubMedService } from './services/pubmed.service';
+import { NICEService } from './services/nice.service';
+import { BNFService } from './services/bnf.service';
+import { HallucinationDetectorService } from './services/hallucination-detector.service';
 
 // Controllers
 import { DrugController } from './controllers/drug.controller';
@@ -149,6 +153,10 @@ import { RxGPTController } from './controllers/rxgpt.controller';
     DrugInteractionService,
     OrderConfirmationPdfService,
     RxGPTService,
+    PubMedService,
+    NICEService,
+    BNFService,
+    HallucinationDetectorService,
     FileUploadHelper,
     GeneralHelpers,
     PaymentHandler,
@@ -168,6 +176,10 @@ import { RxGPTController } from './controllers/rxgpt.controller';
     OpenFDAService,
     DrugInteractionService,
     RxGPTService,
+    PubMedService,
+    NICEService,
+    BNFService,
+    HallucinationDetectorService,
   ],
 })
 export class PharmacyModule {}

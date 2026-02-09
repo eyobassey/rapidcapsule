@@ -666,6 +666,9 @@ export class User {
   delivery_addresses?: DeliveryAddressEntry[];
 
   @Prop({ type: Boolean, default: false })
+  onboarding_completed: boolean;
+
+  @Prop({ type: Boolean, default: false })
   enable_claude_health_summary: boolean;
 
   @Prop(

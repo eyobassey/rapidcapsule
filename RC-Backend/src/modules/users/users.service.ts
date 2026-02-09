@@ -1076,11 +1076,19 @@ export class UsersService {
     userId: Types.ObjectId,
     specialistPreferencesDto: SpecialistPreferencesDto,
   ) {
-    return await upsert(
+    const result = await upsert(
       this.specialistPreferencesModel,
       { userId },
       { $set: { ...specialistPreferencesDto } },
     );
+
+    // When final consents are accepted, mark onboarding as completed on the user document
+    const consents = specialistPreferencesDto?.final_consents;
+    if (consents?.code_of_conduct && consents?.professional_indemnity) {
+      await updateOne(this.userModel, { _id: userId }, { onboarding_completed: true });
+    }
+
+    return result;
   }
 
   async getUserAvailabilityAndPreferences(userId: Types.ObjectId) {

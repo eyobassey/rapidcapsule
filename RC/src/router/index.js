@@ -663,6 +663,27 @@ const routes = [
         name: "SpecialistPharmacyRxGPTHistory",
         component: () => import("@/views/Mainapp/SpecialistApp/Pharmacy/RxGPTHistory.vue"),
       },
+      // RxGPT AI Standalone Routes
+      {
+        path: "rxgpt",
+        name: "RxGPTDashboard",
+        component: () => import("@/views/Mainapp/SpecialistApp/RxGPT/index.vue"),
+      },
+      {
+        path: "rxgpt/results/:id",
+        name: "RxGPTResults",
+        component: () => import("@/views/Mainapp/SpecialistApp/RxGPT/Results.vue"),
+      },
+      {
+        path: "rxgpt/history",
+        name: "RxGPTHistory",
+        component: () => import("@/views/Mainapp/SpecialistApp/RxGPT/History.vue"),
+      },
+      {
+        path: "rxgpt/interactions",
+        name: "RxGPTInteractions",
+        component: () => import("@/views/Mainapp/SpecialistApp/RxGPT/InteractionChecker.vue"),
+      },
       // Patient Health Views (for specialists viewing patient data)
       {
         path: "patient-health/checkup/:appointmentId/:checkupId",

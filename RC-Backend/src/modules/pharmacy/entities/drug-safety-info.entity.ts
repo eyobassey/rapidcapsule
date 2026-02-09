@@ -59,6 +59,100 @@ export class DrugSafetyInfo {
   @Prop({ type: [String], default: [] })
   overdosage: string[]; // Overdose information
 
+  // ============ DOSAGE INFORMATION ============
+
+  @Prop({ type: [String], default: [] })
+  dosage_and_administration: string[]; // FDA dosage guidelines
+
+  @Prop({ type: [String], default: [] })
+  dosage_forms_and_strengths: string[]; // Available forms and strengths
+
+  @Prop({ type: [String], default: [] })
+  indications_and_usage: string[]; // Approved uses
+
+  @Prop(
+    raw({
+      adult: {
+        min_dose: { type: String },
+        max_dose: { type: String },
+        typical_dose: { type: String },
+        max_daily_dose: { type: String },
+        frequency: { type: String },
+        route: { type: String },
+        notes: { type: String },
+      },
+      pediatric: {
+        min_dose: { type: String },
+        max_dose: { type: String },
+        dose_per_kg: { type: String },
+        max_daily_dose: { type: String },
+        min_age: { type: String },
+        max_age: { type: String },
+        frequency: { type: String },
+        notes: { type: String },
+      },
+      geriatric: {
+        min_dose: { type: String },
+        max_dose: { type: String },
+        typical_dose: { type: String },
+        frequency: { type: String },
+        notes: { type: String },
+      },
+      renal_impairment: {
+        mild: { type: String },
+        moderate: { type: String },
+        severe: { type: String },
+        notes: { type: String },
+      },
+      hepatic_impairment: {
+        mild: { type: String },
+        moderate: { type: String },
+        severe: { type: String },
+        notes: { type: String },
+      },
+    }),
+  )
+  parsed_dosage: {
+    adult?: {
+      min_dose?: string;
+      max_dose?: string;
+      typical_dose?: string;
+      max_daily_dose?: string;
+      frequency?: string;
+      route?: string;
+      notes?: string;
+    };
+    pediatric?: {
+      min_dose?: string;
+      max_dose?: string;
+      dose_per_kg?: string;
+      max_daily_dose?: string;
+      min_age?: string;
+      max_age?: string;
+      frequency?: string;
+      notes?: string;
+    };
+    geriatric?: {
+      min_dose?: string;
+      max_dose?: string;
+      typical_dose?: string;
+      frequency?: string;
+      notes?: string;
+    };
+    renal_impairment?: {
+      mild?: string;
+      moderate?: string;
+      severe?: string;
+      notes?: string;
+    };
+    hepatic_impairment?: {
+      mild?: string;
+      moderate?: string;
+      severe?: string;
+      notes?: string;
+    };
+  };
+
   // ============ ADMIN CUSTOMIZATIONS ============
 
   @Prop(

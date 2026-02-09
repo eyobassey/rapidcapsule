@@ -634,6 +634,90 @@ export class RxGPTAnalyticsSummaryDto {
   }[];
 }
 
+// ============ STANDALONE ANALYSIS DTOs ============
+
+export class InlinePatientContextDto {
+  @IsNumber()
+  @IsOptional()
+  age?: number;
+
+  @IsString()
+  @IsOptional()
+  gender?: string;
+
+  @IsNumber()
+  @IsOptional()
+  weight?: number;
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  allergies?: string[];
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  chronic_conditions?: string[];
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CurrentMedicationDto)
+  @IsOptional()
+  current_medications?: CurrentMedicationDto[];
+
+  @IsBoolean()
+  @IsOptional()
+  renal_impairment?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  hepatic_impairment?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  pregnant?: boolean;
+}
+
+export class RxGPTStandaloneAnalyzeDto {
+  @IsString()
+  @IsNotEmpty()
+  diagnosis: string;
+
+  @IsString()
+  @IsOptional()
+  subject_name?: string;
+
+  @IsString()
+  @IsOptional()
+  treatment_goal?: string;
+
+  @ValidateNested()
+  @Type(() => InlinePatientContextDto)
+  @IsOptional()
+  patient_context?: InlinePatientContextDto;
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ProposedDrugDto)
+  @IsOptional()
+  proposed_drugs?: ProposedDrugDto[];
+
+  @IsNumber()
+  @IsOptional()
+  @Min(1)
+  @Max(10)
+  max_suggestions?: number;
+
+  @IsBoolean()
+  @IsOptional()
+  prefer_inventory?: boolean;
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  symptoms?: string[];
+}
+
 // ============ MEDICATION SUGGESTION DTOs ============
 
 export class RxGPTSuggestMedicationsDto {
@@ -710,9 +794,26 @@ export class SuggestedMedicationDto {
 
   // AI reasoning
   reasoning: string;
-  confidence: number;              // 0-100
+  confidence: number;              // 0-100 (AI confidence adjusted by evidence)
   priority: 'primary' | 'alternative' | 'supplementary';
   citations?: string[];
+
+  // Evidence-based confidence breakdown
+  // Note: AI confidence is the BASE, evidence ADJUSTS it (doesn't replace it)
+  // If no evidence data available, original AI confidence is preserved
+  evidence_confidence?: {
+    final_score: number;           // Final adjusted confidence (0-100)
+    base_score: number;            // Original AI-generated confidence (preserved for reference)
+    adjustments: Array<{
+      source: string;              // e.g., 'fda_approved', 'nice_recommended', 'pubmed_high_quality'
+      adjustment: number;          // Points added or subtracted
+      reason: string;              // Human-readable explanation
+    }>;
+    evidence_level: 'very_high' | 'high' | 'moderate' | 'low' | 'very_low';
+    evidence_summary: string;      // Brief summary of evidence strength
+    is_off_label: boolean;         // Whether use is off-label
+    grounded_in_evidence: boolean; // True if backed by at least one trusted source
+  };
 
   // Safety information
   safety_alerts?: RxGPTAlertDto[];
@@ -729,6 +830,112 @@ export class SuggestedMedicationDto {
     is_in_inventory: boolean;
     reason: string;
   }[];
+
+  // Verification status (Fact-Check Layer)
+  verification?: {
+    is_verified: boolean;           // True if drug found in trusted databases
+    verified_sources: string[];     // Which databases verified this drug (e.g., ['local_inventory', 'openfda'])
+    fda_approved: boolean;          // True if found in FDA database
+    verification_warnings: string[]; // Warnings if drug could not be fully verified
+    verified_at?: Date;
+  };
+
+  // Dosage Validation against FDA guidelines
+  dosage_validation?: {
+    status: 'safe' | 'warning' | 'danger';  // Overall dosage safety status
+    fda_dosage_info?: {                      // FDA dosage guidelines used for validation
+      adult?: {
+        min_dose?: string;
+        max_dose?: string;
+        typical_dose?: string;
+        max_daily_dose?: string;
+        frequency?: string;
+      };
+      pediatric?: {
+        min_dose?: string;
+        max_dose?: string;
+        dose_per_kg?: string;
+        max_daily_dose?: string;
+        min_age?: string;
+        max_age?: string;
+      };
+      geriatric?: {
+        min_dose?: string;
+        max_dose?: string;
+        typical_dose?: string;
+        frequency?: string;
+      };
+    };
+    warnings: string[];                       // Specific dosage warnings
+    validated_for_patient: {                  // Patient context used for validation
+      age: number;
+      weight?: number;
+      population: 'pediatric' | 'adult' | 'geriatric';
+    };
+    validated_at: Date;
+  };
+
+  // PubMed Evidence Citations
+  pubmed_citations?: {
+    total_found: number;
+    citations: Array<{
+      pmid: string;
+      title: string;
+      authors_short: string;
+      journal: string;
+      year: string;
+      url: string;
+      evidence_level: 'high' | 'moderate' | 'low' | 'unknown';
+      relevance_score: number;
+    }>;
+    evidence_summary?: {
+      high_quality_count: number;
+      moderate_quality_count: number;
+      low_quality_count: number;
+    };
+    search_condition?: string;
+  };
+
+  // NICE Guidelines Compliance (UK)
+  nice_compliance?: {
+    is_compliant: boolean;
+    compliance_level: 'full' | 'partial' | 'none' | 'unknown';
+    recommendation_type?: 'recommended' | 'consider' | 'do_not_offer' | 'caution';
+    line_of_treatment?: 'first_line' | 'second_line' | 'third_line' | 'adjunct';
+    guideline_references: Array<{
+      id: string;
+      title: string;
+      url: string;
+    }>;
+    warnings: string[];
+    recommendation_text?: string;
+  };
+
+  // BNF (British National Formulary) Validation
+  bnf_info?: {
+    found_in_bnf: boolean;
+    uk_approved: boolean;
+    drug_class?: string;
+    bnf_url?: string;
+    indications: string[];
+    indication_match: boolean;
+    dosage_appropriate: boolean;
+    dosage_warnings: string[];
+    cautions: string[];
+    contraindications: string[];
+    interactions: Array<{
+      drug: string;
+      severity: 'severe' | 'moderate' | 'mild' | 'unknown';
+      effect: string;
+      action: string;
+    }>;
+    side_effects?: {
+      common?: string[];
+      uncommon?: string[];
+      rare?: string[];
+    };
+    special_population_warnings: string[];
+  };
 }
 
 export class RxGPTSuggestMedicationsResponseDto {
@@ -753,4 +960,93 @@ export class RxGPTSuggestMedicationsResponseDto {
   confidence_score: number;        // Overall confidence
   credits_used: number;
   credits_remaining: number;
+
+  // Fact-Check Layer summary
+  verification_summary?: {
+    total_suggestions: number;
+    verified_count: number;
+    unverified_count: number;
+    fda_approved_count: number;
+    has_unverified_drugs: boolean;
+    warning?: string;
+  };
+
+  // Dosage Validation summary
+  dosage_validation_summary?: {
+    total_validated: number;
+    safe_count: number;
+    warning_count: number;
+    danger_count: number;
+    has_dosage_concerns: boolean;
+    warning?: string;
+  };
+
+  // PubMed Evidence summary
+  pubmed_evidence_summary?: {
+    total_drugs_with_evidence: number;
+    total_citations: number;
+    high_quality_evidence_count: number;
+    drugs_without_evidence: string[];
+    has_strong_evidence: boolean;
+  };
+
+  // NICE Guidelines Compliance summary (UK)
+  nice_compliance_summary?: {
+    total_drugs_checked: number;
+    fully_compliant: number;
+    partially_compliant: number;
+    non_compliant: number;
+    no_guidance_available: number;
+    has_compliance_issues: boolean;
+    warning?: string;
+    guidelines_referenced: Array<{
+      id: string;
+      title: string;
+      url: string;
+    }>;
+  };
+
+  // BNF (British National Formulary) summary
+  bnf_compliance_summary?: {
+    total_drugs_checked: number;
+    uk_approved_count: number;
+    not_uk_approved: string[];
+    dosage_warnings_count: number;
+    caution_flags_count: number;
+    interaction_alerts_count: number;
+    has_uk_compliance_issues: boolean;
+    warning?: string;
+  };
+
+  // Evidence-based confidence summary (replaces AI-generated overall confidence)
+  evidence_summary?: {
+    overall_evidence_score: number;      // Average evidence-based confidence
+    overall_evidence_level: 'very_high' | 'high' | 'moderate' | 'low' | 'very_low';
+    drugs_with_strong_evidence: number;  // Count of drugs with high/very_high evidence
+    drugs_with_weak_evidence: number;    // Count of drugs with low/very_low evidence
+    off_label_count: number;             // Count of off-label uses
+    evidence_sources_used: string[];     // e.g., ['FDA', 'NICE', 'PubMed', 'BNF']
+    confidence_methodology: string;      // Explanation of how confidence is calculated
+  };
+
+  // Hallucination Detection Report
+  hallucination_check?: {
+    passed: boolean;                     // True if no critical/high severity issues
+    total_flags: number;                 // Total number of potential issues detected
+    critical_count: number;              // Issues that could cause harm
+    high_count: number;                  // Likely hallucinations
+    medium_count: number;                // Possible hallucinations
+    low_count: number;                   // Minor concerns
+    suspicion_score: number;             // Overall suspicion score (0-100)
+    recommendation: 'safe' | 'review_required' | 'reject';
+    summary: string;                     // Human-readable summary
+    flagged_drugs?: Array<{
+      drug_name: string;
+      issues: Array<{
+        type: string;
+        severity: string;
+        reason: string;
+      }>;
+    }>;
+  };
 }

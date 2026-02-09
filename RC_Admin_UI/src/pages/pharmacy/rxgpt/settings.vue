@@ -35,6 +35,10 @@ const formData = reactive({
     use_openfda: true,
     use_claude_ai: true,
     use_local_drug_db: true,
+    use_pubmed: true,
+    use_nice_guidelines: false,
+    use_bnf: false,
+    use_hallucination_detection: true,
   },
 
   thresholds: {
@@ -128,6 +132,10 @@ const resetToDefaults = () => {
       use_openfda: true,
       use_claude_ai: true,
       use_local_drug_db: true,
+      use_pubmed: true,
+      use_nice_guidelines: false,
+      use_bnf: false,
+      use_hallucination_detection: true,
     },
     thresholds: {
       min_confidence_score: 70,
@@ -391,9 +399,41 @@ onMounted(() => {
               <div class="d-flex align-center justify-space-between">
                 <div>
                   <div class="font-weight-medium">OpenFDA</div>
-                  <div class="text-caption text-medium-emphasis">Use FDA drug label data</div>
+                  <div class="text-caption text-medium-emphasis">Use FDA drug label data for US drug validation</div>
                 </div>
                 <VSwitch v-model="formData.data_sources.use_openfda" color="success" hide-details />
+              </div>
+              <VDivider />
+              <div class="d-flex align-center justify-space-between">
+                <div>
+                  <div class="font-weight-medium">PubMed</div>
+                  <div class="text-caption text-medium-emphasis">Enrich suggestions with clinical evidence citations</div>
+                </div>
+                <VSwitch v-model="formData.data_sources.use_pubmed" color="success" hide-details />
+              </div>
+              <VDivider />
+              <div class="d-flex align-center justify-space-between">
+                <div>
+                  <div class="font-weight-medium">NICE Guidelines</div>
+                  <div class="text-caption text-medium-emphasis">Validate against UK NICE clinical standards</div>
+                </div>
+                <VSwitch v-model="formData.data_sources.use_nice_guidelines" color="success" hide-details />
+              </div>
+              <VDivider />
+              <div class="d-flex align-center justify-space-between">
+                <div>
+                  <div class="font-weight-medium">BNF (British National Formulary)</div>
+                  <div class="text-caption text-medium-emphasis">Validate against UK prescribing guidelines</div>
+                </div>
+                <VSwitch v-model="formData.data_sources.use_bnf" color="success" hide-details />
+              </div>
+              <VDivider />
+              <div class="d-flex align-center justify-space-between">
+                <div>
+                  <div class="font-weight-medium">Hallucination Detection</div>
+                  <div class="text-caption text-medium-emphasis">Detect potential AI errors and invented information</div>
+                </div>
+                <VSwitch v-model="formData.data_sources.use_hallucination_detection" color="warning" hide-details />
               </div>
               <VDivider />
               <div class="d-flex align-center justify-space-between">
