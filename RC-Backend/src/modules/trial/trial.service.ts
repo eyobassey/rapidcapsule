@@ -602,6 +602,7 @@ export class TrialService {
         usage_count: 0,
         used_in_orders: [],
         is_trial: true,
+        trial_patient_name: `${session.first_name} ${session.last_name}`.trim(),
         is_deleted: false,
       });
 

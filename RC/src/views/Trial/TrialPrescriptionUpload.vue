@@ -209,8 +209,18 @@
           </div>
         </div>
 
+        <!-- Processing Overlay -->
+        <div v-if="uploadedId && !isComplete" class="processing-overlay">
+          <div class="processing-spinner"></div>
+          <h3>AI Verification in Progress</h3>
+          <p>Our system is analyzing your prescription across multiple checks...</p>
+          <div class="processing-dots">
+            <span></span><span></span><span></span>
+          </div>
+        </div>
+
         <!-- Transparent Score Breakdown (Trial Exclusive) -->
-        <div v-if="verificationData" class="score-section">
+        <div v-if="verificationData && isComplete" class="score-section">
           <!-- Overall Authenticity Score -->
           <div class="score-card score-card--main">
             <div class="score-card__header">
@@ -318,7 +328,7 @@
                   <span class="check-name">{{ check.check_name }}</span>
                   <span class="check-details">{{ check.details }}</span>
                 </div>
-                <span class="check-score">{{ check.score }}%</span>
+                <span class="check-score">{{ Math.round(check.score) }}%</span>
               </div>
             </div>
           </div>
@@ -342,7 +352,7 @@
                   <span class="check-name">{{ check.check_name }}</span>
                   <span class="check-details">{{ check.details }}</span>
                 </div>
-                <span class="check-score">{{ check.score }}%</span>
+                <span class="check-score">{{ Math.round(check.score) }}%</span>
               </div>
             </div>
           </div>
@@ -655,7 +665,9 @@ export default defineComponent({
     const friendlyDetails = (details) => {
       if (!details) return details;
       if (details.includes('unsupported document format'))
-        return 'The uploaded file format could not be processed by our text extraction engine. Try uploading a JPEG or PNG image instead.';
+        return 'This PDF could not be processed — it may be corrupted or not a true PDF file. Try uploading a photo (JPEG/PNG) of the prescription instead.';
+      if (details.includes('Invalid PDF structure'))
+        return 'The PDF file has an invalid internal structure. Please try exporting it again or upload a photo of the prescription instead.';
       if (details.includes('OCR failed'))
         return 'Our system was unable to extract text from this image. Please ensure the prescription is clearly visible, well-lit, and not blurry.';
       if (details.includes('No text extracted') || details.includes('no text'))
@@ -968,6 +980,61 @@ $orange: #FF5C00;
     &.processing .step-indicator { background: $sky; }
     .step-content { flex: 1; padding-top: 4px; h4 { font-size: 14px; font-weight: 600; color: $navy; margin-bottom: 4px; } p { font-size: 13px; color: $gray; } }
   }
+}
+
+// Processing Overlay
+.processing-overlay {
+  @include glass-card;
+  text-align: center;
+  padding: 60px 32px;
+  margin-bottom: 24px;
+
+  h3 {
+    font-size: 20px;
+    font-weight: 700;
+    color: $navy;
+    margin: 20px 0 8px;
+  }
+
+  p {
+    font-size: 15px;
+    color: $gray;
+    margin: 0;
+  }
+}
+
+.processing-spinner {
+  width: 56px;
+  height: 56px;
+  border: 4px solid rgba($sky, 0.2);
+  border-top-color: $sky;
+  border-radius: 50%;
+  margin: 0 auto;
+  animation: spin 1s linear infinite;
+}
+
+.processing-dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 20px;
+
+  span {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: $sky;
+    opacity: 0.3;
+    animation: dotPulse 1.4s ease-in-out infinite;
+
+    &:nth-child(2) { animation-delay: 0.2s; }
+    &:nth-child(3) { animation-delay: 0.4s; }
+  }
+}
+
+@keyframes dotPulse {
+  0%, 80%, 100% { opacity: 0.3; transform: scale(1); }
+  40% { opacity: 1; transform: scale(1.3); }
 }
 
 // Score Section

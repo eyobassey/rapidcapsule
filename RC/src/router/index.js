@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from "vue-router";
 import store from "@/store/data-store";
+import { routeSeoMeta, defaultMeta } from "./seo-meta";
 import SignupPatient from "../views/Signup/Signup-patient.vue";
 import SignupSpecialist from "../views/Signup/Signup-specialist.vue";
 import Login from "../views/Login/Login.vue";
@@ -937,6 +938,50 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes,
+});
+
+// ── SEO: Dynamic <head> management ────────────────────────────
+function setMeta(attr, key, content) {
+  let el = document.querySelector(`meta[${attr}="${key}"]`);
+  if (!el) {
+    el = document.createElement("meta");
+    el.setAttribute(attr, key);
+    document.head.appendChild(el);
+  }
+  el.setAttribute("content", content);
+}
+
+router.afterEach((to) => {
+  const meta = routeSeoMeta[to.name] || {};
+  const title = meta.title || defaultMeta.title;
+  const description = meta.description || defaultMeta.description;
+  const url = `https://rapidcapsule.com${to.fullPath}`;
+
+  // Page title
+  document.title = title;
+
+  // Standard meta
+  setMeta("name", "description", description);
+  if (meta.keywords) setMeta("name", "keywords", meta.keywords);
+
+  // Open Graph
+  setMeta("property", "og:title", title);
+  setMeta("property", "og:description", description);
+  setMeta("property", "og:url", url);
+
+  // Twitter
+  setMeta("property", "twitter:title", title);
+  setMeta("property", "twitter:description", description);
+  setMeta("property", "twitter:url", url);
+
+  // Canonical URL
+  let canonical = document.querySelector('link[rel="canonical"]');
+  if (!canonical) {
+    canonical = document.createElement("link");
+    canonical.setAttribute("rel", "canonical");
+    document.head.appendChild(canonical);
+  }
+  canonical.setAttribute("href", url);
 });
 
 export default router;

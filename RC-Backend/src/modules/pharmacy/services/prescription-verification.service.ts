@@ -813,6 +813,7 @@ export class PrescriptionVerificationService {
       const patientNameCheck = await this.checkPatientNameMatch(
         verification.patient,
         ocrData.patient_name,
+        (upload as any).trial_patient_name,
       );
       checks.push(patientNameCheck);
 
@@ -1788,6 +1789,7 @@ export class PrescriptionVerificationService {
   async checkPatientNameMatch(
     patientId: Types.ObjectId,
     ocrPatientName: string | null,
+    trialPatientName?: string | null,
   ): Promise<CheckResult> {
     if (!ocrPatientName) {
       return {
@@ -1800,7 +1802,19 @@ export class PrescriptionVerificationService {
       };
     }
 
-    const patientData = await this.getPatientFullName(patientId);
+    // Use trial patient name override if available, otherwise look up from DB
+    let patientData: { firstName: string; lastName: string; fullName: string } | null = null;
+    if (trialPatientName) {
+      const parts = trialPatientName.split(' ');
+      patientData = {
+        firstName: parts[0] || '',
+        lastName: parts.slice(1).join(' ') || '',
+        fullName: trialPatientName,
+      };
+    } else {
+      patientData = await this.getPatientFullName(patientId);
+    }
+
     if (!patientData) {
       return {
         check_name: 'Patient Name Match',
@@ -2086,15 +2100,21 @@ export class PrescriptionVerificationService {
     }
 
     try {
-      // Get patient info for comparison
-      const patientData = await this.getPatientFullName(verification.patient);
-      const patient = await this.userModel.findById(verification.patient).select('profile.date_of_birth profile.gender');
-
-      const patientInfo = {
-        fullName: patientData?.fullName || 'Unknown',
-        dateOfBirth: patient?.profile?.date_of_birth,
-        gender: patient?.profile?.gender,
-      };
+      // Get patient info for comparison — use trial override if available
+      let patientInfo: { fullName: string; dateOfBirth?: any; gender?: any };
+      if ((upload as any).trial_patient_name) {
+        patientInfo = {
+          fullName: (upload as any).trial_patient_name,
+        };
+      } else {
+        const patientData = await this.getPatientFullName(verification.patient);
+        const patient = await this.userModel.findById(verification.patient).select('profile.date_of_birth profile.gender');
+        patientInfo = {
+          fullName: patientData?.fullName || 'Unknown',
+          dateOfBirth: patient?.profile?.date_of_birth,
+          gender: patient?.profile?.gender,
+        };
+      }
 
       // Get image from S3 for Claude vision analysis
       let imageBase64: string | undefined;

@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Disallow: /app/
+Disallow: /profile-setup/
+Disallow: /verify-email
+Disallow: /email-verification
+Disallow: /reset-password/
+Disallow: /password-reset/
+Disallow: /forgot-password
+Disallow: /logged-out
+
+Sitemap: https://rapidcapsule.com/sitemap.xml

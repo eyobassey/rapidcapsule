@@ -290,6 +290,10 @@ export class PatientPrescriptionUpload {
   @Prop({ type: Boolean, default: false })
   is_trial: boolean;
 
+  // Trial patient name override — used for patient name matching in trial uploads
+  @Prop({ type: String, default: null })
+  trial_patient_name: string;
+
   // Soft delete
   @Prop({ type: Boolean, default: false })
   is_deleted: boolean;

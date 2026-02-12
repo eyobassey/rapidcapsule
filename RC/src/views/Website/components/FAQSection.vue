@@ -16,7 +16,7 @@
 					:ref="reveal"
 					:style="{ transitionDelay: `${index * 60}ms` }"
 				>
-					<button class="faq-item__question" @click="toggle(index)">
+					<button class="faq-item__question" @click="toggle(index)" :aria-expanded="openIndex === index">
 						<span class="faq-item__question-text">{{ item.question }}</span>
 						<span class="faq-item__chevron">
 							<v-icon name="hi-chevron-down" scale="1" />
