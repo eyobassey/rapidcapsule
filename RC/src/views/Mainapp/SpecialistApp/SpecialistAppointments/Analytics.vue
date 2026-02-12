@@ -1,144 +1,139 @@
 <template>
   <div class="sa-analytics">
-    <!-- Mobile Page Header -->
-    <div class="mobile-page-header">
-      <router-link to="/app/specialist/appointments-v2" class="back-btn">
-        <v-icon name="hi-arrow-left" scale="1" />
-      </router-link>
-      <h1>Analytics</h1>
-      <div class="header-spacer"></div>
-    </div>
+    <!-- Hero Section -->
+    <section class="hero">
+      <div class="hero__content">
+        <div class="hero__badge">
+          <span class="hero__badge-dot"></span>
+          <v-icon name="hi-chart-bar" scale="0.7" />
+          <span>Analytics</span>
+        </div>
+        <h1 class="hero__title">
+          Performance
+          <span class="hero__title-accent">Analytics</span>
+        </h1>
+        <p class="hero__subtitle">Track your appointment metrics, revenue trends, and practice performance.</p>
 
-    <!-- Desktop Header -->
-    <div class="analytics-header desktop-header">
-      <div class="header-left">
-        <h1 class="page-title">Analytics</h1>
-        <p class="page-subtitle">Track your appointment performance</p>
-      </div>
-      <div class="header-actions">
-        <select v-model="selectedPeriod" class="period-select" @change="fetchAnalytics">
-          <option value="7d">Last 7 Days</option>
-          <option value="30d">Last 30 Days</option>
-          <option value="90d">Last 90 Days</option>
-          <option value="1y">Last Year</option>
-        </select>
-        <button class="btn-export" @click="exportData">
-          <v-icon name="hi-download" scale="0.9" />
-          <span>Export</span>
-        </button>
-      </div>
-    </div>
+        <!-- Actions Row (period select + export) -->
+        <div class="hero__actions">
+          <select v-model="selectedPeriod" class="hero-select" @change="fetchAnalytics">
+            <option value="7d">Last 7 Days</option>
+            <option value="30d">Last 30 Days</option>
+            <option value="90d">Last 90 Days</option>
+            <option value="1y">Last Year</option>
+          </select>
+          <button class="hero-export-btn" @click="exportData">
+            <v-icon name="hi-download" scale="0.85" />
+            <span>Export CSV</span>
+          </button>
+        </div>
 
-    <!-- Mobile Filter Row -->
-    <div class="mobile-filter-row">
-      <select v-model="selectedPeriod" class="period-select" @change="fetchAnalytics">
-        <option value="7d">Last 7 Days</option>
-        <option value="30d">Last 30 Days</option>
-        <option value="90d">Last 90 Days</option>
-        <option value="1y">Last Year</option>
-      </select>
-      <button class="btn-export-icon" @click="exportData">
-        <v-icon name="hi-download" scale="1" />
-      </button>
-    </div>
+        <!-- Stats Bar -->
+        <div class="hero__stats" v-if="!loading">
+          <div class="hero-stat">
+            <span class="hero-stat__value">{{ stats.totalAppointments }}</span>
+            <span class="hero-stat__label">Total Appts</span>
+            <span class="hero-stat__trend" :class="stats.trends.appointments.direction">
+              <v-icon :name="getTrendIcon(stats.trends.appointments.direction)" scale="0.55" />
+              {{ formatTrend(stats.trends.appointments) }}
+            </span>
+          </div>
+          <div class="hero-stat__divider"></div>
+          <div class="hero-stat">
+            <span class="hero-stat__value">{{ stats.completedRate }}%</span>
+            <span class="hero-stat__label">Completion</span>
+            <span class="hero-stat__trend" :class="stats.trends.completion.direction">
+              <v-icon :name="getTrendIcon(stats.trends.completion.direction)" scale="0.55" />
+              {{ formatTrend(stats.trends.completion) }}
+            </span>
+          </div>
+          <div class="hero-stat__divider"></div>
+          <div class="hero-stat">
+            <span class="hero-stat__value">{{ formatCurrencyShort(stats.revenue) }}</span>
+            <span class="hero-stat__label">Revenue</span>
+            <span class="hero-stat__trend" :class="stats.trends.revenue.direction">
+              <v-icon :name="getTrendIcon(stats.trends.revenue.direction)" scale="0.55" />
+              {{ formatTrend(stats.trends.revenue) }}
+            </span>
+          </div>
+          <div class="hero-stat__divider"></div>
+          <div class="hero-stat">
+            <span class="hero-stat__value">{{ stats.uniquePatients }}</span>
+            <span class="hero-stat__label">Patients</span>
+            <span class="hero-stat__trend" :class="stats.trends.patients.direction">
+              <v-icon :name="getTrendIcon(stats.trends.patients.direction)" scale="0.55" />
+              {{ formatTrend(stats.trends.patients) }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hero Visual -->
+      <div class="hero__visual">
+        <div class="dashboard-orb">
+          <div class="orb-ring orb-ring--1"></div>
+          <div class="orb-ring orb-ring--2"></div>
+          <div class="orb-ring orb-ring--3"></div>
+          <div class="orb-core">
+            <v-icon name="hi-chart-bar" scale="2" />
+          </div>
+        </div>
+        <div class="floating-icon floating-icon--1">
+          <v-icon name="hi-trending-up" scale="0.9" />
+        </div>
+        <div class="floating-icon floating-icon--2">
+          <v-icon name="hi-currency-dollar" scale="0.9" />
+        </div>
+        <div class="floating-icon floating-icon--3">
+          <v-icon name="hi-user-group" scale="0.9" />
+        </div>
+      </div>
+    </section>
 
     <!-- Loading State -->
-    <div v-if="loading" class="loading-state">
-      <div class="loading-spinner"></div>
-      <p>Loading analytics...</p>
+    <div v-if="loading" class="bento-card loading-card">
+      <div class="loading-state">
+        <div class="loading-spinner"></div>
+        <p>Loading analytics...</p>
+      </div>
     </div>
 
     <!-- Error State -->
-    <div v-else-if="error" class="error-state">
-      <v-icon name="hi-exclamation-circle" scale="2" />
-      <p>{{ error }}</p>
-      <button class="btn-retry" @click="fetchAnalytics">Try Again</button>
+    <div v-else-if="error" class="bento-card error-card">
+      <div class="error-state">
+        <v-icon name="hi-exclamation-circle" scale="2" />
+        <p>{{ error }}</p>
+        <button class="btn-retry" @click="fetchAnalytics">Try Again</button>
+      </div>
     </div>
 
     <!-- Analytics Content -->
     <template v-else>
-      <!-- Stats Overview -->
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-icon appointments">
-            <v-icon name="hi-calendar" scale="1.2" />
-          </div>
-          <div class="stat-content">
-            <span class="stat-value">{{ stats.totalAppointments }}</span>
-            <span class="stat-label">Total Appointments</span>
-          </div>
-          <div class="stat-trend" :class="stats.trends.appointments.direction">
-            <v-icon :name="getTrendIcon(stats.trends.appointments.direction)" scale="0.7" />
-            <span>{{ formatTrend(stats.trends.appointments) }}</span>
-          </div>
-        </div>
-
-        <div class="stat-card">
-          <div class="stat-icon completed">
-            <v-icon name="hi-check-circle" scale="1.2" />
-          </div>
-          <div class="stat-content">
-            <span class="stat-value">{{ stats.completedRate }}%</span>
-            <span class="stat-label">Completion Rate</span>
-          </div>
-          <div class="stat-trend" :class="stats.trends.completion.direction">
-            <v-icon :name="getTrendIcon(stats.trends.completion.direction)" scale="0.7" />
-            <span>{{ formatTrend(stats.trends.completion) }}</span>
-          </div>
-        </div>
-
-        <div class="stat-card">
-          <div class="stat-icon revenue">
-            <v-icon name="hi-currency-dollar" scale="1.2" />
-          </div>
-          <div class="stat-content">
-            <span class="stat-value">{{ formatCurrency(stats.revenue) }}</span>
-            <span class="stat-label">Revenue</span>
-          </div>
-          <div class="stat-trend" :class="stats.trends.revenue.direction">
-            <v-icon :name="getTrendIcon(stats.trends.revenue.direction)" scale="0.7" />
-            <span>{{ formatTrend(stats.trends.revenue) }}</span>
-          </div>
-        </div>
-
-        <div class="stat-card">
-          <div class="stat-icon patients">
-            <v-icon name="hi-user-group" scale="1.2" />
-          </div>
-          <div class="stat-content">
-            <span class="stat-value">{{ stats.uniquePatients }}</span>
-            <span class="stat-label">Unique Patients</span>
-          </div>
-          <div class="stat-trend" :class="stats.trends.patients.direction">
-            <v-icon :name="getTrendIcon(stats.trends.patients.direction)" scale="0.7" />
-            <span>{{ formatTrend(stats.trends.patients) }}</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Charts Section - Row 1 -->
-      <div class="charts-grid">
+      <!-- Charts Row 1 -->
+      <div class="bento-row bento-row--charts">
         <!-- Appointments Over Time -->
-        <div class="chart-card">
-          <div class="chart-header">
-            <h3>Appointments Over Time</h3>
+        <div class="bento-card chart-card">
+          <div class="card-header">
+            <div class="card-header__left">
+              <div class="card-icon card-icon--sky">
+                <v-icon name="hi-chart-bar" scale="0.9" />
+              </div>
+              <h3>Appointments Over Time</h3>
+            </div>
             <div class="chart-legend">
-              <span class="legend-item"><span class="dot completed"></span> Completed</span>
-              <span class="legend-item"><span class="dot cancelled"></span> Cancelled</span>
+              <span class="legend-item"><span class="dot dot--completed"></span> Completed</span>
+              <span class="legend-item"><span class="dot dot--cancelled"></span> Cancelled</span>
             </div>
           </div>
           <div class="chart-container" ref="dailyChartContainer">
             <svg v-if="charts.dailyTrend.length" class="bar-chart" :viewBox="`0 0 ${chartWidth} ${chartHeight}`" preserveAspectRatio="xMidYMid meet">
-              <!-- Y-axis lines -->
               <line v-for="(tick, i) in yAxisTicks" :key="'y-' + i"
                 :x1="40" :y1="tick.y" :x2="chartWidth - 10" :y2="tick.y"
                 stroke="#E2E8F0" stroke-dasharray="4"/>
               <text v-for="(tick, i) in yAxisTicks" :key="'yt-' + i"
                 :x="35" :y="tick.y + 4" text-anchor="end" fill="#94A3B8" font-size="10">{{ tick.label }}</text>
 
-              <!-- Bars with hover areas -->
               <g v-for="(day, i) in charts.dailyTrend" :key="'bar-' + i" class="bar-group">
-                <!-- Invisible hover area -->
                 <rect
                   :x="getBarX(i) - 5"
                   :y="20"
@@ -149,7 +144,6 @@
                   @mouseenter="showTooltip($event, 'daily', day)"
                   @mouseleave="hideTooltip"
                 />
-                <!-- Completed bar -->
                 <rect
                   :x="getBarX(i)"
                   :y="getBarY(day.completed)"
@@ -159,7 +153,6 @@
                   rx="2"
                   class="chart-bar"
                 />
-                <!-- Cancelled bar -->
                 <rect
                   :x="getBarX(i) + barWidth + 2"
                   :y="getBarY(day.cancelled)"
@@ -169,7 +162,6 @@
                   rx="2"
                   class="chart-bar"
                 />
-                <!-- X-axis label -->
                 <text
                   :x="getBarX(i) + barWidth"
                   :y="chartHeight - 5"
@@ -187,9 +179,14 @@
         </div>
 
         <!-- Revenue by Channel -->
-        <div class="chart-card">
-          <div class="chart-header">
-            <h3>Revenue by Channel</h3>
+        <div class="bento-card chart-card">
+          <div class="card-header">
+            <div class="card-header__left">
+              <div class="card-icon card-icon--amber">
+                <v-icon name="hi-currency-dollar" scale="0.9" />
+              </div>
+              <h3>Revenue by Channel</h3>
+            </div>
           </div>
           <div class="chart-container donut-container">
             <div class="donut-wrapper" @mouseenter="showTooltip($event, 'revenue', null)" @mouseleave="hideTooltip">
@@ -236,19 +233,22 @@
         </div>
       </div>
 
-      <!-- Charts Section - Row 2 -->
-      <div class="charts-grid">
+      <!-- Charts Row 2 -->
+      <div class="bento-row bento-row--charts">
         <!-- Peak Hours Chart -->
-        <div class="chart-card">
-          <div class="chart-header">
-            <h3>Peak Hours</h3>
-            <span class="chart-subtitle">Busiest appointment times</span>
+        <div class="bento-card chart-card">
+          <div class="card-header">
+            <div class="card-header__left">
+              <div class="card-icon card-icon--violet">
+                <v-icon name="hi-clock" scale="0.9" />
+              </div>
+              <h3>Peak Hours</h3>
+            </div>
+            <span class="card-subtitle">Busiest appointment times</span>
           </div>
           <div class="chart-container">
             <svg v-if="charts.peakHours.length" class="peak-chart" :viewBox="`0 0 ${chartWidth} 180`" preserveAspectRatio="xMidYMid meet">
-              <!-- Hour bars -->
               <g v-for="(hour, i) in peakHoursFiltered" :key="'peak-' + i" class="bar-group">
-                <!-- Hover area -->
                 <rect
                   :x="getPeakBarX(i) - 2"
                   :y="10"
@@ -285,21 +285,24 @@
         </div>
 
         <!-- Monthly Trends Chart -->
-        <div class="chart-card">
-          <div class="chart-header">
-            <h3>Monthly Trends</h3>
-            <span class="chart-subtitle">6-month overview</span>
+        <div class="bento-card chart-card">
+          <div class="card-header">
+            <div class="card-header__left">
+              <div class="card-icon card-icon--emerald">
+                <v-icon name="hi-presentation-chart-line" scale="0.9" />
+              </div>
+              <h3>Monthly Trends</h3>
+            </div>
+            <span class="card-subtitle">6-month overview</span>
           </div>
           <div class="chart-container">
             <svg v-if="charts.monthlyTrend.length" class="line-chart" :viewBox="`0 0 ${chartWidth} 180`" preserveAspectRatio="xMidYMid meet">
-              <!-- Grid lines -->
               <line v-for="(tick, i) in monthlyYTicks" :key="'my-' + i"
                 :x1="40" :y1="tick.y" :x2="chartWidth - 10" :y2="tick.y"
                 stroke="#E2E8F0" stroke-dasharray="4"/>
               <text v-for="(tick, i) in monthlyYTicks" :key="'myt-' + i"
                 :x="35" :y="tick.y + 4" text-anchor="end" fill="#94A3B8" font-size="10">{{ tick.label }}</text>
 
-              <!-- Line path for total -->
               <polyline
                 :points="monthlyTotalPoints"
                 fill="none"
@@ -308,7 +311,6 @@
                 stroke-linecap="round"
                 stroke-linejoin="round"
               />
-              <!-- Line path for completed -->
               <polyline
                 :points="monthlyCompletedPoints"
                 fill="none"
@@ -318,9 +320,7 @@
                 stroke-linejoin="round"
               />
 
-              <!-- Data points with hover -->
               <g v-for="(month, i) in charts.monthlyTrend" :key="'mp-' + i" class="point-group">
-                <!-- Hover area -->
                 <circle
                   :cx="getMonthX(i)"
                   :cy="getMonthY(month.total)"
@@ -353,58 +353,87 @@
         </div>
       </div>
 
-      <!-- Breakdown Tables -->
-      <div class="tables-grid">
+      <!-- Breakdown Tables Row -->
+      <div class="bento-row bento-row--tables">
         <!-- By Status -->
-        <div class="table-card">
-          <h3>By Status</h3>
+        <div class="bento-card table-card">
+          <div class="card-header">
+            <div class="card-header__left">
+              <div class="card-icon card-icon--sky">
+                <v-icon name="hi-clipboard-check" scale="0.9" />
+              </div>
+              <h3>By Status</h3>
+            </div>
+          </div>
           <div class="breakdown-list">
             <div class="breakdown-item">
               <span class="breakdown-label">
-                <span class="dot completed"></span>
+                <span class="breakdown-dot" style="background: #22C55E"></span>
                 Completed
               </span>
               <span class="breakdown-value">{{ byStatus.completed }}</span>
+              <span class="breakdown-bar-wrap">
+                <span class="breakdown-bar" :style="{ width: getPercent(byStatus.completed) + '%', background: '#22C55E' }"></span>
+              </span>
               <span class="breakdown-percent">{{ getPercent(byStatus.completed) }}%</span>
             </div>
             <div class="breakdown-item">
               <span class="breakdown-label">
-                <span class="dot confirmed"></span>
+                <span class="breakdown-dot" style="background: #4FC3F7"></span>
                 Confirmed
               </span>
               <span class="breakdown-value">{{ byStatus.confirmed }}</span>
+              <span class="breakdown-bar-wrap">
+                <span class="breakdown-bar" :style="{ width: getPercent(byStatus.confirmed) + '%', background: '#4FC3F7' }"></span>
+              </span>
               <span class="breakdown-percent">{{ getPercent(byStatus.confirmed) }}%</span>
             </div>
             <div class="breakdown-item">
               <span class="breakdown-label">
-                <span class="dot pending"></span>
+                <span class="breakdown-dot" style="background: #F59E0B"></span>
                 Pending
               </span>
               <span class="breakdown-value">{{ byStatus.pending }}</span>
+              <span class="breakdown-bar-wrap">
+                <span class="breakdown-bar" :style="{ width: getPercent(byStatus.pending) + '%', background: '#F59E0B' }"></span>
+              </span>
               <span class="breakdown-percent">{{ getPercent(byStatus.pending) }}%</span>
             </div>
             <div class="breakdown-item">
               <span class="breakdown-label">
-                <span class="dot cancelled"></span>
+                <span class="breakdown-dot" style="background: #EF4444"></span>
                 Cancelled
               </span>
               <span class="breakdown-value">{{ byStatus.cancelled }}</span>
+              <span class="breakdown-bar-wrap">
+                <span class="breakdown-bar" :style="{ width: getPercent(byStatus.cancelled) + '%', background: '#EF4444' }"></span>
+              </span>
               <span class="breakdown-percent">{{ getPercent(byStatus.cancelled) }}%</span>
             </div>
             <div class="breakdown-item">
               <span class="breakdown-label">
-                <span class="dot no-show"></span>
+                <span class="breakdown-dot" style="background: #8B5CF6"></span>
                 No Show
               </span>
               <span class="breakdown-value">{{ byStatus.no_show }}</span>
+              <span class="breakdown-bar-wrap">
+                <span class="breakdown-bar" :style="{ width: getPercent(byStatus.no_show) + '%', background: '#8B5CF6' }"></span>
+              </span>
               <span class="breakdown-percent">{{ getPercent(byStatus.no_show) }}%</span>
             </div>
           </div>
         </div>
 
         <!-- By Channel -->
-        <div class="table-card">
-          <h3>By Channel</h3>
+        <div class="bento-card table-card">
+          <div class="card-header">
+            <div class="card-header__left">
+              <div class="card-icon card-icon--emerald">
+                <v-icon name="hi-video-camera" scale="0.9" />
+              </div>
+              <h3>By Channel</h3>
+            </div>
+          </div>
           <div class="breakdown-list">
             <div class="breakdown-item">
               <span class="breakdown-label">
@@ -412,6 +441,9 @@
                 Video
               </span>
               <span class="breakdown-value">{{ byChannel.video }}</span>
+              <span class="breakdown-bar-wrap">
+                <span class="breakdown-bar" :style="{ width: getChannelPercent(byChannel.video) + '%', background: '#4FC3F7' }"></span>
+              </span>
               <span class="breakdown-percent">{{ getChannelPercent(byChannel.video) }}%</span>
             </div>
             <div class="breakdown-item">
@@ -420,6 +452,9 @@
                 Audio
               </span>
               <span class="breakdown-value">{{ byChannel.audio }}</span>
+              <span class="breakdown-bar-wrap">
+                <span class="breakdown-bar" :style="{ width: getChannelPercent(byChannel.audio) + '%', background: '#81C784' }"></span>
+              </span>
               <span class="breakdown-percent">{{ getChannelPercent(byChannel.audio) }}%</span>
             </div>
             <div class="breakdown-item">
@@ -428,21 +463,35 @@
                 In-Person
               </span>
               <span class="breakdown-value">{{ byChannel.in_person }}</span>
+              <span class="breakdown-bar-wrap">
+                <span class="breakdown-bar" :style="{ width: getChannelPercent(byChannel.in_person) + '%', background: '#FFB74D' }"></span>
+              </span>
               <span class="breakdown-percent">{{ getChannelPercent(byChannel.in_person) }}%</span>
             </div>
           </div>
         </div>
 
         <!-- Top Appointment Types -->
-        <div class="table-card">
-          <h3>Top Appointment Types</h3>
+        <div class="bento-card table-card">
+          <div class="card-header">
+            <div class="card-header__left">
+              <div class="card-icon card-icon--rose">
+                <v-icon name="hi-tag" scale="0.9" />
+              </div>
+              <h3>Top Appointment Types</h3>
+            </div>
+          </div>
           <div class="breakdown-list">
             <div v-for="(count, type) in byType" :key="type" class="breakdown-item">
               <span class="breakdown-label">{{ type }}</span>
               <span class="breakdown-value">{{ count }}</span>
+              <span class="breakdown-bar-wrap">
+                <span class="breakdown-bar" :style="{ width: getTypePercent(count) + '%', background: '#8B5CF6' }"></span>
+              </span>
               <span class="breakdown-percent">{{ getTypePercent(count) }}%</span>
             </div>
             <div v-if="Object.keys(byType).length === 0" class="empty-types">
+              <v-icon name="hi-tag" scale="1" />
               <p>No appointment types data</p>
             </div>
           </div>
@@ -841,144 +890,484 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
-@import './styles/sa-variables';
+// ─── Design Tokens ─────────────────────────────────────
+$sky: #4FC3F7;
+$sky-light: #E1F5FE;
+$sky-dark: #0288D1;
+$sky-darker: #01579B;
+$navy: #0F172A;
+$slate: #334155;
+$gray: #64748B;
+$light-gray: #94A3B8;
+$bg: #F8FAFC;
+$emerald: #10B981;
+$emerald-light: #D1FAE5;
+$amber: #F59E0B;
+$amber-light: #FEF3C7;
+$rose: #F43F5E;
+$rose-light: #FFE4E6;
+$violet: #8B5CF6;
+$violet-light: #EDE9FE;
 
+@mixin glass-card {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+// ─── Page Container ────────────────────────────────────
 .sa-analytics {
   max-width: 1200px;
   margin: 0 auto;
   position: relative;
 }
 
-// Mobile Page Header
-.mobile-page-header {
-  display: none;
+// ─── Hero Section ──────────────────────────────────────
+.hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 340px;
   align-items: center;
-  justify-content: space-between;
-  padding: 0.75rem 0;
-  margin-bottom: 1rem;
-  border-bottom: 1px solid #E2E8F0;
-
-  h1 {
-    font-size: 1.125rem;
-    font-weight: 600;
-    color: $sa-navy;
-    margin: 0;
-  }
-
-  .back-btn {
-    width: 36px;
-    height: 36px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #F1F5F9;
-    border-radius: 8px;
-    color: $sa-navy;
-    text-decoration: none;
-
-    &:active {
-      background: #E2E8F0;
-    }
-  }
-
-  .header-spacer {
-    width: 36px;
-  }
+  background: linear-gradient(135deg, $sky 0%, $sky-dark 50%, $sky-darker 100%);
+  border-radius: 28px;
+  padding: 48px;
+  margin-bottom: 24px;
+  overflow: hidden;
+  min-height: 380px;
+  box-shadow:
+    0 20px 60px rgba(2, 136, 209, 0.3),
+    0 4px 20px rgba(0, 0, 0, 0.1);
 }
 
-// Desktop Header
-.desktop-header {
+.hero__content {
+  position: relative;
+  z-index: 2;
   display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
-.analytics-header {
-  align-items: flex-start;
-  justify-content: space-between;
-  margin-bottom: 1.5rem;
+.hero__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 24px;
+  padding: 6px 16px;
+  width: fit-content;
+  color: white;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0.3px;
 }
 
-.page-title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: $sa-navy;
+.hero__badge-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: $emerald;
+  animation: pulse 2s ease-in-out infinite;
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: 50%;
+    border: 1.5px solid rgba($emerald, 0.5);
+    animation: pulse-ring 2s ease-in-out infinite;
+  }
+}
+
+.hero__title {
+  font-family: 'Poppins', system-ui, sans-serif;
+  font-size: 2.75rem;
+  font-weight: 800;
+  color: white;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
   margin: 0;
 }
 
-.page-subtitle {
-  font-size: 0.875rem;
-  color: $sa-text-secondary;
-  margin: 0.25rem 0 0;
+.hero__title-accent {
+  display: block;
+  background: linear-gradient(135deg, #ffffff 0%, rgba(255, 255, 255, 0.7) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
-.header-actions {
+.hero__subtitle {
+  font-size: 1.0625rem;
+  color: rgba(255, 255, 255, 0.85);
+  line-height: 1.5;
+  max-width: 440px;
+  margin: 0;
+}
+
+// Hero Actions
+.hero__actions {
   display: flex;
-  gap: 0.75rem;
+  gap: 10px;
+  margin-top: 4px;
 }
 
-// Mobile Filter Row
-.mobile-filter-row {
-  display: none;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
-
-  .period-select {
-    flex: 1;
-  }
-}
-
-.btn-export-icon {
-  width: 44px;
-  height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #FFFFFF;
-  border: 1px solid #E2E8F0;
-  border-radius: 0.5rem;
-  color: $sa-text-secondary;
+.hero-select {
+  padding: 8px 14px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 10px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: white;
   cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 32px;
+  transition: all 0.2s;
 
-  &:active {
-    background: #F1F5F9;
+  option {
+    background: $navy;
+    color: white;
   }
-}
 
-.period-select {
-  padding: 0.625rem 1rem;
-  background: #FFFFFF;
-  border: 1px solid #E2E8F0;
-  border-radius: 0.5rem;
-  font-size: 0.875rem;
-  color: $sa-navy;
-  cursor: pointer;
+  &:hover {
+    background: rgba(255, 255, 255, 0.25);
+  }
 
   &:focus {
     outline: none;
-    border-color: $sa-sky;
+    border-color: rgba(255, 255, 255, 0.5);
   }
 }
 
-.btn-export {
+.hero-export-btn {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.625rem 1rem;
-  background: #FFFFFF;
-  border: 1px solid #E2E8F0;
-  border-radius: 0.5rem;
-  color: $sa-text-secondary;
-  font-size: 0.875rem;
+  gap: 6px;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 10px;
+  font-size: 0.8125rem;
   font-weight: 500;
+  color: white;
   cursor: pointer;
   transition: all 0.2s;
 
   &:hover {
-    border-color: $sa-sky;
-    color: $sa-sky;
+    background: rgba(255, 255, 255, 0.25);
   }
 }
 
-// Loading & Error States
+// Hero Stats Bar
+.hero__stats {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 16px;
+  padding: 14px 8px;
+  margin-top: 8px;
+}
+
+.hero-stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 0 12px;
+
+  &__value {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: white;
+    letter-spacing: -0.02em;
+    font-family: 'Poppins', system-ui, sans-serif;
+  }
+
+  &__label {
+    font-size: 0.6875rem;
+    color: rgba(255, 255, 255, 0.7);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 500;
+  }
+
+  &__trend {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 8px;
+    margin-top: 2px;
+
+    &.up {
+      color: #86EFAC;
+      background: rgba(134, 239, 172, 0.15);
+    }
+
+    &.down {
+      color: #FCA5A5;
+      background: rgba(252, 165, 165, 0.15);
+    }
+
+    &.flat {
+      color: rgba(255, 255, 255, 0.5);
+      background: rgba(255, 255, 255, 0.08);
+    }
+  }
+
+  &__divider {
+    width: 1px;
+    height: 48px;
+    background: rgba(255, 255, 255, 0.15);
+    flex-shrink: 0;
+  }
+}
+
+// Hero Visual (Orb)
+.hero__visual {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 280px;
+}
+
+.dashboard-orb {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.orb-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.15);
+
+  &--1 {
+    width: 200px;
+    height: 200px;
+    animation: spin-slow 20s linear infinite;
+    border-style: dashed;
+  }
+
+  &--2 {
+    width: 160px;
+    height: 160px;
+    animation: spin-slow 15s linear infinite reverse;
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+
+  &--3 {
+    width: 120px;
+    height: 120px;
+    animation: spin-slow 10s linear infinite;
+    border-color: rgba(255, 255, 255, 0.2);
+    border-style: dotted;
+  }
+}
+
+.orb-core {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  z-index: 2;
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+.floating-icon {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  animation: float 6s ease-in-out infinite;
+
+  &--1 {
+    top: 10px;
+    right: 40px;
+    animation-delay: 0s;
+  }
+
+  &--2 {
+    bottom: 20px;
+    left: 20px;
+    animation-delay: -2s;
+  }
+
+  &--3 {
+    top: 50%;
+    right: 10px;
+    animation-delay: -4s;
+  }
+}
+
+// ─── Animations ────────────────────────────────────────
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.1); }
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(255, 255, 255, 0.2); }
+  50% { box-shadow: 0 0 40px rgba(255, 255, 255, 0.4); }
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+// ─── Bento Grid ────────────────────────────────────────
+.bento-row {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 20px;
+
+  &--charts {
+    > .bento-card {
+      flex: 1;
+      min-width: 0;
+    }
+  }
+
+  &--tables {
+    > .bento-card {
+      flex: 1;
+      min-width: 0;
+    }
+  }
+}
+
+.bento-card {
+  @include glass-card;
+  border-radius: 20px;
+  padding: 24px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+  }
+}
+
+// ─── Card Header ───────────────────────────────────────
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  &__left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: $navy;
+    margin: 0;
+    font-family: 'Poppins', system-ui, sans-serif;
+  }
+}
+
+.card-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  &--sky {
+    background: $sky-light;
+    color: $sky-dark;
+  }
+
+  &--emerald {
+    background: $emerald-light;
+    color: $emerald;
+  }
+
+  &--amber {
+    background: $amber-light;
+    color: $amber;
+  }
+
+  &--violet {
+    background: $violet-light;
+    color: $violet;
+  }
+
+  &--rose {
+    background: $rose-light;
+    color: $rose;
+  }
+}
+
+.card-subtitle {
+  font-size: 0.75rem;
+  color: $light-gray;
+  font-weight: 500;
+}
+
+// ─── Loading / Error States ────────────────────────────
+.loading-card,
+.error-card {
+  margin-bottom: 20px;
+}
+
 .loading-state,
 .error-state {
   display: flex;
@@ -986,13 +1375,11 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   padding: 4rem 2rem;
-  background: #FFFFFF;
-  border: 1px solid #E2E8F0;
-  border-radius: 0.75rem;
 
   p {
     margin: 1rem 0 0;
-    color: $sa-text-secondary;
+    color: $gray;
+    font-size: 0.9375rem;
   }
 }
 
@@ -1000,175 +1387,34 @@ onMounted(() => {
   width: 40px;
   height: 40px;
   border: 3px solid #E2E8F0;
-  border-top-color: $sa-sky;
+  border-top-color: $sky;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
 .error-state svg {
-  color: #EF4444;
+  color: $rose;
 }
 
 .btn-retry {
   margin-top: 1rem;
-  padding: 0.5rem 1.5rem;
-  background: $sa-sky;
+  padding: 0.625rem 1.75rem;
+  background: linear-gradient(135deg, $sky 0%, $sky-dark 100%);
   color: white;
   border: none;
-  border-radius: 0.5rem;
+  border-radius: 12px;
   cursor: pointer;
-  font-weight: 500;
+  font-weight: 600;
+  font-size: 0.875rem;
+  transition: all 0.2s;
 
   &:hover {
-    background: darken($sa-sky, 10%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba($sky-dark, 0.3);
   }
 }
 
-// Stats Grid
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-}
-
-.stat-card {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1.25rem;
-  background: #FFFFFF;
-  border: 1px solid #E2E8F0;
-  border-radius: 0.75rem;
-}
-
-.stat-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 0.75rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-
-  &.appointments {
-    background: $sa-sky-light;
-    color: $sa-sky;
-  }
-
-  &.completed {
-    background: #DCFCE7;
-    color: #166534;
-  }
-
-  &.revenue {
-    background: #FEF3C7;
-    color: #92400E;
-  }
-
-  &.patients {
-    background: #F3E8FF;
-    color: #7C3AED;
-  }
-}
-
-.stat-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.stat-value {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: $sa-navy;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.stat-label {
-  font-size: 0.8125rem;
-  color: $sa-text-secondary;
-}
-
-.stat-trend {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-  flex-shrink: 0;
-
-  &.up { color: #16A34A; }
-  &.down { color: #DC2626; }
-  &.flat { color: #94A3B8; }
-}
-
-// Charts Grid
-.charts-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-}
-
-.chart-card {
-  background: #FFFFFF;
-  border: 1px solid #E2E8F0;
-  border-radius: 0.75rem;
-  padding: 1.25rem;
-}
-
-.chart-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 1rem;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-
-  h3 {
-    font-size: 1rem;
-    font-weight: 600;
-    color: $sa-navy;
-    margin: 0;
-  }
-}
-
-.chart-subtitle {
-  font-size: 0.75rem;
-  color: $sa-text-secondary;
-}
-
-.chart-legend,
-.line-legend {
-  display: flex;
-  gap: 1rem;
-}
-
-.legend-item {
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-  font-size: 0.75rem;
-  color: $sa-text-secondary;
-
-  .dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-
-    &.completed { background: #22C55E; }
-    &.cancelled { background: #EF4444; }
-  }
-}
-
+// ─── Chart Containers ──────────────────────────────────
 .chart-container {
   min-height: 200px;
   display: flex;
@@ -1182,11 +1428,11 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   padding: 2rem;
-  color: $sa-text-secondary;
+  color: $light-gray;
 
   svg {
     margin-bottom: 0.5rem;
-    opacity: 0.5;
+    opacity: 0.4;
   }
 
   p {
@@ -1202,7 +1448,7 @@ onMounted(() => {
   height: auto;
 }
 
-// Chart interactions
+// ─── Chart Interactions ────────────────────────────────
 .bar-group,
 .point-group {
   .chart-bar,
@@ -1222,7 +1468,37 @@ onMounted(() => {
   cursor: pointer;
 }
 
-// Donut chart
+// ─── Chart Legend ───────────────────────────────────────
+.chart-legend,
+.line-legend {
+  display: flex;
+  gap: 1rem;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: $gray;
+  font-weight: 500;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+
+  &--completed { background: #22C55E; }
+  &--cancelled { background: #EF4444; }
+}
+
+.line-legend {
+  margin-top: 12px;
+  justify-content: center;
+}
+
+// ─── Donut Chart ───────────────────────────────────────
 .donut-container {
   display: flex;
   align-items: center;
@@ -1262,23 +1538,23 @@ onMounted(() => {
 .legend-color {
   width: 12px;
   height: 12px;
-  border-radius: 3px;
+  border-radius: 4px;
   flex-shrink: 0;
 }
 
 .legend-text {
   font-size: 0.8125rem;
-  color: $sa-text-secondary;
+  color: $gray;
   min-width: 60px;
 }
 
 .legend-value {
   font-size: 0.8125rem;
-  font-weight: 600;
-  color: $sa-navy;
+  font-weight: 700;
+  color: $navy;
 }
 
-// Tooltip
+// ─── Tooltip ───────────────────────────────────────────
 .chart-tooltip {
   position: fixed;
   z-index: 1000;
@@ -1287,11 +1563,11 @@ onMounted(() => {
 }
 
 .tooltip-content {
-  background: $sa-navy;
+  background: $navy;
   color: white;
   padding: 0.75rem 1rem;
-  border-radius: 0.5rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
   min-width: 140px;
 
   &::after {
@@ -1302,7 +1578,7 @@ onMounted(() => {
     transform: translateX(-50%);
     border-left: 6px solid transparent;
     border-right: 6px solid transparent;
-    border-top: 6px solid $sa-navy;
+    border-top: 6px solid $navy;
   }
 }
 
@@ -1337,111 +1613,139 @@ onMounted(() => {
   margin-left: auto;
 }
 
-// Tables Grid
-.tables-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
-}
-
+// ─── Breakdown Tables ──────────────────────────────────
 .table-card {
-  background: #FFFFFF;
-  border: 1px solid #E2E8F0;
-  border-radius: 0.75rem;
-  padding: 1.25rem;
-
-  h3 {
-    font-size: 1rem;
-    font-weight: 600;
-    color: $sa-navy;
-    margin: 0 0 1rem;
+  .card-header {
+    margin-bottom: 16px;
   }
 }
 
 .breakdown-list {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 12px;
 }
 
 .breakdown-item {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 10px;
 }
 
 .breakdown-label {
   flex: 1;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 0.875rem;
-  color: $sa-text-secondary;
-
-  .dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    flex-shrink: 0;
-
-    &.completed { background: #22C55E; }
-    &.confirmed { background: #4FC3F7; }
-    &.pending { background: #F59E0B; }
-    &.cancelled { background: #EF4444; }
-    &.no-show { background: #8B5CF6; }
-  }
+  gap: 8px;
+  font-size: 0.8125rem;
+  color: $slate;
+  font-weight: 500;
+  min-width: 0;
 
   svg {
-    color: $sa-sky;
+    color: $sky;
+    flex-shrink: 0;
   }
+}
+
+.breakdown-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
 .breakdown-value {
   font-size: 0.875rem;
-  font-weight: 600;
-  color: $sa-navy;
-  min-width: 40px;
+  font-weight: 700;
+  color: $navy;
+  min-width: 32px;
   text-align: right;
+}
+
+.breakdown-bar-wrap {
+  width: 60px;
+  height: 6px;
+  background: #F1F5F9;
+  border-radius: 3px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.breakdown-bar {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.6s ease;
+  min-width: 2px;
 }
 
 .breakdown-percent {
   font-size: 0.75rem;
-  color: $sa-text-secondary;
-  min-width: 40px;
+  color: $light-gray;
+  min-width: 36px;
   text-align: right;
+  font-weight: 500;
 }
 
 .empty-types {
-  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.5rem;
   text-align: center;
-  color: $sa-text-secondary;
-  font-size: 0.875rem;
+  color: $light-gray;
+
+  svg {
+    opacity: 0.4;
+    margin-bottom: 0.5rem;
+  }
+
+  p {
+    font-size: 0.875rem;
+    margin: 0;
+  }
 }
 
-// Responsive
+// ─── Responsive ────────────────────────────────────────
 @media (max-width: 1023px) {
-  .stats-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .charts-grid {
+  .hero {
     grid-template-columns: 1fr;
+    padding: 32px 24px;
+    min-height: auto;
+    border-radius: 20px;
   }
 
-  .tables-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .desktop-header {
+  .hero__visual {
     display: none;
   }
 
-  .mobile-page-header {
-    display: flex;
+  .hero__title {
+    font-size: 2rem;
   }
 
-  .mobile-filter-row {
-    display: flex;
+  .hero__stats {
+    flex-wrap: wrap;
+    gap: 0;
+  }
+
+  .hero-stat {
+    flex: 0 0 50%;
+    padding: 10px 8px;
+
+    &__divider {
+      display: none;
+    }
+  }
+
+  .bento-row {
+    flex-direction: column;
+
+    &--charts,
+    &--tables {
+      > .bento-card {
+        flex: none;
+      }
+    }
   }
 
   .donut-container {
@@ -1450,34 +1754,74 @@ onMounted(() => {
 }
 
 @media (max-width: 640px) {
-  .stats-grid {
-    grid-template-columns: 1fr;
+  .hero {
+    padding: 24px 20px;
+    border-radius: 16px;
+    margin-bottom: 16px;
   }
 
-  .stat-card {
-    padding: 1rem;
+  .hero__title {
+    font-size: 1.625rem;
   }
 
-  .stat-icon {
-    width: 40px;
-    height: 40px;
+  .hero__subtitle {
+    font-size: 0.9375rem;
   }
 
-  .stat-value {
-    font-size: 1.25rem;
+  .hero__actions {
+    flex-direction: column;
+    gap: 8px;
   }
 
-  .chart-card {
-    padding: 1rem;
+  .hero-select,
+  .hero-export-btn {
+    width: 100%;
+    justify-content: center;
   }
 
-  .chart-header {
+  .hero-stat {
+    flex: 0 0 50%;
+
+    &__value {
+      font-size: 1.125rem;
+    }
+  }
+
+  .bento-card {
+    padding: 16px;
+    border-radius: 16px;
+  }
+
+  .bento-row {
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .card-header {
     flex-direction: column;
     align-items: flex-start;
   }
 
   .chart-legend {
-    margin-top: 0.5rem;
+    margin-top: 0;
+  }
+
+  .breakdown-bar-wrap {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero__title {
+    font-size: 1.375rem;
+  }
+
+  .hero-stat__value {
+    font-size: 1rem;
+  }
+
+  .hero-stat__label {
+    font-size: 0.625rem;
   }
 }
 </style>

@@ -38,6 +38,7 @@ const formData = reactive({
     use_pubmed: true,
     use_nice_guidelines: false,
     use_bnf: false,
+    use_who_eml: false,
     use_hallucination_detection: true,
   },
 
@@ -135,6 +136,7 @@ const resetToDefaults = () => {
       use_pubmed: true,
       use_nice_guidelines: false,
       use_bnf: false,
+      use_who_eml: false,
       use_hallucination_detection: true,
     },
     thresholds: {
@@ -426,6 +428,14 @@ onMounted(() => {
                   <div class="text-caption text-medium-emphasis">Validate against UK prescribing guidelines</div>
                 </div>
                 <VSwitch v-model="formData.data_sources.use_bnf" color="success" hide-details />
+              </div>
+              <VDivider />
+              <div class="d-flex align-center justify-space-between">
+                <div>
+                  <div class="font-weight-medium">WHO Essential Medicines</div>
+                  <div class="text-caption text-medium-emphasis">Validate against WHO Essential Medicines List (667 medicines)</div>
+                </div>
+                <VSwitch v-model="formData.data_sources.use_who_eml" color="success" hide-details />
               </div>
               <VDivider />
               <div class="d-flex align-center justify-space-between">

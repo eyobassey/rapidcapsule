@@ -216,6 +216,20 @@
             </div>
           </div>
 
+          <!-- WHO EML Compliance Summary -->
+          <div v-if="suggestionResult.who_eml_compliance_summary" class="summary-card"
+               :class="{ warning: suggestionResult.who_eml_compliance_summary.has_eml_issues }">
+            <div class="summary-icon who-eml">
+              <span>WHO</span>
+            </div>
+            <div class="summary-content">
+              <div class="summary-title">Essential Medicines</div>
+              <div class="summary-value">
+                {{ suggestionResult.who_eml_compliance_summary.eml_listed_count }}/{{ suggestionResult.who_eml_compliance_summary.total_drugs_checked }} listed
+              </div>
+            </div>
+          </div>
+
           <!-- Hallucination Check -->
           <div v-if="suggestionResult.hallucination_check" class="summary-card"
                :class="{
@@ -384,6 +398,10 @@
                   <span v-if="med.bnf_info?.uk_approved" class="mini-badge bnf-approved">
                     BNF
                   </span>
+                  <!-- WHO EML Badge -->
+                  <span v-if="med.who_info?.found_in_eml" class="mini-badge who-eml-listed">
+                    WHO{{ med.who_info.list_type === 'core' ? ' Core' : '' }}
+                  </span>
                   <!-- PubMed Badge -->
                   <span v-if="med.pubmed_citations?.total_found > 0" class="mini-badge pubmed">
                     {{ med.pubmed_citations.total_found }} refs
@@ -541,6 +559,27 @@
                     <v-icon name="hi-external-link" scale="0.6" />
                     View in BNF
                   </a>
+                </div>
+
+                <!-- WHO Essential Medicines -->
+                <div v-if="med.who_info" class="who-eml-block">
+                  <div class="detail-header">
+                    <span class="who-logo">WHO</span>
+                    <span>Essential Medicines</span>
+                    <span :class="['status-tag', med.who_info.found_in_eml ? 'verified' : 'unverified']">
+                      {{ med.who_info.found_in_eml ? (med.who_info.list_type === 'core' ? 'Core' : 'Complementary') : 'Not in EML' }}
+                    </span>
+                  </div>
+                  <div v-if="med.who_info.atc_code" class="who-meta-row">
+                    <span class="label">ATC Code:</span> {{ med.who_info.atc_code }}
+                  </div>
+                  <div v-if="med.who_info.category" class="who-meta-row">
+                    <span class="label">Category:</span> {{ med.who_info.category }}
+                  </div>
+                  <div v-if="med.who_info.matching_indications?.length" class="who-meta-row">
+                    <span class="label">Indications:</span>
+                    <span class="indication-list">{{ med.who_info.matching_indications.join(', ') }}</span>
+                  </div>
                 </div>
 
                 <!-- PubMed Citations -->
@@ -830,6 +869,7 @@ const hasVerificationData = computed(() => {
     suggestionResult.value.dosage_validation_summary ||
     suggestionResult.value.nice_compliance_summary ||
     suggestionResult.value.bnf_compliance_summary ||
+    suggestionResult.value.who_eml_compliance_summary ||
     suggestionResult.value.hallucination_check ||
     suggestionResult.value.pubmed_evidence_summary
   );
@@ -889,6 +929,7 @@ function hasVerificationInfo(med) {
     med.dosage_validation ||
     med.nice_compliance ||
     med.bnf_info ||
+    med.who_info ||
     med.pubmed_citations?.citations?.length
   );
 }
@@ -920,6 +961,8 @@ function formatSourceName(source) {
     pubmed: 'PubMed',
     nice: 'NICE',
     bnf: 'BNF',
+    'who_eml': 'WHO EML',
+    'WHO EML': 'WHO EML',
   };
   return names[source] || source;
 }
@@ -2015,7 +2058,7 @@ $violet-light: #EDE9FE;
   background: $sky-light;
   color: $sky-dark;
 
-  &.nice, &.bnf {
+  &.nice, &.bnf, &.who-eml {
     font-size: 10px;
     font-weight: 800;
     letter-spacing: -0.5px;
@@ -2028,6 +2071,11 @@ $violet-light: #EDE9FE;
 
   &.bnf {
     background: #004080;
+    color: white;
+  }
+
+  &.who-eml {
+    background: #009EDB;
     color: white;
   }
 
@@ -2191,6 +2239,7 @@ $violet-light: #EDE9FE;
   &.unverified { background: $amber-light; color: darken($amber, 10%); }
   &.nice-compliant { background: #1e3a5f; color: white; }
   &.bnf-approved { background: #004080; color: white; }
+  &.who-eml-listed { background: #009EDB; color: white; }
   &.pubmed { background: #326599; color: white; }
 }
 
@@ -2232,7 +2281,7 @@ $violet-light: #EDE9FE;
 }
 
 .evidence-breakdown, .verification-block, .dosage-validation-block,
-.nice-block, .bnf-block, .pubmed-block {
+.nice-block, .bnf-block, .who-eml-block, .pubmed-block {
   padding: 12px;
   background: $bg;
   border-radius: 8px;
@@ -2373,7 +2422,7 @@ $violet-light: #EDE9FE;
   }
 }
 
-.nice-logo, .bnf-logo {
+.nice-logo, .bnf-logo, .who-logo {
   padding: 2px 6px;
   border-radius: 4px;
   font-size: 10px;
@@ -2383,6 +2432,14 @@ $violet-light: #EDE9FE;
 
 .nice-logo { background: #1e3a5f; color: white; }
 .bnf-logo { background: #004080; color: white; }
+.who-logo { background: #009EDB; color: white; }
+
+.who-meta-row {
+  font-size: 12px;
+  color: $slate;
+  margin-bottom: 4px;
+  .label { font-weight: 600; margin-right: 4px; }
+}
 
 .nice-recommendation {
   display: flex;

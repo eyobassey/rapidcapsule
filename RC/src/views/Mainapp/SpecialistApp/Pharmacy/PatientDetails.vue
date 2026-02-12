@@ -623,7 +623,7 @@ async function toggleStar() {
 // Quick Actions
 function bookAppointment() {
   router.push({
-    path: '/app/specialist/specialist-appointments',
+    name: 'SpecialistAppointmentsCreate',
     query: { patientId: patientId },
   });
 }

@@ -1,12 +1,5 @@
 <template>
   <div class="rxgpt-history-page">
-    <!-- Ambient Background -->
-    <div class="ambient-bg">
-      <div class="orb orb--1" />
-      <div class="orb orb--2" />
-      <div class="orb orb--3" />
-    </div>
-
     <!-- Mobile Header -->
     <header class="mobile-header">
       <button class="back-btn" @click="$router.push('/app/specialist/rxgpt')">
@@ -20,20 +13,6 @@
 
     <!-- Page Container -->
     <div class="page-container">
-      <!-- Breadcrumbs -->
-      <nav class="breadcrumbs">
-        <router-link to="/app/specialist" class="breadcrumb-item">
-          <v-icon name="hi-home" scale="0.7" />
-          Home
-        </router-link>
-        <span class="breadcrumb-separator">/</span>
-        <router-link to="/app/specialist/rxgpt" class="breadcrumb-item">
-          RxGPT AI
-        </router-link>
-        <span class="breadcrumb-separator">/</span>
-        <span class="breadcrumb-current">My Analyses</span>
-      </nav>
-
       <!-- Loading State -->
       <div v-if="isLoading" class="loading-state">
         <div class="loading-spinner">
@@ -48,7 +27,7 @@
         <section class="hero">
           <div class="hero__content">
             <router-link to="/app/specialist/rxgpt" class="back-link desktop-only">
-              <v-icon name="hi-arrow-left" scale="0.8" />
+              <v-icon name="hi-arrow-left" scale="0.85" />
               <span>Back to RxGPT</span>
             </router-link>
             <div class="hero__badge">
@@ -70,12 +49,12 @@
               </div>
               <div class="hero-stat__divider"></div>
               <div class="hero-stat">
-                <span class="hero-stat__value hero-stat__value--success">{{ stats.safe_prescriptions || 0 }}</span>
+                <span class="hero-stat__value">{{ stats.safe_prescriptions || 0 }}</span>
                 <span class="hero-stat__label">Safe</span>
               </div>
               <div class="hero-stat__divider"></div>
               <div class="hero-stat">
-                <span class="hero-stat__value hero-stat__value--warning">{{ stats.alerts_issued || 0 }}</span>
+                <span class="hero-stat__value">{{ stats.alerts_issued || 0 }}</span>
                 <span class="hero-stat__label">Alerts</span>
               </div>
             </div>
@@ -86,7 +65,7 @@
               <div class="orb-ring orb-ring--2"></div>
               <div class="orb-ring orb-ring--3"></div>
               <div class="orb-core">
-                <v-icon name="bi-robot" />
+                <v-icon name="hi-clock" />
               </div>
             </div>
             <div class="floating-icons">
@@ -192,6 +171,9 @@
                       </span>
                       <span :class="['risk-badge', getRiskBadgeClass(analysis.overall_risk_level)]">
                         {{ formatRiskLevel(analysis.overall_risk_level) }}
+                      </span>
+                      <span v-if="analysis.total_versions > 1" class="version-badge">
+                        v{{ analysis.version_number }}
                       </span>
                     </div>
                     <p class="analysis-summary">
@@ -403,64 +385,6 @@ $color-g-97: #F5F6F7;
   overflow-x: hidden;
 }
 
-// Ambient Background
-.ambient-bg {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  overflow: hidden;
-  z-index: 0;
-
-  .orb {
-    position: absolute;
-    border-radius: 50%;
-    filter: blur(80px);
-    opacity: 0.15;
-
-    &--1 {
-      width: 400px;
-      height: 400px;
-      background: $sky;
-      top: -100px;
-      right: -100px;
-      animation: float1 20s ease-in-out infinite;
-    }
-
-    &--2 {
-      width: 300px;
-      height: 300px;
-      background: $sky-dark;
-      bottom: 20%;
-      left: -80px;
-      animation: float2 25s ease-in-out infinite;
-    }
-
-    &--3 {
-      width: 250px;
-      height: 250px;
-      background: $sky;
-      top: 50%;
-      right: 10%;
-      animation: float3 22s ease-in-out infinite;
-    }
-  }
-}
-
-@keyframes float1 {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(-30px, 30px) scale(1.1); }
-}
-
-@keyframes float2 {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(20px, -20px) scale(1.05); }
-}
-
-@keyframes float3 {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(-15px, 15px) scale(1.08); }
-}
-
 // Mobile Header
 .mobile-header {
   display: none;
@@ -502,47 +426,10 @@ $color-g-97: #F5F6F7;
 .page-container {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 40px 32px;
-  position: relative;
-  z-index: 1;
+  padding: 24px 32px 100px;
 
   @media (max-width: 768px) {
-    padding: 20px 16px;
-  }
-}
-
-// Breadcrumbs
-.breadcrumbs {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 32px;
-  font-size: 14px;
-
-  @media (max-width: 768px) {
-    display: none;
-  }
-
-  .breadcrumb-item {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    color: $slate;
-    text-decoration: none;
-    transition: color 0.2s;
-
-    &:hover {
-      color: $sky-dark;
-    }
-  }
-
-  .breadcrumb-separator {
-    color: $color-g-67;
-  }
-
-  .breadcrumb-current {
-    color: $color-g-21;
-    font-weight: 500;
+    padding: 16px 16px 120px;
   }
 }
 
@@ -589,161 +476,286 @@ $color-g-97: #F5F6F7;
   to { transform: rotate(360deg); }
 }
 
-// Hero Section
+// ============================================
+// HERO SECTION (matches Dashboard exactly)
+// ============================================
 .hero {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 40px;
-  margin-bottom: 40px;
-  padding: 40px;
-  background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%);
-  backdrop-filter: blur(20px);
-  border-radius: 32px;
-  border: 1px solid rgba(255,255,255,0.8);
-  box-shadow: 0 20px 60px rgba(0,0,0,0.06);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+  padding: 48px 40px 56px;
+  background: linear-gradient(135deg, $sky 0%, $sky-dark 50%, $sky-darker 100%);
+  border-radius: 28px;
+  position: relative;
+  overflow: visible;
+  min-height: 460px;
+  margin-bottom: 32px;
+  box-shadow:
+    0 20px 60px rgba(2, 136, 209, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.1) inset;
 
-  @media (max-width: 900px) {
+  @media (max-width: 768px) {
+    display: flex;
     flex-direction: column;
+    padding: 28px 20px 24px;
+    gap: 0;
     text-align: center;
-    padding: 32px 24px;
-  }
-
-  &__content {
-    flex: 1;
-  }
-
-  .back-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    color: $slate;
-    font-size: 14px;
-    font-weight: 500;
-    text-decoration: none;
+    min-height: unset;
+    height: auto;
+    border-radius: 20px;
     margin-bottom: 20px;
-    transition: color 0.2s;
-
-    &:hover {
-      color: $sky-dark;
-    }
+    overflow: visible;
   }
 
-  .desktop-only {
-    @media (max-width: 768px) {
-      display: none;
-    }
+  @media (max-width: 480px) {
+    padding: 24px 16px 20px;
+    border-radius: 16px;
   }
+}
 
-  &__badge {
-    display: inline-flex;
+.hero__content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  z-index: 2;
+
+  @media (max-width: 768px) {
+    width: 100%;
     align-items: center;
-    gap: 10px;
-    padding: 10px 18px;
-    background: linear-gradient(135deg, $sky-light 0%, rgba($sky-dark, 0.2) 100%);
-    border-radius: 50px;
+  }
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border: none;
+  border-radius: 12px;
+  padding: 10px 16px;
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  margin-bottom: 20px;
+  width: fit-content;
+  text-decoration: none;
+  transition: all 0.2s ease;
+
+  &:hover { background: rgba(255, 255, 255, 0.25); }
+}
+
+.desktop-only {
+  @media (max-width: 768px) { display: none !important; }
+}
+
+.hero__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border-radius: 24px;
+  width: fit-content;
+  margin-bottom: 20px;
+  position: relative;
+
+  @media (max-width: 768px) {
+    margin: 0 auto 16px;
+    padding: 8px 16px;
+  }
+
+  @media (max-width: 480px) {
+    padding: 6px 14px;
+    margin: 0 auto 12px;
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
+    color: white;
+    margin-left: 12px;
+
+    @media (max-width: 768px) {
+      width: 14px;
+      height: 14px;
+      margin-left: 10px;
+    }
+  }
+
+  span {
     font-size: 13px;
     font-weight: 600;
-    color: $sky-dark;
-    margin-bottom: 20px;
+    color: white;
+    letter-spacing: 0.3px;
 
-    .badge-pulse {
-      width: 8px;
-      height: 8px;
-      background: $sky-dark;
-      border-radius: 50%;
-      animation: pulse 2s ease-in-out infinite;
-    }
+    @media (max-width: 768px) { font-size: 12px; }
+  }
+}
+
+.badge-pulse {
+  position: absolute;
+  left: 12px;
+  width: 8px;
+  height: 8px;
+  background: $emerald;
+  border-radius: 50%;
+  animation: pulse 2s ease-in-out infinite;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    background: rgba($emerald, 0.4);
+    border-radius: 50%;
+    animation: pulse-ring 2s ease-out infinite;
   }
 
-  @keyframes pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.5; transform: scale(1.2); }
+  @media (max-width: 768px) {
+    left: 10px;
+    width: 6px;
+    height: 6px;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.1); opacity: 0.8; }
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(1); opacity: 0.8; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+
+.hero__title {
+  font-size: 48px;
+  font-weight: 800;
+  color: white;
+  line-height: 1.1;
+  margin: 0 0 16px;
+  letter-spacing: -1px;
+
+  @media (max-width: 768px) {
+    font-size: 32px;
+    margin: 0 0 12px;
+    letter-spacing: -0.5px;
+    br { display: none; }
   }
 
-  &__title {
-    font-size: 48px;
-    font-weight: 800;
-    line-height: 1.1;
-    color: $color-g-21;
-    margin-bottom: 16px;
+  @media (max-width: 480px) {
+    font-size: 28px;
+    margin: 0 0 8px;
+  }
+}
 
-    @media (max-width: 768px) {
-      font-size: 36px;
-    }
+.hero__title-accent {
+  background: linear-gradient(90deg, #fff 0%, rgba(255,255,255,0.7) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+
+  @media (max-width: 768px) {
+    display: inline;
+    margin-left: 6px;
+  }
+}
+
+.hero__subtitle {
+  font-size: 18px;
+  color: white;
+  line-height: 1.6;
+  margin: 0 0 24px;
+  max-width: 400px;
+  opacity: 0.95;
+
+  @media (max-width: 768px) {
+    font-size: 15px;
+    max-width: 100%;
+    margin: 0 0 20px;
+    opacity: 0.9;
+    line-height: 1.5;
   }
 
-  &__title-accent {
-    background: linear-gradient(135deg, $sky-dark 0%, $sky-darker 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+  @media (max-width: 480px) {
+    font-size: 14px;
+    margin: 0 0 16px;
+  }
+}
+
+.hero__stats {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 16px 20px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  width: fit-content;
+
+  @media (max-width: 768px) {
+    width: 100%;
+    justify-content: space-around;
+    padding: 16px;
+    gap: 8px;
+  }
+}
+
+.hero-stat {
+  text-align: center;
+
+  &__value {
+    display: block;
+    font-size: 28px;
+    font-weight: 700;
+    color: white;
+
+    @media (max-width: 768px) { font-size: 22px; }
+    @media (max-width: 480px) { font-size: 20px; }
   }
 
-  &__subtitle {
-    font-size: 16px;
-    color: $slate;
-    margin-bottom: 28px;
-    max-width: 400px;
+  &__label {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.8);
+    white-space: nowrap;
 
-    @media (max-width: 900px) {
-      margin-left: auto;
-      margin-right: auto;
-    }
+    @media (max-width: 480px) { font-size: 11px; }
   }
 
-  &__stats {
-    display: flex;
-    align-items: center;
-    gap: 24px;
+  &__divider {
+    width: 1px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.2);
 
-    @media (max-width: 900px) {
-      justify-content: center;
-    }
+    @media (max-width: 768px) { height: 32px; }
   }
+}
 
-  .hero-stat {
-    text-align: center;
+.hero__visual {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
-    &__value {
-      display: block;
-      font-size: 28px;
-      font-weight: 700;
-      color: $color-g-21;
-
-      &--success { color: $emerald; }
-      &--warning { color: $amber; }
-    }
-
-    &__label {
-      font-size: 13px;
-      color: $slate;
-    }
-
-    &__divider {
-      width: 1px;
-      height: 40px;
-      background: $color-g-92;
-    }
-  }
-
-  &__visual {
-    position: relative;
-    width: 280px;
-    height: 280px;
-    flex-shrink: 0;
-
-    @media (max-width: 900px) {
-      width: 200px;
-      height: 200px;
-    }
+  @media (max-width: 768px) {
+    width: 200px;
+    height: 200px;
+    margin: 20px auto 0;
   }
 }
 
 // AI Orb
 .ai-orb {
-  position: absolute;
-  inset: 20px;
+  position: relative;
+  width: 240px;
+  height: 240px;
+
+  @media (max-width: 768px) {
+    width: 180px;
+    height: 180px;
+  }
 
   .orb-ring {
     position: absolute;
@@ -752,19 +764,19 @@ $color-g-97: #F5F6F7;
     border: 2px solid transparent;
 
     &--1 {
-      border-color: rgba($sky-dark, 0.3);
+      border-color: rgba(255, 255, 255, 0.25);
       animation: orbit1 8s linear infinite;
     }
 
     &--2 {
       inset: 15px;
-      border-color: rgba($sky-darker, 0.3);
+      border-color: rgba(255, 255, 255, 0.2);
       animation: orbit2 12s linear infinite reverse;
     }
 
     &--3 {
       inset: 30px;
-      border-color: rgba($sky-dark, 0.3);
+      border-color: rgba(255, 255, 255, 0.15);
       animation: orbit1 10s linear infinite;
     }
   }
@@ -772,13 +784,19 @@ $color-g-97: #F5F6F7;
   .orb-core {
     position: absolute;
     inset: 45px;
-    background: linear-gradient(135deg, $sky 0%, $sky-dark 100%);
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     color: white;
-    box-shadow: 0 10px 40px rgba($sky, 0.4);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+
+    @media (max-width: 768px) {
+      inset: 35px;
+    }
   }
 }
 
@@ -799,32 +817,44 @@ $color-g-97: #F5F6F7;
     position: absolute;
     width: 48px;
     height: 48px;
-    background: white;
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
     border-radius: 14px;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+    color: white;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+
+    @media (max-width: 768px) {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+    }
 
     &--1 {
       top: 10px;
-      right: 20px;
-      color: $emerald;
+      right: -30px;
       animation: floatIcon1 4s ease-in-out infinite;
+
+      @media (max-width: 768px) { right: -10px; }
     }
 
     &--2 {
-      bottom: 40px;
-      left: 0;
-      color: $sky-dark;
+      bottom: 20px;
+      left: -20px;
       animation: floatIcon2 5s ease-in-out infinite;
+
+      @media (max-width: 768px) { left: -5px; }
     }
 
     &--3 {
       top: 50%;
-      right: 0;
-      color: $sky-darker;
+      right: -40px;
       animation: floatIcon3 4.5s ease-in-out infinite;
+
+      @media (max-width: 768px) { right: -15px; }
     }
   }
 }
@@ -1163,6 +1193,18 @@ $color-g-97: #F5F6F7;
     background: rgba($slate, 0.1);
     color: $slate;
   }
+}
+
+.version-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  background: rgba($sky-dark, 0.1);
+  color: $sky-dark;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
 }
 
 .analysis-summary {

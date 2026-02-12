@@ -23,6 +23,26 @@ export default {
 		};
 	},
 
+	mounted() {
+		// Remove height/overflow locks from ancestors so pages use native browser scroll
+		document.documentElement.style.height = 'auto';
+		document.documentElement.style.overflow = 'visible';
+		document.body.style.height = 'auto';
+		document.body.style.overflow = 'visible';
+		const app = document.getElementById('app');
+		if (app) app.style.height = 'auto';
+	},
+
+	beforeUnmount() {
+		// Restore defaults for non-specialist pages
+		document.documentElement.style.height = '';
+		document.documentElement.style.overflow = '';
+		document.body.style.height = '';
+		document.body.style.overflow = '';
+		const app = document.getElementById('app');
+		if (app) app.style.height = '';
+	},
+
 	methods: {
 		setState(state) {
 			this.paneOpen = true;
@@ -35,46 +55,26 @@ export default {
 .main-wrapper {
 	display: flex;
 	flex-direction: row;
-	height: 100vh;
 	width: 100%;
-	overflow: hidden;
+	min-height: 100vh;
+	background-color: #F8FAFC;
 }
 
 .content {
 	flex: 1;
-	display: flex;
-	flex-direction: column;
-	background-color: $color-g-97;
+	min-width: 0;
+	background-color: #F8FAFC;
 	border-right: $size-1 solid $color-g-85;
-	height: 100vh;
-	width: 100%;
-	overflow-y: auto;
-	overflow-x: hidden;
 
 	@include responsive(phone) {
 		border-right: none;
 	}
 
-	// Mobile: white background, no padding
 	@media (max-width: 767px) {
 		background-color: white;
 		border-right: none;
 		padding: 0 !important;
 		margin: 0 !important;
-	}
-}
-
-// Mobile overrides
-@media (max-width: 767px) {
-	.main-wrapper {
-		overflow: visible;
-	}
-
-	.content {
-		padding: 0 !important;
-		margin: 0 !important;
-		background: white !important;
-		overflow-y: auto;
 	}
 }
 </style>

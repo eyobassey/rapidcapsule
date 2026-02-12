@@ -77,6 +77,7 @@ export class RxGPTSettings {
       use_pubmed: { type: Boolean, default: true },
       use_nice_guidelines: { type: Boolean, default: false },
       use_bnf: { type: Boolean, default: false },
+      use_who_eml: { type: Boolean, default: false },
       use_hallucination_detection: { type: Boolean, default: true },
     }),
   )
@@ -87,6 +88,7 @@ export class RxGPTSettings {
     use_pubmed: boolean;
     use_nice_guidelines: boolean;
     use_bnf: boolean;
+    use_who_eml: boolean;
     use_hallucination_detection: boolean;
   };
 

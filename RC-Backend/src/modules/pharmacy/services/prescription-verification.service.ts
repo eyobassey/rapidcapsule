@@ -170,6 +170,7 @@ export class PrescriptionVerificationService {
       },
       errors: [],
       retry_count: 0,
+      is_trial: (upload as any).is_trial || false,
     });
 
     verification = await verification.save();
@@ -1683,6 +1684,7 @@ export class PrescriptionVerificationService {
     const query = {
       'pharmacist_review.status': 'PENDING',
       overall_result: VerificationResult.NEEDS_REVIEW,
+      is_trial: { $ne: true },
     };
 
     const [verifications, total] = await Promise.all([

@@ -718,6 +718,14 @@ export class RxGPTStandaloneAnalyzeDto {
   symptoms?: string[];
 }
 
+// ============ RE-RUN DTO ============
+
+export class RxGPTRerunAnalysisDto {
+  @IsMongoId()
+  @IsNotEmpty()
+  source_analysis_id: string;
+}
+
 // ============ MEDICATION SUGGESTION DTOs ============
 
 export class RxGPTSuggestMedicationsDto {
@@ -936,6 +944,22 @@ export class SuggestedMedicationDto {
     };
     special_population_warnings: string[];
   };
+
+  // WHO Essential Medicines List (EML) Validation
+  who_info?: {
+    found_in_eml: boolean;
+    list_type?: 'core' | 'complementary';
+    atc_code?: string;
+    section?: string;
+    category?: string;
+    matching_indications: string[];
+    formulations: Array<{
+      route: string;
+      form: string;
+      strength: string;
+    }>;
+    age_group_appropriate: boolean;
+  };
 }
 
 export class RxGPTSuggestMedicationsResponseDto {
@@ -1015,6 +1039,17 @@ export class RxGPTSuggestMedicationsResponseDto {
     caution_flags_count: number;
     interaction_alerts_count: number;
     has_uk_compliance_issues: boolean;
+    warning?: string;
+  };
+
+  // WHO EML (Essential Medicines List) summary
+  who_eml_compliance_summary?: {
+    total_drugs_checked: number;
+    eml_listed_count: number;
+    core_count: number;
+    complementary_count: number;
+    not_in_eml: string[];
+    has_eml_issues: boolean;
     warning?: string;
   };
 

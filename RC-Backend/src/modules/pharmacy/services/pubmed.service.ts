@@ -171,17 +171,70 @@ export class PubMedService {
   }
 
   /**
+   * Clean drug name for PubMed search
+   * Strips dosages, strengths, and other noise to get just the drug INN/generic name
+   */
+  private cleanDrugName(name: string): string {
+    if (!name) return name;
+
+    let cleaned = name
+      // Remove dosage patterns: 20mg, 120 mg, 500mcg, 0.5g, etc.
+      .replace(/\d+(\.\d+)?\s*(mg|mcg|g|ml|iu|units?|mmol)\b/gi, '')
+      // Remove "sachet", "tablet", "capsule" etc.
+      .replace(/\b(sachet|tablet|capsule|powder|solution|injection|syrup|cream|ointment|gel|drops)\b/gi, '')
+      // Replace + or / separators with space (for combination drugs)
+      .replace(/[+\/]/g, ' ')
+      // Clean up extra whitespace
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    return cleaned || name;
+  }
+
+  /**
+   * Split a condition string into individual conditions
+   * "Malaria, Tension Headache" → ["Malaria", "Tension Headache"]
+   */
+  private splitConditions(condition: string): string[] {
+    if (!condition) return [];
+    return condition
+      .split(/[,;]+/)
+      .map(c => c.trim())
+      .filter(c => c.length > 0);
+  }
+
+  /**
    * Build search query from parameters
    */
   private buildSearchQuery(params: PubMedSearchParams): string {
     const terms: string[] = [];
 
-    // Drug name search - search in title/abstract and MeSH
-    terms.push(`(${params.drug_name}[Title/Abstract] OR ${params.drug_name}[MeSH Terms])`);
+    // Clean drug name (strip dosages, strengths)
+    const drugName = this.cleanDrugName(params.drug_name);
 
-    // Add condition if provided
+    // Drug name search - search in title/abstract and MeSH
+    // For combination drugs (e.g. "artemether lumefantrine"), search each component
+    const drugParts = drugName.split(/\s+/).filter(p => p.length > 2);
+    if (drugParts.length <= 3) {
+      // Simple drug name: search as phrase and individual terms
+      terms.push(`(${drugName}[Title/Abstract] OR ${drugName}[MeSH Terms])`);
+    } else {
+      // Combination or complex name: search each meaningful word with AND
+      const drugQuery = drugParts.map(p => `${p}[Title/Abstract]`).join(' AND ');
+      terms.push(`(${drugQuery} OR ${drugName}[MeSH Terms])`);
+    }
+
+    // Add condition if provided - split multiple conditions with OR
     if (params.condition) {
-      terms.push(`(${params.condition}[Title/Abstract] OR ${params.condition}[MeSH Terms])`);
+      const conditions = this.splitConditions(params.condition);
+      if (conditions.length === 1) {
+        terms.push(`(${conditions[0]}[Title/Abstract] OR ${conditions[0]}[MeSH Terms])`);
+      } else if (conditions.length > 1) {
+        const conditionQuery = conditions
+          .map(c => `(${c}[Title/Abstract] OR ${c}[MeSH Terms])`)
+          .join(' OR ');
+        terms.push(`(${conditionQuery})`);
+      }
     }
 
     // Prefer high-quality publication types
@@ -325,10 +378,12 @@ export class PubMedService {
       };
     }
 
-    // Default to unknown
+    // Journal articles and other publication types default to low
     return {
-      level: EvidenceLevel.UNKNOWN,
-      reasoning: 'Evidence level could not be determined',
+      level: EvidenceLevel.LOW,
+      reasoning: pubTypesLower.some(pt => pt.includes('journal article'))
+        ? 'Journal article'
+        : 'Evidence level could not be fully determined',
       publication_type: pubTypes[0] || 'Journal Article',
     };
   }

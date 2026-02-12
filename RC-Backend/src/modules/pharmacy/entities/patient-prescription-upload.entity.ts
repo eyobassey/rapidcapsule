@@ -286,6 +286,10 @@ export class PatientPrescriptionUpload {
     verified_at: Date;
   };
 
+  // Trial flag — trial prescriptions are excluded from admin/pharmacist views
+  @Prop({ type: Boolean, default: false })
+  is_trial: boolean;
+
   // Soft delete
   @Prop({ type: Boolean, default: false })
   is_deleted: boolean;

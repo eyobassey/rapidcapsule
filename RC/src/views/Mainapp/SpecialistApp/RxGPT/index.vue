@@ -27,10 +27,6 @@
         <!-- Hero Section -->
         <section class="hero">
           <div class="hero__content">
-            <router-link to="/app/specialist/specialist-dashboard" class="back-link desktop-only">
-              <v-icon name="hi-arrow-left" scale="0.85" />
-              <span>Dashboard</span>
-            </router-link>
             <div class="hero__badge">
               <div class="badge-pulse"></div>
               <v-icon name="bi-robot" />
@@ -38,10 +34,10 @@
             </div>
             <h1 class="hero__title">
               RxGPT<br/>
-              <span class="hero__title-accent">Quick Analysis</span>
+              <span class="hero__title-accent">AI Assistant</span>
             </h1>
             <p class="hero__subtitle">
-              AI-powered medication safety analysis and evidence-based recommendations.
+              AI-powered medication safety analysis, drug interaction checking, and evidence-based clinical decision support.
             </p>
             <div class="hero__stats">
               <div class="hero-stat">
@@ -52,6 +48,11 @@
               <div class="hero-stat">
                 <span class="hero-stat__value hero-stat__value--success">{{ stats.safe_prescriptions || 0 }}</span>
                 <span class="hero-stat__label">Safe</span>
+              </div>
+              <div class="hero-stat__divider"></div>
+              <div class="hero-stat">
+                <span class="hero-stat__value hero-stat__value--warning">{{ stats.warnings_count || 0 }}</span>
+                <span class="hero-stat__label">Warnings</span>
               </div>
               <div class="hero-stat__divider"></div>
               <div class="hero-stat">
@@ -77,12 +78,52 @@
           </div>
         </section>
 
+        <!-- Feature Gateway Cards -->
+        <section class="features-row">
+          <div class="feature-card" @click="scrollToAnalysis">
+            <div class="feature-card__icon feature-card__icon--sky">
+              <v-icon name="bi-robot" scale="1.3" />
+            </div>
+            <div class="feature-card__content">
+              <h3 class="feature-card__title">Quick Analysis</h3>
+              <p class="feature-card__desc">Enter a diagnosis and get AI-powered medication recommendations with evidence verification</p>
+            </div>
+            <div class="feature-card__arrow">
+              <v-icon name="hi-arrow-down" scale="0.9" />
+            </div>
+          </div>
+          <router-link to="/app/specialist/rxgpt/interactions" class="feature-card">
+            <div class="feature-card__icon feature-card__icon--amber">
+              <v-icon name="hi-switch-horizontal" scale="1.3" />
+            </div>
+            <div class="feature-card__content">
+              <h3 class="feature-card__title">Interaction Checker</h3>
+              <p class="feature-card__desc">Check drug-drug interactions, severity levels, and management guidance before prescribing</p>
+            </div>
+            <div class="feature-card__arrow">
+              <v-icon name="hi-arrow-right" scale="0.9" />
+            </div>
+          </router-link>
+          <router-link to="/app/specialist/rxgpt/history" class="feature-card">
+            <div class="feature-card__icon feature-card__icon--emerald">
+              <v-icon name="hi-clock" scale="1.3" />
+            </div>
+            <div class="feature-card__content">
+              <h3 class="feature-card__title">Analysis History</h3>
+              <p class="feature-card__desc">Review all past analyses, filter by risk level, and revisit detailed results</p>
+            </div>
+            <div class="feature-card__arrow">
+              <v-icon name="hi-arrow-right" scale="0.9" />
+            </div>
+          </router-link>
+        </section>
+
         <!-- Bento Grid -->
-        <section class="bento">
+        <section class="bento" ref="analysisSection">
           <!-- Quick Analysis Form -->
           <div class="bento__card bento__card--form">
             <div class="card-header">
-              <div class="card-header__icon card-header__icon--indigo">
+              <div class="card-header__icon card-header__icon--sky">
                 <v-icon name="bi-robot" scale="0.9" />
               </div>
               <div>
@@ -166,6 +207,7 @@ const isPageLoading = ref(true);
 const isAnalyzing = ref(false);
 const stats = ref({});
 const recentAnalyses = ref([]);
+const analysisSection = ref(null);
 
 onMounted(async () => {
   try {
@@ -221,6 +263,10 @@ async function runAnalysis(payload) {
   }
 }
 
+function scrollToAnalysis() {
+  analysisSection.value?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 function truncateText(text, maxLen = 60) {
   if (!text || text.length <= maxLen) return text;
   const trimmed = text.substring(0, maxLen);
@@ -234,7 +280,7 @@ function viewAnalysis(id) {
 </script>
 
 <style lang="scss" scoped>
-// Design Tokens (matching Pharmacy)
+// Design Tokens
 $sky: #4FC3F7;
 $sky-light: #E1F5FE;
 $sky-dark: #0288D1;
@@ -260,13 +306,15 @@ $violet-light: #EDE9FE;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
 }
 
+// ============================================
+// PAGE LAYOUT
+// ============================================
 .rxgpt-page {
   width: 100%;
   min-height: 100vh;
   background: $bg;
 }
 
-// Mobile header
 .mobile-header {
   display: none;
   position: sticky;
@@ -281,7 +329,7 @@ $violet-light: #EDE9FE;
   @media (max-width: 768px) { display: flex; }
 }
 
-.menu-btn, .action-btn {
+.menu-btn {
   width: 40px;
   height: 40px;
   border-radius: 12px;
@@ -307,7 +355,6 @@ $violet-light: #EDE9FE;
   svg { color: $sky-dark; }
 }
 
-// Page content
 .page-content {
   max-width: 1400px;
   margin: 0 auto;
@@ -354,7 +401,7 @@ $violet-light: #EDE9FE;
 @keyframes spin { to { transform: rotate(360deg); } }
 
 // ============================================
-// HERO SECTION (matches Pharmacy exactly)
+// HERO SECTION
 // ============================================
 .hero {
   display: grid;
@@ -365,7 +412,7 @@ $violet-light: #EDE9FE;
   border-radius: 28px;
   position: relative;
   overflow: visible;
-  min-height: 460px;
+  min-height: 420px;
   margin-bottom: 24px;
   box-shadow:
     0 20px 60px rgba(2, 136, 209, 0.3),
@@ -378,10 +425,8 @@ $violet-light: #EDE9FE;
     gap: 0;
     text-align: center;
     min-height: unset;
-    height: auto;
     border-radius: 20px;
     margin-bottom: 16px;
-    overflow: visible;
   }
 
   @media (max-width: 480px) {
@@ -402,31 +447,6 @@ $violet-light: #EDE9FE;
   }
 }
 
-.back-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(10px);
-  border: none;
-  border-radius: 12px;
-  padding: 10px 16px;
-  color: white;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  margin-bottom: 20px;
-  width: fit-content;
-  text-decoration: none;
-  transition: all 0.2s ease;
-
-  &:hover { background: rgba(255, 255, 255, 0.25); }
-}
-
-.desktop-only {
-  @media (max-width: 768px) { display: none !important; }
-}
-
 .hero__badge {
   display: inline-flex;
   align-items: center;
@@ -441,7 +461,6 @@ $violet-light: #EDE9FE;
 
   @media (max-width: 768px) {
     margin: 0 auto 16px;
-    padding: 8px 16px;
   }
 
   @media (max-width: 480px) {
@@ -545,7 +564,7 @@ $violet-light: #EDE9FE;
   color: white;
   line-height: 1.6;
   margin: 0 0 24px;
-  max-width: 400px;
+  max-width: 440px;
   opacity: 0.95;
 
   @media (max-width: 768px) {
@@ -717,6 +736,146 @@ $violet-light: #EDE9FE;
 }
 
 // ============================================
+// FEATURE GATEWAY CARDS
+// ============================================
+.features-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  @media (max-width: 768px) {
+    margin-bottom: 16px;
+  }
+}
+
+.feature-card {
+  @include glass-card;
+  border-radius: 20px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  text-decoration: none;
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: transparent;
+    transition: background 0.25s ease;
+    border-radius: 20px 20px 0 0;
+  }
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1), 0 4px 12px rgba(0, 0, 0, 0.04);
+
+    .feature-card__arrow {
+      transform: translateX(4px);
+      color: $sky-dark;
+    }
+  }
+
+  &:nth-child(1):hover::before { background: linear-gradient(90deg, $sky, $sky-dark); }
+  &:nth-child(2):hover::before { background: linear-gradient(90deg, $amber, darken($amber, 10%)); }
+  &:nth-child(3):hover::before { background: linear-gradient(90deg, $emerald, darken($emerald, 10%)); }
+
+  @media (max-width: 900px) {
+    flex-direction: row;
+    align-items: center;
+    padding: 20px;
+
+    &::before { display: none; }
+  }
+
+  @media (max-width: 768px) {
+    padding: 16px;
+    border-radius: 16px;
+    gap: 12px;
+  }
+}
+
+.feature-card__icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  &--sky {
+    background: linear-gradient(135deg, $sky-light 0%, rgba($sky, 0.2) 100%);
+    color: $sky-dark;
+  }
+
+  &--amber {
+    background: linear-gradient(135deg, $amber-light 0%, rgba($amber, 0.2) 100%);
+    color: $amber;
+  }
+
+  &--emerald {
+    background: linear-gradient(135deg, $emerald-light 0%, rgba($emerald, 0.2) 100%);
+    color: $emerald;
+  }
+
+  @media (max-width: 768px) {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+  }
+}
+
+.feature-card__content {
+  flex: 1;
+  min-width: 0;
+}
+
+.feature-card__title {
+  font-size: 16px;
+  font-weight: 700;
+  color: $navy;
+  margin: 0 0 6px;
+
+  @media (max-width: 768px) {
+    font-size: 15px;
+    margin: 0 0 4px;
+  }
+}
+
+.feature-card__desc {
+  font-size: 13px;
+  color: $gray;
+  line-height: 1.5;
+  margin: 0;
+
+  @media (max-width: 768px) { font-size: 12px; }
+}
+
+.feature-card__arrow {
+  align-self: flex-end;
+  color: $light-gray;
+  transition: all 0.25s ease;
+
+  @media (max-width: 900px) {
+    align-self: center;
+  }
+}
+
+// ============================================
 // BENTO GRID
 // ============================================
 .bento {
@@ -767,7 +926,7 @@ $violet-light: #EDE9FE;
   flex-shrink: 0;
 }
 
-.card-header__icon--indigo {
+.card-header__icon--sky {
   background: linear-gradient(135deg, $sky-light 0%, rgba($sky, 0.2) 100%);
   color: $sky-dark;
 }

@@ -4180,20 +4180,46 @@ watch(() => payment.source, (newSource, oldSource) => {
 const showDraftModal = ref(false);
 const draftInfo = ref(null);
 
-onMounted(() => {
+onMounted(async () => {
   checkForExistingDraft();
-  loadMyPatients();
+  await loadMyPatients();
   loadFilterOptions();
   loadSpecialtyCategories();
+
+  // If patientId is in query params (e.g. from patient details page), auto-select and skip to step 2
+  const preselectedId = route.query.patientId;
+  if (preselectedId) {
+    const found = existingPatientResults.value.find(p => p._id === preselectedId);
+    if (found) {
+      selectPatient(found, 'existing');
+      currentStep.value = 2;
+    } else {
+      // Patient not in existing list — search platform-wide
+      try {
+        const res = await $http.$_searchPatients({ filter: 'all', search: preselectedId, limit: 10 });
+        const patients = res.data?.data?.patients || [];
+        const match = patients.find(p => p._id === preselectedId);
+        if (match) {
+          selectPatient(match, 'existing');
+          currentStep.value = 2;
+        }
+      } catch (e) {
+        console.error('Failed to pre-select patient:', e);
+      }
+    }
+    // Clean patientId from URL without triggering navigation
+    router.replace({ name: 'SpecialistAppointmentsCreate', query: {} });
+  }
 });
 
 // Check for existing draft and show restore prompt
 function checkForExistingDraft() {
-  // If navigating with fresh=true query param, skip draft restore
-  if (route.query.fresh === 'true') {
+  // If navigating with fresh=true or patientId query param, skip draft restore
+  if (route.query.fresh === 'true' || route.query.patientId) {
     clearDraft();
-    // Clear the query param from URL without navigation
-    router.replace({ name: 'SpecialistAppointmentsCreate', query: {} });
+    if (route.query.fresh === 'true') {
+      router.replace({ name: 'SpecialistAppointmentsCreate', query: {} });
+    }
     return;
   }
 

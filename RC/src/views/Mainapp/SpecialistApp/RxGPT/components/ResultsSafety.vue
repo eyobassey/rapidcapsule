@@ -84,13 +84,34 @@
       </div>
     </div>
 
-    <!-- No Alerts State -->
-    <div v-else class="no-alerts">
-      <div class="no-alerts__icon">
-        <v-icon name="hi-shield-check" scale="1.4" />
+    <!-- No Alerts — Structured safety assessment -->
+    <div v-else class="safety-clear glass-card">
+      <div class="safety-clear__header">
+        <div class="safety-clear__icon">
+          <v-icon name="hi-shield-check" scale="0.9" />
+        </div>
+        <div>
+          <h4 class="safety-clear__title">No Interactions Found</h4>
+          <p class="safety-clear__headline">{{ safetySummary?.headline || 'No clinically significant interactions identified between the suggested medications.' }}</p>
+        </div>
       </div>
-      <p class="no-alerts__title">No safety alerts detected</p>
-      <p class="no-alerts__text">The analysis did not identify any drug interactions, allergies, or contraindications.</p>
+      <div v-if="safetySummary?.drugs?.length" class="safety-clear__drugs">
+        <div v-for="drug in safetySummary.drugs" :key="drug.name" class="safety-drug-row">
+          <span class="safety-drug-row__name">{{ drug.name }}</span>
+          <span v-for="src in drug.sources" :key="src" class="safety-source-tag">{{ src }}</span>
+          <span v-for="(p, i) in drug.precautions" :key="i" class="safety-precaution-tag">
+            <v-icon name="hi-exclamation-circle" scale="0.55" /> {{ p }}
+          </span>
+        </div>
+      </div>
+      <div v-if="safetySummary?.allergies_checked || safetySummary?.current_medications_checked" class="safety-clear__context">
+        <span v-if="safetySummary.allergies_checked">
+          <v-icon name="hi-check" scale="0.55" /> Allergies reviewed ({{ safetySummary.allergies_checked.join(', ') }})
+        </span>
+        <span v-if="safetySummary.current_medications_checked">
+          <v-icon name="hi-check" scale="0.55" /> Current medications considered
+        </span>
+      </div>
     </div>
 
     <!-- Clinical Summary -->
@@ -207,6 +228,9 @@ const warningAlerts = computed(() =>
 const infoAlerts = computed(() =>
   allAlerts.value.filter((a) => a.severity === 'info')
 );
+
+// Structured safety summary
+const safetySummary = computed(() => props.result.safety_summary || null);
 
 // Patient considerations
 const considerations = computed(() => props.result.patient_considerations || {});
@@ -436,45 +460,99 @@ $gray-light: #9ca3af;
   }
 }
 
-// ============ No Alerts ============
-.no-alerts {
-  text-align: center;
-  padding: 32px 20px;
-  background: rgba(255, 255, 255, 0.65);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  border-radius: 18px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+// ============ Safety Clear (No Alerts) ============
+.safety-clear__header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 14px;
 }
 
-.no-alerts__icon {
-  width: 56px;
-  height: 56px;
-  margin: 0 auto 14px;
-  background: linear-gradient(135deg, rgba($emerald, 0.12), rgba($emerald, 0.06));
-  border-radius: 16px;
+.safety-clear__icon {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: $emerald;
+  background: linear-gradient(135deg, $emerald, darken($emerald, 8%));
+  color: white;
 }
 
-.no-alerts__title {
+.safety-clear__title {
   font-size: 15px;
   font-weight: 700;
   color: $navy;
-  margin: 0 0 6px;
+  margin: 0 0 4px;
 }
 
-.no-alerts__text {
+.safety-clear__headline {
   font-size: 13px;
   color: $gray;
   margin: 0;
-  max-width: 340px;
-  margin-left: auto;
-  margin-right: auto;
-  line-height: 1.5;
+  line-height: 1.45;
+}
+
+.safety-clear__drugs {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.02);
+  border-radius: 12px;
+  margin-bottom: 10px;
+}
+
+.safety-drug-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.safety-drug-row__name {
+  font-size: 13px;
+  font-weight: 600;
+  color: $slate;
+  margin-right: 2px;
+}
+
+.safety-source-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  background: rgba($emerald, 0.1);
+  color: darken($emerald, 12%);
+}
+
+.safety-precaution-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 500;
+  background: rgba($amber, 0.1);
+  color: darken($amber, 12%);
+}
+
+.safety-clear__context {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 12px;
+  color: $gray;
+
+  > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
 }
 
 // ============ Clinical Summary ============

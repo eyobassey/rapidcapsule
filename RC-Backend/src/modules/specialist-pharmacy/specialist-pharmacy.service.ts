@@ -24,6 +24,29 @@ import { FileUploadHelper } from '../../common/helpers/file-upload.helpers';
 export class SpecialistPharmacyService {
   private readonly logger = new Logger(SpecialistPharmacyService.name);
 
+  // Reference data cache (dosage forms, routes, manufacturers) — 5 min TTL
+  private refCache: {
+    forms: Map<string, string>;
+    mfrs: Map<string, string>;
+    ts: number;
+  } | null = null;
+
+  private async getRefCache() {
+    if (this.refCache && Date.now() - this.refCache.ts < 300_000) {
+      return this.refCache;
+    }
+    const [forms, mfrs] = await Promise.all([
+      this.connection.collection('dosageformentities').find({}).toArray(),
+      this.connection.collection('manufacturerentities').find({}).toArray(),
+    ]);
+    this.refCache = {
+      forms: new Map(forms.map((f) => [f._id.toString(), f.name])),
+      mfrs: new Map(mfrs.map((m) => [m._id.toString(), m.name])),
+      ts: Date.now(),
+    };
+    return this.refCache;
+  }
+
   constructor(
     @InjectModel(SpecialistPrescription.name)
     private prescriptionModel: Model<SpecialistPrescriptionDocument>,
@@ -656,95 +679,103 @@ export class SpecialistPharmacyService {
 
     const DrugsCollection = this.connection.collection('drugentities');
     const StockBatchCollection = this.connection.collection('stockbatchentities');
-    const DosageFormsCollection = this.connection.collection('dosageformentities');
 
-    const filter: any = {
-      is_active: true,
-    };
+    // Load cached reference data (dosage forms, manufacturers)
+    const cache = await this.getRefCache();
 
-    // Text search
+    // Build filter
+    const filter: any = { is_active: true };
+
     if (search) {
-      const searchRegex = new RegExp(search, 'i');
+      const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       filter.$or = [
-        { name: searchRegex },
-        { generic_name: searchRegex },
-        { brand_name: searchRegex },
-        { search_keywords: searchRegex },
+        { name: { $regex: escaped, $options: 'i' } },
+        { generic_name: { $regex: escaped, $options: 'i' } },
+        { brand_name: { $regex: escaped, $options: 'i' } },
+        { search_keywords: { $regex: escaped, $options: 'i' } },
       ];
     }
 
-    // Category filter
     if (category) {
       filter.categories = new Types.ObjectId(category);
     }
 
-    // Get matching drugs first (without stock filter - we'll filter by batches)
+    if (manufacturer) {
+      filter.manufacturer = { $regex: manufacturer, $options: 'i' };
+    }
+
+    // Stock status filter (for legacy quantity-based drugs)
+    if (stock_status === 'in_stock') {
+      filter.quantity = { $gt: 0 };
+    } else if (stock_status === 'out_of_stock') {
+      filter.quantity = 0;
+    }
+
+    // DB-level pagination
+    const total = await DrugsCollection.countDocuments(filter);
     const drugs = await DrugsCollection.find(filter)
       .sort({ [sort_by]: sort_order === 'asc' ? 1 : -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
       .toArray();
 
-    // Build batch-level results
-    const batchResults: any[] = [];
+    // Batch stock lookup for paginated subset only (single query)
+    const drugIds = drugs.map((d) => d._id);
+    const allBatches = await StockBatchCollection.find({
+      drug_id: { $in: drugIds },
+      status: 'active',
+      quantity_available: { $gt: 0 },
+      $or: [{ no_expiry: true }, { expiry_date: { $gt: new Date() } }],
+    })
+      .sort({ expiry_date: 1 })
+      .toArray();
+
+    // Group batches by drug ID
+    const batchMap = new Map<string, any[]>();
+    for (const b of allBatches) {
+      const key = b.drug_id.toString();
+      if (!batchMap.has(key)) batchMap.set(key, []);
+      batchMap.get(key)!.push(b);
+    }
+
+    // Build results from cached/batched data
+    const results: any[] = [];
 
     for (const drug of drugs) {
-      // Get dosage form name
-      let dosageFormName = '';
-      if (drug.dosage_form) {
-        const df = await DosageFormsCollection.findOne({ _id: drug.dosage_form });
-        dosageFormName = df?.name || '';
+      const dosageFormName = drug.dosage_form
+        ? cache.forms.get(drug.dosage_form.toString()) || ''
+        : '';
+
+      const primaryImage =
+        drug.images?.find((img) => img.is_primary)?.url ||
+        drug.images?.[0]?.url ||
+        null;
+
+      // Resolve manufacturer name (string or ObjectId)
+      let drugManufacturer = drug.manufacturer;
+      if (drug.manufacturer && typeof drug.manufacturer === 'object') {
+        drugManufacturer = cache.mfrs.get(drug.manufacturer.toString()) || null;
       }
 
-      // Get primary image with pre-signed URL
-      let primaryImage = drug.images?.find((img) => img.is_primary)?.url ||
-        drug.images?.[0]?.url;
-
-      if (primaryImage && primaryImage.includes('s3.') && primaryImage.includes('amazonaws.com')) {
-        try {
-          primaryImage = await this.fileUploadHelper.getPresignedUrl(primaryImage, 3600);
-        } catch (e) {
-          this.logger.warn(`Failed to generate presigned URL for drug ${drug._id}: ${e.message}`);
-        }
-      }
-
-      // Get available batches for this drug
-      const batches = await StockBatchCollection.find({
-        drug_id: drug._id,
-        status: 'active',
-        quantity_available: { $gt: 0 },
-        $or: [
-          { no_expiry: true },
-          { expiry_date: { $gt: new Date() } },
-        ],
-      })
-        .sort({ expiry_date: 1 }) // FEFO - first expiry first
-        .toArray();
+      const batches = batchMap.get(drug._id.toString()) || [];
 
       if (batches.length > 0) {
-        // Add each batch as a separate selectable item
         for (const batch of batches) {
-          const availableQty = batch.quantity_available - (batch.quantity_reserved || 0);
+          const availableQty =
+            batch.quantity_available - (batch.quantity_reserved || 0);
           if (availableQty <= 0) continue;
 
-          // Apply stock_status filter
-          if (stock_status === 'out_of_stock') continue; // Skip in-stock batches
-
-          // Apply manufacturer filter if provided
-          if (manufacturer) {
-            const mfrRegex = new RegExp(manufacturer, 'i');
-            if (!batch.manufacturer || !mfrRegex.test(batch.manufacturer)) continue;
-          }
-
-          // Calculate days until expiry
           let daysUntilExpiry: number | null = null;
           let expiryStatus = 'ok';
           if (!batch.no_expiry && batch.expiry_date) {
-            const diffMs = new Date(batch.expiry_date).getTime() - Date.now();
+            const diffMs =
+              new Date(batch.expiry_date).getTime() - Date.now();
             daysUntilExpiry = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
             if (daysUntilExpiry <= 30) expiryStatus = 'warning';
             if (daysUntilExpiry <= 7) expiryStatus = 'critical';
           }
 
-          batchResults.push({
+          results.push({
             _id: drug._id,
             batch_id: batch._id,
             batch_number: batch.batch_number,
@@ -753,7 +784,7 @@ export class SpecialistPharmacyService {
             brand_name: drug.brand_name,
             strength: drug.strength,
             dosage_form: dosageFormName,
-            manufacturer: batch.manufacturer || null,
+            manufacturer: batch.manufacturer || drugManufacturer,
             selling_price: batch.selling_price_override || drug.selling_price,
             quantity: availableQty,
             expiry_date: batch.expiry_date,
@@ -766,68 +797,31 @@ export class SpecialistPharmacyService {
           });
         }
       } else {
-        // No batches - use drug's legacy quantity (for seeded data)
-        if (drug.quantity > 0 || stock_status === 'out_of_stock') {
-          // Apply stock_status filter for legacy drugs
-          if (stock_status === 'in_stock' && drug.quantity <= 0) continue;
-          if (stock_status === 'out_of_stock' && drug.quantity > 0) continue;
-
-          // Get drug manufacturer name if it's an ObjectId
-          let drugManufacturer = drug.manufacturer;
-          if (drug.manufacturer && typeof drug.manufacturer === 'object') {
-            const ManufacturersCollection = this.connection.collection('manufacturerentities');
-            const mfr = await ManufacturersCollection.findOne({ _id: drug.manufacturer });
-            drugManufacturer = mfr?.name || null;
-          }
-
-          // Apply manufacturer filter
-          if (manufacturer) {
-            const mfrRegex = new RegExp(manufacturer, 'i');
-            if (!drugManufacturer || !mfrRegex.test(drugManufacturer)) continue;
-          }
-
-          batchResults.push({
-            _id: drug._id,
-            batch_id: null,
-            batch_number: null,
-            name: drug.name,
-            generic_name: drug.generic_name,
-            brand_name: drug.brand_name,
-            strength: drug.strength,
-            dosage_form: dosageFormName,
-            manufacturer: drugManufacturer,
-            selling_price: drug.selling_price,
-            quantity: drug.quantity,
-            expiry_date: null,
-            no_expiry: true,
-            days_until_expiry: null,
-            expiry_status: 'ok',
-            primary_image: primaryImage,
-            requires_prescription: drug.requires_prescription,
-            is_batch: false,
-          });
-        }
+        // Legacy quantity-based drug
+        results.push({
+          _id: drug._id,
+          batch_id: null,
+          batch_number: null,
+          name: drug.name,
+          generic_name: drug.generic_name,
+          brand_name: drug.brand_name,
+          strength: drug.strength,
+          dosage_form: dosageFormName,
+          manufacturer: drugManufacturer,
+          selling_price: drug.selling_price,
+          quantity: drug.quantity || 0,
+          expiry_date: null,
+          no_expiry: true,
+          days_until_expiry: null,
+          expiry_status: 'ok',
+          primary_image: primaryImage,
+          requires_prescription: drug.requires_prescription,
+          is_batch: false,
+        });
       }
     }
 
-    // Sort results
-    batchResults.sort((a, b) => {
-      if (sort_by === 'name') {
-        const cmp = a.name.localeCompare(b.name);
-        return sort_order === 'asc' ? cmp : -cmp;
-      }
-      if (sort_by === 'selling_price') {
-        return sort_order === 'asc' ? a.selling_price - b.selling_price : b.selling_price - a.selling_price;
-      }
-      return 0;
-    });
-
-    // Paginate
-    const total = batchResults.length;
-    const startIndex = (page - 1) * limit;
-    const paginatedResults = batchResults.slice(startIndex, startIndex + limit);
-
-    return this.generalHelpers.paginate(paginatedResults, page, limit, total);
+    return this.generalHelpers.paginate(results, page, limit, total);
   }
 
   /**

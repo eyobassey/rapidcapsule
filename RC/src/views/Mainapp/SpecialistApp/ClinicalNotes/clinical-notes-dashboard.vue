@@ -1,216 +1,249 @@
 <template>
-  <div class="page-content">
-    <TopBar showButtons type="title-only" :title="isPatientMode ? 'Patient Clinical Notes' : 'Clinical Notes'" @open-side-nav="$emit('openSideNav')" />
-    <div class="page-content__body">
-      <div class="notes-container">
-        <!-- Hero Banner (when in patient mode) -->
-        <div v-if="isPatientMode && patient" class="hero-banner">
-          <div class="hero-top">
-            <button @click="goBack" class="back-link">
-              <v-icon name="hi-arrow-left" scale="0.9" />
-              <span>Back to Patient</span>
-            </button>
-            <button class="create-note-btn" @click="openCreateNoteModal">
-              <v-icon name="hi-plus" scale="0.9" />
-              Create Clinical Note
-            </button>
+  <div class="clinical-notes-page">
+    <!-- Hero Section: Patient Mode -->
+    <section v-if="isPatientMode && patient" class="hero">
+      <div class="hero__content">
+        <div class="hero__top-actions">
+          <button @click="goBack" class="hero__back-btn">
+            <v-icon name="hi-arrow-left" scale="0.9" />
+            <span>Back to Patient</span>
+          </button>
+          <button class="hero__create-btn" @click="openCreateNoteModal">
+            <v-icon name="hi-plus" scale="0.9" />
+            Create Clinical Note
+          </button>
+        </div>
+        <div class="hero__patient-row">
+          <div class="hero__avatar">
+            <img v-if="getPatientImage()" :src="getPatientImage()" :alt="getPatientName()" @error="$event.target.style.display='none'" />
+            <span v-else class="avatar-initials">{{ getPatientInitials() }}</span>
           </div>
-          <div class="hero-main">
-            <div class="patient-header">
-              <div class="patient-avatar">
-                <div class="avatar-wrapper">
-                  <img v-if="getPatientImage()" :src="getPatientImage()" :alt="getPatientName()" @error="$event.target.style.display='none'" />
-                  <span v-else class="avatar-initials">{{ getPatientInitials() }}</span>
-                </div>
-              </div>
-              <div class="patient-info">
-                <span class="patient-badge">Clinical Notes</span>
-                <h1 class="patient-name">{{ getPatientName() }}</h1>
-                <div class="patient-meta">
-                  <span v-if="patient?.profile?.gender" class="meta-item">
-                    <v-icon name="hi-user" scale="0.7" />
-                    {{ patient.profile.gender }}
-                  </span>
-                  <span v-if="patient?.profile?.date_of_birth" class="meta-item">
-                    <v-icon name="hi-calendar" scale="0.7" />
-                    {{ calculateAge(patient.profile.date_of_birth) }} years old
-                  </span>
-                  <span v-if="patient?.email" class="meta-item">
-                    <v-icon name="hi-mail" scale="0.7" />
-                    {{ patient.email }}
-                  </span>
-                  <span v-if="patient?.profile?.phone_number" class="meta-item">
-                    <v-icon name="hi-phone" scale="0.7" />
-                    {{ patient.profile.phone_number }}
-                  </span>
-                </div>
-              </div>
+          <div class="hero__patient-info">
+            <div class="hero__badge">
+              <div class="badge-pulse"></div>
+              <v-icon name="hi-document-text" />
+              <span>Patient Clinical Notes</span>
             </div>
-            <div class="hero-stats" v-if="notes.length">
-              <div class="stat-card">
-                <span class="stat-value">{{ notes.length }}</span>
-                <span class="stat-label">Total Notes</span>
-              </div>
+            <h1 class="hero__title">{{ getPatientName() }}</h1>
+            <div class="hero__patient-meta">
+              <span v-if="patient?.profile?.gender" class="meta-item">
+                <v-icon name="hi-user" scale="0.7" />
+                {{ patient.profile.gender }}
+              </span>
+              <span v-if="patient?.profile?.date_of_birth" class="meta-item">
+                <v-icon name="hi-calendar" scale="0.7" />
+                {{ calculateAge(patient.profile.date_of_birth) }} years old
+              </span>
+              <span v-if="patient?.email" class="meta-item">
+                <v-icon name="hi-mail" scale="0.7" />
+                {{ patient.email }}
+              </span>
+              <span v-if="patient?.profile?.phone_number" class="meta-item">
+                <v-icon name="hi-phone" scale="0.7" />
+                {{ patient.profile.phone_number }}
+              </span>
             </div>
           </div>
         </div>
-
-        <!-- Hero Section (when not in patient mode) -->
-        <div v-else class="hero-section">
-          <div class="hero-content">
-            <h1 class="hero-title">
-              <v-icon name="hi-document-text" scale="1" />
-              Clinical Notes
-            </h1>
-            <p class="hero-subtitle">View and manage your clinical notes from appointments</p>
-          </div>
-          <div v-if="notes.length" class="hero-stat-pill">
-            <span class="hero-stat-pill__value">{{ notes.length }}</span>
-            <span class="hero-stat-pill__label">Notes</span>
+        <div class="hero__stats" v-if="notes.length">
+          <div class="hero-stat">
+            <span class="hero-stat__value">{{ notes.length }}</span>
+            <span class="hero-stat__label">Total Notes</span>
           </div>
         </div>
-
-        <!-- Search & Filters -->
-        <div class="filters-card">
-          <div class="search-input-wrapper">
-            <v-icon name="hi-search" scale="0.9" class="search-icon" />
-            <input
-              v-model="searchQuery"
-              type="text"
-              placeholder="Search notes by content or patient name..."
-            />
-            <button v-if="searchQuery" class="clear-btn" @click="searchQuery = ''">
-              <v-icon name="hi-x" scale="0.8" />
-            </button>
-          </div>
-          <div class="filters-row">
-            <div class="filter-group">
-              <label>Patient</label>
-              <select v-model="patientFilter">
-                <option value="all">All Patients</option>
-                <option v-for="name in uniquePatients" :key="name" :value="name">
-                  {{ name }}
-                </option>
-              </select>
-            </div>
-            <div class="filter-group">
-              <label>Platform</label>
-              <select v-model="platformFilter">
-                <option value="all">All Platforms</option>
-                <option value="zoom">Zoom Notes</option>
-                <option value="custom">Custom Notes</option>
-              </select>
-            </div>
-            <div class="filter-actions">
-              <button class="export-btn" :disabled="!filteredNotes.length || isExporting" @click="exportPdf">
-                <v-icon name="hi-download" scale="0.75" />
-                {{ isExporting ? 'Exporting...' : 'Export PDF' }}
-              </button>
-              <router-link to="/app/specialist/clinical-notes/templates" class="templates-link">
-                <v-icon name="hi-template" scale="0.8" />
-                Templates
-              </router-link>
-            </div>
+      </div>
+      <div class="hero__visual">
+        <div class="dashboard-orb">
+          <div class="orb-ring orb-ring--1"></div>
+          <div class="orb-ring orb-ring--2"></div>
+          <div class="orb-ring orb-ring--3"></div>
+          <div class="orb-core">
+            <v-icon name="hi-document-text" />
           </div>
         </div>
+        <div class="floating-icons">
+          <div class="float-icon float-icon--1"><v-icon name="hi-pencil-alt" /></div>
+          <div class="float-icon float-icon--2"><v-icon name="hi-clipboard-list" /></div>
+          <div class="float-icon float-icon--3"><v-icon name="hi-shield-check" /></div>
+        </div>
+      </div>
+    </section>
 
-        <!-- Shimmer Loading -->
-        <template v-if="isLoading">
-          <div class="skeleton-card" v-for="i in 4" :key="i" />
-        </template>
-
-        <!-- Notes List -->
-        <template v-else>
-          <div v-if="filteredNotes.length" class="notes-list">
-            <div
-              v-for="note in filteredNotes"
-              :key="note.note_id"
-              class="note-card"
-              @click="openNoteDetails(note)"
-            >
-              <div class="note-card__header">
-                <div class="note-card__info">
-                  <h3 class="note-card__patient">{{ note.patient_name }}</h3>
-                  <span class="note-card__date">{{ formatNoteDate(note.created_at) }}</span>
-                </div>
-                <div class="note-card__badges">
-                  <span
-                    class="status-badge"
-                    :class="note.platform === 'zoom' ? 'status-badge--zoom' : 'status-badge--custom'"
-                  >
-                    {{ note.platform === 'zoom' ? 'Zoom' : 'Custom' }}
-                  </span>
-                  <span v-if="note.completed" class="status-badge status-badge--completed">
-                    Completed
-                  </span>
-                  <span v-else class="status-badge status-badge--progress">
-                    In Progress
-                  </span>
-                  <button
-                    v-if="getLinkedPrescriptions(note).length"
-                    class="status-badge status-badge--prescription status-badge--clickable"
-                    @click.stop="openRxDetails(note)"
-                  >
-                    <v-icon name="ri-capsule-line" scale="0.55" />
-                    {{ getLinkedPrescriptions(note).length }} Rx
-                  </button>
-                </div>
-              </div>
-
-              <p class="note-card__text">{{ truncateText(note.content, 150) }}</p>
-
-              <div class="note-card__footer">
-                <div class="note-card__footer-left">
-                  <!-- Specialist Info -->
-                  <div class="note-card__specialist">
-                    <div class="specialist-avatar">
-                      <img v-if="note.specialist_image" :src="note.specialist_image" :alt="note.specialist_name" @error="$event.target.style.display='none'" />
-                      <span v-else class="avatar-initials">{{ getSpecialistInitials(note.specialist_name) }}</span>
-                    </div>
-                    <div class="specialist-info">
-                      <span class="specialist-name">Dr. {{ note.specialist_name }}</span>
-                      <span v-if="note.specialist_specialty" class="specialist-specialty">{{ note.specialist_specialty }}</span>
-                    </div>
-                  </div>
-                  <div class="note-card__meta-group">
-                    <div class="note-card__meta">
-                      <v-icon name="hi-video-camera" scale="0.7" />
-                      <span>{{ note.meeting_channel }}</span>
-                    </div>
-                    <div class="note-card__meta">
-                      <v-icon name="hi-clock" scale="0.7" />
-                      <span>{{ formatTimeAgo(note.created_at) }}</span>
-                    </div>
-                  </div>
-                </div>
-                <div class="note-card__footer-right">
-                  <button
-                    class="note-card__prescription-btn"
-                    @click.stop="createPrescriptionFromNote(note)"
-                    title="Create Prescription"
-                  >
-                    <v-icon name="ri-capsule-line" scale="0.8" />
-                    <span>Prescribe</span>
-                  </button>
-                  <div class="card-arrow">
-                    <v-icon name="hi-chevron-right" scale="0.85" />
-                  </div>
-                </div>
-              </div>
-            </div>
+    <!-- Hero Section: General Mode -->
+    <section v-else class="hero">
+      <div class="hero__content">
+        <div class="hero__badge">
+          <div class="badge-pulse"></div>
+          <v-icon name="hi-document-text" />
+          <span>Clinical Notes</span>
+        </div>
+        <h1 class="hero__title">
+          Clinical<br/>
+          <span class="hero__title-accent">Notes</span>
+        </h1>
+        <p class="hero__subtitle">View and manage your clinical notes from appointments</p>
+        <div class="hero__stats" v-if="notes.length">
+          <div class="hero-stat">
+            <span class="hero-stat__value">{{ notes.length }}</span>
+            <span class="hero-stat__label">Total Notes</span>
           </div>
-
-          <!-- Empty State -->
-          <div v-else class="empty-section">
-            <div class="empty-section__icon">
-              <v-icon name="hi-document-text" scale="1.8" />
-            </div>
-            <h3>No clinical notes found</h3>
-            <p>Clinical notes from your appointments will appear here</p>
+        </div>
+      </div>
+      <div class="hero__visual">
+        <div class="dashboard-orb">
+          <div class="orb-ring orb-ring--1"></div>
+          <div class="orb-ring orb-ring--2"></div>
+          <div class="orb-ring orb-ring--3"></div>
+          <div class="orb-core">
+            <v-icon name="hi-document-text" />
           </div>
-        </template>
+        </div>
+        <div class="floating-icons">
+          <div class="float-icon float-icon--1"><v-icon name="hi-pencil-alt" /></div>
+          <div class="float-icon float-icon--2"><v-icon name="hi-clipboard-list" /></div>
+          <div class="float-icon float-icon--3"><v-icon name="hi-shield-check" /></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Search & Filters -->
+    <div class="bento-card filter-card">
+      <div class="search-input-wrapper">
+        <v-icon name="hi-search" scale="0.9" class="search-icon" />
+        <input
+          v-model="searchQuery"
+          type="text"
+          placeholder="Search notes by content or patient name..."
+        />
+        <button v-if="searchQuery" class="clear-btn" @click="searchQuery = ''">
+          <v-icon name="hi-x" scale="0.8" />
+        </button>
+      </div>
+      <div class="filters-row">
+        <div class="filter-group">
+          <label>Patient</label>
+          <select v-model="patientFilter">
+            <option value="all">All Patients</option>
+            <option v-for="name in uniquePatients" :key="name" :value="name">
+              {{ name }}
+            </option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>Platform</label>
+          <select v-model="platformFilter">
+            <option value="all">All Platforms</option>
+            <option value="zoom">Zoom Notes</option>
+            <option value="custom">Custom Notes</option>
+          </select>
+        </div>
+        <div class="filter-actions">
+          <button class="export-btn" :disabled="!filteredNotes.length || isExporting" @click="exportPdf">
+            <v-icon name="hi-download" scale="0.75" />
+            {{ isExporting ? 'Exporting...' : 'Export PDF' }}
+          </button>
+          <router-link to="/app/specialist/clinical-notes/templates" class="templates-link">
+            <v-icon name="hi-template" scale="0.8" />
+            Templates
+          </router-link>
+        </div>
       </div>
     </div>
+
+    <!-- Shimmer Loading -->
+    <template v-if="isLoading">
+      <div class="skeleton-card" v-for="i in 4" :key="i" />
+    </template>
+
+    <!-- Notes List -->
+    <template v-else>
+      <div v-if="filteredNotes.length" class="notes-list">
+        <div
+          v-for="note in filteredNotes"
+          :key="note.note_id"
+          class="bento-card note-card"
+          @click="openNoteDetails(note)"
+        >
+          <div class="note-card__header">
+            <div class="note-card__info">
+              <h3 class="note-card__patient">{{ note.patient_name }}</h3>
+              <span class="note-card__date">{{ formatNoteDate(note.created_at) }}</span>
+            </div>
+            <div class="note-card__badges">
+              <span
+                class="status-badge"
+                :class="note.platform === 'zoom' ? 'status-badge--zoom' : 'status-badge--custom'"
+              >
+                {{ note.platform === 'zoom' ? 'Zoom' : 'Custom' }}
+              </span>
+              <span v-if="note.completed" class="status-badge status-badge--completed">
+                Completed
+              </span>
+              <span v-else class="status-badge status-badge--progress">
+                In Progress
+              </span>
+              <button
+                v-if="getLinkedPrescriptions(note).length"
+                class="status-badge status-badge--prescription status-badge--clickable"
+                @click.stop="openRxDetails(note)"
+              >
+                <v-icon name="ri-capsule-line" scale="0.55" />
+                {{ getLinkedPrescriptions(note).length }} Rx
+              </button>
+            </div>
+          </div>
+
+          <p class="note-card__text">{{ truncateText(note.content, 150) }}</p>
+
+          <div class="note-card__footer">
+            <div class="note-card__footer-left">
+              <div class="note-card__specialist">
+                <div class="specialist-avatar">
+                  <img v-if="note.specialist_image" :src="note.specialist_image" :alt="note.specialist_name" @error="$event.target.style.display='none'" />
+                  <span v-else class="avatar-initials">{{ getSpecialistInitials(note.specialist_name) }}</span>
+                </div>
+                <div class="specialist-info">
+                  <span class="specialist-name">Dr. {{ note.specialist_name }}</span>
+                  <span v-if="note.specialist_specialty" class="specialist-specialty">{{ note.specialist_specialty }}</span>
+                </div>
+              </div>
+              <div class="note-card__meta-group">
+                <div class="note-card__meta">
+                  <v-icon name="hi-video-camera" scale="0.7" />
+                  <span>{{ note.meeting_channel }}</span>
+                </div>
+                <div class="note-card__meta">
+                  <v-icon name="hi-clock" scale="0.7" />
+                  <span>{{ formatTimeAgo(note.created_at) }}</span>
+                </div>
+              </div>
+            </div>
+            <div class="note-card__footer-right">
+              <button
+                class="note-card__prescription-btn"
+                @click.stop="createPrescriptionFromNote(note)"
+                title="Create Prescription"
+              >
+                <v-icon name="ri-capsule-line" scale="0.8" />
+                <span>Prescribe</span>
+              </button>
+              <div class="card-arrow">
+                <v-icon name="hi-chevron-right" scale="0.85" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div v-else class="bento-card empty-section">
+        <div class="empty-section__icon">
+          <v-icon name="hi-document-text" scale="1.8" />
+        </div>
+        <h3>No clinical notes found</h3>
+        <p>Clinical notes from your appointments will appear here</p>
+      </div>
+    </template>
 
     <!-- Note Details Modal -->
     <NoteDetailsModal
@@ -290,7 +323,7 @@
           <!-- Link Type Tabs -->
           <div class="link-type-tabs">
             <button
-              :class="['tab-btn', { active: selectedLinkType === 'appointment' }]"
+              :class="['link-tab-btn', { active: selectedLinkType === 'appointment' }]"
               @click="selectedLinkType = 'appointment'"
             >
               <v-icon name="hi-calendar" scale="0.8" />
@@ -298,7 +331,7 @@
               <span class="count">{{ patientAppointments.length }}</span>
             </button>
             <button
-              :class="['tab-btn', { active: selectedLinkType === 'checkup' }]"
+              :class="['link-tab-btn', { active: selectedLinkType === 'checkup' }]"
               @click="selectedLinkType = 'checkup'"
             >
               <v-icon name="fa-robot" scale="0.8" />
@@ -306,7 +339,7 @@
               <span class="count">{{ patientHealthCheckups.length }}</span>
             </button>
             <button
-              :class="['tab-btn', { active: selectedLinkType === 'none' }]"
+              :class="['link-tab-btn', { active: selectedLinkType === 'none' }]"
               @click="selectedLinkType = 'none'"
             >
               <v-icon name="hi-document-text" scale="0.8" />
@@ -416,7 +449,6 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useToast } from 'vue-toast-notification';
 import { format, formatDistanceToNow } from 'date-fns';
-import TopBar from '@/components/Navigation/top-bar';
 import apiFactory from '@/services/apiFactory';
 import NoteDetailsModal from './note-details-modal.vue';
 import ClinicalNoteModal from '@/views/Mainapp/SpecialistApp/SpecialistAppointments/modals/ClinicalNoteModal.vue';
@@ -843,668 +875,518 @@ onMounted(async () => {
 </script>
 
 <style scoped lang="scss">
-.page-content {
+// ─── Design Tokens ───
+$sky: #4FC3F7;
+$sky-dark: #0288D1;
+$sky-darker: #01579B;
+$navy: #0F172A;
+$emerald: #10B981;
+$amber: #F59E0B;
+$rose: #F43F5E;
+$violet: #8B5CF6;
+
+@mixin glass-card {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+// ─── Page Layout ───
+.clinical-notes-page {
   display: flex;
   flex-direction: column;
+  gap: 20px;
   width: 100%;
-  height: 100%;
-  padding: 0;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px;
+  padding-bottom: 100px;
   background: #F8FAFC;
+  min-height: min-content;
 
-  @include responsive(tab-portrait) {
-    padding: 0;
-  }
-
-  &__body {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    max-width: 1400px;
-    margin: 0 auto;
-    height: 100%;
-    overflow-y: auto;
-    padding-bottom: 100px;
-
-    &::-webkit-scrollbar {
-      width: 6px;
-    }
-
-    &::-webkit-scrollbar-track {
-      background: transparent;
-    }
-
-    &::-webkit-scrollbar-thumb {
-      background: #CBD5E1;
-      border-radius: 3px;
-    }
+  @media (max-width: 768px) {
+    padding: 16px;
+    padding-bottom: 120px;
+    gap: 16px;
   }
 }
 
-.notes-container {
-  width: 100%;
+// ─── Hero Section ───
+.hero {
   display: flex;
-  flex-direction: column;
-  gap: $size-24;
-  padding: 0 $size-48;
-  padding-bottom: $size-32;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(135deg, $sky 0%, $sky-dark 55%, $sky-darker 100%);
+  border-radius: 28px;
+  padding: 40px 48px;
+  min-height: 300px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(2, 136, 209, 0.3);
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(circle at 20% 80%, rgba(255,255,255,0.08) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, rgba(255,255,255,0.05) 0%, transparent 40%);
+    pointer-events: none;
+  }
 
   @media (max-width: 768px) {
-    padding: 0 $size-16;
+    flex-direction: column;
+    padding: 28px 24px;
+    min-height: auto;
+    border-radius: 20px;
+    text-align: center;
   }
 }
 
-// Hero Banner (matching Patient Dashboard)
-.hero-banner {
-  background: linear-gradient(135deg, #4FC3F7 0%, #29B6F6 50%, #0288D1 100%);
-  border-radius: $size-24;
-  padding: $size-24 $size-32;
-  margin-top: $size-24;
+.hero__content {
+  position: relative;
+  z-index: 2;
+  flex: 1;
+  max-width: 600px;
+
+  @media (max-width: 768px) {
+    max-width: 100%;
+  }
+}
+
+.hero__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 100px;
   color: white;
-  box-shadow: 0 10px 40px rgba(79, 195, 247, 0.3);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  margin-bottom: 16px;
 
-  @media (max-width: 768px) {
-    padding: $size-20;
-    border-radius: $size-16;
+  .ov-icon {
+    width: 16px;
+    height: 16px;
   }
 }
 
-.hero-top {
+.badge-pulse {
+  width: 8px;
+  height: 8px;
+  background: #4ade80;
+  border-radius: 50%;
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.hero__title {
+  font-size: 2.75rem;
+  font-weight: 800;
+  color: white;
+  line-height: 1.1;
+  margin: 0 0 12px;
+  letter-spacing: -0.02em;
+
+  @media (max-width: 768px) {
+    font-size: 2rem;
+  }
+}
+
+.hero__title-accent {
+  background: linear-gradient(135deg, #E0F7FA 0%, #B2EBF2 50%, #80DEEA 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero__subtitle {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.85);
+  line-height: 1.6;
+  margin: 0 0 24px;
+}
+
+// ─── Hero Top Actions (Patient Mode) ───
+.hero__top-actions {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: $size-24;
+  margin-bottom: 24px;
+
+  @media (max-width: 640px) {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
 }
 
-.back-link {
+.hero__back-btn {
   display: inline-flex;
   align-items: center;
-  gap: $size-8;
+  gap: 8px;
   background: rgba(255, 255, 255, 0.15);
-  border: none;
-  padding: $size-10 $size-16;
-  border-radius: $size-8;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 10px 16px;
+  border-radius: 12px;
   color: white;
-  font-size: $size-14;
+  font-size: 0.875rem;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
 
   &:hover {
     background: rgba(255, 255, 255, 0.25);
   }
 }
 
-.create-note-btn {
+.hero__create-btn {
   display: inline-flex;
   align-items: center;
-  gap: $size-8;
+  gap: 8px;
   background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.3);
-  padding: $size-10 $size-20;
-  border-radius: $size-8;
+  padding: 10px 20px;
+  border-radius: 12px;
   color: white;
-  font-size: $size-14;
+  font-size: 0.875rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
 
   &:hover {
     background: rgba(255, 255, 255, 0.3);
     transform: translateY(-1px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
   }
 }
 
-.hero-main {
+// ─── Hero Patient Row (Patient Mode) ───
+.hero__patient-row {
   display: flex;
-  justify-content: space-between;
+  gap: 20px;
   align-items: flex-start;
-  gap: $size-32;
+  margin-bottom: 20px;
 
-  @media (max-width: 992px) {
-    flex-direction: column;
-  }
-}
-
-.patient-header {
-  display: flex;
-  gap: $size-20;
-  align-items: flex-start;
-}
-
-.patient-avatar {
-  .avatar-wrapper {
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
-    overflow: hidden;
-    background: rgba(255, 255, 255, 0.2);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 3px solid rgba(255, 255, 255, 0.3);
-
-    img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-
-    .avatar-initials {
-      font-size: 28px;
-      font-weight: 700;
-      color: white;
-    }
-  }
-}
-
-.patient-info {
-  .patient-badge {
-    display: inline-block;
-    background: rgba(255, 255, 255, 0.2);
-    padding: $size-4 $size-12;
-    border-radius: $size-12;
-    font-size: $size-12;
-    font-weight: 500;
-    margin-bottom: $size-8;
-  }
-
-  .patient-name {
-    font-size: $size-28;
-    font-weight: 700;
-    margin: 0 0 $size-12;
-    line-height: 1.2;
-  }
-
-  .patient-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: $size-16;
-
-    .meta-item {
-      display: flex;
-      align-items: center;
-      gap: $size-6;
-      font-size: $size-14;
-      opacity: 0.9;
-
-      svg {
-        opacity: 0.8;
-      }
-    }
-  }
-}
-
-.hero-stats {
-  display: flex;
-  gap: $size-16;
-
-  .stat-card {
-    background: rgba(255, 255, 255, 0.15);
-    border-radius: $size-12;
-    padding: $size-16 $size-24;
-    text-align: center;
-    min-width: 100px;
-
-    .stat-value {
-      display: block;
-      font-size: $size-28;
-      font-weight: 700;
-      line-height: 1.2;
-    }
-
-    .stat-label {
-      display: block;
-      font-size: $size-12;
-      opacity: 0.85;
-      margin-top: $size-4;
-    }
-  }
-}
-
-// Mobile adjustments for hero banner
-@media (max-width: 600px) {
-  .hero-banner {
-    margin: $size-12;
-    padding: $size-16;
-    border-radius: $size-12;
-  }
-
-  .hero-top {
-    flex-direction: column;
-    gap: $size-12;
-    align-items: stretch;
-  }
-
-  .back-link, .create-note-btn {
-    justify-content: center;
-  }
-
-  .patient-header {
+  @media (max-width: 640px) {
     flex-direction: column;
     align-items: center;
     text-align: center;
   }
-
-  .patient-info .patient-meta {
-    justify-content: center;
-  }
-
-  .hero-stats {
-    width: 100%;
-    justify-content: center;
-  }
 }
 
-// Link Selector Modal
-.link-selector-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+.hero__avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.2);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
-  padding: 20px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  flex-shrink: 0;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .avatar-initials {
+    font-size: 28px;
+    font-weight: 700;
+    color: white;
+  }
+
+  @media (max-width: 768px) {
+    width: 64px;
+    height: 64px;
+
+    .avatar-initials {
+      font-size: 22px;
+    }
+  }
 }
 
-.link-selector-modal {
-  background: white;
-  border-radius: 20px;
-  width: 100%;
-  max-width: 600px;
-  max-height: 80vh;
+.hero__patient-info {
+  flex: 1;
+
+  .hero__title {
+    font-size: 2rem;
+    margin-bottom: 8px;
+
+    @media (max-width: 768px) {
+      font-size: 1.5rem;
+    }
+  }
+}
+
+.hero__patient-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+
+  @media (max-width: 640px) {
+    justify-content: center;
+  }
+
+  .meta-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.85);
+  }
+}
+
+// ─── Hero Stats Bar ───
+.hero__stats {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 16px 24px;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 16px;
+
+  @media (max-width: 768px) {
+    gap: 12px;
+    padding: 12px 16px;
+    justify-content: center;
+  }
+}
+
+.hero-stat {
   display: flex;
   flex-direction: column;
-  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
-}
-
-.link-selector-header {
-  display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 20px 24px;
-  border-bottom: 1px solid #e2e8f0;
-
-  h3 {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 18px;
-    font-weight: 600;
-    color: #1e293b;
-    margin: 0;
-
-    svg {
-      color: #0EAEC4;
-    }
-  }
-
-  .close-btn {
-    background: none;
-    border: none;
-    color: #94a3b8;
-    cursor: pointer;
-    padding: 8px;
-    border-radius: 8px;
-
-    &:hover {
-      background: #f1f5f9;
-      color: #64748b;
-    }
-  }
+  gap: 2px;
 }
 
-.link-selector-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 24px;
-
-  .link-description {
-    font-size: 14px;
-    color: #64748b;
-    margin: 0 0 20px;
-  }
-
-  .link-type-tabs {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 20px;
-    flex-wrap: wrap;
-
-    .tab-btn {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 16px;
-      background: #f1f5f9;
-      border: 2px solid transparent;
-      border-radius: 10px;
-      font-size: 14px;
-      font-weight: 500;
-      color: #64748b;
-      cursor: pointer;
-      transition: all 0.2s ease;
-
-      .count {
-        background: #e2e8f0;
-        padding: 2px 8px;
-        border-radius: 10px;
-        font-size: 12px;
-      }
-
-      &.active {
-        background: #e0f7fa;
-        border-color: #0EAEC4;
-        color: #0EAEC4;
-
-        .count {
-          background: #0EAEC4;
-          color: white;
-        }
-      }
-
-      &:hover:not(.active) {
-        background: #e2e8f0;
-      }
-    }
-  }
-
-  .link-items-list {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    max-height: 300px;
-    overflow-y: auto;
-  }
-
-  .empty-list {
-    text-align: center;
-    padding: 40px 20px;
-    color: #94a3b8;
-
-    svg {
-      margin-bottom: 10px;
-    }
-
-    p {
-      margin: 0;
-      font-size: 14px;
-    }
-  }
-
-  .link-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 14px 16px;
-    background: #f8fafc;
-    border: 2px solid transparent;
-    border-radius: 12px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-
-    input[type="radio"] {
-      display: none;
-    }
-
-    &.selected,
-    &:has(input:checked) {
-      background: #e0f7fa;
-      border-color: #0EAEC4;
-    }
-
-    &:hover:not(.selected) {
-      background: #f1f5f9;
-    }
-
-    .link-item-content {
-      flex: 1;
-    }
-
-    .link-item-main {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 4px;
-
-      .link-item-date {
-        font-weight: 600;
-        color: #1e293b;
-        font-size: 14px;
-      }
-
-      .link-item-type {
-        font-size: 12px;
-        color: #64748b;
-        background: #e2e8f0;
-        padding: 2px 8px;
-        border-radius: 6px;
-      }
-
-      .link-item-triage {
-        font-size: 11px;
-        padding: 3px 10px;
-        border-radius: 20px;
-        font-weight: 600;
-
-        &.triage-emergency { background: #fee2e2; color: #dc2626; }
-        &.triage-urgent { background: #ffedd5; color: #ea580c; }
-        &.triage-moderate { background: #fef3c7; color: #d97706; }
-        &.triage-low { background: #d1fae5; color: #059669; }
-        &.triage-default { background: #e2e8f0; color: #64748b; }
-      }
-    }
-
-    .link-item-meta {
-      display: flex;
-      gap: 12px;
-      font-size: 13px;
-      color: #64748b;
-    }
-
-    .check-icon {
-      color: #0EAEC4;
-    }
-  }
-
-  .no-link-section {
-    .no-link-info {
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-      padding: 20px;
-      background: #f0f9ff;
-      border-radius: 12px;
-
-      svg {
-        color: #0ea5e9;
-        flex-shrink: 0;
-        margin-top: 2px;
-      }
-
-      p {
-        margin: 0;
-        font-size: 14px;
-        color: #0369a1;
-        line-height: 1.5;
-      }
-    }
-  }
-}
-
-.link-selector-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  padding: 16px 24px;
-  border-top: 1px solid #e2e8f0;
-
-  .cancel-btn {
-    padding: 10px 20px;
-    background: #f1f5f9;
-    border: none;
-    border-radius: 10px;
-    font-size: 14px;
-    font-weight: 500;
-    color: #64748b;
-    cursor: pointer;
-
-    &:hover {
-      background: #e2e8f0;
-    }
-  }
-
-  .confirm-btn {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 20px;
-    background: linear-gradient(135deg, #0EAEC4 0%, #0891b2 100%);
-    border: none;
-    border-radius: 10px;
-    font-size: 14px;
-    font-weight: 600;
-    color: white;
-    cursor: pointer;
-    transition: all 0.2s ease;
-
-    &:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(14, 174, 196, 0.3);
-    }
-  }
-}
-
-// Hero Section
-.hero-section {
-  background: linear-gradient(135deg, #0EAEC4 0%, #0891b2 50%, #0e7490 100%);
-  border-radius: $size-20;
-  padding: $size-24 $size-28;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 10px 40px rgba(14, 174, 196, 0.25);
+.hero-stat__value {
+  font-size: 1.5rem;
+  font-weight: 700;
   color: white;
 
-  &::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    right: -10%;
-    width: 300px;
-    height: 300px;
-    background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, transparent 70%);
-    pointer-events: none;
+  @media (max-width: 768px) {
+    font-size: 1.25rem;
+  }
+}
+
+.hero-stat__label {
+  font-size: 0.6875rem;
+  color: rgba(255, 255, 255, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 500;
+}
+
+// ─── Hero Visual / Orb ───
+.hero__visual {
+  position: relative;
+  width: 220px;
+  height: 220px;
+  flex-shrink: 0;
+
+  @media (max-width: 768px) {
+    width: 160px;
+    height: 160px;
+    margin-top: 20px;
+  }
+}
+
+.dashboard-orb {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.orb-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.12);
+
+  &--1 {
+    width: 100%;
+    height: 100%;
+    animation: spin-slow 20s linear infinite;
+  }
+  &--2 {
+    width: 75%;
+    height: 75%;
+    animation: spin-slow 15s linear infinite reverse;
+    border-style: dashed;
+  }
+  &--3 {
+    width: 50%;
+    height: 50%;
+    animation: spin-slow 10s linear infinite;
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+}
+
+.orb-core {
+  width: 64px;
+  height: 64px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  animation: pulse-glow 3s ease-in-out infinite;
+  z-index: 1;
+
+  .ov-icon {
+    width: 28px;
+    height: 28px;
   }
 
-  @include responsive(tab-portrait) {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: $size-16;
-    padding: $size-20;
-    border-radius: $size-16;
-  }
+  @media (max-width: 768px) {
+    width: 48px;
+    height: 48px;
 
-  @include responsive(phone) {
-    padding: $size-16;
-    border-radius: $size-12;
-  }
-
-  .hero-content {
-    z-index: 1;
-
-    .hero-title {
-      display: flex;
-      align-items: center;
-      gap: $size-8;
-      font-size: $size-20;
-      font-weight: $fw-bold;
-      margin-bottom: $size-4;
-    }
-
-    .hero-subtitle {
-      font-size: $size-13;
-      opacity: 0.85;
-    }
-  }
-
-  .hero-stat-pill {
-    z-index: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    background: rgba(255, 255, 255, 0.15);
-    padding: $size-12 $size-20;
-    border-radius: $size-12;
-
-    &__value {
-      font-size: $size-24;
-      font-weight: $fw-bold;
-      line-height: 1.2;
-    }
-
-    &__label {
-      font-size: $size-11;
-      opacity: 0.85;
-      font-weight: $fw-medium;
+    .ov-icon {
+      width: 22px;
+      height: 22px;
     }
   }
 }
 
-// Filters Card
-.filters-card {
-  background: white;
-  border-radius: $size-16;
-  padding: $size-20;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+.floating-icons {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.float-icon {
+  position: absolute;
+  width: 36px;
+  height: 36px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+
+  .ov-icon {
+    width: 16px;
+    height: 16px;
+  }
+
+  &--1 {
+    top: 10%;
+    right: 5%;
+    animation: float-1 6s ease-in-out infinite;
+  }
+  &--2 {
+    bottom: 15%;
+    left: 0;
+    animation: float-2 7s ease-in-out infinite;
+  }
+  &--3 {
+    top: 50%;
+    right: -5%;
+    animation: float-3 8s ease-in-out infinite;
+  }
+
+  @media (max-width: 768px) {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+
+    .ov-icon {
+      width: 13px;
+      height: 13px;
+    }
+  }
+}
+
+// ─── Bento Cards ───
+.bento-card {
+  @include glass-card;
+  padding: 24px;
+
+  @media (max-width: 768px) {
+    padding: 16px;
+    border-radius: 16px;
+  }
+}
+
+// ─── Filter Card ───
+.filter-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .search-input-wrapper {
   display: flex;
   align-items: center;
-  gap: $size-12;
-  padding: $size-12 $size-16;
-  background: $color-g-97;
-  border-radius: $size-10;
-  margin-bottom: $size-14;
-  transition: background 0.2s ease;
+  gap: 10px;
+  padding: 12px 16px;
+  background: rgba(248, 250, 252, 0.8);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 12px;
+  transition: all 0.3s ease;
 
   &:focus-within {
-    background: rgba(14, 174, 196, 0.04);
+    border-color: $sky;
+    box-shadow: 0 0 0 3px rgba(79, 195, 247, 0.12);
+    background: white;
   }
 
   .search-icon {
-    color: $color-g-54;
+    color: #94A3B8;
+    flex-shrink: 0;
   }
 
   input {
     flex: 1;
     border: none;
     outline: none;
-    font-size: $size-14;
-    color: $color-g-21;
+    font-size: 0.875rem;
+    color: #334155;
     background: transparent;
 
     &::placeholder {
-      color: $color-g-67;
+      color: #94A3B8;
     }
   }
 
   .clear-btn {
-    background: $color-g-92;
+    background: rgba(241, 245, 249, 0.8);
     border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
     cursor: pointer;
-    padding: $size-4 $size-6;
-    color: $color-g-54;
-    border-radius: $size-4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #64748B;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
 
     &:hover {
-      background: $color-g-85;
-      color: $color-g-36;
+      background: #E2E8F0;
+      color: #334155;
     }
   }
 }
@@ -1512,10 +1394,10 @@ onMounted(async () => {
 .filters-row {
   display: flex;
   align-items: flex-end;
-  gap: $size-12;
+  gap: 12px;
   flex-wrap: wrap;
 
-  @include responsive(phone) {
+  @media (max-width: 640px) {
     flex-direction: column;
     align-items: stretch;
   }
@@ -1524,27 +1406,29 @@ onMounted(async () => {
 .filter-group {
   display: flex;
   flex-direction: column;
-  gap: $size-4;
+  gap: 4px;
 
   label {
-    font-size: $size-12;
-    font-weight: $fw-medium;
-    color: $color-g-54;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #64748B;
   }
 
   select {
-    padding: $size-10 $size-12;
-    border: 1px solid $color-g-85;
-    border-radius: $size-8;
-    font-size: $size-13;
-    color: $color-g-36;
-    background: white;
+    padding: 10px 14px;
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    border-radius: 12px;
+    font-size: 0.8125rem;
+    color: #334155;
+    background: rgba(255, 255, 255, 0.7);
     cursor: pointer;
     min-width: 160px;
+    transition: all 0.3s ease;
 
     &:focus {
       outline: none;
-      border-color: #0EAEC4;
+      border-color: $sky;
+      box-shadow: 0 0 0 3px rgba(79, 195, 247, 0.12);
     }
   }
 }
@@ -1552,10 +1436,10 @@ onMounted(async () => {
 .filter-actions {
   display: flex;
   align-items: flex-end;
-  gap: $size-8;
+  gap: 8px;
   margin-left: auto;
 
-  @include responsive(phone) {
+  @media (max-width: 640px) {
     margin-left: 0;
     width: 100%;
     justify-content: space-between;
@@ -1565,20 +1449,21 @@ onMounted(async () => {
 .export-btn {
   display: inline-flex;
   align-items: center;
-  gap: $size-6;
-  padding: $size-10 $size-14;
-  background: rgba(14, 174, 196, 0.1);
-  color: #0891b2;
+  gap: 6px;
+  padding: 10px 16px;
+  background: rgba(79, 195, 247, 0.1);
+  color: $sky-dark;
   border: none;
-  border-radius: $size-8;
-  font-size: $size-12;
-  font-weight: $fw-semi-bold;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   white-space: nowrap;
 
   &:hover:not(:disabled) {
-    background: rgba(14, 174, 196, 0.18);
+    background: rgba(79, 195, 247, 0.18);
+    transform: translateY(-1px);
   }
 
   &:disabled {
@@ -1590,55 +1475,58 @@ onMounted(async () => {
 .templates-link {
   display: inline-flex;
   align-items: center;
-  gap: $size-6;
-  padding: $size-10 $size-14;
-  background: rgba(14, 174, 196, 0.08);
-  color: #0891b2;
-  border-radius: $size-8;
-  font-size: $size-12;
-  font-weight: $fw-semi-bold;
+  gap: 6px;
+  padding: 10px 16px;
+  background: rgba(79, 195, 247, 0.08);
+  color: $sky-dark;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
   text-decoration: none;
-  transition: background 0.2s ease;
+  transition: all 0.3s ease;
   white-space: nowrap;
 
   &:hover {
-    background: rgba(14, 174, 196, 0.15);
+    background: rgba(79, 195, 247, 0.15);
+    transform: translateY(-1px);
   }
 }
 
-// Notes List
+// ─── Notes List ───
 .notes-list {
   display: flex;
   flex-direction: column;
-  gap: $size-12;
+  gap: 16px;
 }
 
 .note-card {
-  background: white;
-  border-radius: $size-16;
-  padding: $size-20;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
+  padding: 24px;
 
   &:hover {
-    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1), 0 2px 6px rgba(0, 0, 0, 0.04);
 
     .card-arrow {
-      color: #0EAEC4;
+      color: $sky-dark;
       transform: translateX(2px);
     }
+  }
+
+  @media (max-width: 768px) {
+    padding: 16px;
   }
 
   &__header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: $size-12;
+    margin-bottom: 12px;
 
-    @include responsive(phone) {
+    @media (max-width: 640px) {
       flex-direction: column;
-      gap: $size-8;
+      gap: 8px;
     }
   }
 
@@ -1647,69 +1535,69 @@ onMounted(async () => {
   }
 
   &__patient {
-    font-size: $size-15;
-    font-weight: $fw-semi-bold;
-    color: $color-g-21;
-    margin-bottom: $size-2;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: $navy;
+    margin: 0 0 2px;
   }
 
   &__date {
-    font-size: $size-12;
-    color: $color-g-54;
+    font-size: 0.75rem;
+    color: #64748B;
   }
 
   &__badges {
     display: flex;
-    gap: $size-6;
+    gap: 6px;
     flex-wrap: wrap;
   }
 
   &__text {
-    font-size: $size-14;
+    font-size: 0.875rem;
     line-height: 1.6;
-    color: $color-g-36;
-    margin-bottom: $size-14;
+    color: #475569;
+    margin: 0 0 16px;
   }
 
   &__footer {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: $size-16;
-    padding-top: $size-16;
-    border-top: 1px solid $color-g-92;
+    gap: 16px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(226, 232, 240, 0.6);
   }
 
   &__footer-left {
     display: flex;
     align-items: center;
-    gap: $size-20;
+    gap: 20px;
     flex: 1;
 
-    @media (max-width: 600px) {
+    @media (max-width: 640px) {
       flex-direction: column;
       align-items: flex-start;
-      gap: $size-12;
+      gap: 12px;
     }
   }
 
   &__footer-right {
     display: flex;
     align-items: center;
-    gap: $size-12;
+    gap: 12px;
   }
 
   &__specialist {
     display: flex;
     align-items: center;
-    gap: $size-10;
+    gap: 10px;
 
     .specialist-avatar {
       width: 36px;
       height: 36px;
       border-radius: 50%;
       overflow: hidden;
-      background: linear-gradient(135deg, #4FC3F7 0%, #29B6F6 100%);
+      background: linear-gradient(135deg, $sky 0%, $sky-dark 100%);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -1734,14 +1622,14 @@ onMounted(async () => {
       gap: 2px;
 
       .specialist-name {
-        font-size: $size-13;
-        font-weight: $fw-semi-bold;
-        color: $color-g-21;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: #1E293B;
       }
 
       .specialist-specialty {
-        font-size: $size-11;
-        color: $color-g-54;
+        font-size: 0.6875rem;
+        color: #64748B;
       }
     }
   }
@@ -1749,210 +1637,258 @@ onMounted(async () => {
   &__meta-group {
     display: flex;
     align-items: center;
-    gap: $size-12;
+    gap: 12px;
   }
 
   &__meta {
     display: flex;
     align-items: center;
-    gap: $size-4;
-    font-size: $size-12;
-    color: $color-g-54;
+    gap: 4px;
+    font-size: 0.75rem;
+    color: #64748B;
   }
 
   .card-arrow {
-    color: $color-g-67;
-    transition: all 0.2s ease;
+    color: #94A3B8;
+    transition: all 0.3s ease;
   }
 
   &__prescription-btn {
     display: flex;
     align-items: center;
-    gap: $size-6;
+    gap: 6px;
     border: none;
-    background: linear-gradient(135deg, #4FC3F7 0%, #29B6F6 100%);
+    background: linear-gradient(135deg, $sky 0%, $sky-dark 100%);
     color: white;
-    border-radius: $size-8;
+    border-radius: 10px;
     cursor: pointer;
-    transition: all 0.2s;
-    padding: $size-8 $size-14;
-    font-size: $size-12;
-    font-weight: $fw-semi-bold;
+    transition: all 0.3s ease;
+    padding: 8px 14px;
+    font-size: 0.75rem;
+    font-weight: 600;
     white-space: nowrap;
-    box-shadow: 0 2px 8px rgba(79, 195, 247, 0.3);
+    box-shadow: 0 4px 12px rgba(79, 195, 247, 0.3);
 
     &:hover {
       transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(79, 195, 247, 0.4);
+      box-shadow: 0 6px 16px rgba(79, 195, 247, 0.4);
     }
   }
 }
 
-// Status Badges
+// ─── Status Badges ───
 .status-badge {
   display: inline-block;
-  padding: $size-4 $size-10;
-  border-radius: $size-12;
-  font-size: $size-11;
-  font-weight: $fw-semi-bold;
+  padding: 4px 10px;
+  border-radius: 100px;
+  font-size: 0.6875rem;
+  font-weight: 600;
 
   &--zoom {
-    background: rgba(#3b82f6, 0.1);
-    color: #2563eb;
+    background: rgba(59, 130, 246, 0.1);
+    color: #2563EB;
   }
 
   &--custom {
-    background: rgba(#10b981, 0.1);
+    background: rgba(16, 185, 129, 0.1);
     color: #059669;
   }
 
   &--completed {
-    background: rgba(#10b981, 0.1);
+    background: rgba(16, 185, 129, 0.1);
     color: #059669;
   }
 
   &--progress {
-    background: rgba(#f59e0b, 0.1);
-    color: #d97706;
+    background: rgba(245, 158, 11, 0.1);
+    color: #D97706;
   }
 
   &--prescription {
     display: inline-flex;
     align-items: center;
     gap: 3px;
-    background: rgba(14, 174, 196, 0.1);
-    color: #0891b2;
+    background: rgba(79, 195, 247, 0.1);
+    color: $sky-dark;
   }
 
   &--clickable {
     cursor: pointer;
     border: none;
-    transition: all 0.2s;
+    transition: all 0.25s ease;
 
     &:hover {
-      background: rgba(14, 174, 196, 0.2);
+      background: rgba(79, 195, 247, 0.2);
       transform: scale(1.05);
     }
   }
 }
 
-// Rx Modal
+// ─── Empty State ───
+.empty-section {
+  text-align: center;
+  padding: 48px 24px;
+
+  &__icon {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 20px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(79, 195, 247, 0.12) 0%, rgba(79, 195, 247, 0.04) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: $sky;
+  }
+
+  h3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #1E293B;
+    margin: 0 0 8px;
+  }
+
+  p {
+    font-size: 0.875rem;
+    color: #64748B;
+    margin: 0;
+  }
+}
+
+// ─── Skeleton Loading ───
+.skeleton-card {
+  @include glass-card;
+  height: 140px;
+  background: linear-gradient(90deg,
+    rgba(255,255,255,0.92) 25%,
+    rgba(248,250,252,0.95) 50%,
+    rgba(255,255,255,0.92) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+// ─── Rx Modal ───
 .rx-modal-overlay {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  padding: $size-16;
+  padding: 16px;
 }
 
 .rx-modal {
   background: white;
-  border-radius: $size-16;
+  border-radius: 20px;
   width: 100%;
   max-width: 480px;
   max-height: 80vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.2);
 
   &__header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: $size-20 $size-24;
-    border-bottom: 1px solid $color-g-92;
+    padding: 20px 24px;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.6);
 
     h3 {
       display: flex;
       align-items: center;
-      gap: $size-8;
-      font-size: $size-16;
-      font-weight: $fw-semi-bold;
-      color: $color-g-21;
+      gap: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #1E293B;
+      margin: 0;
     }
   }
 
   &__close {
-    background: none;
+    background: rgba(241, 245, 249, 0.8);
     border: none;
-    color: $color-g-54;
+    color: #64748B;
     cursor: pointer;
-    padding: $size-4;
-    border-radius: $size-4;
+    padding: 8px;
+    border-radius: 8px;
+    transition: all 0.2s ease;
 
     &:hover {
-      background: $color-g-95;
-      color: $color-g-21;
+      background: #E2E8F0;
+      color: #1E293B;
     }
   }
 
   &__loading {
-    padding: $size-24;
+    padding: 24px;
 
     .skeleton-item {
       height: 80px;
-      background: $color-g-95;
-      border-radius: $size-10;
-      margin-bottom: $size-12;
+      background: linear-gradient(90deg, #F1F5F9 25%, #F8FAFC 50%, #F1F5F9 75%);
+      background-size: 200% 100%;
+      border-radius: 12px;
+      margin-bottom: 12px;
       animation: shimmer 1.5s infinite;
     }
   }
 
   &__body {
-    padding: $size-20 $size-24;
+    padding: 20px 24px;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: $size-16;
+    gap: 16px;
   }
 }
 
 .rx-card {
-  border: 1px solid $color-g-90;
-  border-radius: $size-12;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 12px;
   overflow: hidden;
 
   &__header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: $size-12 $size-16;
-    background: $color-g-97;
+    padding: 12px 16px;
+    background: rgba(248, 250, 252, 0.8);
   }
 
   &__info {
     display: flex;
     align-items: center;
-    gap: $size-8;
+    gap: 8px;
   }
 
   &__number {
-    font-size: $size-14;
-    font-weight: $fw-semi-bold;
-    color: $color-g-21;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #1E293B;
   }
 
   &__status {
-    font-size: $size-11;
-    padding: 2px $size-8;
-    border-radius: $size-4;
-    font-weight: $fw-medium;
+    font-size: 0.6875rem;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-weight: 500;
     text-transform: capitalize;
   }
 
   &__view {
     display: flex;
     align-items: center;
-    gap: $size-4;
-    font-size: $size-12;
-    color: #0891b2;
+    gap: 4px;
+    font-size: 0.75rem;
+    color: $sky-dark;
     background: none;
     border: none;
     cursor: pointer;
-    font-weight: $fw-medium;
+    font-weight: 500;
 
     &:hover {
       text-decoration: underline;
@@ -1960,10 +1896,10 @@ onMounted(async () => {
   }
 
   &__items {
-    padding: $size-12 $size-16;
+    padding: 12px 16px;
     display: flex;
     flex-direction: column;
-    gap: $size-10;
+    gap: 10px;
   }
 }
 
@@ -1971,102 +1907,370 @@ onMounted(async () => {
   &__name {
     display: flex;
     align-items: center;
-    gap: $size-6;
-    font-size: $size-13;
-    font-weight: $fw-medium;
-    color: $color-g-21;
-    margin-bottom: $size-4;
+    gap: 6px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: #1E293B;
+    margin-bottom: 4px;
 
-    svg { color: #0891b2; }
+    svg { color: $sky-dark; }
   }
 
   &__details {
     display: flex;
     align-items: center;
-    gap: $size-6;
+    gap: 6px;
     flex-wrap: wrap;
-    padding-left: $size-20;
+    padding-left: 20px;
   }
 
   &__tag {
-    font-size: $size-11;
-    background: $color-g-95;
-    padding: 2px $size-6;
-    border-radius: $size-4;
-    color: $color-g-54;
+    font-size: 0.6875rem;
+    background: #F1F5F9;
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: #64748B;
   }
 
   &__qty {
-    font-size: $size-11;
-    font-weight: $fw-semi-bold;
-    color: #0891b2;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: $sky-dark;
   }
 }
 
 .rx-status--draft {
-  background: $color-g-92;
-  color: $color-g-54;
+  background: #F1F5F9;
+  color: #64748B;
 }
 
 .rx-status--pending_payment {
-  background: rgba(#f59e0b, 0.1);
-  color: #d97706;
+  background: rgba(245, 158, 11, 0.1);
+  color: #D97706;
 }
 
 .rx-status--paid, .rx-status--delivered {
-  background: rgba(#10b981, 0.1);
+  background: rgba(16, 185, 129, 0.1);
   color: #059669;
 }
 
 .rx-status--processing, .rx-status--dispensed, .rx-status--shipped {
-  background: rgba(14, 174, 196, 0.1);
-  color: #0891b2;
+  background: rgba(79, 195, 247, 0.1);
+  color: $sky-dark;
 }
 
 .rx-status--cancelled {
-  background: rgba(#ef4444, 0.1);
-  color: #dc2626;
+  background: rgba(239, 68, 68, 0.1);
+  color: #DC2626;
 }
 
-// Empty State
-.empty-section {
-  text-align: center;
-  padding: $size-32 $size-20;
-  background: $color-g-97;
-  border-radius: $size-12;
+// ─── Link Selector Modal ───
+.link-selector-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
 
-  &__icon {
-    width: 64px;
-    height: 64px;
-    margin: 0 auto $size-14;
-    border-radius: 50%;
-    background: rgba(14, 174, 196, 0.08);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #0EAEC4;
-  }
+.link-selector-modal {
+  background: white;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 600px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+}
+
+.link-selector-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.6);
 
   h3 {
-    font-size: $size-15;
-    font-weight: $fw-semi-bold;
-    color: $color-g-21;
-    margin-bottom: $size-6;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #1E293B;
+    margin: 0;
+
+    svg {
+      color: $sky-dark;
+    }
   }
 
-  p {
-    font-size: $size-13;
-    color: $color-g-54;
+  .close-btn {
+    background: none;
+    border: none;
+    color: #94A3B8;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 8px;
+
+    &:hover {
+      background: #F1F5F9;
+      color: #64748B;
+    }
   }
 }
 
-// Skeleton
-.skeleton-card {
-  height: 120px;
-  border-radius: $size-16;
-  background: linear-gradient(90deg, $color-g-92 25%, $color-g-97 50%, $color-g-92 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
+.link-selector-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+
+  .link-description {
+    font-size: 0.875rem;
+    color: #64748B;
+    margin: 0 0 20px;
+  }
+
+  .link-type-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+
+  .link-items-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 300px;
+    overflow-y: auto;
+  }
+
+  .empty-list {
+    text-align: center;
+    padding: 40px 20px;
+    color: #94A3B8;
+
+    svg {
+      margin-bottom: 10px;
+    }
+
+    p {
+      margin: 0;
+      font-size: 0.875rem;
+    }
+  }
+
+  .link-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    background: #F8FAFC;
+    border: 2px solid transparent;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    input[type="radio"] {
+      display: none;
+    }
+
+    &.selected,
+    &:has(input:checked) {
+      background: rgba(79, 195, 247, 0.08);
+      border-color: $sky;
+    }
+
+    &:hover:not(.selected) {
+      background: #F1F5F9;
+    }
+
+    .link-item-content {
+      flex: 1;
+    }
+
+    .link-item-main {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 4px;
+
+      .link-item-date {
+        font-weight: 600;
+        color: #1E293B;
+        font-size: 0.875rem;
+      }
+
+      .link-item-type {
+        font-size: 0.75rem;
+        color: #64748B;
+        background: #E2E8F0;
+        padding: 2px 8px;
+        border-radius: 6px;
+      }
+
+      .link-item-triage {
+        font-size: 0.6875rem;
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-weight: 600;
+
+        &.triage-emergency { background: #FEE2E2; color: #DC2626; }
+        &.triage-urgent { background: #FFEDD5; color: #EA580C; }
+        &.triage-moderate { background: #FEF3C7; color: #D97706; }
+        &.triage-low { background: #D1FAE5; color: #059669; }
+        &.triage-default { background: #E2E8F0; color: #64748B; }
+      }
+    }
+
+    .link-item-meta {
+      display: flex;
+      gap: 12px;
+      font-size: 0.8125rem;
+      color: #64748B;
+    }
+
+    .check-icon {
+      color: $sky;
+    }
+  }
+
+  .no-link-section {
+    .no-link-info {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 20px;
+      background: rgba(79, 195, 247, 0.06);
+      border-radius: 12px;
+
+      svg {
+        color: $sky;
+        flex-shrink: 0;
+        margin-top: 2px;
+      }
+
+      p {
+        margin: 0;
+        font-size: 0.875rem;
+        color: $sky-dark;
+        line-height: 1.5;
+      }
+    }
+  }
+}
+
+.link-tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #F1F5F9;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #64748B;
+  cursor: pointer;
+  transition: all 0.25s ease;
+
+  .count {
+    background: #E2E8F0;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.75rem;
+  }
+
+  &.active {
+    background: rgba(79, 195, 247, 0.08);
+    border-color: $sky;
+    color: $sky-dark;
+
+    .count {
+      background: $sky;
+      color: white;
+    }
+  }
+
+  &:hover:not(.active) {
+    background: #E2E8F0;
+  }
+}
+
+.link-selector-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 24px;
+  border-top: 1px solid rgba(226, 232, 240, 0.6);
+
+  .cancel-btn {
+    padding: 10px 20px;
+    background: #F1F5F9;
+    border: none;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #64748B;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background: #E2E8F0;
+    }
+  }
+
+  .confirm-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: linear-gradient(135deg, $sky 0%, $sky-dark 100%);
+    border: none;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(79, 195, 247, 0.3);
+
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(79, 195, 247, 0.4);
+    }
+  }
+}
+
+// ─── Animations ───
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.05); }
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes float-1 {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-12px) rotate(5deg); }
+}
+
+@keyframes float-2 {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-8px) rotate(-5deg); }
+}
+
+@keyframes float-3 {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-15px) rotate(3deg); }
 }
 
 @keyframes shimmer {

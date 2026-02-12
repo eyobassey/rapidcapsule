@@ -158,6 +158,17 @@ export class RxGPTAnalytics {
   @Prop({ type: Boolean, default: false })
   from_cache: boolean;
 
+  // ============ VERSIONING ============
+
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'RxGPTAnalytics', index: true })
+  version_group: Types.ObjectId;
+
+  @Prop({ type: Number, default: 1 })
+  version_number: number;
+
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'RxGPTAnalytics' })
+  parent_analysis_id: Types.ObjectId;
+
   // ============ RAW RESPONSE (for debugging) ============
 
   @Prop({ type: mongoose.Schema.Types.Mixed })
@@ -187,3 +198,6 @@ RxGPTAnalyticsSchema.index({ critical_alerts: 1, created_at: -1 });
 
 // Index for risk level filtering
 RxGPTAnalyticsSchema.index({ overall_risk_level: 1, created_at: -1 });
+
+// Compound index for version group queries
+RxGPTAnalyticsSchema.index({ version_group: 1, version_number: -1 });

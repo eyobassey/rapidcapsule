@@ -6,7 +6,7 @@
     "assets": [
       {
         "include": "modules/pharmacy/data/**/*.json",
-        "outDir": "dist"
+        "outDir": "dist/src"
       }
     ]
   }

@@ -29,6 +29,8 @@ import { GeneralHelpers } from '../../common/helpers/general.helpers';
 import { PaymentHandler } from '../../common/external/payment/payment.handler';
 import { UnifiedWalletService } from '../accounting/services/unified-wallet.service';
 import { WalletOwnerType, TransactionCategory } from '../accounting/enums/account-codes.enum';
+import { BanksService } from '../banks/banks.service';
+import { SUCCESS } from '../../core/constants';
 
 @Injectable()
 export class SpecialistWalletService {
@@ -42,6 +44,7 @@ export class SpecialistWalletService {
     private readonly generalHelpers: GeneralHelpers,
     private readonly paymentHandler: PaymentHandler,
     private readonly unifiedWalletService: UnifiedWalletService,
+    private readonly bankService: BanksService,
   ) {}
 
   /**
@@ -208,7 +211,7 @@ export class SpecialistWalletService {
     );
 
     return {
-      authorization_url: paymentResponse.data?.authorization_url,
+      authorization_url: paymentResponse.data?.data?.authorization_url,
       reference,
       amount: dto.amount,
     };
@@ -258,6 +261,66 @@ export class SpecialistWalletService {
       message: 'Wallet credited successfully',
       transaction,
       new_balance: wallet.available_balance + amount,
+    };
+  }
+
+  /**
+   * Withdraw funds to bank account
+   */
+  async withdrawToBank(
+    specialistId: Types.ObjectId,
+    bankId: string,
+    amount: number,
+  ) {
+    // Validate balance
+    const hasSufficient = await this.hasSufficientBalance(specialistId, amount);
+    if (!hasSufficient) {
+      throw new BadRequestException('Insufficient wallet balance');
+    }
+
+    // Get bank account
+    const bank = await this.bankService.getBank(new Types.ObjectId(bankId));
+    const reference = this.generalHelpers.genTxReference();
+    const narration = 'Specialist wallet withdrawal';
+
+    // Transfer via Paystack
+    const response = await this.paymentHandler.transferToRecipient({
+      recipient: bank,
+      amount,
+      reference,
+      reason: narration,
+    });
+
+    if (response?.status !== SUCCESS) {
+      throw new InternalServerErrorException('Transfer failed. Please try again later.');
+    }
+
+    // Debit wallet (handles dual-write to unified accounting)
+    const transaction = await this.debit(
+      specialistId,
+      amount,
+      SpecialistTransactionReference.WITHDRAWAL,
+      null,
+      narration,
+    );
+
+    // Update transaction with external reference and bank metadata
+    await this.transactionModel.updateOne(
+      { _id: transaction._id },
+      {
+        external_reference: reference,
+        metadata: {
+          bank_name: bank.bank_name,
+          account_number: bank.account_number,
+          account_name: bank.account_name,
+        },
+      },
+    );
+
+    return {
+      success: true,
+      reference,
+      transaction,
     };
   }
 

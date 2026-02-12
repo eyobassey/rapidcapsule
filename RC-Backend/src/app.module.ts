@@ -46,6 +46,7 @@ import { SpecialistCategoriesModule } from './modules/specialist-categories/spec
 import { ConsultationServicesModule } from './modules/consultation-services/consultation-services.module';
 import { HealthTipsModule } from './modules/health-tips/health-tips.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { TrialModule } from './modules/trial/trial.module';
 
 dotenv.config();
 
@@ -95,6 +96,7 @@ dotenv.config();
     ConsultationServicesModule,
     HealthTipsModule,
     NotificationsModule,
+    TrialModule,
   ],
   controllers: [AppController],
   providers: [AppService, WebsocketGateway],

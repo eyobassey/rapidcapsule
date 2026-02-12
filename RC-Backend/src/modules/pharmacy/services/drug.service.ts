@@ -25,6 +25,37 @@ import { DrugInteractionService, InteractionCheckResult, DataSource } from './dr
 export class DrugService {
   private readonly logger = new Logger(DrugService.name);
 
+  // Reference data cache (dosage forms, routes, manufacturers) — 5 min TTL
+  private refCache: {
+    forms: Map<string, string>;
+    routes: Map<string, { name: string; abbreviation: string }>;
+    mfrs: Map<string, string>;
+    ts: number;
+  } | null = null;
+
+  private async getRefCache() {
+    if (this.refCache && Date.now() - this.refCache.ts < 300_000) {
+      return this.refCache;
+    }
+    const [forms, routes, mfrs] = await Promise.all([
+      this.connection.collection('dosageformentities').find({}).toArray(),
+      this.connection.collection('drugrouteentities').find({}).toArray(),
+      this.connection.collection('manufacturerentities').find({}).toArray(),
+    ]);
+    this.refCache = {
+      forms: new Map(forms.map((f) => [f._id.toString(), f.name])),
+      routes: new Map(
+        routes.map((r) => [
+          r._id.toString(),
+          { name: r.name || '', abbreviation: r.abbreviation || '' },
+        ]),
+      ),
+      mfrs: new Map(mfrs.map((m) => [m._id.toString(), m.name])),
+      ts: Date.now(),
+    };
+    return this.refCache;
+  }
+
   constructor(
     @InjectModel(Drug.name)
     private readonly drugModel: Model<DrugDocument>,
@@ -293,16 +324,15 @@ export class DrugService {
     } = searchDto;
 
     const DrugsCollection = this.connection.collection('drugentities');
-    const DosageFormsCollection = this.connection.collection('dosageformentities');
     const StockBatchCollection = this.connection.collection('stockbatchentities');
-    const RoutesCollection = this.connection.collection('drugrouteentities');
 
-    // Build query
+    // Load cached reference data
+    const cache = await this.getRefCache();
+
+    // Build filter
     const filter: any = { is_active: true };
 
-    // Text search
     if (query) {
-      // Escape special regex characters to prevent search failures
       const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       filter.$or = [
         { name: { $regex: escapedQuery, $options: 'i' } },
@@ -312,27 +342,21 @@ export class DrugService {
       ];
     }
 
-    // Filters
     if (purchase_type) {
       filter.purchase_type = purchase_type;
     }
 
     if (category) {
-      // Check if category is ObjectId or slug
-      const CategoriesCollection = this.connection.collection('drugcategoryentities');
+      const CategoriesCollection =
+        this.connection.collection('drugcategoryentities');
       let categoryId: Types.ObjectId | null = null;
 
-      // Check if it's a valid ObjectId format
       if (/^[a-f0-9]{24}$/i.test(category)) {
         categoryId = new Types.ObjectId(category);
       } else {
-        // It's a slug - convert to code and lookup
         const categoryCode = category.toUpperCase().replace(/-/g, '_');
         const categoryDoc = await CategoriesCollection.findOne({
-          $or: [
-            { code: categoryCode },
-            { slug: category },
-          ],
+          $or: [{ code: categoryCode }, { slug: category }],
           is_active: true,
         });
         if (categoryDoc) {
@@ -365,81 +389,82 @@ export class DrugService {
       filter.is_featured = is_featured;
     }
 
-    // Get all matching drugs (without pagination - we'll paginate the batch results)
+    if (manufacturer) {
+      filter.manufacturer = { $regex: manufacturer, $options: 'i' };
+    }
+
+    if (min_price !== undefined || max_price !== undefined) {
+      filter.selling_price = {};
+      if (min_price !== undefined) filter.selling_price.$gte = min_price;
+      if (max_price !== undefined) filter.selling_price.$lte = max_price;
+    }
+
+    // DB-level pagination
+    const sortField = sort_by || 'name';
+    const sortDir = sort_order === 'desc' ? -1 : 1;
+    const total = await DrugsCollection.countDocuments(filter);
     const drugs = await DrugsCollection.find(filter)
-      .sort({ name: 1 })
+      .sort({ [sortField]: sortDir })
+      .skip((page - 1) * limit)
+      .limit(limit)
       .toArray();
 
-    // Build batch-level results
-    const batchResults: any[] = [];
+    // Batch stock lookup for paginated subset (single query)
+    const drugIds = drugs.map((d) => d._id);
+    const allBatches = await StockBatchCollection.find({
+      drug_id: { $in: drugIds },
+      status: 'active',
+      quantity_available: { $gt: 0 },
+      $or: [{ no_expiry: true }, { expiry_date: { $gt: new Date() } }],
+    })
+      .sort({ expiry_date: 1 })
+      .toArray();
+
+    const batchMap = new Map<string, any[]>();
+    for (const b of allBatches) {
+      const key = b.drug_id.toString();
+      if (!batchMap.has(key)) batchMap.set(key, []);
+      batchMap.get(key)!.push(b);
+    }
+
+    // Build results from cached/batched data
+    const results: any[] = [];
 
     for (const drug of drugs) {
-      // Get dosage form name
-      let dosageFormName = '';
-      if (drug.dosage_form) {
-        const df = await DosageFormsCollection.findOne({ _id: drug.dosage_form });
-        dosageFormName = df?.name || '';
+      const dosageFormName = drug.dosage_form
+        ? cache.forms.get(drug.dosage_form.toString()) || ''
+        : '';
+
+      const routeInfo = drug.route
+        ? cache.routes.get(drug.route.toString()) || {
+            name: '',
+            abbreviation: '',
+          }
+        : { name: '', abbreviation: '' };
+
+      const primaryImage =
+        drug.images?.find((img) => img.is_primary)?.url ||
+        drug.images?.[0]?.url ||
+        null;
+
+      let drugManufacturer = drug.manufacturer;
+      if (drug.manufacturer && typeof drug.manufacturer === 'object') {
+        drugManufacturer =
+          cache.mfrs.get(drug.manufacturer.toString()) || null;
       }
 
-      // Get route information
-      let routeName = '';
-      let routeAbbreviation = '';
-      if (drug.route) {
-        const routeDoc = await RoutesCollection.findOne({ _id: drug.route });
-        if (routeDoc) {
-          routeName = routeDoc.name || '';
-          routeAbbreviation = routeDoc.abbreviation || '';
-        }
-      }
-
-      // Get primary image with pre-signed URL
-      let primaryImage = drug.images?.find((img) => img.is_primary)?.url ||
-        drug.images?.[0]?.url || null;
-
-      if (primaryImage && primaryImage.includes('s3.') && primaryImage.includes('amazonaws.com')) {
-        try {
-          primaryImage = await this.fileUploadHelper.getPresignedUrl(primaryImage, 3600);
-        } catch (e) {
-          this.logger.warn(`Failed to generate presigned URL for drug ${drug._id}: ${e.message}`);
-        }
-      }
-
-      // Get available batches for this drug
-      const batches = await StockBatchCollection.find({
-        drug_id: drug._id,
-        status: 'active',
-        quantity_available: { $gt: 0 },
-        $or: [
-          { no_expiry: true },
-          { expiry_date: { $gt: new Date() } },
-        ],
-      })
-        .sort({ expiry_date: 1 })
-        .toArray();
+      const batches = batchMap.get(drug._id.toString()) || [];
 
       if (batches.length > 0) {
-        // Add each batch as a separate selectable item
         for (const batch of batches) {
-          const availableQty = batch.quantity_available - (batch.quantity_reserved || 0);
+          const availableQty =
+            batch.quantity_available - (batch.quantity_reserved || 0);
           if (availableQty <= 0) continue;
 
-          const batchPrice = batch.selling_price_override || drug.selling_price;
+          const batchPrice =
+            batch.selling_price_override || drug.selling_price;
 
-          // Apply price filter at batch level
-          if (min_price !== undefined && batchPrice < min_price) continue;
-          if (max_price !== undefined && batchPrice > max_price) continue;
-
-          // Apply manufacturer filter at batch level
-          if (manufacturer) {
-            const mfrRegex = new RegExp(manufacturer, 'i');
-            if (!batch.manufacturer || !mfrRegex.test(batch.manufacturer)) continue;
-          }
-
-          // Apply availability filter
-          if (is_available === true && availableQty <= 0) continue;
-          if (is_available === false && availableQty > 0) continue;
-
-          batchResults.push({
+          results.push({
             _id: drug._id,
             batch_id: batch._id,
             batch_number: batch.batch_number,
@@ -449,9 +474,9 @@ export class DrugService {
             strength: drug.strength,
             dosage_form: dosageFormName,
             dosage_form_id: drug.dosage_form,
-            route: routeName,
-            route_abbreviation: routeAbbreviation,
-            manufacturer: batch.manufacturer || null,
+            route: routeInfo.name,
+            route_abbreviation: routeInfo.abbreviation,
+            manufacturer: batch.manufacturer || drugManufacturer,
             selling_price: batchPrice,
             quantity: availableQty,
             quantity_in_stock: availableQty,
@@ -467,76 +492,37 @@ export class DrugService {
           });
         }
       } else {
-        // No batches - use drug's legacy quantity (for seeded data)
-        if (drug.quantity > 0 || is_available === false) {
-          // Apply availability filter for legacy drugs
-          if (is_available === true && drug.quantity <= 0) continue;
-          if (is_available === false && drug.quantity > 0) continue;
-
-          // Apply price filter
-          if (min_price !== undefined && drug.selling_price < min_price) continue;
-          if (max_price !== undefined && drug.selling_price > max_price) continue;
-
-          // Apply manufacturer filter
-          if (manufacturer) {
-            const mfrRegex = new RegExp(manufacturer, 'i');
-            if (!drug.manufacturer || !mfrRegex.test(drug.manufacturer)) continue;
-          }
-
-          batchResults.push({
-            _id: drug._id,
-            batch_id: null,
-            batch_number: null,
-            name: drug.name,
-            generic_name: drug.generic_name,
-            brand_name: drug.brand_name,
-            strength: drug.strength,
-            dosage_form: dosageFormName,
-            dosage_form_id: drug.dosage_form,
-            route: routeName,
-            route_abbreviation: routeAbbreviation,
-            manufacturer: drug.manufacturer || null,
-            selling_price: drug.selling_price,
-            quantity: drug.quantity,
-            quantity_in_stock: drug.quantity,
-            expiry_date: null,
-            no_expiry: true,
-            image_url: primaryImage,
-            primary_image: primaryImage,
-            requires_prescription: drug.requires_prescription,
-            purchase_type: drug.purchase_type,
-            description: drug.description || drug.short_description,
-            is_available: drug.quantity > 0,
-            is_batch: false,
-          });
-        }
+        results.push({
+          _id: drug._id,
+          batch_id: null,
+          batch_number: null,
+          name: drug.name,
+          generic_name: drug.generic_name,
+          brand_name: drug.brand_name,
+          strength: drug.strength,
+          dosage_form: dosageFormName,
+          dosage_form_id: drug.dosage_form,
+          route: routeInfo.name,
+          route_abbreviation: routeInfo.abbreviation,
+          manufacturer: drugManufacturer,
+          selling_price: drug.selling_price,
+          quantity: drug.quantity || 0,
+          quantity_in_stock: drug.quantity || 0,
+          expiry_date: null,
+          no_expiry: true,
+          image_url: primaryImage,
+          primary_image: primaryImage,
+          requires_prescription: drug.requires_prescription,
+          purchase_type: drug.purchase_type,
+          description: drug.description || drug.short_description,
+          is_available: (drug.quantity || 0) > 0,
+          is_batch: false,
+        });
       }
     }
 
-    // Sort results
-    batchResults.sort((a, b) => {
-      if (sort_by === 'name') {
-        const cmp = (a.name || '').localeCompare(b.name || '');
-        return sort_order === 'asc' ? cmp : -cmp;
-      }
-      if (sort_by === 'selling_price') {
-        const diff = (a.selling_price || 0) - (b.selling_price || 0);
-        return sort_order === 'asc' ? diff : -diff;
-      }
-      if (sort_by === 'created_at') {
-        const diff = new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
-        return sort_order === 'asc' ? diff : -diff;
-      }
-      return 0;
-    });
-
-    // Paginate
-    const total = batchResults.length;
-    const startIndex = (page - 1) * limit;
-    const paginatedResults = batchResults.slice(startIndex, startIndex + limit);
-
     return {
-      drugs: paginatedResults,
+      drugs: results,
       total,
       page,
       limit,
@@ -559,9 +545,14 @@ export class DrugService {
     limit = 20,
   ): Promise<{ drugs: any[]; total: number }> {
     const DrugsCollection = this.connection.collection('drugentities');
-    const DosageFormsCollection = this.connection.collection('dosageformentities');
     const StockBatchCollection = this.connection.collection('stockbatchentities');
-    const ManufacturersCollection = this.connection.collection('manufacturerentities');
+
+    // Load cached reference data
+    const cache = await this.getRefCache();
+
+    // Coerce to integers (query params may arrive as strings)
+    const pageNum = Number(page) || 1;
+    const limitNum = Number(limit) || 20;
 
     const filter = {
       is_active: true,
@@ -575,84 +566,79 @@ export class DrugService {
       },
     };
 
-    const offset = (page - 1) * limit;
+    const offset = (pageNum - 1) * limitNum;
     const total = await DrugsCollection.countDocuments(filter);
     const drugs = await DrugsCollection.find(filter)
       .skip(offset)
-      .limit(limit)
+      .limit(limitNum)
       .sort({ name: 1 })
       .toArray();
 
-    // Resolve dosage forms and add batch info
-    const resolvedDrugs = await Promise.all(
-      drugs.map(async (drug) => {
-        // Resolve dosage form name
-        let dosageFormName = '';
-        if (drug.dosage_form) {
-          const df = await DosageFormsCollection.findOne({ _id: drug.dosage_form });
-          dosageFormName = df?.name || '';
-        }
+    // Batch stock lookup for paginated subset (single query)
+    const drugIds = drugs.map((d) => d._id);
+    const allBatches = await StockBatchCollection.find({
+      drug_id: { $in: drugIds },
+      status: 'active',
+      quantity_available: { $gt: 0 },
+      $or: [{ no_expiry: true }, { expiry_date: { $gt: new Date() } }],
+    }).toArray();
 
-        // Get primary image with pre-signed URL
-        let imageUrl = drug.images?.find((img) => img.is_primary)?.url ||
-          drug.images?.[0]?.url || null;
+    const batchMap = new Map<string, any[]>();
+    for (const b of allBatches) {
+      const key = b.drug_id.toString();
+      if (!batchMap.has(key)) batchMap.set(key, []);
+      batchMap.get(key)!.push(b);
+    }
 
-        if (imageUrl && imageUrl.includes('s3.') && imageUrl.includes('amazonaws.com')) {
-          try {
-            imageUrl = await this.fileUploadHelper.getPresignedUrl(imageUrl, 3600);
-          } catch (e) {
-            this.logger.warn(`Failed to generate presigned URL for drug ${drug._id}: ${e.message}`);
+    // Build results from cached/batched data
+    const resolvedDrugs = drugs.map((drug) => {
+      const dosageFormName = drug.dosage_form
+        ? cache.forms.get(drug.dosage_form.toString()) || ''
+        : '';
+
+      const primaryImage =
+        drug.images?.find((img) => img.is_primary)?.url ||
+        drug.images?.[0]?.url ||
+        null;
+
+      let drugManufacturer = drug.manufacturer;
+      if (drug.manufacturer && typeof drug.manufacturer === 'object') {
+        drugManufacturer =
+          cache.mfrs.get(drug.manufacturer.toString()) || null;
+      }
+
+      const batches = batchMap.get(drug._id.toString()) || [];
+      let totalQuantity = 0;
+      let lowestPrice = drug.selling_price;
+      for (const batch of batches) {
+        const availableQty =
+          batch.quantity_available - (batch.quantity_reserved || 0);
+        if (availableQty > 0) {
+          totalQuantity += availableQty;
+          const batchPrice =
+            batch.selling_price_override || drug.selling_price;
+          if (batchPrice < lowestPrice) {
+            lowestPrice = batchPrice;
           }
         }
+      }
 
-        // Get total quantity from batches
-        const batches = await StockBatchCollection.find({
-          drug_id: drug._id,
-          status: 'active',
-          quantity_available: { $gt: 0 },
-          $or: [
-            { no_expiry: true },
-            { expiry_date: { $gt: new Date() } },
-          ],
-        }).toArray();
+      // Use legacy quantity if no batches
+      if (totalQuantity === 0 && drug.quantity > 0) {
+        totalQuantity = drug.quantity;
+      }
 
-        let totalQuantity = 0;
-        let lowestPrice = drug.selling_price;
-        for (const batch of batches) {
-          const availableQty = batch.quantity_available - (batch.quantity_reserved || 0);
-          if (availableQty > 0) {
-            totalQuantity += availableQty;
-            const batchPrice = batch.selling_price_override || drug.selling_price;
-            if (batchPrice < lowestPrice) {
-              lowestPrice = batchPrice;
-            }
-          }
-        }
-
-        // Use legacy quantity if no batches
-        if (totalQuantity === 0 && drug.quantity > 0) {
-          totalQuantity = drug.quantity;
-        }
-
-        // Resolve manufacturer name if it's an ObjectId
-        let manufacturerName = drug.manufacturer;
-        if (drug.manufacturer && typeof drug.manufacturer === 'object') {
-          const mfr = await ManufacturersCollection.findOne({ _id: drug.manufacturer });
-          manufacturerName = mfr?.name || null;
-        }
-
-        return {
-          ...drug,
-          dosage_form: dosageFormName,
-          dosage_form_id: drug.dosage_form,
-          manufacturer: manufacturerName,
-          image_url: imageUrl,
-          quantity_in_stock: totalQuantity,
-          selling_price: lowestPrice,
-          is_available: totalQuantity > 0,
-        };
-      }),
-    );
+      return {
+        ...drug,
+        dosage_form: dosageFormName,
+        dosage_form_id: drug.dosage_form,
+        manufacturer: drugManufacturer,
+        image_url: primaryImage,
+        quantity_in_stock: totalQuantity,
+        selling_price: lowestPrice,
+        is_available: totalQuantity > 0,
+      };
+    });
 
     return { drugs: resolvedDrugs, total };
   }
@@ -675,16 +661,15 @@ export class DrugService {
       maxPrice?: number;
     },
   ): Promise<{ drugs: any[]; total: number; categoryName: string }> {
-    // Convert slug to category code (e.g., "cardiovascular" -> "CARDIOVASCULAR")
     const categoryCode = category.toUpperCase().replace(/-/g, '_');
 
-    // Look up collections
-    const CategoriesCollection = this.connection.collection('drugcategoryentities');
+    const CategoriesCollection =
+      this.connection.collection('drugcategoryentities');
     const DrugsCollection = this.connection.collection('drugentities');
     const StockBatchCollection = this.connection.collection('stockbatchentities');
-    const DosageFormsCollection = this.connection.collection('dosageformentities');
-    const ManufacturersCollection = this.connection.collection('manufacturerentities');
-    const RoutesCollection = this.connection.collection('drugrouteentities');
+
+    // Load cached reference data
+    const cache = await this.getRefCache();
 
     const categoryDoc = await CategoriesCollection.findOne({
       code: categoryCode,
@@ -704,83 +689,126 @@ export class DrugService {
 
     // Apply search filter
     if (filters?.search) {
+      const escapedSearch = filters.search.replace(
+        /[.*+?^${}()|[\]\\]/g,
+        '\\$&',
+      );
       filter.$or = [
-        { name: { $regex: filters.search, $options: 'i' } },
-        { generic_name: { $regex: filters.search, $options: 'i' } },
-        { brand_name: { $regex: filters.search, $options: 'i' } },
+        { name: { $regex: escapedSearch, $options: 'i' } },
+        { generic_name: { $regex: escapedSearch, $options: 'i' } },
+        { brand_name: { $regex: escapedSearch, $options: 'i' } },
       ];
     }
 
     // Apply OTC/Prescription filters
     if (filters?.otcOnly) {
       filter.purchase_type = {
-        $in: [PurchaseType.OTC_GENERAL, PurchaseType.OTC_RESTRICTED, PurchaseType.PHARMACY_ONLY],
+        $in: [
+          PurchaseType.OTC_GENERAL,
+          PurchaseType.OTC_RESTRICTED,
+          PurchaseType.PHARMACY_ONLY,
+        ],
       };
       filter.requires_prescription = false;
     } else if (filters?.prescriptionOnly) {
       filter.requires_prescription = true;
     }
 
-    // Get all drugs in this category
+    // Apply availability filter at DB level
+    if (availableOnly) {
+      filter.quantity = { $gt: 0 };
+    }
+
+    // Apply price filters at DB level
+    if (filters?.minPrice !== undefined || filters?.maxPrice !== undefined) {
+      filter.selling_price = {};
+      if (filters?.minPrice !== undefined)
+        filter.selling_price.$gte = filters.minPrice;
+      if (filters?.maxPrice !== undefined)
+        filter.selling_price.$lte = filters.maxPrice;
+    }
+
+    // Determine sort at DB level
+    let sortObj: any = { name: 1 };
+    switch (sort) {
+      case 'price_asc':
+        sortObj = { selling_price: 1 };
+        break;
+      case 'price_desc':
+        sortObj = { selling_price: -1 };
+        break;
+      case 'popular':
+        sortObj = { quantity: -1 };
+        break;
+      case 'name':
+      default:
+        sortObj = { name: 1 };
+        break;
+    }
+
+    // DB-level pagination
+    const pageNum = Number(page) || 1;
+    const limitNum = Number(limit) || 20;
+    const total = await DrugsCollection.countDocuments(filter);
     const drugs = await DrugsCollection.find(filter)
-      .sort({ name: 1 })
+      .sort(sortObj)
+      .skip((pageNum - 1) * limitNum)
+      .limit(limitNum)
       .toArray();
 
-    // Build batch-level results (same as specialist endpoint)
-    const batchResults: any[] = [];
+    // Batch stock lookup for paginated subset (single query)
+    const drugIds = drugs.map((d) => d._id);
+    const allBatches = await StockBatchCollection.find({
+      drug_id: { $in: drugIds },
+      status: 'active',
+      quantity_available: { $gt: 0 },
+      $or: [{ no_expiry: true }, { expiry_date: { $gt: new Date() } }],
+    })
+      .sort({ expiry_date: 1 })
+      .toArray();
+
+    const batchMap = new Map<string, any[]>();
+    for (const b of allBatches) {
+      const key = b.drug_id.toString();
+      if (!batchMap.has(key)) batchMap.set(key, []);
+      batchMap.get(key)!.push(b);
+    }
+
+    // Build results from cached/batched data
+    const results: any[] = [];
 
     for (const drug of drugs) {
-      // Get dosage form name
-      let dosageFormName = '';
-      if (drug.dosage_form) {
-        const df = await DosageFormsCollection.findOne({ _id: drug.dosage_form });
-        dosageFormName = df?.name || '';
+      const dosageFormName = drug.dosage_form
+        ? cache.forms.get(drug.dosage_form.toString()) || ''
+        : '';
+
+      const routeInfo = drug.route
+        ? cache.routes.get(drug.route.toString()) || {
+            name: '',
+            abbreviation: '',
+          }
+        : { name: '', abbreviation: '' };
+
+      const primaryImage =
+        drug.images?.find((img) => img.is_primary)?.url ||
+        drug.images?.[0]?.url ||
+        null;
+
+      let drugManufacturer = drug.manufacturer;
+      if (drug.manufacturer && typeof drug.manufacturer === 'object') {
+        drugManufacturer =
+          cache.mfrs.get(drug.manufacturer.toString()) || null;
       }
 
-      // Get route information
-      let routeName = '';
-      let routeAbbreviation = '';
-      if (drug.route) {
-        const routeDoc = await RoutesCollection.findOne({ _id: drug.route });
-        if (routeDoc) {
-          routeName = routeDoc.name || '';
-          routeAbbreviation = routeDoc.abbreviation || '';
-        }
-      }
-
-      // Get primary image with pre-signed URL
-      let primaryImage = drug.images?.find((img) => img.is_primary)?.url ||
-        drug.images?.[0]?.url || null;
-
-      // Generate pre-signed URL for S3 images
-      if (primaryImage && primaryImage.includes('s3.') && primaryImage.includes('amazonaws.com')) {
-        try {
-          primaryImage = await this.fileUploadHelper.getPresignedUrl(primaryImage, 3600);
-        } catch (e) {
-          this.logger.warn(`Failed to generate presigned URL for drug ${drug._id}: ${e.message}`);
-        }
-      }
-
-      // Get available batches for this drug
-      const batches = await StockBatchCollection.find({
-        drug_id: drug._id,
-        status: 'active',
-        quantity_available: { $gt: 0 },
-        $or: [
-          { no_expiry: true },
-          { expiry_date: { $gt: new Date() } },
-        ],
-      })
-        .sort({ expiry_date: 1 })
-        .toArray();
+      const batches = batchMap.get(drug._id.toString()) || [];
 
       if (batches.length > 0) {
-        // Add each batch as a separate selectable item
         for (const batch of batches) {
-          const availableQty = batch.quantity_available - (batch.quantity_reserved || 0);
+          const availableQty =
+            batch.quantity_available - (batch.quantity_reserved || 0);
           if (availableQty <= 0) continue;
 
-          batchResults.push({
+          results.push({
             _id: drug._id,
             batch_id: batch._id,
             batch_number: batch.batch_number,
@@ -789,9 +817,9 @@ export class DrugService {
             brand_name: drug.brand_name,
             strength: drug.strength,
             dosage_form: dosageFormName,
-            route: routeName,
-            route_abbreviation: routeAbbreviation,
-            manufacturer: batch.manufacturer || null,
+            route: routeInfo.name,
+            route_abbreviation: routeInfo.abbreviation,
+            manufacturer: batch.manufacturer || drugManufacturer,
             selling_price: batch.selling_price_override || drug.selling_price,
             quantity: availableQty,
             expiry_date: batch.expiry_date,
@@ -805,89 +833,35 @@ export class DrugService {
           });
         }
       } else {
-        // No batches - use drug's legacy quantity
-        if (drug.quantity > 0) {
-          // Get manufacturer name if it's an ObjectId
-          let drugManufacturer = drug.manufacturer;
-          if (drug.manufacturer && typeof drug.manufacturer === 'object') {
-            const mfr = await ManufacturersCollection.findOne({ _id: drug.manufacturer });
-            drugManufacturer = mfr?.name || null;
-          }
-
-          batchResults.push({
-            _id: drug._id,
-            batch_id: null,
-            batch_number: null,
-            name: drug.name,
-            generic_name: drug.generic_name,
-            brand_name: drug.brand_name,
-            strength: drug.strength,
-            dosage_form: dosageFormName,
-            route: routeName,
-            route_abbreviation: routeAbbreviation,
-            manufacturer: drugManufacturer,
-            selling_price: drug.selling_price,
-            quantity: drug.quantity,
-            expiry_date: null,
-            image_url: primaryImage,
-            primary_image: primaryImage,
-            requires_prescription: drug.requires_prescription,
-            purchase_type: drug.purchase_type,
-            description: drug.description || drug.short_description,
-            is_available: drug.quantity > 0,
-            is_batch: false,
-          });
-        }
+        results.push({
+          _id: drug._id,
+          batch_id: null,
+          batch_number: null,
+          name: drug.name,
+          generic_name: drug.generic_name,
+          brand_name: drug.brand_name,
+          strength: drug.strength,
+          dosage_form: dosageFormName,
+          route: routeInfo.name,
+          route_abbreviation: routeInfo.abbreviation,
+          manufacturer: drugManufacturer,
+          selling_price: drug.selling_price,
+          quantity: drug.quantity || 0,
+          expiry_date: null,
+          image_url: primaryImage,
+          primary_image: primaryImage,
+          requires_prescription: drug.requires_prescription,
+          purchase_type: drug.purchase_type,
+          description: drug.description || drug.short_description,
+          is_available: (drug.quantity || 0) > 0,
+          is_batch: false,
+        });
       }
     }
-
-    // Filter by availability if requested
-    let filteredResults = batchResults;
-    if (availableOnly) {
-      filteredResults = filteredResults.filter(
-        (drug) => drug.is_available && drug.quantity > 0,
-      );
-    }
-
-    // Apply price filters
-    if (filters?.minPrice !== undefined) {
-      const minPrice = filters.minPrice;
-      filteredResults = filteredResults.filter(
-        (drug) => drug.selling_price >= minPrice,
-      );
-    }
-    if (filters?.maxPrice !== undefined) {
-      const maxPrice = filters.maxPrice;
-      filteredResults = filteredResults.filter(
-        (drug) => drug.selling_price <= maxPrice,
-      );
-    }
-
-    // Apply sorting
-    filteredResults.sort((a, b) => {
-      switch (sort) {
-        case 'price_asc':
-          return (a.selling_price || 0) - (b.selling_price || 0);
-        case 'price_desc':
-          return (b.selling_price || 0) - (a.selling_price || 0);
-        case 'popular':
-          // For now, sort by quantity as a proxy for popularity
-          return (b.quantity || 0) - (a.quantity || 0);
-        case 'name':
-        default:
-          return (a.name || '').localeCompare(b.name || '');
-      }
-    });
-
-    // Apply pagination
-    const pageNum = Number(page) || 1;
-    const limitNum = Number(limit) || 20;
-    const offset = (pageNum - 1) * limitNum;
-    const paginatedDrugs = filteredResults.slice(offset, offset + limitNum);
 
     return {
-      drugs: paginatedDrugs,
-      total: filteredResults.length,
+      drugs: results,
+      total,
       categoryName: categoryDoc.name,
     };
   }
@@ -896,11 +870,10 @@ export class DrugService {
    * Get featured drugs
    */
   async getFeaturedDrugs(limit = 10): Promise<DrugDocument[]> {
-    return (await find(this.drugModel, {
-      is_active: true,
-      is_available: true,
-      is_featured: true,
-    })) as DrugDocument[];
+    return this.drugModel
+      .find({ is_active: true, is_available: true, is_featured: true })
+      .limit(limit)
+      .exec();
   }
 
   /**

@@ -98,11 +98,11 @@
                 </div>
                 <span>Disable All</span>
               </button>
-              <button class="action-btn" @click="$router.push('/app/specialist/specialist-account')">
+              <button class="action-btn" @click="$router.push('/app/specialist/specialist-dashboard')">
                 <div class="action-icon sky">
-                  <v-icon name="hi-user" scale="1.1" />
+                  <v-icon name="hi-home" scale="1.1" />
                 </div>
-                <span>Account Settings</span>
+                <span>Dashboard</span>
               </button>
               <button class="action-btn" @click="$router.push('/app/specialist/security-settings')">
                 <div class="action-icon violet">

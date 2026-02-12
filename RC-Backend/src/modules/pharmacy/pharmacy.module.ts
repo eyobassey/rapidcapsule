@@ -71,6 +71,10 @@ import {
   ClaudeSummaryCredit,
   ClaudeSummaryCreditSchema,
 } from '../claude-summary-credits/entities/claude-summary-credit.entity';
+import {
+  ClaudeSummaryTransaction,
+  ClaudeSummaryTransactionSchema,
+} from '../claude-summary-credits/entities/claude-summary-transaction.entity';
 
 // Services
 import { DrugService } from './services/drug.service';
@@ -92,6 +96,7 @@ import { PubMedService } from './services/pubmed.service';
 import { NICEService } from './services/nice.service';
 import { BNFService } from './services/bnf.service';
 import { HallucinationDetectorService } from './services/hallucination-detector.service';
+import { WHOEMLService } from './services/who-eml.service';
 
 // Controllers
 import { DrugController } from './controllers/drug.controller';
@@ -118,6 +123,7 @@ import { RxGPTController } from './controllers/rxgpt.controller';
       { name: Appointment.name, schema: AppointmentSchema },
       { name: HealthCheckup.name, schema: HealthCheckupSchema },
       { name: ClaudeSummaryCredit.name, schema: ClaudeSummaryCreditSchema },
+      { name: ClaudeSummaryTransaction.name, schema: ClaudeSummaryTransactionSchema },
       { name: RxGPTSettings.name, schema: RxGPTSettingsSchema },
       { name: RxGPTAnalytics.name, schema: RxGPTAnalyticsSchema },
       { name: RxGPTCache.name, schema: RxGPTCacheSchema },
@@ -157,6 +163,7 @@ import { RxGPTController } from './controllers/rxgpt.controller';
     NICEService,
     BNFService,
     HallucinationDetectorService,
+    WHOEMLService,
     FileUploadHelper,
     GeneralHelpers,
     PaymentHandler,
@@ -180,6 +187,7 @@ import { RxGPTController } from './controllers/rxgpt.controller';
     NICEService,
     BNFService,
     HallucinationDetectorService,
+    WHOEMLService,
   ],
 })
 export class PharmacyModule {}

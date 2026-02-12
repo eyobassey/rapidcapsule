@@ -15,7 +15,12 @@ import {
   TopUpWalletDto,
   VerifyTopUpDto,
   SpecialistWalletTransactionQueryDto,
+  SpecialistWithdrawDto,
 } from './dto/specialist-wallet.dto';
+import {
+  SpecialistTransactionType,
+  SpecialistTransactionReference,
+} from './entities/specialist-wallet-transaction.entity';
 
 @UseGuards(JwtAuthGuard)
 @Controller('specialist/wallet')
@@ -89,6 +94,40 @@ export class SpecialistWalletController {
       dto.reference,
     );
     return sendSuccessResponse(Messages.TRANSACTION_VERIFIED, result);
+  }
+
+  /**
+   * POST /api/specialist/wallet/withdraw
+   * Withdraw funds to bank account
+   */
+  @Post('withdraw')
+  async withdrawToBank(@Request() req, @Body() dto: SpecialistWithdrawDto) {
+    const result = await this.specialistWalletService.withdrawToBank(
+      req.user.sub,
+      dto.bankId,
+      dto.amount,
+    );
+    return sendSuccessResponse(Messages.WITHDRAW_SUCCESSFUL, result);
+  }
+
+  /**
+   * GET /api/specialist/wallet/withdrawals
+   * Get withdrawal history
+   */
+  @Get('withdrawals')
+  async getWithdrawals(
+    @Request() req,
+    @Query() query: SpecialistWalletTransactionQueryDto,
+  ) {
+    const result = await this.specialistWalletService.getTransactions(
+      req.user.sub,
+      {
+        ...query,
+        type: SpecialistTransactionType.DEBIT,
+        reference_type: SpecialistTransactionReference.WITHDRAWAL,
+      },
+    );
+    return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
   /**

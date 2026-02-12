@@ -1,5 +1,5 @@
 <template>
-  <div class="sa-layout" style="position: fixed !important; top: 0; left: 0; right: 0; bottom: 0; width: 100vw; height: 100vh; z-index: 9999; background: #F8FAFC;">
+  <div class="sa-layout">
     <!-- Desktop Sidebar -->
     <aside class="sa-sidebar desktop-only">
       <div class="sidebar-header">
@@ -192,29 +192,23 @@ function goToCreate() {
 
 <style scoped lang="scss">
 .sa-layout {
-  position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  bottom: 0 !important;
   display: flex;
-  width: 100vw !important;
-  height: 100vh !important;
-  background: #F8FAFC;
-  z-index: 9999 !important;
+  width: 100%;
+  min-height: 100vh;
 }
 
 // Sidebar
 .sa-sidebar {
   width: 260px;
+  flex-shrink: 0;
   background: #FFFFFF;
   border-right: 1px solid #E2E8F0;
   display: flex;
   flex-direction: column;
-  position: fixed;
+  position: sticky;
   top: 0;
-  left: 0;
   height: 100vh;
+  overflow-y: auto;
   z-index: 50;
 }
 
@@ -315,27 +309,25 @@ function goToCreate() {
 // Main Content
 .sa-main {
   flex: 1;
-  margin-left: 260px;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  overflow: hidden;
   align-items: center;
 }
 
 .sa-content {
-  flex: 1;
-  padding: 1.25rem 2rem;
-  overflow-y: auto;
-  overflow-x: hidden;
+  padding: 24px 32px 100px;
   width: 100%;
   max-width: 1400px;
   box-sizing: border-box;
 
+  @media (max-width: 768px) {
+    padding: 16px 16px 120px;
+  }
+
   :deep(.router-component),
   :deep(> *) {
     width: 100%;
-    min-height: 100%;
   }
 }
 

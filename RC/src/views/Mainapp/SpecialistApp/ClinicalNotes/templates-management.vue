@@ -1,117 +1,134 @@
 <template>
-  <div class="page-content">
-    <TopBar showButtons type="title-only" title="Clinical Notes / Templates" @open-side-nav="$emit('openSideNav')" />
-    <div class="page-content__body">
-      <div class="templates-container">
-        <!-- Hero Section -->
-        <div class="hero-section">
-          <div class="hero-content">
-            <button class="hero-back" @click="router.push('/app/specialist/clinical-notes')">
-              <v-icon name="hi-arrow-left" scale="0.75" />
-              Clinical Notes
-            </button>
-            <h1 class="hero-title">
-              <v-icon name="hi-template" scale="1" />
-              Note Templates
-            </h1>
-            <p class="hero-subtitle">Create and manage reusable clinical note templates</p>
-          </div>
-          <div class="hero-right">
-            <div v-if="templates.length" class="hero-stat-pill">
-              <span class="hero-stat-pill__value">{{ templates.length }}</span>
-              <span class="hero-stat-pill__label">Templates</span>
-            </div>
-            <button class="hero-action-btn" @click="openCreateModal">
-              <v-icon name="hi-plus" scale="0.85" />
-              Create Template
-            </button>
+  <div class="templates-page">
+    <!-- Hero Section -->
+    <section class="hero">
+      <div class="hero__content">
+        <button class="hero__back-btn" @click="router.push('/app/specialist/clinical-notes')">
+          <v-icon name="hi-arrow-left" scale="0.75" />
+          <span>Clinical Notes</span>
+        </button>
+        <div class="hero__badge">
+          <div class="badge-pulse"></div>
+          <v-icon name="hi-template" />
+          <span>Note Templates</span>
+        </div>
+        <h1 class="hero__title">
+          Note<br/>
+          <span class="hero__title-accent">Templates</span>
+        </h1>
+        <p class="hero__subtitle">Create and manage reusable clinical note templates</p>
+        <div class="hero__stats" v-if="templates.length">
+          <div class="hero-stat">
+            <span class="hero-stat__value">{{ templates.length }}</span>
+            <span class="hero-stat__label">Templates</span>
           </div>
         </div>
-
-        <!-- Shimmer Loading -->
-        <template v-if="isLoading">
-          <div class="skeleton-card" v-for="i in 3" :key="i" />
-        </template>
-
-        <!-- Templates List -->
-        <template v-else>
-          <div v-if="templates.length" class="templates-list">
-            <div
-              v-for="template in templates"
-              :key="template._id"
-              class="template-card"
-              :class="{ 'template-card--default': template.is_default }"
-            >
-              <div class="template-card__header">
-                <div class="template-card__title-row">
-                  <h3>{{ template.name }}</h3>
-                  <v-icon v-if="template.is_default" name="hi-star" scale="0.85" class="default-star" />
-                </div>
-                <span v-if="template.category" class="category-badge">{{ template.category }}</span>
-              </div>
-
-              <p class="template-card__content">{{ truncate(template.content, 150) }}</p>
-
-              <div class="template-card__footer">
-                <div class="template-card__meta">
-                  <span class="usage-count">
-                    <v-icon name="hi-clipboard-list" scale="0.65" />
-                    Used {{ template.usage_count || 0 }} times
-                  </span>
-                  <span v-if="template.is_default" class="default-badge">Default</span>
-                </div>
-                <div class="template-card__actions">
-                  <button
-                    v-if="!template.is_default"
-                    class="action-btn"
-                    @click="setAsDefault(template._id)"
-                  >
-                    Set Default
-                  </button>
-                  <button
-                    v-else
-                    class="action-btn"
-                    @click="unsetDefault(template._id)"
-                  >
-                    Unset Default
-                  </button>
-                  <button class="action-btn" @click="editTemplate(template)">
-                    Edit
-                  </button>
-                  <button
-                    v-if="template.usage_count > 0"
-                    class="action-btn action-btn--danger"
-                    @click="archiveTemplate(template)"
-                  >
-                    Archive
-                  </button>
-                  <button
-                    v-else
-                    class="action-btn action-btn--danger"
-                    @click="deleteTemplate(template)"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Empty State -->
-          <div v-else class="empty-section">
-            <div class="empty-section__icon">
-              <v-icon name="hi-template" scale="1.8" />
-            </div>
-            <h3>No templates yet</h3>
-            <p>Create your first clinical note template to speed up documentation</p>
-            <button class="empty-section__action" @click="openCreateModal">
-              <v-icon name="hi-plus" scale="0.8" />
-              Create Template
-            </button>
-          </div>
-        </template>
+        <div class="hero__actions">
+          <button class="hero__create-btn" @click="openCreateModal">
+            <v-icon name="hi-plus" scale="0.85" />
+            Create Template
+          </button>
+        </div>
       </div>
-    </div>
+      <div class="hero__visual">
+        <div class="dashboard-orb">
+          <div class="orb-ring orb-ring--1"></div>
+          <div class="orb-ring orb-ring--2"></div>
+          <div class="orb-ring orb-ring--3"></div>
+          <div class="orb-core">
+            <v-icon name="hi-template" />
+          </div>
+        </div>
+        <div class="floating-icons">
+          <div class="float-icon float-icon--1"><v-icon name="hi-document-text" /></div>
+          <div class="float-icon float-icon--2"><v-icon name="hi-clipboard-list" /></div>
+          <div class="float-icon float-icon--3"><v-icon name="hi-pencil-alt" /></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Shimmer Loading -->
+    <template v-if="isLoading">
+      <div class="skeleton-card" v-for="i in 3" :key="i" />
+    </template>
+
+    <!-- Templates List -->
+    <template v-else>
+      <div v-if="templates.length" class="templates-list">
+        <div
+          v-for="template in templates"
+          :key="template._id"
+          class="bento-card template-card"
+          :class="{ 'template-card--default': template.is_default }"
+        >
+          <div class="template-card__header">
+            <div class="template-card__title-row">
+              <h3>{{ template.name }}</h3>
+              <v-icon v-if="template.is_default" name="hi-star" scale="0.85" class="default-star" />
+            </div>
+            <span v-if="template.category" class="category-badge">{{ template.category }}</span>
+          </div>
+
+          <p class="template-card__content">{{ truncate(template.content, 150) }}</p>
+
+          <div class="template-card__footer">
+            <div class="template-card__meta">
+              <span class="usage-count">
+                <v-icon name="hi-clipboard-list" scale="0.65" />
+                Used {{ template.usage_count || 0 }} times
+              </span>
+              <span v-if="template.is_default" class="default-badge">Default</span>
+            </div>
+            <div class="template-card__actions">
+              <button
+                v-if="!template.is_default"
+                class="action-btn"
+                @click="setAsDefault(template._id)"
+              >
+                Set Default
+              </button>
+              <button
+                v-else
+                class="action-btn"
+                @click="unsetDefault(template._id)"
+              >
+                Unset Default
+              </button>
+              <button class="action-btn" @click="editTemplate(template)">
+                Edit
+              </button>
+              <button
+                v-if="template.usage_count > 0"
+                class="action-btn action-btn--danger"
+                @click="archiveTemplate(template)"
+              >
+                Archive
+              </button>
+              <button
+                v-else
+                class="action-btn action-btn--danger"
+                @click="deleteTemplate(template)"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div v-else class="bento-card empty-section">
+        <div class="empty-section__icon">
+          <v-icon name="hi-template" scale="1.8" />
+        </div>
+        <h3>No templates yet</h3>
+        <p>Create your first clinical note template to speed up documentation</p>
+        <button class="empty-section__action" @click="openCreateModal">
+          <v-icon name="hi-plus" scale="0.8" />
+          Create Template
+        </button>
+      </div>
+    </template>
 
     <!-- Create/Edit Modal -->
     <Teleport to="body">
@@ -205,7 +222,6 @@
 import { ref, reactive, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useToast } from 'vue-toast-notification';
-import TopBar from '@/components/Navigation/top-bar';
 import apiFactory from '@/services/apiFactory';
 
 defineEmits(['openSideNav']);
@@ -376,254 +392,454 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
-.page-content {
+// ─── Design Tokens ───
+$sky: #4FC3F7;
+$sky-dark: #0288D1;
+$sky-darker: #01579B;
+$navy: #0F172A;
+$emerald: #10B981;
+$amber: #F59E0B;
+$rose: #F43F5E;
+$violet: #8B5CF6;
+
+@mixin glass-card {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+// ─── Page Layout ───
+.templates-page {
   display: flex;
   flex-direction: column;
+  gap: 20px;
   width: 100%;
-  height: 100vh;
-  padding: 0 128px;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px;
+  padding-bottom: 100px;
+  background: #F8FAFC;
+  min-height: min-content;
 
-  @include responsive(tab-portrait) {
-    padding: 0;
-  }
-
-  @include responsive(phone) {
-    padding: 0;
-  }
-
-  &__body {
-    width: 100%;
-    padding: $size-24 $size-32;
-    overflow-y: auto;
-
-    @include responsive(phone) {
-      padding: $size-16;
-    }
-
-    &::-webkit-scrollbar {
-      display: none;
-    }
+  @media (max-width: 768px) {
+    padding: 16px;
+    padding-bottom: 120px;
+    gap: 16px;
   }
 }
 
-.templates-container {
-  width: 100%;
-  max-width: 700px;
+// ─── Hero Section ───
+.hero {
   display: flex;
-  flex-direction: column;
-  gap: $size-24;
-  padding-bottom: $size-32;
-}
-
-// Hero Section
-.hero-section {
-  background: linear-gradient(135deg, #0EAEC4 0%, #0891b2 50%, #0e7490 100%);
-  border-radius: $size-20;
-  padding: $size-24 $size-28;
-  display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: flex-start;
+  background: linear-gradient(135deg, $sky 0%, $sky-dark 55%, $sky-darker 100%);
+  border-radius: 28px;
+  padding: 40px 48px;
+  min-height: 300px;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 10px 40px rgba(14, 174, 196, 0.25);
-  color: white;
+  box-shadow: 0 20px 60px rgba(2, 136, 209, 0.3);
 
   &::before {
     content: '';
     position: absolute;
-    top: -50%;
-    right: -10%;
-    width: 300px;
-    height: 300px;
-    background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, transparent 70%);
+    inset: 0;
+    background:
+      radial-gradient(circle at 20% 80%, rgba(255,255,255,0.08) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, rgba(255,255,255,0.05) 0%, transparent 40%);
     pointer-events: none;
   }
 
-  @include responsive(tab-portrait) {
+  @media (max-width: 768px) {
     flex-direction: column;
-    gap: $size-20;
-    padding: $size-20;
-    border-radius: $size-16;
+    padding: 28px 24px;
+    min-height: auto;
+    border-radius: 20px;
+    text-align: center;
+  }
+}
+
+.hero__content {
+  position: relative;
+  z-index: 2;
+  flex: 1;
+  max-width: 500px;
+
+  @media (max-width: 768px) {
+    max-width: 100%;
+  }
+}
+
+.hero__back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  margin-bottom: 16px;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.25);
+  }
+}
+
+.hero__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 100px;
+  color: white;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+
+  .ov-icon {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.badge-pulse {
+  width: 8px;
+  height: 8px;
+  background: #4ade80;
+  border-radius: 50%;
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.hero__title {
+  font-size: 2.75rem;
+  font-weight: 800;
+  color: white;
+  line-height: 1.1;
+  margin: 0 0 12px;
+  letter-spacing: -0.02em;
+
+  @media (max-width: 768px) {
+    font-size: 2rem;
+  }
+}
+
+.hero__title-accent {
+  background: linear-gradient(135deg, #E0F7FA 0%, #B2EBF2 50%, #80DEEA 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero__subtitle {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.85);
+  line-height: 1.6;
+  margin: 0 0 24px;
+}
+
+.hero__stats {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 16px 24px;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 16px;
+  margin-bottom: 20px;
+
+  @media (max-width: 768px) {
+    justify-content: center;
+    padding: 12px 16px;
+  }
+}
+
+.hero-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.hero-stat__value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: white;
+}
+
+.hero-stat__label {
+  font-size: 0.6875rem;
+  color: rgba(255, 255, 255, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 500;
+}
+
+.hero__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.hero__create-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 10px 20px;
+  border-radius: 12px;
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
   }
 
-  @include responsive(phone) {
-    padding: $size-16;
-    border-radius: $size-12;
+  @media (max-width: 768px) {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+// ─── Hero Visual / Orb ───
+.hero__visual {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  flex-shrink: 0;
+
+  @media (max-width: 768px) {
+    width: 150px;
+    height: 150px;
+    margin-top: 20px;
+  }
+}
+
+.dashboard-orb {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.orb-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.12);
+
+  &--1 {
+    width: 100%;
+    height: 100%;
+    animation: spin-slow 20s linear infinite;
+  }
+  &--2 {
+    width: 75%;
+    height: 75%;
+    animation: spin-slow 15s linear infinite reverse;
+    border-style: dashed;
+  }
+  &--3 {
+    width: 50%;
+    height: 50%;
+    animation: spin-slow 10s linear infinite;
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+}
+
+.orb-core {
+  width: 56px;
+  height: 56px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  animation: pulse-glow 3s ease-in-out infinite;
+  z-index: 1;
+
+  .ov-icon {
+    width: 24px;
+    height: 24px;
   }
 
-  .hero-content {
-    z-index: 1;
+  @media (max-width: 768px) {
+    width: 44px;
+    height: 44px;
 
-    .hero-back {
-      display: inline-flex;
-      align-items: center;
-      gap: $size-4;
-      background: rgba(255, 255, 255, 0.15);
-      border: none;
-      color: white;
-      font-size: $size-12;
-      font-weight: $fw-medium;
-      padding: $size-4 $size-10;
-      border-radius: $size-8;
-      cursor: pointer;
-      margin-bottom: $size-12;
-      transition: background 0.2s;
-
-      &:hover {
-        background: rgba(255, 255, 255, 0.25);
-      }
-    }
-
-    .hero-title {
-      display: flex;
-      align-items: center;
-      gap: $size-8;
-      font-size: $size-20;
-      font-weight: $fw-bold;
-      margin-bottom: $size-4;
-    }
-
-    .hero-subtitle {
-      font-size: $size-13;
-      opacity: 0.85;
-    }
-  }
-
-  .hero-right {
-    z-index: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: $size-14;
-
-    @include responsive(tab-portrait) {
-      align-items: flex-start;
-      width: 100%;
-    }
-  }
-
-  .hero-stat-pill {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    background: rgba(255, 255, 255, 0.15);
-    padding: $size-10 $size-16;
-    border-radius: $size-10;
-
-    &__value {
-      font-size: $size-20;
-      font-weight: $fw-bold;
-      line-height: 1.2;
-    }
-
-    &__label {
-      font-size: $size-10;
-      opacity: 0.85;
-      font-weight: $fw-medium;
-    }
-  }
-
-  .hero-action-btn {
-    display: flex;
-    align-items: center;
-    gap: $size-8;
-    background: rgba(255, 255, 255, 0.2);
-    color: white;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: $size-10;
-    padding: $size-10 $size-20;
-    font-size: $size-14;
-    font-weight: $fw-semi-bold;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    white-space: nowrap;
-
-    &:hover {
-      background: rgba(255, 255, 255, 0.3);
+    .ov-icon {
+      width: 20px;
+      height: 20px;
     }
   }
 }
 
-// Templates List
+.floating-icons {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.float-icon {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+
+  .ov-icon {
+    width: 14px;
+    height: 14px;
+  }
+
+  &--1 {
+    top: 10%;
+    right: 5%;
+    animation: float-1 6s ease-in-out infinite;
+  }
+  &--2 {
+    bottom: 15%;
+    left: 0;
+    animation: float-2 7s ease-in-out infinite;
+  }
+  &--3 {
+    top: 50%;
+    right: -5%;
+    animation: float-3 8s ease-in-out infinite;
+  }
+
+  @media (max-width: 768px) {
+    width: 26px;
+    height: 26px;
+    border-radius: 7px;
+
+    .ov-icon {
+      width: 12px;
+      height: 12px;
+    }
+  }
+}
+
+// ─── Bento Cards ───
+.bento-card {
+  @include glass-card;
+  padding: 24px;
+
+  @media (max-width: 768px) {
+    padding: 16px;
+    border-radius: 16px;
+  }
+}
+
+// ─── Templates List ───
 .templates-list {
   display: flex;
   flex-direction: column;
-  gap: $size-12;
+  gap: 16px;
 }
 
 .template-card {
-  background: white;
-  border-radius: $size-16;
-  padding: $size-20;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
 
   &:hover {
-    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1), 0 2px 6px rgba(0, 0, 0, 0.04);
   }
 
   &--default {
-    border: 1px solid rgba(#FFC107, 0.4);
-    background: linear-gradient(to bottom, rgba(255, 193, 7, 0.03) 0%, white 100%);
+    border-color: rgba(255, 193, 7, 0.4);
+    background: linear-gradient(to bottom, rgba(255, 193, 7, 0.04) 0%, rgba(255, 255, 255, 0.92) 100%);
   }
 
   &__header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: $size-12;
+    margin-bottom: 12px;
 
-    @include responsive(phone) {
+    @media (max-width: 640px) {
       flex-direction: column;
-      gap: $size-8;
+      gap: 8px;
     }
   }
 
   &__title-row {
     display: flex;
     align-items: center;
-    gap: $size-8;
+    gap: 8px;
 
     h3 {
-      font-size: $size-15;
-      font-weight: $fw-semi-bold;
-      color: $color-g-21;
+      font-size: 0.9375rem;
+      font-weight: 600;
+      color: $navy;
+      margin: 0;
     }
   }
 
   &__content {
-    font-size: $size-14;
-    color: $color-g-36;
+    font-size: 0.875rem;
+    color: #475569;
     line-height: 1.6;
-    margin-bottom: $size-16;
+    margin: 0 0 16px;
   }
 
   &__footer {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding-top: $size-14;
-    border-top: 1px solid $color-g-92;
+    padding-top: 16px;
+    border-top: 1px solid rgba(226, 232, 240, 0.6);
 
-    @include responsive(phone) {
+    @media (max-width: 640px) {
       flex-direction: column;
       align-items: flex-start;
-      gap: $size-12;
+      gap: 12px;
     }
   }
 
   &__meta {
     display: flex;
     align-items: center;
-    gap: $size-12;
+    gap: 12px;
   }
 
   &__actions {
     display: flex;
-    gap: $size-8;
+    gap: 8px;
     flex-wrap: wrap;
 
-    @include responsive(phone) {
+    @media (max-width: 640px) {
       width: 100%;
       justify-content: flex-end;
     }
@@ -635,173 +851,173 @@ onMounted(() => {
 }
 
 .category-badge {
-  font-size: $size-11;
-  color: #0891b2;
-  background: rgba(14, 174, 196, 0.1);
-  padding: $size-4 $size-10;
-  border-radius: $size-12;
-  font-weight: $fw-medium;
+  font-size: 0.6875rem;
+  color: $sky-dark;
+  background: rgba(79, 195, 247, 0.1);
+  padding: 4px 10px;
+  border-radius: 100px;
+  font-weight: 500;
 }
 
 .usage-count {
   display: flex;
   align-items: center;
-  gap: $size-4;
-  font-size: $size-12;
-  color: $color-g-54;
+  gap: 4px;
+  font-size: 0.75rem;
+  color: #64748B;
 }
 
 .default-badge {
-  font-size: $size-11;
-  font-weight: $fw-semi-bold;
+  font-size: 0.6875rem;
+  font-weight: 600;
   color: #FF8F00;
   background: rgba(255, 193, 7, 0.15);
-  padding: $size-2 $size-8;
-  border-radius: $size-12;
+  padding: 2px 8px;
+  border-radius: 100px;
 }
 
 .action-btn {
-  padding: $size-6 $size-12;
-  background: rgba(14, 174, 196, 0.06);
-  color: #0891b2;
+  padding: 6px 14px;
+  background: rgba(79, 195, 247, 0.08);
+  color: $sky-dark;
   border: none;
-  border-radius: $size-6;
-  font-size: $size-12;
-  font-weight: $fw-semi-bold;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: background 0.2s ease;
+  transition: all 0.25s ease;
 
   &:hover {
-    background: rgba(14, 174, 196, 0.14);
+    background: rgba(79, 195, 247, 0.16);
+    transform: translateY(-1px);
   }
 
   &--danger {
-    background: rgba(#ef4444, 0.06);
-    color: #dc2626;
+    background: rgba(239, 68, 68, 0.08);
+    color: #DC2626;
 
     &:hover {
-      background: rgba(#ef4444, 0.14);
+      background: rgba(239, 68, 68, 0.16);
     }
   }
 }
 
-// Empty State
+// ─── Empty State ───
 .empty-section {
   text-align: center;
-  padding: $size-32 $size-20;
-  background: $color-g-97;
-  border-radius: $size-12;
+  padding: 48px 24px;
 
   &__icon {
-    width: 64px;
-    height: 64px;
-    margin: 0 auto $size-14;
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 20px;
     border-radius: 50%;
-    background: rgba(14, 174, 196, 0.08);
+    background: linear-gradient(135deg, rgba(79, 195, 247, 0.12) 0%, rgba(79, 195, 247, 0.04) 100%);
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #0EAEC4;
+    color: $sky;
   }
 
   h3 {
-    font-size: $size-15;
-    font-weight: $fw-semi-bold;
-    color: $color-g-21;
-    margin-bottom: $size-6;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #1E293B;
+    margin: 0 0 8px;
   }
 
   p {
-    font-size: $size-13;
-    color: $color-g-54;
-    margin-bottom: $size-16;
+    font-size: 0.875rem;
+    color: #64748B;
+    margin: 0 0 20px;
   }
 
   &__action {
     display: inline-flex;
     align-items: center;
-    gap: $size-6;
-    background: rgba(14, 174, 196, 0.1);
-    color: #0EAEC4;
+    gap: 6px;
+    background: linear-gradient(135deg, $sky 0%, $sky-dark 100%);
+    color: white;
     border: none;
-    border-radius: $size-8;
-    padding: $size-10 $size-18;
-    font-size: $size-13;
-    font-weight: $fw-semi-bold;
+    border-radius: 12px;
+    padding: 10px 20px;
+    font-size: 0.875rem;
+    font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(79, 195, 247, 0.3);
 
     &:hover {
-      background: rgba(14, 174, 196, 0.18);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(79, 195, 247, 0.4);
     }
   }
 }
 
-// Modal
+// ─── Modal ───
 .modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  padding: $size-20;
+  padding: 20px;
   animation: fadeIn 0.2s ease;
 }
 
 .modal-panel {
   background: white;
-  border-radius: $size-20;
+  border-radius: 20px;
   width: 100%;
   max-width: 560px;
   max-height: 85vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.2);
   animation: slideUp 0.25s ease;
 
-  @include responsive(phone) {
+  @media (max-width: 640px) {
     max-width: 100%;
     max-height: 90vh;
-    border-radius: $size-16;
+    border-radius: 16px;
   }
 
   &__header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: $size-20 $size-24;
-    border-bottom: 1px solid $color-g-92;
+    padding: 20px 24px;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.6);
 
     .modal-header-info {
       display: flex;
       align-items: center;
-      gap: $size-8;
-      color: #0891b2;
+      gap: 8px;
+      color: $sky-dark;
 
       h2 {
-        font-size: $size-16;
-        font-weight: $fw-semi-bold;
-        color: $color-g-21;
+        font-size: 1rem;
+        font-weight: 600;
+        color: #1E293B;
+        margin: 0;
       }
     }
 
     .close-btn {
-      background: $color-g-97;
+      background: rgba(241, 245, 249, 0.8);
       border: none;
-      border-radius: $size-8;
-      padding: $size-8;
+      border-radius: 8px;
+      padding: 8px;
       cursor: pointer;
-      color: $color-g-54;
+      color: #64748B;
       transition: all 0.2s ease;
 
       &:hover {
-        background: $color-g-92;
-        color: $color-g-21;
+        background: #E2E8F0;
+        color: #1E293B;
       }
     }
   }
@@ -809,10 +1025,10 @@ onMounted(() => {
   &__body {
     flex: 1;
     overflow-y: auto;
-    padding: $size-24;
+    padding: 24px;
     display: flex;
     flex-direction: column;
-    gap: $size-20;
+    gap: 20px;
 
     &::-webkit-scrollbar {
       display: none;
@@ -822,157 +1038,163 @@ onMounted(() => {
   &__footer {
     display: flex;
     justify-content: flex-end;
-    gap: $size-12;
-    padding: $size-16 $size-24;
-    border-top: 1px solid $color-g-92;
+    gap: 12px;
+    padding: 16px 24px;
+    border-top: 1px solid rgba(226, 232, 240, 0.6);
 
-    @include responsive(phone) {
+    @media (max-width: 640px) {
       flex-direction: column-reverse;
     }
   }
 }
 
-// Confirm Dialog
+// ─── Confirm Dialog ───
 .confirm-panel {
   background: white;
-  border-radius: $size-16;
-  padding: $size-28;
+  border-radius: 20px;
+  padding: 32px;
   width: 100%;
   max-width: 400px;
   text-align: center;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.2);
   animation: slideUp 0.25s ease;
 
   &__icon {
     width: 48px;
     height: 48px;
-    margin: 0 auto $size-16;
+    margin: 0 auto 16px;
     border-radius: 50%;
-    background: rgba(#f59e0b, 0.1);
+    background: rgba(245, 158, 11, 0.1);
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #d97706;
+    color: #D97706;
   }
 
   h3 {
-    font-size: $size-16;
-    font-weight: $fw-semi-bold;
-    color: $color-g-21;
-    margin-bottom: $size-8;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1E293B;
+    margin: 0 0 8px;
   }
 
   p {
-    font-size: $size-14;
-    color: $color-g-54;
+    font-size: 0.875rem;
+    color: #64748B;
     line-height: 1.5;
-    margin-bottom: $size-20;
+    margin: 0 0 24px;
   }
 
   &__actions {
     display: flex;
-    gap: $size-12;
+    gap: 12px;
     justify-content: center;
 
-    @include responsive(phone) {
+    @media (max-width: 640px) {
       flex-direction: column-reverse;
     }
   }
 }
 
-// Form
+// ─── Form ───
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: $size-8;
+  gap: 8px;
 
   label {
-    font-size: $size-14;
-    font-weight: $fw-medium;
-    color: $color-g-21;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #1E293B;
 
     .required {
-      color: #ef4444;
+      color: #EF4444;
     }
   }
 
   input[type="text"] {
-    padding: $size-12 $size-14;
-    border: 1px solid $color-g-85;
-    border-radius: $size-10;
-    font-size: $size-14;
-    color: $color-g-21;
+    padding: 12px 14px;
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    border-radius: 12px;
+    font-size: 0.875rem;
+    color: #1E293B;
+    background: rgba(255, 255, 255, 0.7);
+    transition: all 0.3s ease;
 
     &:focus {
       outline: none;
-      border-color: #0EAEC4;
+      border-color: $sky;
+      box-shadow: 0 0 0 3px rgba(79, 195, 247, 0.12);
     }
 
     &::placeholder {
-      color: $color-g-67;
+      color: #94A3B8;
     }
   }
 
   textarea {
     width: 100%;
-    padding: $size-14;
-    border: 1px solid $color-g-85;
-    border-radius: $size-12;
-    font-size: $size-14;
+    padding: 14px;
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    border-radius: 12px;
+    font-size: 0.875rem;
     line-height: 1.6;
-    color: $color-g-21;
+    color: #1E293B;
     resize: vertical;
     font-family: inherit;
+    background: rgba(255, 255, 255, 0.7);
+    transition: all 0.3s ease;
 
     &:focus {
       outline: none;
-      border-color: #0EAEC4;
+      border-color: $sky;
+      box-shadow: 0 0 0 3px rgba(79, 195, 247, 0.12);
     }
 
     &::placeholder {
-      color: $color-g-67;
+      color: #94A3B8;
     }
   }
 }
 
 .field-hint {
-  font-size: $size-12;
-  color: $color-g-54;
+  font-size: 0.75rem;
+  color: #64748B;
   font-style: italic;
 }
 
 .checkbox-field {
   display: flex;
   align-items: center;
-  gap: $size-8;
+  gap: 8px;
   cursor: pointer;
 
   input[type="checkbox"] {
     width: 18px;
     height: 18px;
     cursor: pointer;
-    accent-color: #0EAEC4;
+    accent-color: $sky;
   }
 
   span {
-    font-size: $size-14;
-    color: $color-g-36;
-    font-weight: $fw-medium;
+    font-size: 0.875rem;
+    color: #475569;
+    font-weight: 500;
   }
 }
 
-// Buttons
+// ─── Buttons ───
 .btn {
-  padding: $size-10 $size-20;
-  border-radius: $size-10;
-  font-size: $size-14;
-  font-weight: $fw-semi-bold;
+  padding: 10px 20px;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  font-weight: 600;
   border: none;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   display: inline-flex;
   align-items: center;
-  gap: $size-6;
+  gap: 6px;
 
   &:disabled {
     opacity: 0.6;
@@ -980,33 +1202,35 @@ onMounted(() => {
   }
 
   &--primary {
-    background: #0EAEC4;
+    background: linear-gradient(135deg, $sky 0%, $sky-dark 100%);
     color: white;
+    box-shadow: 0 4px 12px rgba(79, 195, 247, 0.3);
 
     &:hover:not(:disabled) {
-      background: #0891b2;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(79, 195, 247, 0.4);
     }
   }
 
   &--secondary {
-    background: $color-g-97;
-    color: $color-g-36;
+    background: rgba(241, 245, 249, 0.8);
+    color: #475569;
 
     &:hover:not(:disabled) {
-      background: $color-g-92;
+      background: #E2E8F0;
     }
   }
 
   &--danger {
-    background: #ef4444;
+    background: #EF4444;
     color: white;
 
     &:hover:not(:disabled) {
-      background: #dc2626;
+      background: #DC2626;
     }
   }
 
-  @include responsive(phone) {
+  @media (max-width: 640px) {
     width: 100%;
     justify-content: center;
   }
@@ -1021,13 +1245,43 @@ onMounted(() => {
   animation: spin 0.6s linear infinite;
 }
 
-// Skeleton
+// ─── Skeleton ───
 .skeleton-card {
+  @include glass-card;
   height: 140px;
-  border-radius: $size-16;
-  background: linear-gradient(90deg, $color-g-92 25%, $color-g-97 50%, $color-g-92 75%);
+  background: linear-gradient(90deg,
+    rgba(255,255,255,0.92) 25%,
+    rgba(248,250,252,0.95) 50%,
+    rgba(255,255,255,0.92) 75%
+  );
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
+}
+
+// ─── Animations ───
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.05); }
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes float-1 {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-12px) rotate(5deg); }
+}
+
+@keyframes float-2 {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-8px) rotate(-5deg); }
+}
+
+@keyframes float-3 {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-15px) rotate(3deg); }
 }
 
 @keyframes fadeIn {

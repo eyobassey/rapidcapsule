@@ -430,6 +430,18 @@ const apiFactory = {
   $_checkWalletBalance(amount) {
     return http.get(`/specialist/wallet/check-balance?amount=${amount}`);
   },
+  $_specialistWalletWithdraw(payload) {
+    return http.post("/specialist/wallet/withdraw", payload);
+  },
+  $_getSpecialistWithdrawals(params) {
+    return http.get("/specialist/wallet/withdrawals", { params });
+  },
+  $_purchaseSpecialistCreditPlan(planId) {
+    return http.post("/claude-summary/specialist/purchase", { plan_id: planId });
+  },
+  $_getSpecialistCreditTransactions(params = {}) {
+    return http.get("/claude-summary/transactions", { params });
+  },
 
   // ============ Specialist Pharmacy APIs ============
 
@@ -823,6 +835,24 @@ const apiFactory = {
    */
   $_rxgptStandaloneAnalyze(payload) {
     return http.post("/pharmacy/rxgpt/standalone-analyze", payload);
+  },
+
+  /**
+   * Re-run a standalone analysis with the same inputs
+   * @param {string} sourceAnalysisId - The analysis ID to re-run
+   * @returns {Promise} - New analysis results (new version)
+   */
+  $_rxgptRerunAnalysis(sourceAnalysisId) {
+    return http.post("/pharmacy/rxgpt/rerun", { source_analysis_id: sourceAnalysisId });
+  },
+
+  /**
+   * Get all versions for a version group
+   * @param {string} versionGroup - The version group ID
+   * @returns {Promise} - Array of version summaries
+   */
+  $_getRxGPTVersions(versionGroup) {
+    return http.get(`/pharmacy/rxgpt/versions/${versionGroup}`);
   },
 
   /**
@@ -1276,6 +1306,94 @@ const apiFactory = {
    */
   $_getHealthTipsHistory(params = {}) {
     return http.get('/health-tips/history', { params });
+  },
+
+  // ============ TRIAL ENDPOINTS ============
+
+  $_trialRequest(data) {
+    return http.post('/trial/request', data);
+  },
+
+  $_trialVerify(token) {
+    return http.get(`/trial/verify/${token}`);
+  },
+
+  $_trialGetSession() {
+    const trialToken = sessionStorage.getItem('trial_token');
+    return http.get('/trial/session', {
+      headers: { 'x-trial-token': trialToken },
+    });
+  },
+
+  $_trialBeginCheckup(data) {
+    const trialToken = sessionStorage.getItem('trial_token');
+    return http.post('/trial/symptom-checker/begin', data, {
+      headers: { 'x-trial-token': trialToken },
+    });
+  },
+
+  $_trialParseText(data) {
+    const trialToken = sessionStorage.getItem('trial_token');
+    return http.post('/trial/symptom-checker/parse', data, {
+      headers: { 'x-trial-token': trialToken },
+    });
+  },
+
+  $_trialDiagnosis(data) {
+    const trialToken = sessionStorage.getItem('trial_token');
+    return http.post('/trial/symptom-checker/diagnosis', data, {
+      headers: { 'x-trial-token': trialToken },
+    });
+  },
+
+  $_trialSearch(params) {
+    const trialToken = sessionStorage.getItem('trial_token');
+    return http.get('/trial/symptom-checker/search', {
+      params,
+      headers: { 'x-trial-token': trialToken },
+    });
+  },
+
+  $_trialGetRiskFactors(data) {
+    const trialToken = sessionStorage.getItem('trial_token');
+    return http.post('/trial/symptom-checker/risk-factors', data, {
+      headers: { 'x-trial-token': trialToken },
+    });
+  },
+
+  $_trialGetSuggestedSymptoms(data) {
+    const trialToken = sessionStorage.getItem('trial_token');
+    return http.post('/trial/symptom-checker/symptoms', data, {
+      headers: { 'x-trial-token': trialToken },
+    });
+  },
+
+  $_trialRxGPTAnalyze(data) {
+    const trialToken = sessionStorage.getItem('trial_token');
+    return http.post('/trial/rxgpt/analyze', data, {
+      headers: { 'x-trial-token': trialToken },
+    });
+  },
+  $_trialAISummary(data) {
+    const trialToken = sessionStorage.getItem('trial_token');
+    return http.post('/trial/symptom-checker/ai-summary', data, {
+      headers: { 'x-trial-token': trialToken },
+    });
+  },
+  $_trialPrescriptionUpload(formData) {
+    const trialToken = sessionStorage.getItem('trial_token');
+    return http.post('/trial/prescription/upload', formData, {
+      headers: {
+        'x-trial-token': trialToken,
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+  $_trialPrescriptionStatus(uploadId) {
+    const trialToken = sessionStorage.getItem('trial_token');
+    return http.get(`/trial/prescription/${uploadId}/status`, {
+      headers: { 'x-trial-token': trialToken },
+    });
   },
 };
 export default apiFactory;

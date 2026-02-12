@@ -6,6 +6,8 @@ import { ClaudeSummaryPlan, ClaudeSummaryPlanDocument, PlanType } from './entiti
 import { ClaudeSummaryCredit, ClaudeSummaryCreditDocument, CreditUserType } from './entities/claude-summary-credit.entity';
 import { ClaudeSummaryTransaction, ClaudeSummaryTransactionDocument, TransactionType } from './entities/claude-summary-transaction.entity';
 import { WalletsService } from '../wallets/wallets.service';
+import { SpecialistWalletService } from '../wallets/specialist-wallet.service';
+import { SpecialistTransactionReference } from '../wallets/entities/specialist-wallet-transaction.entity';
 import { UsersService } from '../users/users.service';
 import { GeneralHelpers } from '../../common/helpers/general.helpers';
 import { claudeSummaryPurchaseEmail } from '../../core/emails/mails/claudeSummaryPurchaseEmail';
@@ -25,6 +27,7 @@ export class ClaudeSummaryCreditsService {
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(AdvancedScoreSettings.name) private settingsModel: Model<AdvancedScoreSettingsDocument>,
     private walletsService: WalletsService,
+    private specialistWalletService: SpecialistWalletService,
     private usersService: UsersService,
     private generalHelpers: GeneralHelpers,
   ) {}
@@ -380,6 +383,113 @@ export class ClaudeSummaryCreditsService {
         plan_name: plan.name,
         expires_at: expiresAt,
         wallet_balance: debitResult.newBalance,
+      };
+    }
+  }
+
+  /**
+   * Purchase a plan for a specialist (debits from specialist wallet)
+   */
+  async purchasePlanForSpecialist(specialistId: Types.ObjectId | string, planId: Types.ObjectId | string) {
+    const specialistIdObj = typeof specialistId === 'string' ? new Types.ObjectId(specialistId) : specialistId;
+    const planIdObj = typeof planId === 'string' ? new Types.ObjectId(planId) : planId;
+
+    const plan = await this.planModel.findById(planIdObj);
+    if (!plan || !plan.is_active) {
+      throw new NotFoundException('Plan not found or not available');
+    }
+
+    // Check specialist wallet balance
+    const hasSufficient = await this.specialistWalletService.hasSufficientBalance(specialistIdObj, plan.price);
+    if (!hasSufficient) {
+      throw new BadRequestException('Insufficient wallet balance');
+    }
+
+    const walletBefore = await this.specialistWalletService.getWalletBalance(specialistIdObj);
+
+    // Debit specialist wallet
+    await this.specialistWalletService.debit(
+      specialistIdObj,
+      plan.price,
+      SpecialistTransactionReference.PRESCRIPTION, // closest available reference type
+      null,
+      `AI Credit Purchase - ${plan.name}`,
+    );
+
+    const walletAfter = await this.specialistWalletService.getWalletBalance(specialistIdObj);
+    const reference = `RXGPT-${Date.now()}-${Math.random().toString(36).substring(7).toUpperCase()}`;
+
+    // Update credits
+    const credit = await this.initializeUserCredits(specialistIdObj);
+
+    if (plan.type === PlanType.BUNDLE) {
+      credit.purchased_credits += plan.credits!;
+      credit.total_amount_spent += plan.price;
+      await credit.save();
+
+      await this.logTransaction({
+        userId: specialistIdObj,
+        type: TransactionType.BUNDLE_PURCHASE,
+        credits_delta: plan.credits!,
+        amount: plan.price,
+        currency: plan.currency,
+        plan_id: planIdObj,
+        plan_name: plan.name,
+        wallet_reference: reference,
+        description: `Purchased ${plan.name} (${plan.credits} credits)`,
+        credit_snapshot: {
+          free_credits: credit.free_credits_remaining,
+          purchased_credits: credit.purchased_credits,
+          gifted_credits: credit.gifted_credits,
+          has_unlimited: credit.unlimited_subscription?.is_active || false,
+        },
+      });
+
+      return {
+        success: true,
+        type: 'bundle',
+        credits_added: plan.credits,
+        new_purchased_credits: credit.purchased_credits,
+        wallet_balance: walletAfter.available_balance,
+      };
+    } else {
+      // Unlimited subscription
+      const expiresAt = moment().add(plan.duration_days!, 'days').toDate();
+
+      credit.unlimited_subscription = {
+        plan_id: planIdObj,
+        plan_name: plan.name,
+        started_at: new Date(),
+        expires_at: expiresAt,
+        is_active: true,
+      };
+      credit.total_amount_spent += plan.price;
+      await credit.save();
+
+      await this.logTransaction({
+        userId: specialistIdObj,
+        type: TransactionType.UNLIMITED_PURCHASE,
+        credits_delta: 0,
+        amount: plan.price,
+        currency: plan.currency,
+        plan_id: planIdObj,
+        plan_name: plan.name,
+        wallet_reference: reference,
+        description: `Purchased ${plan.name} (expires ${moment(expiresAt).format('MMM DD, YYYY')})`,
+        credit_snapshot: {
+          free_credits: credit.free_credits_remaining,
+          purchased_credits: credit.purchased_credits,
+          gifted_credits: credit.gifted_credits,
+          has_unlimited: true,
+        },
+      });
+
+      return {
+        success: true,
+        type: 'unlimited',
+        plan_name: plan.name,
+        expires_at: expiresAt,
+        wallet_balance: walletAfter.available_balance,
       };
     }
   }

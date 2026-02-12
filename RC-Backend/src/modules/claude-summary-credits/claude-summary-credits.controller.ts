@@ -67,6 +67,19 @@ export class ClaudeSummaryCreditsController {
   }
 
   /**
+   * Purchase a plan for specialist (debits from specialist wallet)
+   * POST /claude-summary/specialist/purchase
+   */
+  @Post('specialist/purchase')
+  async purchasePlanForSpecialist(@Body() purchasePlanDto: PurchasePlanDto, @Request() req) {
+    const result = await this.claudeSummaryCreditsService.purchasePlanForSpecialist(
+      req.user.sub,
+      purchasePlanDto.plan_id,
+    );
+    return sendSuccessResponse('Plan purchased successfully', result);
+  }
+
+  /**
    * Get transaction history
    * GET /claude-summary/transactions
    */

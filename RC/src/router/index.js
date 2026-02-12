@@ -64,7 +64,7 @@ const routes = [
           }
         }
       }
-      return { name: "Login" };
+      return true;
     },
   },
 
@@ -568,6 +568,11 @@ const routes = [
         name: "SpecialistAccount",
         component: () => import("@/views/Mainapp/SpecialistApp/Account"),
       },
+      {
+        path: "wallet",
+        name: "SpecialistWallet",
+        component: () => import("@/views/Mainapp/SpecialistApp/Wallet/index.vue"),
+      },
       // Specialist Notification Settings Route
       {
         path: "notification-settings",
@@ -893,6 +898,39 @@ const routes = [
     name: "RC Architecture",
     component: () => import("../views/Public/RCArchitecture.vue"),
     meta: { public: true, title: "Rapid Capsule - System Architecture" },
+  },
+  // Trial Access Routes
+  {
+    path: "/trial/verify/:token",
+    name: "Trial Verify",
+    component: () => import("../views/Trial/TrialLanding.vue"),
+  },
+  {
+    path: "/trial/symptom-checker",
+    name: "Trial Symptom Checker",
+    component: () => import("../views/Trial/TrialSymptomChecker.vue"),
+    beforeEnter: (to, from) => {
+      if (!sessionStorage.getItem("trial_token")) return { name: "Home" };
+      return true;
+    },
+  },
+  {
+    path: "/trial/rxgpt",
+    name: "Trial RxGPT",
+    component: () => import("../views/Trial/TrialRxGPT.vue"),
+    beforeEnter: (to, from) => {
+      if (!sessionStorage.getItem("trial_token")) return { name: "Home" };
+      return true;
+    },
+  },
+  {
+    path: "/trial/prescription",
+    name: "Trial Prescription",
+    component: () => import("../views/Trial/TrialPrescriptionUpload.vue"),
+    beforeEnter: (to, from) => {
+      if (!sessionStorage.getItem("trial_token")) return { name: "Home" };
+      return true;
+    },
   },
 ];
 

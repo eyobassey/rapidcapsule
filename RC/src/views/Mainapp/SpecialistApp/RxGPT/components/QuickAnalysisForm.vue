@@ -12,7 +12,7 @@
     </div>
 
     <!-- Diagnosis (Required) -->
-    <div class="form-group">
+    <div class="form-group autocomplete-wrapper" ref="diagnosisWrapperRef">
       <label class="form-label">
         <v-icon name="hi-clipboard-list" scale="0.8" />
         Primary Diagnosis <span class="required">*</span>
@@ -22,7 +22,26 @@
         type="text"
         class="form-input"
         placeholder="e.g., Hypertension, Type 2 Diabetes, Atrial Fibrillation"
+        autocomplete="off"
+        @input="onDiagnosisInput"
+        @keydown.down.prevent="navigateSuggestions('diagnosis', 1)"
+        @keydown.up.prevent="navigateSuggestions('diagnosis', -1)"
+        @keydown.enter.prevent="selectHighlighted('diagnosis')"
+        @keydown.escape="closeSuggestions('diagnosis')"
+        @focus="onDiagnosisInput"
+        @blur="delayClose('diagnosis')"
       />
+      <ul v-if="showDiagnosisSuggestions && filteredDiagnoses.length" class="suggestions-dropdown">
+        <li
+          v-for="(item, i) in filteredDiagnoses"
+          :key="item"
+          :class="['suggestion-item', { 'suggestion-item--active': diagnosisHighlightIndex === i }]"
+          @mousedown.prevent="selectDiagnosis(item)"
+          @mouseenter="diagnosisHighlightIndex = i"
+        >
+          <span v-html="highlightMatch(item, currentDiagnosisQuery)"></span>
+        </li>
+      </ul>
     </div>
 
     <!-- Treatment Goal -->
@@ -164,13 +183,33 @@
               <button class="tag-remove" @click="form.symptoms.splice(i, 1)">&times;</button>
             </span>
           </div>
-          <input
-            v-model="symptomInput"
-            type="text"
-            class="form-input form-input--sm"
-            placeholder="Type symptom and press Enter"
-            @keydown.enter.prevent="addSymptom"
-          />
+          <div class="autocomplete-wrapper" ref="symptomWrapperRef">
+            <input
+              v-model="symptomInput"
+              type="text"
+              class="form-input form-input--sm"
+              placeholder="Type symptom and press Enter"
+              autocomplete="off"
+              @input="onSymptomInput"
+              @keydown.down.prevent="navigateSuggestions('symptom', 1)"
+              @keydown.up.prevent="navigateSuggestions('symptom', -1)"
+              @keydown.enter.prevent="selectHighlighted('symptom')"
+              @keydown.escape="closeSuggestions('symptom')"
+              @focus="onSymptomInput"
+              @blur="delayClose('symptom')"
+            />
+            <ul v-if="showSymptomSuggestions && filteredSymptoms.length" class="suggestions-dropdown">
+              <li
+                v-for="(item, i) in filteredSymptoms"
+                :key="item"
+                :class="['suggestion-item', { 'suggestion-item--active': symptomHighlightIndex === i }]"
+                @mousedown.prevent="selectSymptom(item)"
+                @mouseenter="symptomHighlightIndex = i"
+              >
+                <span v-html="highlightMatch(item, symptomInput)"></span>
+              </li>
+            </ul>
+          </div>
         </div>
       </div>
     </div>
@@ -227,6 +266,307 @@ const showSymptoms = ref(false);
 const allergyInput = ref('');
 const conditionInput = ref('');
 const symptomInput = ref('');
+
+// Autocomplete state
+const showDiagnosisSuggestions = ref(false);
+const showSymptomSuggestions = ref(false);
+const diagnosisHighlightIndex = ref(-1);
+const symptomHighlightIndex = ref(-1);
+const diagnosisWrapperRef = ref(null);
+const symptomWrapperRef = ref(null);
+
+// Common diagnoses list
+const DIAGNOSES = [
+  // Cardiovascular
+  'Hypertension', 'Essential Hypertension', 'Hypertensive Crisis',
+  'Heart Failure', 'Congestive Heart Failure', 'Acute Heart Failure',
+  'Atrial Fibrillation', 'Atrial Flutter', 'Supraventricular Tachycardia',
+  'Ventricular Tachycardia', 'Coronary Artery Disease', 'Angina Pectoris',
+  'Acute Myocardial Infarction', 'Unstable Angina', 'Acute Coronary Syndrome',
+  'Deep Vein Thrombosis', 'Pulmonary Embolism', 'Peripheral Arterial Disease',
+  'Aortic Aneurysm', 'Cardiomyopathy', 'Myocarditis', 'Pericarditis',
+  'Mitral Valve Prolapse', 'Aortic Stenosis', 'Hyperlipidaemia',
+  'Hypercholesterolaemia', 'Dyslipidaemia',
+  // Endocrine / Metabolic
+  'Type 2 Diabetes Mellitus', 'Type 1 Diabetes Mellitus', 'Diabetic Ketoacidosis',
+  'Gestational Diabetes', 'Hypoglycaemia', 'Hypothyroidism', 'Hyperthyroidism',
+  'Thyroid Storm', 'Graves Disease', 'Hashimoto Thyroiditis', 'Goitre',
+  'Cushing Syndrome', 'Addison Disease', 'Adrenal Insufficiency',
+  'Metabolic Syndrome', 'Obesity', 'Hyperuricaemia', 'Gout',
+  'Hypocalcaemia', 'Hyperkalaemia', 'Hyponatraemia',
+  // Respiratory
+  'Asthma', 'Acute Asthma Exacerbation', 'Bronchial Asthma',
+  'COPD', 'Chronic Obstructive Pulmonary Disease', 'Acute COPD Exacerbation',
+  'Pneumonia', 'Community-Acquired Pneumonia', 'Hospital-Acquired Pneumonia',
+  'Aspiration Pneumonia', 'Bronchitis', 'Acute Bronchitis', 'Chronic Bronchitis',
+  'Bronchiectasis', 'Pulmonary Tuberculosis', 'Pleural Effusion',
+  'Pneumothorax', 'Pulmonary Fibrosis', 'Acute Respiratory Distress Syndrome',
+  'Upper Respiratory Tract Infection', 'Sinusitis', 'Pharyngitis',
+  'Tonsillitis', 'Laryngitis', 'Croup',
+  // Infectious Disease
+  'Malaria', 'Uncomplicated Malaria', 'Severe Malaria',
+  'Typhoid Fever', 'Cholera', 'Dysentery', 'Gastroenteritis',
+  'HIV/AIDS', 'Tuberculosis', 'Multidrug-Resistant Tuberculosis',
+  'Hepatitis A', 'Hepatitis B', 'Hepatitis C',
+  'Urinary Tract Infection', 'Pyelonephritis', 'Cystitis',
+  'Sepsis', 'Septic Shock', 'Meningitis', 'Bacterial Meningitis',
+  'Cellulitis', 'Abscess', 'Wound Infection', 'Surgical Site Infection',
+  'Pneumocystis Pneumonia', 'Candidiasis', 'Oral Thrush',
+  'Sexually Transmitted Infection', 'Gonorrhoea', 'Chlamydia', 'Syphilis',
+  'Herpes Simplex', 'Herpes Zoster', 'COVID-19',
+  'Dengue Fever', 'Yellow Fever', 'Lassa Fever',
+  'Schistosomiasis', 'Filariasis', 'Onchocerciasis',
+  'Leishmaniasis', 'Trypanosomiasis',
+  // Gastrointestinal
+  'Peptic Ulcer Disease', 'Gastric Ulcer', 'Duodenal Ulcer',
+  'Gastroesophageal Reflux Disease', 'GERD', 'Dyspepsia',
+  'Irritable Bowel Syndrome', 'Inflammatory Bowel Disease',
+  'Ulcerative Colitis', 'Crohn Disease', 'Appendicitis',
+  'Acute Diarrhoea', 'Chronic Diarrhoea', 'Constipation',
+  'Intestinal Obstruction', 'Pancreatitis', 'Acute Pancreatitis',
+  'Cholecystitis', 'Cholelithiasis', 'Hepatic Cirrhosis',
+  'Liver Failure', 'Hepatic Encephalopathy', 'Ascites',
+  'GI Bleeding', 'Upper GI Bleeding', 'Lower GI Bleeding',
+  // Neurological
+  'Epilepsy', 'Status Epilepticus', 'Seizure Disorder',
+  'Migraine', 'Tension Headache', 'Cluster Headache',
+  'Stroke', 'Ischaemic Stroke', 'Haemorrhagic Stroke',
+  'Transient Ischaemic Attack', 'Parkinson Disease',
+  'Alzheimer Disease', 'Dementia', 'Multiple Sclerosis',
+  'Meningitis', 'Encephalitis', 'Peripheral Neuropathy',
+  'Diabetic Neuropathy', 'Bell Palsy', 'Trigeminal Neuralgia',
+  'Myasthenia Gravis', 'Guillain-Barre Syndrome',
+  // Psychiatric
+  'Major Depressive Disorder', 'Depression', 'Anxiety Disorder',
+  'Generalised Anxiety Disorder', 'Panic Disorder',
+  'Bipolar Disorder', 'Schizophrenia', 'Psychosis',
+  'Obsessive-Compulsive Disorder', 'Post-Traumatic Stress Disorder',
+  'Insomnia', 'Substance Use Disorder', 'Alcohol Dependence',
+  'Opioid Dependence', 'ADHD',
+  // Musculoskeletal
+  'Rheumatoid Arthritis', 'Osteoarthritis', 'Gout',
+  'Systemic Lupus Erythematosus', 'Osteoporosis',
+  'Low Back Pain', 'Sciatica', 'Fibromyalgia',
+  'Ankylosing Spondylitis', 'Tendinitis',
+  // Renal
+  'Acute Kidney Injury', 'Chronic Kidney Disease',
+  'Nephrotic Syndrome', 'Nephritic Syndrome',
+  'End-Stage Renal Disease', 'Renal Calculi',
+  'Diabetic Nephropathy', 'Glomerulonephritis',
+  // Haematological
+  'Iron Deficiency Anaemia', 'Sickle Cell Disease', 'Sickle Cell Crisis',
+  'Anaemia of Chronic Disease', 'Megaloblastic Anaemia',
+  'Thalassaemia', 'Haemophilia', 'Thrombocytopenia',
+  'Disseminated Intravascular Coagulation', 'Leukaemia',
+  'Lymphoma', 'Multiple Myeloma',
+  // Dermatological
+  'Eczema', 'Atopic Dermatitis', 'Contact Dermatitis',
+  'Psoriasis', 'Urticaria', 'Acne Vulgaris',
+  'Fungal Skin Infection', 'Tinea Corporis', 'Tinea Pedis',
+  'Scabies', 'Impetigo', 'Cellulitis',
+  // Obstetric / Gynaecological
+  'Pre-eclampsia', 'Eclampsia', 'Gestational Hypertension',
+  'Postpartum Haemorrhage', 'Ectopic Pregnancy',
+  'Pelvic Inflammatory Disease', 'Endometriosis',
+  'Polycystic Ovary Syndrome', 'Menorrhagia', 'Amenorrhoea',
+  'Threatened Miscarriage', 'Preterm Labour',
+  // Oncological
+  'Breast Cancer', 'Lung Cancer', 'Prostate Cancer',
+  'Colorectal Cancer', 'Cervical Cancer', 'Ovarian Cancer',
+  'Hepatocellular Carcinoma', 'Pancreatic Cancer',
+  'Gastric Cancer', 'Bladder Cancer', 'Renal Cell Carcinoma',
+  // Ophthalmological
+  'Glaucoma', 'Conjunctivitis', 'Allergic Conjunctivitis',
+  'Bacterial Conjunctivitis', 'Cataract', 'Macular Degeneration',
+  'Diabetic Retinopathy', 'Uveitis',
+  // Paediatric
+  'Neonatal Sepsis', 'Neonatal Jaundice', 'Febrile Seizures',
+  'Acute Otitis Media', 'Rickets', 'Kwashiorkor', 'Marasmus',
+  'Severe Acute Malnutrition',
+  // ENT
+  'Otitis Media', 'Otitis Externa', 'Allergic Rhinitis',
+  'Nasal Polyps', 'Sinusitis',
+  // Emergency
+  'Anaphylaxis', 'Cardiac Arrest', 'Shock',
+  'Hypovolaemic Shock', 'Septic Shock', 'Poisoning',
+  'Organophosphate Poisoning', 'Snake Bite Envenomation',
+];
+
+// Common symptoms list
+const SYMPTOMS = [
+  // General
+  'Fever', 'Chills', 'Fatigue', 'Malaise', 'Weakness', 'Night Sweats',
+  'Weight Loss', 'Weight Gain', 'Loss of Appetite', 'Excessive Thirst',
+  'Frequent Urination', 'Dehydration', 'Dizziness', 'Lightheadedness',
+  'Fainting', 'Syncope',
+  // Pain
+  'Headache', 'Chest Pain', 'Abdominal Pain', 'Back Pain', 'Joint Pain',
+  'Muscle Pain', 'Neck Pain', 'Pelvic Pain', 'Flank Pain',
+  'Bone Pain', 'Eye Pain', 'Ear Pain', 'Throat Pain', 'Toothache',
+  'Pain on Urination', 'Painful Swallowing',
+  // Cardiovascular
+  'Palpitations', 'Tachycardia', 'Bradycardia', 'Irregular Heartbeat',
+  'Chest Tightness', 'Leg Swelling', 'Ankle Oedema', 'Cyanosis',
+  'Claudication',
+  // Respiratory
+  'Cough', 'Dry Cough', 'Productive Cough', 'Coughing Blood', 'Haemoptysis',
+  'Shortness of Breath', 'Dyspnoea', 'Wheezing', 'Stridor',
+  'Nasal Congestion', 'Runny Nose', 'Sneezing', 'Sore Throat',
+  'Hoarseness', 'Rapid Breathing',
+  // Gastrointestinal
+  'Nausea', 'Vomiting', 'Diarrhoea', 'Constipation', 'Bloating',
+  'Abdominal Cramps', 'Heartburn', 'Acid Reflux', 'Difficulty Swallowing',
+  'Blood in Stool', 'Black Tarry Stool', 'Vomiting Blood',
+  'Jaundice', 'Abdominal Distension', 'Flatulence',
+  'Loss of Appetite', 'Indigestion',
+  // Neurological
+  'Seizures', 'Convulsions', 'Tremor', 'Numbness', 'Tingling',
+  'Pins and Needles', 'Weakness in Limbs', 'Paralysis',
+  'Loss of Consciousness', 'Confusion', 'Altered Mental Status',
+  'Memory Loss', 'Difficulty Speaking', 'Slurred Speech',
+  'Visual Disturbances', 'Blurred Vision', 'Double Vision',
+  'Loss of Balance', 'Vertigo', 'Tinnitus', 'Hearing Loss',
+  // Dermatological
+  'Rash', 'Itching', 'Pruritus', 'Skin Redness', 'Swelling',
+  'Hives', 'Blistering', 'Bruising', 'Skin Ulcer',
+  'Dry Skin', 'Skin Discolouration', 'Hair Loss',
+  // Musculoskeletal
+  'Joint Stiffness', 'Joint Swelling', 'Limited Range of Motion',
+  'Muscle Cramps', 'Muscle Weakness', 'Back Stiffness',
+  // Psychiatric
+  'Anxiety', 'Depression', 'Insomnia', 'Irritability',
+  'Agitation', 'Hallucinations', 'Delusions', 'Suicidal Thoughts',
+  'Mood Swings', 'Restlessness', 'Poor Concentration',
+  // Urogenital
+  'Blood in Urine', 'Haematuria', 'Painful Urination', 'Dysuria',
+  'Urinary Frequency', 'Urinary Urgency', 'Urinary Incontinence',
+  'Urinary Retention', 'Vaginal Bleeding', 'Vaginal Discharge',
+  'Penile Discharge', 'Erectile Dysfunction',
+  // Ophthalmological
+  'Red Eye', 'Eye Discharge', 'Watery Eyes', 'Photophobia',
+  'Floaters', 'Reduced Visual Acuity',
+  // Constitutional
+  'Swollen Lymph Nodes', 'Lymphadenopathy', 'Pallor',
+  'Easy Bruising', 'Bleeding Gums', 'Nosebleed', 'Epistaxis',
+  'Excessive Sweating', 'Cold Extremities', 'Oedema',
+];
+
+// Helper: get the current term being typed (after last comma)
+function getCurrentDiagnosisTerm() {
+  const parts = form.value.diagnosis.split(',');
+  return parts[parts.length - 1].trim();
+}
+
+// Helper: get already-entered diagnoses (before last comma)
+function getPreviousDiagnoses() {
+  const parts = form.value.diagnosis.split(',');
+  if (parts.length <= 1) return [];
+  return parts.slice(0, -1).map(p => p.trim().toLowerCase()).filter(Boolean);
+}
+
+// Filter logic
+const filteredDiagnoses = computed(() => {
+  const currentTerm = getCurrentDiagnosisTerm().toLowerCase();
+  if (!currentTerm || currentTerm.length < 2) return [];
+  const alreadyEntered = getPreviousDiagnoses();
+  return DIAGNOSES.filter(d => {
+    const dl = d.toLowerCase();
+    return dl.includes(currentTerm) && dl !== currentTerm && !alreadyEntered.includes(dl);
+  }).slice(0, 8);
+});
+
+const filteredSymptoms = computed(() => {
+  const q = symptomInput.value.trim().toLowerCase();
+  if (!q || q.length < 2) return [];
+  const existing = form.value.symptoms.map(s => s.toLowerCase());
+  return SYMPTOMS.filter(s =>
+    s.toLowerCase().includes(q) && !existing.includes(s.toLowerCase())
+  ).slice(0, 8);
+});
+
+// Expose current term for template highlight
+const currentDiagnosisQuery = computed(() => getCurrentDiagnosisTerm());
+
+// Autocomplete handlers
+function onDiagnosisInput() {
+  showDiagnosisSuggestions.value = true;
+  diagnosisHighlightIndex.value = -1;
+}
+
+function onSymptomInput() {
+  showSymptomSuggestions.value = true;
+  symptomHighlightIndex.value = -1;
+}
+
+function navigateSuggestions(field, direction) {
+  if (field === 'diagnosis') {
+    if (!showDiagnosisSuggestions.value || !filteredDiagnoses.value.length) return;
+    const max = filteredDiagnoses.value.length - 1;
+    let idx = diagnosisHighlightIndex.value + direction;
+    if (idx < 0) idx = max;
+    if (idx > max) idx = 0;
+    diagnosisHighlightIndex.value = idx;
+  } else {
+    if (!showSymptomSuggestions.value || !filteredSymptoms.value.length) return;
+    const max = filteredSymptoms.value.length - 1;
+    let idx = symptomHighlightIndex.value + direction;
+    if (idx < 0) idx = max;
+    if (idx > max) idx = 0;
+    symptomHighlightIndex.value = idx;
+  }
+}
+
+function selectHighlighted(field) {
+  if (field === 'diagnosis') {
+    if (diagnosisHighlightIndex.value >= 0 && filteredDiagnoses.value[diagnosisHighlightIndex.value]) {
+      selectDiagnosis(filteredDiagnoses.value[diagnosisHighlightIndex.value]);
+    }
+  } else {
+    if (symptomHighlightIndex.value >= 0 && filteredSymptoms.value[symptomHighlightIndex.value]) {
+      selectSymptom(filteredSymptoms.value[symptomHighlightIndex.value]);
+    } else {
+      addSymptom();
+    }
+  }
+}
+
+function selectDiagnosis(item) {
+  const parts = form.value.diagnosis.split(',');
+  parts[parts.length - 1] = (parts.length > 1 ? ' ' : '') + item;
+  form.value.diagnosis = parts.join(',');
+  showDiagnosisSuggestions.value = false;
+  diagnosisHighlightIndex.value = -1;
+}
+
+function selectSymptom(item) {
+  if (!form.value.symptoms.includes(item)) {
+    form.value.symptoms.push(item);
+  }
+  symptomInput.value = '';
+  showSymptomSuggestions.value = false;
+  symptomHighlightIndex.value = -1;
+}
+
+function closeSuggestions(field) {
+  if (field === 'diagnosis') {
+    showDiagnosisSuggestions.value = false;
+    diagnosisHighlightIndex.value = -1;
+  } else {
+    showSymptomSuggestions.value = false;
+    symptomHighlightIndex.value = -1;
+  }
+}
+
+function delayClose(field) {
+  setTimeout(() => closeSuggestions(field), 150);
+}
+
+function highlightMatch(text, query) {
+  const q = (query || '').trim();
+  if (!q) return text;
+  const regex = new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+  return text.replace(regex, '<strong>$1</strong>');
+}
 
 const form = ref({
   subject_name: '',
@@ -419,7 +759,7 @@ select.form-input {
 .collapsible-section {
   border: 1.5px solid #e5e7eb;
   border-radius: 12px;
-  overflow: hidden;
+  overflow: visible;
   background: rgba(255,255,255,0.5);
 }
 
@@ -616,5 +956,49 @@ select.form-input {
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+// Autocomplete dropdown
+.autocomplete-wrapper {
+  position: relative;
+}
+
+.suggestions-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  margin-top: 4px;
+  padding: 4px;
+  background: white;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1), 0 2px 8px rgba(0, 0, 0, 0.05);
+  list-style: none;
+  max-height: 240px;
+  overflow-y: auto;
+
+  &::-webkit-scrollbar { width: 4px; }
+  &::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+}
+
+.suggestion-item {
+  padding: 8px 12px;
+  font-size: 13px;
+  color: $slate;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: background 0.12s;
+
+  &:hover, &--active {
+    background: $sky-light;
+    color: $sky-darker;
+  }
+
+  strong {
+    color: $sky-dark;
+    font-weight: 700;
+  }
 }
 </style>

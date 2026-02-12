@@ -175,7 +175,38 @@
         </div>
       </div>
 
-      <!-- 6. AI Verification / Hallucination Check -->
+      <!-- 6. WHO Essential Medicines -->
+      <div class="evidence-card evidence-card--who" v-if="result.who_eml_compliance_summary">
+        <div class="evidence-card__header">
+          <div class="evidence-card__icon evidence-card__icon--who">
+            <v-icon name="hi-globe-alt" scale="0.9" />
+          </div>
+          <div class="evidence-card__title">WHO Essential Medicines</div>
+        </div>
+        <div class="evidence-card__value">
+          {{ result.who_eml_compliance_summary.eml_listed_count }}<span class="value-separator">/</span><span class="value-total">{{ result.who_eml_compliance_summary.total_drugs_checked }}</span>
+        </div>
+        <div class="evidence-card__details">
+          <span class="detail-text">EML listed</span>
+          <div class="evidence-card__meta">
+            <span class="meta-item meta-item--who-core" v-if="result.who_eml_compliance_summary.core_count">
+              {{ result.who_eml_compliance_summary.core_count }} core
+            </span>
+            <span class="meta-item meta-item--who-complementary" v-if="result.who_eml_compliance_summary.complementary_count">
+              {{ result.who_eml_compliance_summary.complementary_count }} complementary
+            </span>
+          </div>
+        </div>
+        <div
+          class="evidence-card__footer evidence-card__footer--warn"
+          v-if="result.who_eml_compliance_summary.has_eml_issues"
+        >
+          <v-icon name="hi-exclamation" scale="0.65" />
+          {{ result.who_eml_compliance_summary.warning || 'Some drugs not in WHO Essential Medicines List' }}
+        </div>
+      </div>
+
+      <!-- 7. AI Verification / Hallucination Check -->
       <div
         class="evidence-card"
         :class="hallucinationCardClass"
@@ -493,6 +524,7 @@ $teal: #14b8a6;
   &--red::before { background: $red; }
   &--blue::before { background: $blue; }
   &--purple::before { background: $purple; }
+  &--who::before { background: #009EDB; }
   &--teal::before { background: $teal; }
 }
 
@@ -520,6 +552,7 @@ $teal: #14b8a6;
   &--red { background: linear-gradient(135deg, $red, darken($red, 10%)); }
   &--blue { background: linear-gradient(135deg, $blue, darken($blue, 10%)); }
   &--purple { background: linear-gradient(135deg, $purple, darken($purple, 10%)); }
+  &--who { background: linear-gradient(135deg, #009EDB, #0077B6); }
   &--teal { background: linear-gradient(135deg, $teal, darken($teal, 10%)); }
 }
 
@@ -605,6 +638,8 @@ $teal: #14b8a6;
   &--danger { color: #dc2626; }
   &--info { color: #2563eb; }
   &--muted { color: #9ca3af; }
+  &--who-core { color: #009EDB; font-weight: 600; }
+  &--who-complementary { color: #0077B6; }
 }
 
 // ============ Evidence Level Badge ============

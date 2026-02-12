@@ -58,11 +58,37 @@
                 {{ result.clinical_context.diagnosis }}
               </span>
               <span class="meta-date">{{ formatDateTime(result.generated_at) }}</span>
+              <span v-if="result.version_number > 1 || versions.length > 1" class="meta-version">
+                v{{ result.version_number }}
+              </span>
             </p>
+            <!-- Version Switcher -->
+            <div v-if="versions.length > 1" class="version-switcher">
+              <button
+                v-for="v in versions"
+                :key="v._id"
+                class="version-pill"
+                :class="{ 'version-pill--active': v._id === result._id }"
+                @click="switchVersion(v._id)"
+              >
+                <span class="version-pill__label">v{{ v.version_number }}</span>
+                <span class="version-pill__score">{{ Math.round(v.confidence_score) }}%</span>
+              </button>
+            </div>
           </div>
           <div class="results-header__actions">
             <button class="btn-pdf" @click="generateAnalysisPDF(result)">
               <v-icon name="hi-document-download" scale="0.8" /> Download PDF
+            </button>
+            <button
+              v-if="result.analysis_type === 'standalone'"
+              class="btn-rerun"
+              :disabled="isRerunning"
+              @click="confirmRerun"
+            >
+              <v-icon v-if="!isRerunning" name="hi-refresh" scale="0.8" />
+              <span v-if="isRerunning" class="rerun-spinner"></span>
+              {{ isRerunning ? 'Re-running...' : 'Re-run Analysis' }}
             </button>
             <button class="btn-secondary" @click="$router.push('/app/specialist/rxgpt')">
               <v-icon name="hi-plus" scale="0.8" /> New Analysis
@@ -115,7 +141,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import apiFactory from '@/services/apiFactory';
 import ResultsEvidence from './components/ResultsEvidence.vue';
@@ -131,6 +157,8 @@ const result = ref(null);
 const isLoading = ref(true);
 const loadingMessage = ref('Loading analysis results...');
 const error = ref(null);
+const versions = ref([]);
+const isRerunning = ref(false);
 
 const confidenceClass = computed(() => {
   const score = result.value?.confidence_score || 0;
@@ -139,14 +167,26 @@ const confidenceClass = computed(() => {
   return 'confidence--low';
 });
 
-onMounted(async () => {
-  const id = route.params.id;
+const loadVersions = (data) => {
+  if (data.versions?.length) {
+    versions.value = data.versions;
+  } else if (data.version_group) {
+    apiFactory.$_getRxGPTVersions(data.version_group)
+      .then(res => { versions.value = res.data?.data || []; })
+      .catch(() => {});
+  }
+};
 
+const fetchAnalysis = async (id) => {
   if (!id) {
     error.value = 'No analysis ID provided';
     isLoading.value = false;
     return;
   }
+
+  result.value = null;
+  error.value = null;
+  isLoading.value = true;
 
   // Check if it's a sessionStorage key (for direct analysis results)
   if (id.startsWith('rxgpt_result_')) {
@@ -155,6 +195,7 @@ onMounted(async () => {
       if (stored) {
         result.value = JSON.parse(stored);
         sessionStorage.removeItem(id);
+        loadVersions(result.value);
         isLoading.value = false;
         return;
       }
@@ -167,12 +208,48 @@ onMounted(async () => {
   try {
     const res = await apiFactory.$_getRxGPTAnalysisById(id);
     result.value = res.data?.data || res.data;
+    loadVersions(result.value);
   } catch (e) {
     error.value = e.response?.data?.message || 'Failed to load analysis results.';
   } finally {
     isLoading.value = false;
   }
+};
+
+const switchVersion = (id) => {
+  if (id !== result.value?._id) {
+    router.push(`/app/specialist/rxgpt/results/${id}`);
+  }
+};
+
+const confirmRerun = async () => {
+  if (!confirm('Re-run this analysis with the same inputs? This will use 1 credit.')) return;
+
+  isRerunning.value = true;
+  try {
+    const res = await apiFactory.$_rxgptRerunAnalysis(result.value._id);
+    const data = res.data?.data || res.data;
+    // Navigate to the new analysis by its real _id
+    if (data._id) {
+      router.push(`/app/specialist/rxgpt/results/${data._id}`);
+    } else {
+      // Fallback: set result directly
+      result.value = data;
+      loadVersions(data);
+    }
+  } catch (e) {
+    alert(e.response?.data?.message || 'Failed to re-run analysis. Please try again.');
+  } finally {
+    isRerunning.value = false;
+  }
+};
+
+// Watch for route param changes (version switching, re-run navigation)
+watch(() => route.params.id, (newId) => {
+  if (newId) fetchAnalysis(newId);
 });
+
+onMounted(() => fetchAnalysis(route.params.id));
 </script>
 
 <style lang="scss" scoped>
@@ -366,6 +443,91 @@ $emerald: #10b981;
   border-radius: 20px;
   font-weight: 600;
   font-size: 12px;
+}
+
+.meta-version {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  background: rgba($sky-dark, 0.1);
+  color: $sky-dark;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.version-switcher {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.version-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 12px;
+  background: white;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  color: $gray;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: $sky;
+    color: $sky-dark;
+  }
+
+  &--active {
+    background: linear-gradient(135deg, $sky 0%, $sky-dark 100%);
+    color: white;
+    border-color: transparent;
+
+    .version-pill__score { opacity: 0.85; }
+  }
+}
+
+.version-pill__label { font-weight: 700; }
+.version-pill__score { font-weight: 500; opacity: 0.7; }
+
+.btn-rerun {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: white;
+  color: $sky-dark;
+  border: 1.5px solid $sky-dark;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover:not(:disabled) {
+    background: rgba($sky-dark, 0.05);
+    transform: translateY(-2px);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.rerun-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba($sky-dark, 0.2);
+  border-top-color: $sky-dark;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
 }
 
 .btn-pdf {

@@ -239,6 +239,12 @@ import {
 	// RxGPT icons
 	BiRobot,
 	BiCoin,
+	// Homepage icons
+	FaMicroscope,
+	HiDatabase,
+	HiServer,
+	// Trial prescription icon
+	HiDocumentSearch,
 } from "oh-vue-icons/icons";
 addIcons(
 	BiCreditCard2Back,
@@ -287,6 +293,10 @@ addIcons(
 	// RxGPT icons
 	BiRobot,
 	BiCoin,
+	// Homepage icons
+	FaMicroscope,
+	HiDatabase,
+	HiServer,
 	HiClipboardList,
 	HiCheckCircle,
 	HiArrowRight,
@@ -466,6 +476,8 @@ addIcons(
 	// Active Sessions icons
 	HiLogout,
 	HiDeviceTablet,
+	// Trial prescription icon
+	HiDocumentSearch,
 );
 
 require("@/store/subscriber");

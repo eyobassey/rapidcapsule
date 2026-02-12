@@ -1,53 +1,70 @@
 <template>
   <div class="patients-page">
-    <!-- Page Header -->
-    <div class="page-header">
-      <div class="header-left">
-        <h1 class="page-title">Patient Directory</h1>
-        <p class="page-subtitle">Manage and track all your patients</p>
-      </div>
-      <button class="add-patient-btn" @click="addNewPatient">
-        <v-icon name="hi-plus" scale="0.9" />
-        <span>Add Patient</span>
-      </button>
-    </div>
-
-    <!-- Hero Banner -->
-    <div class="hero-banner">
-      <div class="hero-content">
-        <div class="hero-text">
-          <h2 class="hero-title">Your Patients</h2>
-          <p class="hero-subtitle">Manage and review patient records in one place</p>
+    <!-- Hero Section -->
+    <section class="hero">
+      <div class="hero__content">
+        <div class="hero__badge">
+          <div class="badge-pulse"></div>
+          <v-icon name="hi-user-group" />
+          <span>Patient Directory</span>
+        </div>
+        <h1 class="hero__title">
+          Patient<br/>
+          <span class="hero__title-accent">Directory</span>
+        </h1>
+        <p class="hero__subtitle">
+          Manage and review patient records in one place
+        </p>
+        <div class="hero__stats" v-if="stats">
+          <div class="hero-stat">
+            <span class="hero-stat__value">{{ stats.totalPatients || 0 }}</span>
+            <span class="hero-stat__label">Total Patients</span>
+          </div>
+          <div class="hero-stat__divider"></div>
+          <div class="hero-stat">
+            <span class="hero-stat__value hero-stat__value--success">{{ stats.thisMonthPatients || 0 }}</span>
+            <span class="hero-stat__label">This Month</span>
+          </div>
+          <div class="hero-stat__divider"></div>
+          <div class="hero-stat">
+            <span class="hero-stat__value hero-stat__value--warning">{{ stats.thisWeekPatients || 0 }}</span>
+            <span class="hero-stat__label">This Week</span>
+          </div>
+          <div class="hero-stat__divider"></div>
+          <div class="hero-stat">
+            <span class="hero-stat__value hero-stat__value--starred">
+              <v-icon name="hi-solid-star" scale="0.7" class="star-icon" />
+              {{ stats.starredPatients || 0 }}
+            </span>
+            <span class="hero-stat__label">Starred</span>
+          </div>
+        </div>
+        <div class="hero__actions">
+          <button class="add-patient-btn" @click="addNewPatient">
+            <v-icon name="hi-plus" scale="0.9" />
+            <span>Add Patient</span>
+          </button>
         </div>
       </div>
-      <div class="hero-stats" v-if="stats">
-        <div class="stat-item">
-          <span class="stat-value">{{ stats.totalPatients || 0 }}</span>
-          <span class="stat-label">Total Patients</span>
+      <div class="hero__visual">
+        <div class="dashboard-orb">
+          <div class="orb-ring orb-ring--1"></div>
+          <div class="orb-ring orb-ring--2"></div>
+          <div class="orb-ring orb-ring--3"></div>
+          <div class="orb-core">
+            <v-icon name="hi-user-group" />
+          </div>
         </div>
-        <div class="stat-divider"></div>
-        <div class="stat-item">
-          <span class="stat-value">{{ stats.thisMonthPatients || 0 }}</span>
-          <span class="stat-label">This Month</span>
-        </div>
-        <div class="stat-divider"></div>
-        <div class="stat-item">
-          <span class="stat-value">{{ stats.thisWeekPatients || 0 }}</span>
-          <span class="stat-label">This Week</span>
-        </div>
-        <div class="stat-divider"></div>
-        <div class="stat-item starred">
-          <span class="stat-value">
-            <v-icon name="hi-solid-star" scale="0.7" class="star-icon" />
-            {{ stats.starredPatients || 0 }}
-          </span>
-          <span class="stat-label">Starred</span>
+        <div class="floating-icons">
+          <div class="float-icon float-icon--1"><v-icon name="hi-heart" /></div>
+          <div class="float-icon float-icon--2"><v-icon name="hi-clipboard-list" /></div>
+          <div class="float-icon float-icon--3"><v-icon name="hi-shield-check" /></div>
         </div>
       </div>
-    </div>
+    </section>
 
     <!-- Filter Section -->
-    <div class="filter-section">
+    <div class="bento-card filter-card">
       <div class="filter-grid">
         <div class="search-field">
           <div class="search-input-wrapper">
@@ -145,55 +162,8 @@
       </button>
     </div>
 
-    <!-- Stat Cards -->
-    <div class="stat-cards">
-      <div class="stat-card blue">
-        <div class="stat-card-header">
-          <div class="stat-card-icon">
-            <v-icon name="hi-user-group" scale="1.1" />
-          </div>
-          <span class="stat-card-trend positive">+12% this month</span>
-        </div>
-        <h3 class="stat-card-value">{{ stats?.totalPatients || 0 }}</h3>
-        <p class="stat-card-label">Total Patients</p>
-      </div>
-
-      <div class="stat-card orange">
-        <div class="stat-card-header">
-          <div class="stat-card-icon">
-            <v-icon name="hi-calendar" scale="1.1" />
-          </div>
-          <span class="stat-card-trend warning">Needs attention</span>
-        </div>
-        <h3 class="stat-card-value">{{ quickStats.followUpDue || 0 }}</h3>
-        <p class="stat-card-label">Follow-up Due</p>
-      </div>
-
-      <div class="stat-card green">
-        <div class="stat-card-header">
-          <div class="stat-card-icon">
-            <v-icon name="hi-user-add" scale="1.1" />
-          </div>
-          <span class="stat-card-trend positive">+{{ stats?.thisWeekPatients || 0 }} this week</span>
-        </div>
-        <h3 class="stat-card-value">{{ stats?.thisMonthPatients || 0 }}</h3>
-        <p class="stat-card-label">New This Month</p>
-      </div>
-
-      <div class="stat-card red">
-        <div class="stat-card-header">
-          <div class="stat-card-icon">
-            <v-icon name="hi-flag" scale="1.1" />
-          </div>
-          <span class="stat-card-trend urgent">Urgent</span>
-        </div>
-        <h3 class="stat-card-value">{{ quickStats.highPriority || 0 }}</h3>
-        <p class="stat-card-label">High Priority</p>
-      </div>
-    </div>
-
     <!-- Patient List Table -->
-    <div class="patient-list-container">
+    <div class="bento-card table-card">
       <div class="list-header">
         <h2 class="list-title">All Patients ({{ pagination.total }})</h2>
         <div class="list-actions">
@@ -665,177 +635,205 @@ watch(() => props.defaultFilter, (newVal) => {
 </script>
 
 <style scoped lang="scss">
+// ─── Design Tokens ───
+$sky: #4FC3F7;
+$sky-dark: #0288D1;
+$sky-darker: #01579B;
+$navy: #0F172A;
+$emerald: #10B981;
+$amber: #F59E0B;
+$rose: #F43F5E;
+$violet: #8B5CF6;
+
+@mixin glass-card {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+// ─── Page Layout ───
 .patients-page {
   display: flex;
   flex-direction: column;
+  gap: 20px;
   width: 100%;
   max-width: 1400px;
   margin: 0 auto;
-  padding: 1.5rem 2rem;
+  padding: 24px;
   padding-bottom: 100px;
   background: #F8FAFC;
   min-height: min-content;
 
   @media (max-width: 768px) {
-    padding: 1rem;
+    padding: 16px;
     padding-bottom: 120px;
+    gap: 16px;
   }
 }
 
-// Page Header
-.page-header {
+// ─── Hero Section ───
+.hero {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
+  background: linear-gradient(135deg, $sky 0%, $sky-dark 55%, $sky-darker 100%);
+  border-radius: 28px;
+  padding: 40px 48px;
+  min-height: 320px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(2, 136, 209, 0.3);
 
-  @media (max-width: 640px) {
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(circle at 20% 80%, rgba(255,255,255,0.08) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, rgba(255,255,255,0.05) 0%, transparent 40%);
+    pointer-events: none;
+  }
+
+  @media (max-width: 768px) {
     flex-direction: column;
-    align-items: flex-start;
-    gap: 1rem;
+    padding: 28px 24px;
+    min-height: auto;
+    border-radius: 20px;
+    text-align: center;
   }
 }
 
-.header-left {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.page-title {
-  font-size: 1.875rem;
-  font-weight: 700;
-  color: #1A365D;
-  margin: 0;
+.hero__content {
+  position: relative;
+  z-index: 2;
+  flex: 1;
+  max-width: 600px;
 
   @media (max-width: 768px) {
-    font-size: 1.5rem;
+    max-width: 100%;
   }
 }
 
-.page-subtitle {
-  font-size: 0.9375rem;
-  color: #64748B;
-  margin: 0;
-}
-
-.add-patient-btn {
-  display: flex;
+.hero__badge {
+  display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.25rem;
-  background: linear-gradient(135deg, #4FC3F7 0%, #29B6F6 50%, #0288D1 100%);
+  gap: 8px;
+  padding: 6px 16px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 100px;
   color: white;
-  border: none;
-  border-radius: 0.5rem;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(79, 195, 247, 0.3);
+  margin-bottom: 16px;
 
-  &:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 6px 16px rgba(79, 195, 247, 0.4);
-  }
-
-  @media (max-width: 640px) {
-    width: 100%;
-    justify-content: center;
+  .ov-icon {
+    width: 16px;
+    height: 16px;
   }
 }
 
-// Hero Banner
-.hero-banner {
-  background: linear-gradient(135deg, #4FC3F7 0%, #29B6F6 50%, #0288D1 100%);
-  border-radius: 1rem;
-  padding: 1.75rem 2rem;
-  margin-bottom: 1.5rem;
+.badge-pulse {
+  width: 8px;
+  height: 8px;
+  background: #4ade80;
+  border-radius: 50%;
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.hero__title {
+  font-size: 2.75rem;
+  font-weight: 800;
   color: white;
-  box-shadow: 0 10px 40px rgba(79, 195, 247, 0.3);
+  line-height: 1.1;
+  margin: 0 0 12px;
+  letter-spacing: -0.02em;
 
   @media (max-width: 768px) {
-    padding: 1.5rem;
-    border-radius: 0.75rem;
+    font-size: 2rem;
   }
 }
 
-.hero-content {
-  margin-bottom: 1.25rem;
+.hero__title-accent {
+  background: linear-gradient(135deg, #E0F7FA 0%, #B2EBF2 50%, #80DEEA 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
-.hero-text {
-  display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
+.hero__subtitle {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.85);
+  line-height: 1.6;
+  margin: 0 0 24px;
 }
 
-.hero-title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  margin: 0;
-
-  @media (max-width: 768px) {
-    font-size: 1.25rem;
-  }
-}
-
-.hero-subtitle {
-  font-size: 0.9375rem;
-  opacity: 0.9;
-  margin: 0;
-}
-
-.hero-stats {
+// ─── Hero Stats Bar ───
+.hero__stats {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
-  padding-top: 1rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  gap: 24px;
+  padding: 16px 24px;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 16px;
+  margin-bottom: 20px;
 
   @media (max-width: 768px) {
-    gap: 0.75rem;
+    gap: 12px;
+    padding: 12px 16px;
     flex-wrap: wrap;
     justify-content: center;
   }
 }
 
-.stat-item {
+.hero-stat {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.25rem;
-
-  &.starred .stat-value {
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-
-    .star-icon {
-      color: #fbbf24;
-    }
-  }
+  gap: 2px;
 }
 
-.stat-value {
+.hero-stat__value {
   font-size: 1.5rem;
   font-weight: 700;
+  color: white;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  &--success { color: #4ade80; }
+  &--warning { color: #fbbf24; }
+
+  &--starred {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+
+    .star-icon { color: #fbbf24; }
+  }
 
   @media (max-width: 768px) {
     font-size: 1.25rem;
   }
 }
 
-.stat-label {
-  font-size: 0.75rem;
-  opacity: 0.8;
+.hero-stat__label {
+  font-size: 0.6875rem;
+  color: rgba(255, 255, 255, 0.7);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  font-weight: 500;
 }
 
-.stat-divider {
+.hero-stat__divider {
   width: 1px;
-  height: 2rem;
+  height: 32px;
   background: rgba(255, 255, 255, 0.2);
 
   @media (max-width: 768px) {
@@ -843,21 +841,191 @@ watch(() => props.defaultFilter, (newVal) => {
   }
 }
 
-// Filter Section
-.filter-section {
-  background: white;
-  border-radius: 0.75rem;
-  padding: 1.5rem;
-  margin-bottom: 1.5rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-  border: 1px solid #E2E8F0;
+// ─── Hero Actions ───
+.hero__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.add-patient-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  }
+
+  @media (max-width: 768px) {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+// ─── Hero Visual / Orb ───
+.hero__visual {
+  position: relative;
+  width: 220px;
+  height: 220px;
+  flex-shrink: 0;
+
+  @media (max-width: 768px) {
+    width: 160px;
+    height: 160px;
+    margin-top: 20px;
+  }
+}
+
+.dashboard-orb {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.orb-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.12);
+
+  &--1 {
+    width: 100%;
+    height: 100%;
+    animation: spin-slow 20s linear infinite;
+  }
+  &--2 {
+    width: 75%;
+    height: 75%;
+    animation: spin-slow 15s linear infinite reverse;
+    border-style: dashed;
+  }
+  &--3 {
+    width: 50%;
+    height: 50%;
+    animation: spin-slow 10s linear infinite;
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+}
+
+.orb-core {
+  width: 64px;
+  height: 64px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  animation: pulse-glow 3s ease-in-out infinite;
+  z-index: 1;
+
+  .ov-icon {
+    width: 28px;
+    height: 28px;
+  }
+
+  @media (max-width: 768px) {
+    width: 48px;
+    height: 48px;
+
+    .ov-icon {
+      width: 22px;
+      height: 22px;
+    }
+  }
+}
+
+.floating-icons {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.float-icon {
+  position: absolute;
+  width: 36px;
+  height: 36px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+
+  .ov-icon {
+    width: 16px;
+    height: 16px;
+  }
+
+  &--1 {
+    top: 10%;
+    right: 5%;
+    animation: float-1 6s ease-in-out infinite;
+  }
+  &--2 {
+    bottom: 15%;
+    left: 0;
+    animation: float-2 7s ease-in-out infinite;
+  }
+  &--3 {
+    top: 50%;
+    right: -5%;
+    animation: float-3 8s ease-in-out infinite;
+  }
+
+  @media (max-width: 768px) {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+
+    .ov-icon {
+      width: 13px;
+      height: 13px;
+    }
+  }
+}
+
+// ─── Bento Cards ───
+.bento-card {
+  @include glass-card;
+  padding: 24px;
+
+  @media (max-width: 768px) {
+    padding: 16px;
+    border-radius: 16px;
+  }
+}
+
+// ─── Filter Section ───
+.filter-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .filter-grid {
   display: grid;
   grid-template-columns: 1fr 180px 150px 140px;
-  gap: 1rem;
-  margin-bottom: 1rem;
+  gap: 12px;
 
   @media (max-width: 1024px) {
     grid-template-columns: 1fr 1fr;
@@ -872,20 +1040,22 @@ watch(() => props.defaultFilter, (newVal) => {
   .search-input-wrapper {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    padding: 0.75rem 1rem;
-    border: 1px solid #E2E8F0;
-    border-radius: 0.5rem;
-    background: white;
-    transition: all 0.2s ease;
+    gap: 10px;
+    padding: 10px 14px;
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.7);
+    transition: all 0.3s ease;
 
     &:focus-within {
-      border-color: #4FC3F7;
-      box-shadow: 0 0 0 3px rgba(79, 195, 247, 0.1);
+      border-color: $sky;
+      box-shadow: 0 0 0 3px rgba(79, 195, 247, 0.12);
+      background: white;
     }
 
     .search-icon {
       color: #94A3B8;
+      flex-shrink: 0;
     }
 
     input {
@@ -894,6 +1064,7 @@ watch(() => props.defaultFilter, (newVal) => {
       outline: none;
       font-size: 0.875rem;
       color: #334155;
+      background: transparent;
 
       &::placeholder {
         color: #94A3B8;
@@ -901,17 +1072,18 @@ watch(() => props.defaultFilter, (newVal) => {
     }
 
     .clear-btn {
-      background: #F1F5F9;
+      background: rgba(241, 245, 249, 0.8);
       border: none;
       border-radius: 50%;
-      width: 1.5rem;
-      height: 1.5rem;
+      width: 24px;
+      height: 24px;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       color: #64748B;
       transition: all 0.2s ease;
+      flex-shrink: 0;
 
       &:hover {
         background: #E2E8F0;
@@ -925,18 +1097,20 @@ watch(() => props.defaultFilter, (newVal) => {
 .sort-dropdown {
   select {
     width: 100%;
-    padding: 0.75rem 1rem;
-    border: 1px solid #E2E8F0;
-    border-radius: 0.5rem;
-    background: white;
+    padding: 10px 14px;
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.7);
     font-size: 0.875rem;
     color: #334155;
     cursor: pointer;
+    transition: all 0.3s ease;
 
     &:focus {
       outline: none;
-      border-color: #4FC3F7;
-      box-shadow: 0 0 0 3px rgba(79, 195, 247, 0.1);
+      border-color: $sky;
+      box-shadow: 0 0 0 3px rgba(79, 195, 247, 0.12);
+      background: white;
     }
   }
 }
@@ -945,31 +1119,31 @@ watch(() => props.defaultFilter, (newVal) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1rem;
-  border: 1px solid #E2E8F0;
-  border-radius: 0.5rem;
-  background: white;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.7);
   font-size: 0.875rem;
   font-weight: 500;
   color: #475569;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
 
   &:hover {
-    background: #F8FAFC;
+    background: rgba(255, 255, 255, 0.95);
     border-color: #CBD5E1;
+    transform: translateY(-1px);
   }
 }
 
-// Filter Tabs
+// ─── Filter Tabs ───
 .filter-tabs {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid #E2E8F0;
-  margin-bottom: 1rem;
+  gap: 8px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.6);
   flex-wrap: wrap;
 }
 
@@ -977,40 +1151,42 @@ watch(() => props.defaultFilter, (newVal) => {
   font-size: 0.875rem;
   color: #64748B;
   font-weight: 500;
-  margin-right: 0.5rem;
+  margin-right: 4px;
 }
 
 .tab-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.375rem;
-  padding: 0.5rem 1rem;
-  border: 1px solid #E2E8F0;
-  border-radius: 2rem;
-  background: white;
+  gap: 6px;
+  padding: 8px 16px;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 100px;
+  background: rgba(255, 255, 255, 0.7);
   color: #64748B;
   font-size: 0.8125rem;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
 
   &:hover {
-    border-color: #4FC3F7;
-    color: #4FC3F7;
+    border-color: $sky;
+    color: $sky;
+    background: rgba(79, 195, 247, 0.05);
   }
 
   &.active {
-    background: linear-gradient(135deg, #4FC3F7 0%, #29B6F6 100%);
+    background: linear-gradient(135deg, $sky 0%, $sky-dark 100%);
     border-color: transparent;
     color: white;
+    box-shadow: 0 4px 12px rgba(79, 195, 247, 0.3);
   }
 }
 
-// Quick Filters
+// ─── Quick Filters ───
 .quick-filters {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
@@ -1022,62 +1198,65 @@ watch(() => props.defaultFilter, (newVal) => {
 .quick-filter-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.375rem;
-  padding: 0.375rem 0.75rem;
-  border-radius: 2rem;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 100px;
   border: none;
   font-size: 0.8125rem;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.25s ease;
 
   &.follow-up {
-    background: #FEF3C7;
+    background: rgba(254, 243, 199, 0.8);
     color: #B45309;
 
     &:hover, &.active {
       background: #FDE68A;
+      box-shadow: 0 2px 8px rgba(245, 158, 11, 0.2);
     }
   }
 
   &.high-priority {
-    background: #FEE2E2;
+    background: rgba(254, 226, 226, 0.8);
     color: #DC2626;
 
     &:hover, &.active {
       background: #FECACA;
+      box-shadow: 0 2px 8px rgba(220, 38, 38, 0.2);
     }
   }
 
   &.seen-today {
-    background: #F1F5F9;
+    background: rgba(241, 245, 249, 0.8);
     color: #475569;
 
     &:hover, &.active {
       background: #E2E8F0;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     }
   }
 }
 
-// Access Notice
+// ─── Access Notice ───
 .access-notice {
+  @include glass-card;
   display: flex;
   align-items: center;
-  gap: 1rem;
-  background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
-  border: 1px solid #F59E0B;
-  border-radius: 0.75rem;
-  padding: 1rem 1.5rem;
-  margin-bottom: 1.5rem;
-  box-shadow: 0 4px 20px rgba(245, 158, 11, 0.15);
+  gap: 16px;
+  padding: 16px 24px;
+  border-left: 4px solid $amber;
+  background: rgba(255, 251, 235, 0.9);
+  backdrop-filter: blur(20px);
 
   @media (max-width: 768px) {
     flex-direction: column;
     text-align: center;
+    padding: 16px;
   }
 
   .notice-icon {
-    color: #F59E0B;
+    color: $amber;
     flex-shrink: 0;
   }
 
@@ -1088,7 +1267,7 @@ watch(() => props.defaultFilter, (newVal) => {
       font-size: 0.9375rem;
       font-weight: 600;
       color: #92400E;
-      margin: 0 0 0.25rem;
+      margin: 0 0 4px;
     }
 
     p {
@@ -1099,119 +1278,28 @@ watch(() => props.defaultFilter, (newVal) => {
   }
 
   .acknowledge-btn {
-    padding: 0.625rem 1.25rem;
-    background: #F59E0B;
+    padding: 8px 20px;
+    background: linear-gradient(135deg, $amber 0%, #D97706 100%);
     color: white;
     border: none;
-    border-radius: 0.5rem;
+    border-radius: 10px;
     font-size: 0.875rem;
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.3s ease;
     white-space: nowrap;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);
 
     &:hover {
-      background: #D97706;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(245, 158, 11, 0.35);
     }
   }
 }
 
-// Stat Cards
-.stat-cards {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-
-  @media (max-width: 1024px) {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  @media (max-width: 480px) {
-    grid-template-columns: 1fr;
-  }
-}
-
-.stat-card {
-  background: white;
-  border-radius: 0.75rem;
-  padding: 1.25rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-  border: 1px solid #E2E8F0;
-
-  .stat-card-header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    margin-bottom: 0.75rem;
-  }
-
-  .stat-card-icon {
-    width: 2.5rem;
-    height: 2.5rem;
-    border-radius: 0.5rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .stat-card-trend {
-    font-size: 0.6875rem;
-    font-weight: 600;
-
-    &.positive {
-      color: #059669;
-    }
-
-    &.warning {
-      color: #D97706;
-    }
-
-    &.urgent {
-      color: #DC2626;
-    }
-  }
-
-  .stat-card-value {
-    font-size: 1.875rem;
-    font-weight: 700;
-    color: #1E293B;
-    margin: 0 0 0.25rem;
-  }
-
-  .stat-card-label {
-    font-size: 0.875rem;
-    color: #64748B;
-    margin: 0;
-  }
-
-  &.blue .stat-card-icon {
-    background: #DBEAFE;
-    color: #2563EB;
-  }
-
-  &.orange .stat-card-icon {
-    background: #FFEDD5;
-    color: #EA580C;
-  }
-
-  &.green .stat-card-icon {
-    background: #D1FAE5;
-    color: #059669;
-  }
-
-  &.red .stat-card-icon {
-    background: #FEE2E2;
-    color: #DC2626;
-  }
-}
-
-// Patient List Container
-.patient-list-container {
-  background: white;
-  border-radius: 0.75rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-  border: 1px solid #E2E8F0;
+// ─── Table Card ───
+.table-card {
+  padding: 0;
   overflow: hidden;
 }
 
@@ -1219,50 +1307,55 @@ watch(() => props.defaultFilter, (newVal) => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid #E2E8F0;
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+
+  @media (max-width: 768px) {
+    padding: 16px;
+  }
 }
 
 .list-title {
   font-size: 1.125rem;
   font-weight: 700;
-  color: #1E293B;
+  color: $navy;
   margin: 0;
 }
 
 .list-actions {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 4px;
 }
 
 .action-btn {
-  width: 2.25rem;
-  height: 2.25rem;
+  width: 36px;
+  height: 36px;
   border: none;
-  background: transparent;
-  border-radius: 0.5rem;
+  background: rgba(241, 245, 249, 0.6);
+  border-radius: 10px;
   color: #64748B;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
+  transition: all 0.25s ease;
 
   &:hover {
-    background: #F1F5F9;
-    color: #334155;
+    background: rgba(79, 195, 247, 0.1);
+    color: $sky-dark;
+    transform: translateY(-1px);
   }
 }
 
-// Loading State
+// ─── Loading State ───
 .loading-state {
-  padding: 4rem 2rem;
+  padding: 64px 32px;
   display: flex;
   justify-content: center;
 }
 
-// Table
+// ─── Table ───
 .table-wrapper {
   overflow-x: auto;
 }
@@ -1272,28 +1365,32 @@ watch(() => props.defaultFilter, (newVal) => {
   border-collapse: collapse;
 
   thead {
-    background: #F8FAFC;
-    border-bottom: 1px solid #E2E8F0;
+    background: rgba(79, 195, 247, 0.04);
+    border-bottom: 1px solid rgba(226, 232, 240, 0.6);
 
     th {
-      padding: 1rem 1.5rem;
+      padding: 14px 24px;
       text-align: left;
       font-size: 0.75rem;
       font-weight: 600;
       color: #64748B;
       text-transform: uppercase;
       letter-spacing: 0.05em;
+
+      @media (max-width: 768px) {
+        padding: 12px 16px;
+      }
     }
   }
 
   tbody {
     tr {
-      border-bottom: 1px solid #E2E8F0;
+      border-bottom: 1px solid rgba(226, 232, 240, 0.5);
       cursor: pointer;
-      transition: background 0.15s ease;
+      transition: all 0.2s ease;
 
       &:hover {
-        background: #F8FAFC;
+        background: rgba(79, 195, 247, 0.03);
       }
 
       &:last-child {
@@ -1302,8 +1399,12 @@ watch(() => props.defaultFilter, (newVal) => {
     }
 
     td {
-      padding: 1rem 1.5rem;
+      padding: 14px 24px;
       vertical-align: middle;
+
+      @media (max-width: 768px) {
+        padding: 12px 16px;
+      }
     }
   }
 }
@@ -1312,13 +1413,13 @@ watch(() => props.defaultFilter, (newVal) => {
   .patient-info {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 12px;
   }
 
   .patient-details {
     display: flex;
     flex-direction: column;
-    gap: 0.125rem;
+    gap: 2px;
   }
 
   .patient-name {
@@ -1339,7 +1440,7 @@ watch(() => props.defaultFilter, (newVal) => {
   .contact-phone {
     font-size: 0.875rem;
     color: #1E293B;
-    margin: 0 0 0.125rem;
+    margin: 0 0 2px;
   }
 
   .contact-email {
@@ -1353,38 +1454,38 @@ watch(() => props.defaultFilter, (newVal) => {
   .tags-wrapper {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.375rem;
+    gap: 6px;
   }
 
   .tag {
     display: inline-block;
-    padding: 0.25rem 0.5rem;
-    border-radius: 2rem;
+    padding: 4px 10px;
+    border-radius: 100px;
     font-size: 0.6875rem;
     font-weight: 500;
 
     &.follow-up {
-      background: #FEF3C7;
+      background: rgba(254, 243, 199, 0.8);
       color: #B45309;
     }
 
     &.high-priority {
-      background: #FEE2E2;
+      background: rgba(254, 226, 226, 0.8);
       color: #DC2626;
     }
 
     &.new-patient {
-      background: #DBEAFE;
+      background: rgba(219, 234, 254, 0.8);
       color: #2563EB;
     }
 
     &.chronic {
-      background: #F3E8FF;
+      background: rgba(243, 232, 255, 0.8);
       color: #7C3AED;
     }
 
     &.active {
-      background: #D1FAE5;
+      background: rgba(209, 250, 229, 0.8);
       color: #059669;
     }
   }
@@ -1394,7 +1495,7 @@ watch(() => props.defaultFilter, (newVal) => {
   .seen-date {
     font-size: 0.875rem;
     color: #1E293B;
-    margin: 0 0 0.125rem;
+    margin: 0 0 2px;
   }
 
   .seen-ago {
@@ -1407,10 +1508,10 @@ watch(() => props.defaultFilter, (newVal) => {
 .tasks-cell {
   .pending-badge {
     display: inline-block;
-    padding: 0.25rem 0.5rem;
-    background: #DBEAFE;
+    padding: 4px 10px;
+    background: rgba(219, 234, 254, 0.8);
     color: #2563EB;
-    border-radius: 0.25rem;
+    border-radius: 100px;
     font-size: 0.75rem;
     font-weight: 500;
   }
@@ -1425,37 +1526,37 @@ watch(() => props.defaultFilter, (newVal) => {
   .action-buttons {
     display: flex;
     align-items: center;
-    gap: 0.25rem;
+    gap: 4px;
   }
 
   .row-action-btn {
-    width: 2rem;
-    height: 2rem;
+    width: 32px;
+    height: 32px;
     border: none;
     background: transparent;
-    border-radius: 0.5rem;
+    border-radius: 8px;
     color: #64748B;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s ease;
+    transition: all 0.25s ease;
 
     &:hover {
-      background: #F1F5F9;
-      color: #334155;
+      background: rgba(79, 195, 247, 0.08);
+      color: $sky-dark;
     }
 
     .starred {
-      color: #F59E0B;
+      color: $amber;
     }
   }
 }
 
-// Empty State
+// ─── Empty State ───
 .empty-state {
   text-align: center;
-  padding: 4rem 2rem;
+  padding: 64px 32px;
 }
 
 .empty-illustration {
@@ -1464,12 +1565,12 @@ watch(() => props.defaultFilter, (newVal) => {
   justify-content: center;
   width: 100px;
   height: 100px;
-  background: linear-gradient(135deg, rgba(79, 195, 247, 0.1) 0%, rgba(79, 195, 247, 0.05) 100%);
+  background: linear-gradient(135deg, rgba(79, 195, 247, 0.12) 0%, rgba(79, 195, 247, 0.04) 100%);
   border-radius: 50%;
-  margin-bottom: 1.5rem;
+  margin-bottom: 24px;
 
   .empty-icon {
-    color: #4FC3F7;
+    color: $sky;
   }
 }
 
@@ -1477,28 +1578,28 @@ watch(() => props.defaultFilter, (newVal) => {
   font-size: 1.25rem;
   font-weight: 600;
   color: #1E293B;
-  margin: 0 0 0.5rem;
+  margin: 0 0 8px;
 }
 
 .empty-description {
   font-size: 0.9375rem;
   color: #64748B;
-  margin: 0;
-  max-width: 320px;
   margin: 0 auto;
+  max-width: 320px;
 }
 
-// Pagination
+// ─── Pagination ───
 .pagination {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1.25rem 1.5rem;
-  border-top: 1px solid #E2E8F0;
+  padding: 20px 24px;
+  border-top: 1px solid rgba(226, 232, 240, 0.5);
 
   @media (max-width: 640px) {
     flex-direction: column;
-    gap: 1rem;
+    gap: 12px;
+    padding: 16px;
   }
 }
 
@@ -1511,16 +1612,16 @@ watch(() => props.defaultFilter, (newVal) => {
 .pagination-controls {
   display: flex;
   align-items: center;
-  gap: 0.375rem;
+  gap: 6px;
 }
 
 .pagination-btn {
-  min-width: 2.25rem;
-  height: 2.25rem;
-  padding: 0 0.5rem;
-  border: 1px solid #E2E8F0;
-  background: white;
-  border-radius: 0.5rem;
+  min-width: 36px;
+  height: 36px;
+  padding: 0 8px;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 10px;
   color: #64748B;
   font-size: 0.875rem;
   font-weight: 500;
@@ -1528,27 +1629,55 @@ watch(() => props.defaultFilter, (newVal) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
+  transition: all 0.25s ease;
 
   &:hover:not(:disabled) {
-    background: #F8FAFC;
-    border-color: #CBD5E1;
+    background: rgba(79, 195, 247, 0.08);
+    border-color: rgba(79, 195, 247, 0.3);
+    color: $sky-dark;
   }
 
   &:disabled {
-    opacity: 0.5;
+    opacity: 0.4;
     cursor: not-allowed;
   }
 
   &.page-num.active {
-    background: linear-gradient(135deg, #4FC3F7 0%, #29B6F6 100%);
+    background: linear-gradient(135deg, $sky 0%, $sky-dark 100%);
     border-color: transparent;
     color: white;
+    box-shadow: 0 4px 12px rgba(79, 195, 247, 0.3);
   }
 }
 
 .pagination-ellipsis {
-  padding: 0 0.25rem;
+  padding: 0 4px;
   color: #94A3B8;
+}
+
+// ─── Animations ───
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.05); }
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes float-1 {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-12px) rotate(5deg); }
+}
+
+@keyframes float-2 {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-8px) rotate(-5deg); }
+}
+
+@keyframes float-3 {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-15px) rotate(3deg); }
 }
 </style>

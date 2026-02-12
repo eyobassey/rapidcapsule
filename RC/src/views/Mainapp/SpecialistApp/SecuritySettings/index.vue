@@ -100,11 +100,11 @@
                 </div>
                 <span>Notifications</span>
               </button>
-              <button class="action-btn" @click="$router.push('/app/specialist/specialist-account')">
+              <button class="action-btn" @click="$router.push('/app/specialist/specialist-dashboard')">
                 <div class="action-icon emerald">
-                  <v-icon name="hi-user" scale="1.1" />
+                  <v-icon name="hi-home" scale="1.1" />
                 </div>
-                <span>Account</span>
+                <span>Dashboard</span>
               </button>
               <button class="action-btn" @click="scrollToWhatsapp">
                 <div class="action-icon whatsapp">

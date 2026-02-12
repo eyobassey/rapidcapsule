@@ -358,6 +358,10 @@ export class PrescriptionVerification {
 
   @Prop({ type: String })
   platform_prescription_number: string;
+
+  // Trial flag — trial verifications are excluded from pharmacist review queue
+  @Prop({ type: Boolean, default: false })
+  is_trial: boolean;
 }
 
 export const PrescriptionVerificationSchema = SchemaFactory.createForClass(

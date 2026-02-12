@@ -1,5 +1,6 @@
 import {
   IsNumber,
+  IsNotEmpty,
   IsOptional,
   IsString,
   IsEnum,
@@ -69,6 +70,17 @@ export class ReleaseFundsDto {
 export class ConfirmHoldDto {
   @IsString()
   reference_id: string; // Prescription ID
+}
+
+export class SpecialistWithdrawDto {
+  @IsString()
+  @IsNotEmpty()
+  bankId: string;
+
+  @IsNumber()
+  @IsPositive()
+  @Min(100)
+  amount: number;
 }
 
 export class SpecialistWalletTransactionQueryDto {

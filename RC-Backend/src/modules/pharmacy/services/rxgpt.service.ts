@@ -15,8 +15,11 @@ import { NICEService } from './nice.service';
 import { NICEValidationResult, NICEComplianceSummary } from '../dto/nice.dto';
 import { BNFService } from './bnf.service';
 import { BNFValidationResult, BNFComplianceSummary } from '../dto/bnf.dto';
+import { WHOEMLService } from './who-eml.service';
+import { WHOEMLValidationResult, WHOEMLComplianceSummary } from '../dto/who-eml.dto';
 import { HallucinationDetectorService } from './hallucination-detector.service';
 import { HallucinationReport } from '../dto/hallucination.dto';
+import { TransactionType as CreditTransactionType } from '../../claude-summary-credits/entities/claude-summary-transaction.entity';
 import {
   RxGPTAnalyzeDto,
   RxGPTQuickCheckDto,
@@ -36,6 +39,7 @@ import {
   RxGPTSuggestMedicationsResponseDto,
   SuggestedMedicationDto,
   RxGPTStandaloneAnalyzeDto,
+  RxGPTRerunAnalysisDto,
 } from '../dto/rxgpt.dto';
 
 // Patient context interface for building analysis
@@ -143,11 +147,14 @@ export class RxGPTService {
     private readonly healthCheckupModel: Model<any>,
     @InjectModel('ClaudeSummaryCredit')
     private readonly creditModel: Model<any>,
+    @InjectModel('ClaudeSummaryTransaction')
+    private readonly creditTransactionModel: Model<any>,
     private readonly drugInteractionService: DrugInteractionService,
     private readonly openFDAService: OpenFDAService,
     private readonly pubmedService: PubMedService,
     private readonly niceService: NICEService,
     private readonly bnfService: BNFService,
+    private readonly whoEmlService: WHOEMLService,
     private readonly hallucinationDetector: HallucinationDetectorService,
   ) {
     this.initializeClient();
@@ -225,6 +232,7 @@ export class RxGPTService {
           use_pubmed: true,
           use_nice_guidelines: false,
           use_bnf: false,
+          use_who_eml: true,
           use_hallucination_detection: true,
         },
         thresholds: {
@@ -377,8 +385,9 @@ export class RxGPTService {
     specialistId: string,
     amount: number,
   ): Promise<{ success: boolean; remaining: number }> {
+    const userIdObj = new Types.ObjectId(specialistId);
     const credit = await this.creditModel.findOne({
-      userId: new Types.ObjectId(specialistId),
+      userId: userIdObj,
     }).exec();
 
     if (!credit) {
@@ -398,12 +407,29 @@ export class RxGPTService {
           $set: { 'rxgpt_last_used_at': new Date() },
         },
       );
+
+      // Log unlimited usage transaction
+      await this.creditTransactionModel.create({
+        userId: userIdObj,
+        type: CreditTransactionType.UNLIMITED_USAGE,
+        credits_delta: -amount,
+        description: `RxGPT analysis (unlimited subscription)`,
+        credit_snapshot: {
+          free_credits: credit.free_credits_remaining,
+          purchased_credits: credit.purchased_credits,
+          gifted_credits: credit.gifted_credits,
+          has_unlimited: true,
+        },
+      });
+
       return { success: true, remaining: Infinity };
     }
 
     // Deduct from free credits first, then gifted, then purchased
     let remaining = amount;
     const updates: any = { $inc: { total_summaries_generated: 1 } };
+    let transactionType: CreditTransactionType = CreditTransactionType.PURCHASED_USAGE;
+    let description = 'RxGPT analysis';
 
     // Check if gifted credits have expired
     const giftedValid =
@@ -414,18 +440,24 @@ export class RxGPTService {
       const deductFromFree = Math.min(credit.free_credits_remaining, remaining);
       updates.$inc.free_credits_remaining = -deductFromFree;
       remaining -= deductFromFree;
+      transactionType = CreditTransactionType.FREE_USAGE;
+      description = 'RxGPT analysis (free credit)';
     }
 
     if (remaining > 0 && giftedValid) {
       const deductFromGifted = Math.min(credit.gifted_credits, remaining);
       updates.$inc.gifted_credits = -deductFromGifted;
       remaining -= deductFromGifted;
+      transactionType = CreditTransactionType.GIFTED_USAGE;
+      description = 'RxGPT analysis (gifted credit)';
     }
 
     if (remaining > 0 && credit.purchased_credits > 0) {
       const deductFromPurchased = Math.min(credit.purchased_credits, remaining);
       updates.$inc.purchased_credits = -deductFromPurchased;
       remaining -= deductFromPurchased;
+      transactionType = CreditTransactionType.PURCHASED_USAGE;
+      description = 'RxGPT analysis (purchased credit)';
     }
 
     if (remaining > 0) {
@@ -434,6 +466,21 @@ export class RxGPTService {
     }
 
     await this.creditModel.updateOne({ _id: credit._id }, updates);
+
+    // Log usage transaction
+    const updatedCredit = await this.creditModel.findOne({ userId: userIdObj }).lean();
+    await this.creditTransactionModel.create({
+      userId: userIdObj,
+      type: transactionType,
+      credits_delta: -amount,
+      description,
+      credit_snapshot: {
+        free_credits: updatedCredit?.free_credits_remaining || 0,
+        purchased_credits: updatedCredit?.purchased_credits || 0,
+        gifted_credits: updatedCredit?.gifted_credits || 0,
+        has_unlimited: false,
+      },
+    });
 
     const balance = await this.getSpecialistCreditBalance(specialistId);
     return { success: true, remaining: balance.available };
@@ -1150,8 +1197,17 @@ export class RxGPTService {
       bnfValidationResults = bnfResult.validationResults;
     }
 
+    // WHO EML: Validate against WHO Essential Medicines List
+    let whoValidatedSuggestions = bnfValidatedSuggestions;
+    let whoValidationResults: WHOEMLValidationResult[] = [];
+    if (settings.data_sources?.use_who_eml) {
+      const whoResult = await this.validateWithWHOEML(bnfValidatedSuggestions, condition, patientContext);
+      whoValidatedSuggestions = whoResult.suggestions;
+      whoValidationResults = whoResult.validationResults;
+    }
+
     // Evidence-Based Confidence: Calculate grounded confidence scores
-    const validatedSuggestions = this.calculateEvidenceBasedConfidence(bnfValidatedSuggestions, condition);
+    const validatedSuggestions = this.calculateEvidenceBasedConfidence(whoValidatedSuggestions, condition);
 
     // Hallucination Detection: Check for potential AI errors
     const hallucinationReport = settings.data_sources?.use_hallucination_detection !== false
@@ -1210,6 +1266,8 @@ export class RxGPTService {
       nice_compliance_summary: this.niceService.buildComplianceSummary(niceValidationResults),
       // BNF (British National Formulary) summary
       bnf_compliance_summary: this.bnfService.buildComplianceSummary(bnfValidationResults),
+      // WHO EML (Essential Medicines List) summary
+      who_eml_compliance_summary: this.whoEmlService.buildComplianceSummary(whoValidationResults),
       // Evidence-based confidence summary
       evidence_summary: this.buildOverallEvidenceSummary(validatedSuggestions),
       // Hallucination detection report
@@ -1238,6 +1296,9 @@ export class RxGPTService {
 
     // Update confidence_score with evidence-based average
     response.confidence_score = response.evidence_summary?.overall_evidence_score || response.confidence_score;
+
+    // Build drug-specific safety summary
+    (response as any).safety_summary = this.buildSafetySummary(validatedSuggestions, patientContext);
 
     // Store analytics
     const responseTime = Date.now() - startTime;
@@ -1393,7 +1454,16 @@ export class RxGPTService {
       bnfValidationResults = bnfResult.validationResults;
     }
 
-    const validatedSuggestions = this.calculateEvidenceBasedConfidence(bnfValidatedSuggestions, condition);
+    // WHO EML: Validate against WHO Essential Medicines List
+    let whoValidatedSuggestions = bnfValidatedSuggestions;
+    let whoValidationResults: WHOEMLValidationResult[] = [];
+    if (settings.data_sources?.use_who_eml) {
+      const whoResult = await this.validateWithWHOEML(bnfValidatedSuggestions, condition, patientContext);
+      whoValidatedSuggestions = whoResult.suggestions;
+      whoValidationResults = whoResult.validationResults;
+    }
+
+    const validatedSuggestions = this.calculateEvidenceBasedConfidence(whoValidatedSuggestions, condition);
 
     const hallucinationReport = settings.data_sources?.use_hallucination_detection !== false
       ? await this.hallucinationDetector.detectHallucinations(
@@ -1444,6 +1514,7 @@ export class RxGPTService {
       pubmed_evidence_summary: this.buildPubMedEvidenceSummary(validatedSuggestions),
       nice_compliance_summary: this.niceService.buildComplianceSummary(niceValidationResults),
       bnf_compliance_summary: this.bnfService.buildComplianceSummary(bnfValidationResults),
+      who_eml_compliance_summary: this.whoEmlService.buildComplianceSummary(whoValidationResults),
       evidence_summary: this.buildOverallEvidenceSummary(validatedSuggestions),
       hallucination_check: {
         passed: hallucinationReport.recommendation !== 'reject',
@@ -1470,10 +1541,13 @@ export class RxGPTService {
 
     response.confidence_score = response.evidence_summary?.overall_evidence_score || response.confidence_score;
 
+    // Build drug-specific safety summary
+    (response as any).safety_summary = this.buildSafetySummary(validatedSuggestions, patientContext);
+
     // Store analytics (use specialist ID as patient_id placeholder for standalone)
     const responseTime = Date.now() - startTime;
     try {
-      await this.analyticsModel.create({
+      const analytics = await this.analyticsModel.create({
         specialist_id: new Types.ObjectId(specialistId),
         analysis_type: 'standalone',
         tokens_used: 0,
@@ -1509,19 +1583,129 @@ export class RxGPTService {
         credits_used: creditsRequired,
         clinical_summary: response.clinical_summary,
         from_cache: false,
+        version_number: 1,
         standalone_context: {
           subject_name: dto.subject_name,
           diagnosis: dto.diagnosis,
           treatment_goal: dto.treatment_goal,
           patient_context: dto.patient_context,
           symptoms: dto.symptoms,
+          proposed_drugs: dto.proposed_drugs,
+          max_suggestions: dto.max_suggestions,
+          prefer_inventory: dto.prefer_inventory,
         },
+        raw_response: response,
       });
+
+      // Self-reference version_group
+      await this.analyticsModel.updateOne(
+        { _id: analytics._id },
+        { $set: { version_group: analytics._id } },
+      );
+
+      (response as any)._id = analytics._id;
+      (response as any).version_number = 1;
+      (response as any).version_group = analytics._id;
     } catch (error) {
       this.logger.error('Failed to store standalone analytics:', error);
     }
 
     return response;
+  }
+
+  /**
+   * Re-run a standalone analysis with the same inputs to get fresh AI suggestions.
+   * Creates a new version in the version chain (v1 → v2 → v3).
+   */
+  async rerunAnalysis(
+    sourceAnalysisId: string,
+    specialistId: string,
+  ): Promise<RxGPTSuggestMedicationsResponseDto> {
+    // Load source analysis and verify ownership
+    const source = await this.analyticsModel
+      .findOne({
+        _id: new Types.ObjectId(sourceAnalysisId),
+        specialist_id: new Types.ObjectId(specialistId),
+      })
+      .lean()
+      .exec();
+
+    if (!source) {
+      throw new NotFoundException('Analysis not found or not authorized');
+    }
+
+    if ((source as any).analysis_type !== 'standalone') {
+      throw new BadRequestException('Only standalone analyses can be re-run');
+    }
+
+    // Resolve version_group (lazy backfill for legacy analyses)
+    const versionGroup = (source as any).version_group || source._id;
+    if (!(source as any).version_group) {
+      await this.analyticsModel.updateOne(
+        { _id: source._id },
+        { $set: { version_group: source._id, version_number: 1 } },
+      );
+    }
+
+    // Count existing versions to determine next version number
+    const existingCount = await this.analyticsModel.countDocuments({
+      version_group: versionGroup,
+    });
+    const nextVersion = existingCount + 1;
+
+    // Reconstruct DTO from stored standalone_context
+    const ctx = (source as any).standalone_context || {};
+    const dto: RxGPTStandaloneAnalyzeDto = {
+      diagnosis: ctx.diagnosis || '',
+      subject_name: ctx.subject_name,
+      treatment_goal: ctx.treatment_goal,
+      patient_context: ctx.patient_context,
+      symptoms: ctx.symptoms,
+      proposed_drugs: ctx.proposed_drugs,
+      max_suggestions: ctx.max_suggestions,
+      prefer_inventory: ctx.prefer_inventory,
+    };
+
+    // Run through the full pipeline (credits, AI, verification)
+    const response = await this.standaloneAnalyze(dto, specialistId);
+
+    // Patch the newly created analytics record with version chain fields
+    const newAnalyticsId = (response as any)._id;
+    if (newAnalyticsId) {
+      await this.analyticsModel.updateOne(
+        { _id: newAnalyticsId },
+        {
+          $set: {
+            version_group: versionGroup,
+            version_number: nextVersion,
+            parent_analysis_id: source._id,
+          },
+        },
+      );
+      (response as any).version_number = nextVersion;
+      (response as any).version_group = versionGroup;
+      (response as any).parent_analysis_id = sourceAnalysisId;
+    }
+
+    return response;
+  }
+
+  /**
+   * Get all versions for a version group (lightweight, for version switcher UI)
+   */
+  async getVersionsForGroup(
+    versionGroup: string,
+    specialistId: string,
+  ): Promise<any[]> {
+    return this.analyticsModel
+      .find({
+        version_group: new Types.ObjectId(versionGroup),
+        specialist_id: new Types.ObjectId(specialistId),
+      })
+      .sort({ version_number: 1 })
+      .select('_id version_number confidence_score overall_risk_level is_safe created_at')
+      .lean()
+      .exec();
   }
 
   /**
@@ -2352,6 +2536,73 @@ Based on the above information, suggest ${dto.max_suggestions || 5} appropriate 
   }
 
   /**
+   * Validate suggestions against the WHO Essential Medicines List
+   */
+  private async validateWithWHOEML(
+    suggestions: SuggestedMedicationDto[],
+    condition?: string,
+    patientContext?: PatientContext,
+  ): Promise<{ suggestions: SuggestedMedicationDto[]; validationResults: WHOEMLValidationResult[] }> {
+    this.logger.log(`[WHO EML] Validating ${suggestions.length} suggestions against WHO Essential Medicines List`);
+
+    const enrichedSuggestions: SuggestedMedicationDto[] = [];
+    const validationResults: WHOEMLValidationResult[] = [];
+
+    // Determine age group for validation
+    const ageGroup = patientContext
+      ? patientContext.age < 18 ? 'child' : 'adult'
+      : 'adult';
+
+    for (const suggestion of suggestions) {
+      const drugName = suggestion.generic_name || suggestion.drug_name;
+
+      try {
+        const validation = this.whoEmlService.validateDrug(drugName, condition, ageGroup);
+        validationResults.push(validation);
+
+        enrichedSuggestions.push({
+          ...suggestion,
+          who_info: {
+            found_in_eml: validation.found_in_eml,
+            list_type: validation.list_type,
+            atc_code: validation.atc_code,
+            section: validation.section,
+            category: validation.category,
+            matching_indications: validation.matching_indications,
+            formulations: validation.formulations,
+            age_group_appropriate: validation.age_group_appropriate,
+          },
+        });
+
+        if (!validation.found_in_eml) {
+          this.logger.warn(`[WHO EML] ${drugName}: Not found in WHO Essential Medicines List`);
+        } else {
+          this.logger.log(`[WHO EML] ${drugName}: Listed as ${validation.list_type} essential medicine`);
+        }
+      } catch (error) {
+        this.logger.warn(`[WHO EML] Error validating ${drugName}: ${error.message}`);
+        enrichedSuggestions.push({
+          ...suggestion,
+          who_info: {
+            found_in_eml: false,
+            matching_indications: [],
+            formulations: [],
+            age_group_appropriate: true,
+          },
+        });
+      }
+    }
+
+    const foundCount = validationResults.filter(r => r.found_in_eml).length;
+    const notFoundCount = validationResults.length - foundCount;
+    this.logger.log(
+      `[WHO EML] Validation complete: ${foundCount} in EML, ${notFoundCount} not found`
+    );
+
+    return { suggestions: enrichedSuggestions, validationResults };
+  }
+
+  /**
    * Calculate evidence-based confidence scores
    * ADJUSTS (not replaces) AI-generated confidence based on evidence
    *
@@ -2534,7 +2785,31 @@ Based on the above information, suggest ${dto.max_suggestions || 5} appropriate 
         }
       }
 
-      // 5. Off-label penalty (moderate reduction)
+      // 5. WHO EML (if data available)
+      if (suggestion.who_info) {
+        evidenceSourcesChecked++;
+        if (suggestion.who_info.found_in_eml) {
+          evidenceSourcesFound++;
+          if (suggestion.who_info.list_type === 'core') {
+            adjustments.push({
+              source: 'who_eml_core',
+              adjustment: 8,
+              reason: 'WHO Essential Medicines List - Core medicine',
+            });
+            totalScore += 8;
+            hasStrongEvidence = true;
+          } else {
+            adjustments.push({
+              source: 'who_eml_complementary',
+              adjustment: 5,
+              reason: 'WHO Essential Medicines List - Complementary medicine',
+            });
+            totalScore += 5;
+          }
+        }
+      }
+
+      // 6. Off-label penalty (moderate reduction)
       if (isOffLabel) {
         adjustments.push({
           source: 'off_label',
@@ -2544,7 +2819,7 @@ Based on the above information, suggest ${dto.max_suggestions || 5} appropriate 
         totalScore -= 15;
       }
 
-      // 6. Dosage concerns
+      // 7. Dosage concerns
       if (suggestion.dosage_validation?.status === 'danger') {
         adjustments.push({
           source: 'dosage_danger',
@@ -2692,6 +2967,7 @@ Based on the above information, suggest ${dto.max_suggestions || 5} appropriate 
       if (suggestion.nice_compliance?.is_compliant) sourcesSet.add('NICE');
       if (suggestion.pubmed_citations?.total_found) sourcesSet.add('PubMed');
       if (suggestion.bnf_info?.found_in_bnf) sourcesSet.add('BNF');
+      if (suggestion.who_info?.found_in_eml) sourcesSet.add('WHO EML');
     }
 
     return {
@@ -2702,9 +2978,9 @@ Based on the above information, suggest ${dto.max_suggestions || 5} appropriate 
       off_label_count: offLabelCount,
       evidence_sources_used: Array.from(sourcesSet),
       confidence_methodology: 'AI confidence adjusted by evidence: FDA approval (+15), NICE recommendation (+10), ' +
-        'PubMed high-quality evidence (+10), clinical trials (+5-8), BNF listing (+5), ' +
-        'off-label use (-15), unverified drugs (-20), dosage concerns (-5 to -10). ' +
-        'Original AI confidence preserved when no evidence data available.',
+        'PubMed high-quality evidence (+10), WHO EML core (+8), WHO EML complementary (+5), ' +
+        'clinical trials (+5-8), BNF listing (+5), off-label use (-15), unverified drugs (-20), ' +
+        'dosage concerns (-5 to -10). Original AI confidence preserved when no evidence data available.',
     };
   }
 
@@ -2912,6 +3188,62 @@ Based on the above information, suggest ${dto.max_suggestions || 5} appropriate 
   }
 
   /**
+   * Build a drug-specific safety summary when no alerts are detected.
+   * Provides a clinically meaningful assessment similar to the interaction checker.
+   */
+  private buildSafetySummary(
+    suggestions: SuggestedMedicationDto[],
+    patientContext: PatientContext,
+  ): any {
+    if (!suggestions.length) return null;
+
+    // Check if any suggestions have safety alerts
+    const totalAlerts = suggestions.reduce((sum, s) => sum + (s.safety_alerts?.length || 0), 0);
+    if (totalAlerts > 0) return null;
+
+    const drugNames = suggestions.map(s => {
+      const generic = s.generic_name ? ` (${s.generic_name})` : '';
+      return `${s.drug_name}${generic}`;
+    });
+
+    // Build structured safety data
+    const drugs = suggestions.map(s => {
+      const sources: string[] = [];
+      if (s.verification?.fda_approved) sources.push('FDA');
+      if (s.bnf_info?.uk_approved) sources.push('BNF');
+      if (s.who_info?.found_in_eml) sources.push(`WHO ${s.who_info.list_type === 'core' ? 'Core' : 'EML'}`);
+
+      const precautions = s.contraindication_check?.warnings || [];
+
+      return {
+        name: s.drug_name,
+        generic_name: s.generic_name || null,
+        sources,
+        precautions,
+      };
+    });
+
+    const allergiesChecked = patientContext.allergies.drug.map(a => a.allergen);
+    const currentMedsChecked = patientContext.current_medications.map(m => m.name);
+
+    return {
+      headline: `No clinically significant interactions identified between ${this.formatDrugList(drugNames)}.`,
+      drugs,
+      allergies_checked: allergiesChecked.length > 0 ? allergiesChecked : null,
+      current_medications_checked: currentMedsChecked.length > 0 ? currentMedsChecked : null,
+    };
+  }
+
+  /**
+   * Format a list of drug names with proper English grammar (commas + "and").
+   */
+  private formatDrugList(names: string[]): string {
+    if (names.length === 1) return names[0];
+    if (names.length === 2) return `${names[0]} and ${names[1]}`;
+    return `${names.slice(0, -1).join(', ')}, and ${names[names.length - 1]}`;
+  }
+
+  /**
    * Calculate overall confidence score
    */
   private calculateOverallConfidence(suggestions: SuggestedMedicationDto[]): number {
@@ -2974,6 +3306,7 @@ Based on the above information, suggest ${dto.max_suggestions || 5} appropriate 
         credits_used: creditsUsed,
         clinical_summary: response.clinical_summary,
         from_cache: false,
+        raw_response: response,
       });
     } catch (error) {
       this.logger.error('Failed to store suggestion analytics:', error);
@@ -3536,6 +3869,7 @@ Analyze each proposed drug for safety issues and provide your assessment.`;
         credits_used: creditsUsed,
         clinical_summary: result.clinical_summary,
         from_cache: fromCache,
+        raw_response: result,
       });
     } catch (error) {
       this.logger.error('Failed to store RxGPT analytics:', error);
@@ -3590,23 +3924,58 @@ Analyze each proposed drug for safety issues and provide your assessment.`;
 
     const skip = (page - 1) * limit;
 
-    const [analyses, total] = await Promise.all([
-      this.analyticsModel
-        .find(query)
-        .sort({ created_at: -1 })
-        .skip(skip)
-        .limit(limit)
-        .populate('patient_id', 'profile.first_name profile.last_name profile.profile_image')
-        .populate('prescription_id', 'prescription_number status')
-        .lean()
-        .exec(),
-      this.analyticsModel.countDocuments(query).exec(),
-    ]);
+    // Aggregation pipeline: group by version_group to show only latest version per chain
+    const pipeline: any[] = [
+      { $match: query },
+      { $sort: { created_at: -1 } },
+      {
+        $group: {
+          _id: { $ifNull: ['$version_group', '$_id'] },
+          doc: { $first: '$$ROOT' },
+          latest_version: { $max: '$version_number' },
+          total_versions: { $sum: 1 },
+        },
+      },
+      { $sort: { 'doc.created_at': -1 } },
+    ];
+
+    // Get total count (number of unique version groups)
+    const countPipeline = [...pipeline, { $count: 'total' }];
+    const countResult = await this.analyticsModel.aggregate(countPipeline).exec();
+    const total = countResult[0]?.total || 0;
+
+    // Add pagination
+    pipeline.push({ $skip: skip }, { $limit: limit });
+
+    // Lookup patient info
+    pipeline.push(
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'doc.patient_id',
+          foreignField: '_id',
+          as: 'patient_lookup',
+        },
+      },
+      {
+        $lookup: {
+          from: 'specialist_prescriptions',
+          localField: 'doc.prescription_id',
+          foreignField: '_id',
+          as: 'prescription_lookup',
+        },
+      },
+    );
+
+    const results = await this.analyticsModel.aggregate(pipeline).exec();
 
     // Transform the results for the response
-    const transformedAnalyses = analyses.map((analysis: any) => {
+    const transformedAnalyses = results.map((r: any) => {
+      const analysis = r.doc;
+      const patient = r.patient_lookup?.[0];
+      const prescription = r.prescription_lookup?.[0];
       const isStandalone = analysis.analysis_type === 'standalone' || !analysis.patient_id;
-      const patientProfile = analysis.patient_id?.profile;
+      const patientProfile = patient?.profile;
       const patientName = isStandalone
         ? (analysis.standalone_context?.subject_name || analysis.standalone_context?.diagnosis || 'Standalone Analysis')
         : patientProfile
@@ -3619,33 +3988,27 @@ Analyze each proposed drug for safety issues and provide your assessment.`;
         confidenceScore = confidenceScore / 100;
       }
 
-      // Get prescription ID as string for frontend navigation
-      const prescriptionId = analysis.prescription_id?._id?.toString() ||
-        (typeof analysis.prescription_id === 'string' ? analysis.prescription_id :
-         analysis.prescription_id?.toString()) || null;
+      const prescriptionId = prescription?._id?.toString() || null;
 
       return {
         _id: analysis._id,
         analysis_type: analysis.analysis_type || 'prescription',
-        // Flat patient_name for easy frontend access
         patient_name: patientName,
         patient: isStandalone ? null : {
-          _id: analysis.patient_id?._id || analysis.patient_id,
+          _id: analysis.patient_id,
           name: patientName,
           profile_image: patientProfile?.profile_image,
         },
-        // Standalone context for frontend display
         standalone_context: analysis.standalone_context || null,
         clinical_context: analysis.standalone_context ? {
           diagnosis: analysis.standalone_context.diagnosis,
           subject_name: analysis.standalone_context.subject_name,
         } : null,
-        // Flat prescription_id for frontend navigation
         prescription_id: prescriptionId,
         drugs_analyzed: analysis.drugs_analyzed?.map((d: any) => ({
           drug_name: d.drug_name,
           generic_name: d.generic_name,
-          name: d.drug_name, // keep for backwards compatibility
+          name: d.drug_name,
           strength: d.strength,
           dosage: d.dosage || d.dosage_instructions || '',
           is_appropriate: d.is_appropriate,
@@ -3657,13 +4020,16 @@ Analyze each proposed drug for safety issues and provide your assessment.`;
         total_alerts: analysis.total_alerts || 0,
         critical_alerts: analysis.critical_alerts || 0,
         warning_alerts: analysis.warning_alerts || 0,
-        // Include alerts array for modal display
         alerts: analysis.alerts || [],
         clinical_summary: analysis.clinical_summary || '',
         from_cache: analysis.from_cache,
         response_time_ms: analysis.response_time_ms,
         credits_used: analysis.credits_used,
         created_at: analysis.created_at,
+        // Version fields
+        version_number: r.latest_version || analysis.version_number || 1,
+        total_versions: r.total_versions || 1,
+        version_group: analysis.version_group || null,
       };
     });
 
@@ -3701,14 +4067,22 @@ Analyze each proposed drug for safety issues and provide your assessment.`;
     // Transform the result
     const isStandalone = (analysis as any).analysis_type === 'standalone' || !analysis.patient_id;
     const patientProfile = (analysis as any).patient_id?.profile;
+    const rawResponse = (analysis as any).raw_response || {};
+
     return {
+      // Spread the full raw_response first so the rich data (suggestions, evidence_summary,
+      // verification_summary, dosage_validation_summary, etc.) is available to the frontend
+      ...rawResponse,
+      // Then override with the canonical analytics fields
       _id: analysis._id,
       analysis_type: (analysis as any).analysis_type || 'prescription',
       standalone_context: (analysis as any).standalone_context || null,
       clinical_context: (analysis as any).standalone_context ? {
         diagnosis: (analysis as any).standalone_context.diagnosis,
         subject_name: (analysis as any).standalone_context.subject_name,
-      } : null,
+        treatment_goal: (analysis as any).standalone_context.treatment_goal,
+        patient_context: (analysis as any).standalone_context.patient_context,
+      } : rawResponse.clinical_context || null,
       patient: isStandalone ? null : {
         _id: (analysis as any).patient_id?._id || analysis.patient_id,
         name: patientProfile
@@ -3735,7 +4109,19 @@ Analyze each proposed drug for safety issues and provide your assessment.`;
       from_cache: analysis.from_cache,
       linked_appointments: analysis.linked_appointments,
       linked_health_checkups: analysis.linked_health_checkups,
+      generated_at: rawResponse.generated_at || analysis.created_at,
       created_at: analysis.created_at,
+      // Version fields
+      version_number: (analysis as any).version_number || 1,
+      version_group: (analysis as any).version_group || null,
+      parent_analysis_id: (analysis as any).parent_analysis_id || null,
+      // Fetch version siblings for the switcher UI
+      versions: (analysis as any).version_group
+        ? await this.getVersionsForGroup(
+            (analysis as any).version_group.toString(),
+            specialistId,
+          )
+        : [],
     };
   }
 
@@ -3897,6 +4283,10 @@ Analyze each proposed drug for safety issues and provide your assessment.`;
       credits_used: analysis.credits_used,
       from_cache: analysis.from_cache,
       created_at: analysis.created_at,
+      // Version fields
+      version_number: analysis.version_number || 1,
+      total_versions: analysis.total_versions || 1,
+      version_group: analysis.version_group || null,
     };
   }
 

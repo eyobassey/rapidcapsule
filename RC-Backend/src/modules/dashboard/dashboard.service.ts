@@ -472,7 +472,7 @@ export class DashboardService {
       if (status === 'completed') statusMap.completed = item.count;
       else if (status === 'open') statusMap.confirmed = item.count;
       else if (status === 'ongoing') statusMap.pending = item.count;
-      else if (status === 'cancelled') statusMap.cancelled = item.count;
+      else if (status === 'cancelled' || status === 'failed') statusMap.cancelled += item.count;
       else if (status === 'missed') statusMap.no_show = item.count;
     });
 

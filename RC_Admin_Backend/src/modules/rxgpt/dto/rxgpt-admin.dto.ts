@@ -50,6 +50,7 @@ export class UpdateRxGPTSettingsDto {
     use_pubmed?: boolean;
     use_nice_guidelines?: boolean;
     use_bnf?: boolean;
+    use_who_eml?: boolean;
     use_hallucination_detection?: boolean;
   };
 

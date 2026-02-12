@@ -21,6 +21,7 @@ import {
   SubmitRxGPTFeedbackDto,
   RxGPTSuggestMedicationsDto,
   RxGPTStandaloneAnalyzeDto,
+  RxGPTRerunAnalysisDto,
 } from '../dto/rxgpt.dto';
 import { sendSuccessResponse } from '../../../core/responses/success.responses';
 import { Messages } from '../../../core/messages/messages';
@@ -99,6 +100,23 @@ export class RxGPTController {
 
     const result = await this.rxgptService.standaloneAnalyze(dto, req.user.sub);
     return sendSuccessResponse('Standalone analysis completed', result);
+  }
+
+  /**
+   * Re-run a standalone analysis with the same inputs
+   * Creates a new version in the version chain
+   */
+  @Post('rerun')
+  async rerunAnalysis(
+    @Body() dto: RxGPTRerunAnalysisDto,
+    @Request() req: any,
+  ) {
+    if (req.user?.user_type !== 'Specialist') {
+      throw new ForbiddenException('Only specialists can re-run RxGPT analyses');
+    }
+
+    const result = await this.rxgptService.rerunAnalysis(dto.source_analysis_id, req.user.sub);
+    return sendSuccessResponse('Analysis re-run completed', result);
   }
 
   /**
@@ -224,6 +242,22 @@ export class RxGPTController {
     );
 
     return sendSuccessResponse(Messages.RETRIEVED, result);
+  }
+
+  /**
+   * Get all versions for a version group (for version switcher UI)
+   */
+  @Get('versions/:versionGroup')
+  async getVersions(
+    @Param('versionGroup') versionGroup: string,
+    @Request() req: any,
+  ) {
+    if (req.user?.user_type !== 'Specialist') {
+      throw new ForbiddenException('Only specialists can access RxGPT versions');
+    }
+
+    const versions = await this.rxgptService.getVersionsForGroup(versionGroup, req.user.sub);
+    return sendSuccessResponse('Versions retrieved', versions);
   }
 
   /**

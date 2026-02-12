@@ -166,6 +166,7 @@ export default {
 		return {
 			primaryNav: [
 				{ link: "/app/specialist/specialist-dashboard", label: "Dashboard", children: [], icon: "home" },
+				{ link: "/app/specialist/wallet", label: "Wallet", children: [], icon: "wallet" },
 				// NOTE: Old Appointments v1 ("/app/specialist/specialist-appointments") has been deprecated.
 				// We now use Appointments v2 below. See /views/Mainapp/SpecialistApp/Appointments/ for legacy code.
 				{
@@ -176,48 +177,32 @@ export default {
 					matchRoutes: ["/app/specialist/appointments-v2"]
 				},
 				{
-					link: "",
+					link: "/app/specialist/patients",
 					label: "Patients",
-					children: [
-						{ link: "/app/specialist/patients", label: "My Patients" },
-						{ link: "/app/specialist/patients/all", label: "All Patients" },
-						{ link: "/app/specialist/patients/starred", label: "Starred" }
-					],
+					children: [],
 					icon: "users",
-					isExpanded: false
+					matchRoutes: ["/app/specialist/patients"]
 				},
 				{
-					link: "",
+					link: "/app/specialist/clinical-notes",
 					label: "Clinical Notes",
-					children: [
-						{ link: "/app/specialist/clinical-notes", label: "All Notes" },
-						{ link: "/app/specialist/clinical-notes/templates", label: "Templates" }
-					],
+					children: [],
 					icon: "list",
-					isExpanded: false
+					matchRoutes: ["/app/specialist/clinical-notes"]
 				},
 				{
-					link: "",
+					link: "/app/specialist/pharmacy",
 					label: "Pharmacy",
-					children: [
-						{ link: "/app/specialist/pharmacy", label: "Dashboard" },
-						{ link: "/app/specialist/pharmacy/patients", label: "Patients" },
-						{ link: "/app/specialist/pharmacy/drugs", label: "Drug Catalog" },
-						{ link: "/app/specialist/pharmacy/prescriptions", label: "Prescriptions" }
-					],
+					children: [],
 					icon: "pill",
-					isExpanded: false
+					matchRoutes: ["/app/specialist/pharmacy"]
 				},
 				{
-					link: "",
+					link: "/app/specialist/rxgpt",
 					label: "RxGPT AI",
-					children: [
-						{ link: "/app/specialist/rxgpt", label: "Quick Analysis" },
-						{ link: "/app/specialist/rxgpt/interactions", label: "Interaction Checker" },
-						{ link: "/app/specialist/rxgpt/history", label: "My Analyses" }
-					],
+					children: [],
 					icon: "stethoscope",
-					isExpanded: false
+					matchRoutes: ["/app/specialist/rxgpt"]
 				},
 			],
 			secondaryNav: [
@@ -227,7 +212,8 @@ export default {
 					icon: "cog-wheel",
 					matchRoutes: ["/app/specialist/onboarding"]
 				},
-				{ link: "/app/specialist/specialist-account", label: "Account", icon: "user" },
+				// DEPRECATED: Account page removed — settings consolidated into onboarding/dashboard, wallet, security, and notifications pages
+				// { link: "/app/specialist/specialist-account", label: "Account", icon: "user" },
 				{
 					link: "/app/specialist/notification-settings",
 					label: "Notifications",
@@ -237,7 +223,7 @@ export default {
 				{
 					link: "/app/specialist/security-settings",
 					label: "Security",
-					icon: "lock",
+					icon: "shield-check",
 					matchRoutes: ["/app/specialist/security-settings"]
 				},
 			],
@@ -401,9 +387,12 @@ export default {
 		flex-shrink: 0;
 		padding: $size-32 $size-0;
 		border-right: $size-1 solid $color-g-85;
-		background-color: $color-white;
-		height: 100%;
+		background-color: #F8FAFC;
+		height: 100vh;
 		width: 260px;
+		position: sticky;
+		top: 0;
+		overflow-y: auto;
 
 		@include responsive(tab-landscape) {
 			position: absolute;

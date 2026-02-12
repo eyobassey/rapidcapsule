@@ -104,6 +104,7 @@ export class RxGPTAdminService {
         use_pubmed: true,
         use_nice_guidelines: false,
         use_bnf: false,
+        use_who_eml: false,
         use_hallucination_detection: true,
       },
       thresholds: {

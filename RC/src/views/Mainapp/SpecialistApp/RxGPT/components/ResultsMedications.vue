@@ -119,6 +119,9 @@
             </span>
             <span v-if="med.nice_compliance?.is_compliant" class="mini-badge mini-badge--nice">NICE</span>
             <span v-if="med.bnf_info?.uk_approved" class="mini-badge mini-badge--bnf">BNF</span>
+            <span v-if="med.who_info?.found_in_eml" class="mini-badge mini-badge--who">
+              WHO{{ med.who_info.list_type === 'core' ? ' Core' : '' }}
+            </span>
             <span v-if="med.pubmed_citations?.total_found > 0" class="mini-badge mini-badge--pubmed">
               {{ med.pubmed_citations.total_found }} refs
             </span>
@@ -329,6 +332,33 @@
                 <v-icon name="hi-external-link" scale="0.6" />
                 View in BNF
               </a>
+            </div>
+
+            <!-- WHO Essential Medicines -->
+            <div v-if="med.who_info" class="v-section v-section--who">
+              <div class="v-section__header">
+                <span class="v-section__icon v-section__icon--who">WHO</span>
+                <span class="v-section__title">Essential Medicines</span>
+                <span class="status-tag" :class="med.who_info.found_in_eml ? 'verified' : 'unverified'">
+                  {{ med.who_info.found_in_eml ? (med.who_info.list_type === 'core' ? 'Core' : 'Complementary') : 'Not in EML' }}
+                </span>
+              </div>
+              <div v-if="med.who_info.atc_code" class="who-meta-row">
+                <span class="who-meta-row__label">ATC Code:</span>
+                <span>{{ med.who_info.atc_code }}</span>
+              </div>
+              <div v-if="med.who_info.category" class="who-meta-row">
+                <span class="who-meta-row__label">Category:</span>
+                <span>{{ med.who_info.category }}</span>
+              </div>
+              <div v-if="med.who_info.matching_indications?.length" class="who-meta-row">
+                <span class="who-meta-row__label">Indications:</span>
+                <span>{{ med.who_info.matching_indications.join(', ') }}</span>
+              </div>
+              <div v-if="!med.who_info.age_group_appropriate" class="who-age-warning">
+                <v-icon name="hi-exclamation-triangle" scale="0.55" />
+                Age group may not be appropriate
+              </div>
             </div>
 
             <!-- PubMed Citations -->
@@ -867,6 +897,7 @@ $bg-subtle: #F8FAFC;
   &--unverified { background: $amber-light; color: darken($amber, 10%); }
   &--nice { background: #1e3a5f; color: white; }
   &--bnf { background: #004080; color: white; }
+  &--who { background: #009EDB; color: white; }
   &--pubmed { background: #326599; color: white; }
 }
 
@@ -931,6 +962,13 @@ $bg-subtle: #F8FAFC;
 
   &--bnf {
     background: #004080;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+
+  &--who {
+    background: #009EDB;
     font-size: 9px;
     font-weight: 800;
     letter-spacing: -0.5px;
@@ -1298,6 +1336,36 @@ $bg-subtle: #F8FAFC;
   color: $slate;
   flex: 1;
   line-height: 1.3;
+}
+
+// ---- WHO Essential Medicines ----
+.who-meta-row {
+  font-size: 12px;
+  color: $slate;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+
+  &__label {
+    color: $gray;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+}
+
+.who-age-warning {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: $amber-light;
+  color: darken($amber, 12%);
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  margin-top: 4px;
 }
 
 // ---- PubMed Citations ----
