@@ -103,7 +103,7 @@ $primary-light: #e1f5fe;
 $secondary: #FF5C00;
 $navy: #0f172a;
 $slate: #334155;
-$gray: #64748b;
+$gray: #475569;
 $emerald: #10b981;
 $bg: #f8fafc;
 
@@ -306,7 +306,7 @@ $bg: #f8fafc;
 .ai-tech__sources-label {
 	font-size: 13px;
 	font-weight: 600;
-	color: rgba(255, 255, 255, 0.5);
+	color: rgba(255, 255, 255, 0.65);
 	text-transform: uppercase;
 	letter-spacing: 1px;
 }
@@ -363,7 +363,7 @@ $bg: #f8fafc;
 
 .ai-tech__accuracy-label {
 	font-size: 14px;
-	color: rgba(255, 255, 255, 0.5);
+	color: rgba(255, 255, 255, 0.65);
 	font-weight: 500;
 	margin-top: 4px;
 }

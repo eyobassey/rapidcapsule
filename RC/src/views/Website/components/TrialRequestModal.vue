@@ -172,7 +172,7 @@ $secondary: #FF5C00;
 $secondary-dark: #E05000;
 $navy: #0f172a;
 $slate: #334155;
-$gray: #64748b;
+$gray: #475569;
 $emerald: #10b981;
 
 // Modal overlay

@@ -20,7 +20,7 @@
 
 				<!-- Quick Links -->
 				<div class="footer__col">
-					<h4 class="footer__col-title">Quick Links</h4>
+					<h3 class="footer__col-title">Quick Links</h3>
 					<ul class="footer__links">
 						<li><a href="#">About Us</a></li>
 						<li><a href="#features">Features</a></li>
@@ -32,7 +32,7 @@
 
 				<!-- Legal -->
 				<div class="footer__col">
-					<h4 class="footer__col-title">Legal</h4>
+					<h3 class="footer__col-title">Legal</h3>
 					<ul class="footer__links">
 						<li><router-link to="/privacy-policy">Privacy Policy</router-link></li>
 						<li><router-link to="/terms-of-service">Terms of Service</router-link></li>
@@ -43,7 +43,7 @@
 
 				<!-- Contact -->
 				<div class="footer__col">
-					<h4 class="footer__col-title">Contact</h4>
+					<h3 class="footer__col-title">Contact</h3>
 					<ul class="footer__contact">
 						<li>
 							<v-icon name="hi-mail" scale="0.9" />
@@ -74,7 +74,7 @@ $secondary: #FF5C00;
 $secondary-dark: #E05000;
 $navy: #0f172a;
 $slate: #334155;
-$gray: #64748b;
+$gray: #475569;
 $emerald: #10b981;
 $bg: #f8fafc;
 
@@ -199,7 +199,7 @@ $bg: #f8fafc;
 
 	a {
 		font-size: 14px;
-		color: rgba(255, 255, 255, 0.55);
+		color: rgba(255, 255, 255, 0.7);
 		text-decoration: none;
 		transition: color 0.2s ease;
 
@@ -222,13 +222,13 @@ $bg: #f8fafc;
 		display: flex;
 		align-items: center;
 		gap: 10px;
-		color: rgba(255, 255, 255, 0.4);
+		color: rgba(255, 255, 255, 0.65);
 	}
 
 	a,
 	span {
 		font-size: 14px;
-		color: rgba(255, 255, 255, 0.55);
+		color: rgba(255, 255, 255, 0.7);
 		text-decoration: none;
 		transition: color 0.2s ease;
 	}
@@ -250,7 +250,7 @@ $bg: #f8fafc;
 
 .footer__copyright {
 	font-size: 13px;
-	color: rgba(255, 255, 255, 0.4);
+	color: rgba(255, 255, 255, 0.65);
 	margin: 0;
 }
 

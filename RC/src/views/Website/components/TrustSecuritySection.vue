@@ -67,7 +67,7 @@ $primary-light: #e1f5fe;
 $secondary: #FF5C00;
 $navy: #0f172a;
 $slate: #334155;
-$gray: #64748b;
+$gray: #475569;
 $emerald: #10b981;
 $bg: #f8fafc;
 

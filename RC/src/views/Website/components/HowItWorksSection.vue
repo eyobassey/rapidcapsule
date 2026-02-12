@@ -136,7 +136,7 @@ $emerald-dark: #059669;
 $emerald-light: #D1FAE5;
 $navy: #0F172A;
 $slate: #334155;
-$gray: #64748B;
+$gray: #475569;
 $bg: #F8FAFC;
 
 .how-it-works {
