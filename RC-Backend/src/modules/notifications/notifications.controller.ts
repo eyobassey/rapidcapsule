@@ -12,6 +12,7 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { NotificationsService } from './notifications.service';
 import { NotificationOrchestratorService } from './services/notification-orchestrator.service';
 import { CreateNotificationDto } from './dto/create-notification.dto';
@@ -20,6 +21,8 @@ import { NotificationQueryDto } from './dto/notification-query.dto';
 import { UpdateNotificationPreferencesDto } from './dto/notification-preferences.dto';
 import { AuthGuard } from '@nestjs/passport';
 
+@ApiTags('Notifications')
+@ApiBearerAuth('JWT-auth')
 @Controller('notifications')
 @UseGuards(AuthGuard('jwt'))
 export class NotificationsController {

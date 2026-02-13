@@ -11,6 +11,7 @@ import {
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { RxGPTService } from '../services/rxgpt.service';
 import { ClaudeAIService } from '../services/claude-ai.service';
 import {
@@ -27,6 +28,8 @@ import { sendSuccessResponse } from '../../../core/responses/success.responses';
 import { Messages } from '../../../core/messages/messages';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 
+@ApiTags('Pharmacy - RxGPT')
+@ApiBearerAuth('JWT-auth')
 @Controller('pharmacy/rxgpt')
 @UseGuards(JwtAuthGuard)
 export class RxGPTController {

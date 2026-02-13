@@ -1,0 +1,506 @@
+{
+  "User": {
+    "collection": "users",
+    "description": "Main user entity — patients, specialists, lifeguards, admins with profiles, medical history, and professional info",
+    "fields": {
+      "email": { "type": "String", "required": true, "unique": true },
+      "password": { "type": "String", "required": true },
+      "user_type": { "type": "String", "enum": ["Patient", "Specialist", "Lifeguard", "Admin"], "required": true },
+      "status": { "type": "String", "enum": ["Active", "Suspended", "Deactivated", "Pending"], "default": "Active" },
+      "country_code": { "type": "String" },
+      "phone": { "type": "String" },
+      "preferred_currency": { "type": "String", "default": "NGN" },
+      "profile": {
+        "type": "Object",
+        "fields": {
+          "first_name": { "type": "String" },
+          "last_name": { "type": "String" },
+          "middle_name": { "type": "String" },
+          "date_of_birth": { "type": "Date" },
+          "gender": { "type": "String" },
+          "phone_number": { "type": "String" },
+          "height": { "type": "String" },
+          "weight": { "type": "String" },
+          "blood_group": { "type": "String" },
+          "genotype": { "type": "String" },
+          "bio": { "type": "String" },
+          "profile_image": { "type": "String" },
+          "address": { "type": "String" },
+          "city": { "type": "String" },
+          "state": { "type": "String" },
+          "country": { "type": "String" },
+          "zip_code": { "type": "String" }
+        }
+      },
+      "medical_history": {
+        "type": "Object",
+        "fields": {
+          "has_chronic_conditions": { "type": "Boolean" },
+          "chronic_conditions": { "type": "Array" },
+          "has_medications": { "type": "Boolean" },
+          "current_medications": { "type": "Array" },
+          "has_surgeries": { "type": "Boolean" },
+          "past_surgeries": { "type": "Array" },
+          "has_family_history": { "type": "Boolean" },
+          "family_history": { "type": "Array" },
+          "lifestyle": { "type": "Object" }
+        }
+      },
+      "allergies": {
+        "type": "Object",
+        "fields": {
+          "has_allergies": { "type": "Boolean" },
+          "drug_allergies": { "type": "Array" },
+          "food_allergies": { "type": "Array" },
+          "environmental_allergies": { "type": "Array" },
+          "other_allergies": { "type": "Array" }
+        }
+      },
+      "professional_practice": {
+        "type": "Object",
+        "fields": {
+          "practice_name": { "type": "String" },
+          "practice_type": { "type": "String" },
+          "years_of_experience": { "type": "Number" },
+          "license_number": { "type": "String" },
+          "specializations": { "type": "Array" },
+          "consultation_fee": { "type": "Number" },
+          "bio": { "type": "String" }
+        }
+      },
+      "identity_verification": {
+        "type": "Object",
+        "fields": {
+          "government_id": { "type": "Object" },
+          "medical_license": { "type": "Object" },
+          "registry_check": { "type": "Object" },
+          "overall_status": { "type": "String", "enum": ["pending", "verified", "rejected", "not_started"] }
+        }
+      },
+      "delivery_addresses": { "type": "Array" },
+      "is_email_verified": { "type": "Boolean", "default": false },
+      "is_phone_verified": { "type": "Boolean", "default": false },
+      "is_active": { "type": "Boolean", "default": true },
+      "is_suspended": { "type": "Boolean", "default": false },
+      "suspension_reason": { "type": "String" },
+      "two_factor_enabled": { "type": "Boolean", "default": false },
+      "two_factor_secret": { "type": "String" },
+      "last_login_at": { "type": "Date" },
+      "created_at": { "type": "Date" },
+      "updated_at": { "type": "Date" }
+    }
+  },
+  "Appointment": {
+    "collection": "appointments",
+    "description": "Patient-specialist appointment with Zoom video, payments, notes, documents, and ratings",
+    "fields": {
+      "specialist": { "type": "ObjectId", "ref": "User", "required": true },
+      "patient": { "type": "ObjectId", "ref": "User", "required": true },
+      "category": { "type": "String", "required": true },
+      "specialist_category": { "type": "String" },
+      "appointment_date": { "type": "Date", "required": true },
+      "start_time": { "type": "String", "required": true },
+      "end_time": { "type": "String" },
+      "timezone": { "type": "String" },
+      "duration_minutes": { "type": "Number", "default": 30 },
+      "appointment_type": { "type": "String", "required": true },
+      "appointment_type_name": { "type": "String" },
+      "meeting_channel": { "type": "String" },
+      "status": { "type": "String", "enum": ["Pending", "Confirmed", "InProgress", "Completed", "Cancelled", "Rescheduled", "NoShow"], "default": "Pending" },
+      "zoom_meeting_id": { "type": "String" },
+      "zoom_meeting_url": { "type": "String" },
+      "zoom_host_url": { "type": "String" },
+      "zoom_password": { "type": "String" },
+      "meeting_notes": { "type": "String" },
+      "private_notes": { "type": "String" },
+      "patient_notes": { "type": "String" },
+      "consultation_fee": { "type": "Number" },
+      "platform_fee": { "type": "Number" },
+      "total_amount": { "type": "Number" },
+      "currency": { "type": "String" },
+      "payment_status": { "type": "String", "enum": ["Pending", "Paid", "Refunded", "Failed"] },
+      "payment_reference": { "type": "String" },
+      "payment_source": { "type": "String" },
+      "rating": { "type": "Number", "min": 1, "max": 5 },
+      "review": { "type": "String" },
+      "documents": { "type": "Array" },
+      "attachments": { "type": "Array" },
+      "referral": { "type": "ObjectId", "ref": "Referral" },
+      "is_recurring": { "type": "Boolean", "default": false },
+      "recurring_pattern": { "type": "Object" },
+      "cancellation_reason": { "type": "String" },
+      "cancelled_by": { "type": "String" },
+      "rescheduled_from": { "type": "Date" },
+      "created_at": { "type": "Date" },
+      "updated_at": { "type": "Date" }
+    }
+  },
+  "Prescription": {
+    "collection": "prescriptions",
+    "description": "Basic prescription created by specialist with drug items for a patient",
+    "fields": {
+      "specialist": { "type": "ObjectId", "ref": "User", "required": true },
+      "patient": { "type": "ObjectId", "ref": "User", "required": true },
+      "items": { "type": "Array", "description": "Array of { drug, quantity, dosage, duration, instructions }" },
+      "documents": { "type": "Array" },
+      "status": { "type": "String", "enum": ["Active", "Completed", "Cancelled"] },
+      "sent_to_patient": { "type": "Boolean", "default": false },
+      "sent_to_pharmacy": { "type": "Boolean", "default": false },
+      "pharmacy": { "type": "ObjectId", "ref": "Pharmacy" },
+      "created_at": { "type": "Date" },
+      "updated_at": { "type": "Date" }
+    }
+  },
+  "SpecialistPrescription": {
+    "collection": "specialist_prescriptions",
+    "description": "Advanced specialist prescription with RxGPT analysis, diagnosis, and fulfillment tracking",
+    "fields": {
+      "prescription_number": { "type": "String", "unique": true },
+      "specialist": { "type": "ObjectId", "ref": "User", "required": true },
+      "patient": { "type": "ObjectId", "ref": "User", "required": true },
+      "appointment": { "type": "ObjectId", "ref": "Appointment" },
+      "diagnosis": { "type": "String" },
+      "diagnosis_codes": { "type": "Array" },
+      "clinical_notes": { "type": "String" },
+      "medications": {
+        "type": "Array",
+        "description": "Array of { drug_id, drug_name, generic_name, strength, dosage_form, route, dosage_instructions, quantity, refills, duration_days, special_instructions, substitution_allowed }"
+      },
+      "status": { "type": "String", "enum": ["draft", "signed", "sent_to_patient", "sent_to_pharmacy", "dispensed", "cancelled", "expired"] },
+      "rxgpt_analysis_id": { "type": "ObjectId" },
+      "rxgpt_safety_score": { "type": "Number" },
+      "valid_until": { "type": "Date" },
+      "dispensed_at": { "type": "Date" },
+      "created_at": { "type": "Date" },
+      "updated_at": { "type": "Date" }
+    }
+  },
+  "Drug": {
+    "collection": "drugentities",
+    "description": "Pharmacy drug catalog entry with safety info, pricing, and regulatory data",
+    "fields": {
+      "name": { "type": "String", "required": true },
+      "generic_name": { "type": "String" },
+      "brand_names": { "type": "Array" },
+      "strength": { "type": "String", "required": true },
+      "dosage_form": { "type": "ObjectId", "ref": "DrugDosageForm" },
+      "route": { "type": "ObjectId", "ref": "DrugRoute" },
+      "categories": { "type": "Array", "ref": "DrugCategory" },
+      "classification": { "type": "ObjectId", "ref": "DrugClassification" },
+      "manufacturer": { "type": "String" },
+      "description": { "type": "String" },
+      "active_ingredients": { "type": "Array" },
+      "price": { "type": "Number" },
+      "prices": { "type": "Object", "description": "Multi-currency { USD, GBP, EUR, NGN }" },
+      "quantity": { "type": "Number", "default": 0 },
+      "requires_prescription": { "type": "Boolean", "default": false },
+      "is_otc": { "type": "Boolean", "default": false },
+      "is_featured": { "type": "Boolean", "default": false },
+      "is_controlled": { "type": "Boolean", "default": false },
+      "schedule": { "type": "String" },
+      "images": { "type": "Array" },
+      "primary_image": { "type": "String" },
+      "side_effects": { "type": "Array" },
+      "contraindications": { "type": "Array" },
+      "warnings": { "type": "Array" },
+      "interactions": { "type": "Array" },
+      "storage_conditions": { "type": "String" },
+      "pregnancy_category": { "type": "String" },
+      "pharmacology": { "type": "Object" },
+      "regulatory": { "type": "Object" },
+      "who_eml": { "type": "Object" },
+      "is_active": { "type": "Boolean", "default": true },
+      "created_at": { "type": "Date" },
+      "updated_at": { "type": "Date" }
+    }
+  },
+  "Pharmacy": {
+    "collection": "pharmacies",
+    "description": "Pharmacy business entity with location, verification, and operating hours",
+    "fields": {
+      "name": { "type": "String", "required": true },
+      "slug": { "type": "String", "unique": true },
+      "owner": { "type": "ObjectId", "ref": "User" },
+      "license_number": { "type": "String", "required": true },
+      "phone": { "type": "String" },
+      "email": { "type": "String" },
+      "address": { "type": "Object", "description": "{ street, city, state, postal_code, country, coordinates }" },
+      "operating_hours": { "type": "Object" },
+      "delivery_zones": { "type": "Array" },
+      "is_verified": { "type": "Boolean", "default": false },
+      "is_online": { "type": "Boolean", "default": true },
+      "is_accepting_orders": { "type": "Boolean", "default": true },
+      "rating": { "type": "Number" },
+      "total_ratings": { "type": "Number", "default": 0 },
+      "status": { "type": "String", "enum": ["active", "suspended", "deactivated", "pending"] },
+      "is_pickup_center": { "type": "Boolean", "default": false },
+      "created_at": { "type": "Date" },
+      "updated_at": { "type": "Date" }
+    }
+  },
+  "PharmacyOrder": {
+    "collection": "pharmacy_orders",
+    "description": "Drug order with items, payment, delivery/pickup, verification, and fulfillment tracking",
+    "fields": {
+      "order_number": { "type": "String", "required": true, "unique": true },
+      "patient": { "type": "ObjectId", "ref": "User", "required": true },
+      "pharmacy": { "type": "ObjectId", "ref": "Pharmacy", "required": true },
+      "order_type": { "type": "String", "enum": ["OTC", "PRESCRIPTION", "GENERAL"], "required": true },
+      "status": { "type": "String", "enum": ["PENDING_PAYMENT", "PAID", "PROCESSING", "READY_FOR_PICKUP", "OUT_FOR_DELIVERY", "DELIVERED", "PICKED_UP", "CANCELLED", "REFUNDED"], "default": "PENDING_PAYMENT" },
+      "items": {
+        "type": "Array",
+        "description": "Array of { drug (ObjectId), drug_name, generic_name, strength, dosage_form, quantity, unit_price, total_price, requires_prescription }"
+      },
+      "prescription_id": { "type": "ObjectId" },
+      "prescription_upload_id": { "type": "ObjectId" },
+      "subtotal": { "type": "Number", "required": true },
+      "discount_amount": { "type": "Number", "default": 0 },
+      "tax_amount": { "type": "Number", "default": 0 },
+      "delivery_fee": { "type": "Number", "default": 0 },
+      "total_amount": { "type": "Number", "required": true },
+      "payment_status": { "type": "String", "enum": ["PENDING", "PAID", "FAILED", "REFUNDED", "PARTIALLY_REFUNDED"] },
+      "payment_method": { "type": "String" },
+      "payment_reference": { "type": "String" },
+      "wallet_amount_paid": { "type": "Number", "default": 0 },
+      "card_amount_paid": { "type": "Number", "default": 0 },
+      "delivery_method": { "type": "String", "enum": ["PICKUP", "DELIVERY"] },
+      "delivery_address": { "type": "Object" },
+      "estimated_delivery_date": { "type": "Date" },
+      "delivery_tracking_number": { "type": "String" },
+      "pickup_code": { "type": "String" },
+      "status_history": { "type": "Array", "description": "Array of { status, timestamp, note, updated_by }" },
+      "rating": { "type": "Number", "min": 1, "max": 5 },
+      "review": { "type": "String" },
+      "confirmation_pdf_url": { "type": "String" },
+      "drug_interactions": { "type": "Array" },
+      "drug_safety_info": { "type": "Array" },
+      "created_at": { "type": "Date" },
+      "updated_at": { "type": "Date" }
+    }
+  },
+  "Vital": {
+    "collection": "vitals",
+    "description": "Patient vital signs — temperature, weight, blood pressure, blood sugar, pulse rate",
+    "fields": {
+      "userId": { "type": "String", "ref": "User" },
+      "body_temp": { "type": "Object", "description": "{ value: String, unit: String, updatedAt: Date }" },
+      "body_weight": { "type": "Object", "description": "{ value: String, unit: String, updatedAt: Date }" },
+      "blood_pressure": { "type": "Object", "description": "{ value: String, unit: String, updatedAt: Date }" },
+      "blood_sugar_level": { "type": "Object", "description": "{ value: String, unit: String, updatedAt: Date }" },
+      "pulse_rate": { "type": "Object", "description": "{ value: String, unit: String, updatedAt: Date }" },
+      "created_at": { "type": "Date" },
+      "updated_at": { "type": "Date" }
+    }
+  },
+  "HealthCheckup": {
+    "collection": "health_checkups",
+    "description": "Infermedica AI health checkup with interview flow, diagnosis, triage, and Claude AI summary",
+    "fields": {
+      "user": { "type": "ObjectId", "ref": "User", "required": true },
+      "health_check_for": { "type": "String", "enum": ["Self", "Dependant", "Third Party"], "default": "Self" },
+      "checkup_owner_id": { "type": "ObjectId", "required": true },
+      "request": { "type": "Mixed", "description": "Infermedica request data (symptoms, evidence, age, sex)" },
+      "response": { "type": "Mixed", "description": "Infermedica response (conditions, triage_level, has_emergency_evidence)" },
+      "interview_token": { "type": "String" },
+      "interview_duration": { "type": "Number" },
+      "has_symptom_duration": { "type": "Boolean", "default": false },
+      "is_triage_focused": { "type": "Boolean", "default": false },
+      "claude_summary": {
+        "type": "Object",
+        "fields": {
+          "generated_at": { "type": "Date" },
+          "model": { "type": "String" },
+          "content": {
+            "type": "Object",
+            "description": "{ overview, key_findings[], possible_conditions_explained[], recommendations[], when_to_seek_care, lifestyle_tips[] }"
+          }
+        }
+      },
+      "linked_appointment": { "type": "ObjectId", "ref": "Appointment" },
+      "deleted_at": { "type": "Date" },
+      "created_at": { "type": "Date" },
+      "updated_at": { "type": "Date" }
+    }
+  },
+  "Plan": {
+    "collection": "plans",
+    "description": "Subscription plan with multi-currency pricing and call duration",
+    "fields": {
+      "name": { "type": "String", "required": true },
+      "code": { "type": "String" },
+      "amount": { "type": "Number", "required": true },
+      "prices": { "type": "Object", "description": "{ USD: { amount }, GBP: { amount }, EUR: { amount }, NGN: { amount } }" },
+      "trial_days": { "type": "Number", "default": 14 },
+      "call_duration": { "type": "Number", "default": 60 },
+      "created_at": { "type": "Date" },
+      "updated_at": { "type": "Date" }
+    }
+  },
+  "Subscription": {
+    "collection": "subscriptions",
+    "description": "User subscription to a plan with recurring billing",
+    "fields": {
+      "userId": { "type": "ObjectId", "ref": "User", "required": true },
+      "planId": { "type": "ObjectId", "ref": "Plan", "required": true },
+      "cardId": { "type": "ObjectId", "ref": "Card", "required": true },
+      "current_period_end": { "type": "Date" },
+      "status": { "type": "String", "enum": ["Active", "Expired", "Cancelled", "Declined", "Pending"], "default": "Pending" },
+      "amount_paid": { "type": "Number" },
+      "recurrence": { "type": "String", "enum": ["Monthly", "Annually"], "required": true },
+      "created_at": { "type": "Date" },
+      "updated_at": { "type": "Date" }
+    }
+  },
+  "Notification": {
+    "collection": "notifications",
+    "description": "Multi-channel notification with priority, delivery tracking, and scheduling",
+    "fields": {
+      "userId": { "type": "ObjectId", "ref": "User", "required": true },
+      "user_type": { "type": "String", "required": true },
+      "type": { "type": "String", "required": true },
+      "title": { "type": "String", "required": true },
+      "message": { "type": "String", "required": true },
+      "data": { "type": "Mixed" },
+      "action_url": { "type": "String" },
+      "priority": { "type": "String", "enum": ["low", "medium", "high", "urgent"], "default": "medium" },
+      "is_read": { "type": "Boolean", "default": false },
+      "read_at": { "type": "Date" },
+      "delivery_status": { "type": "Array", "description": "Array of { channel, status (pending|sent|delivered|failed), sent_at, delivered_at }" },
+      "scheduled_for": { "type": "Date" },
+      "expires_at": { "type": "Date" },
+      "is_deleted": { "type": "Boolean", "default": false },
+      "created_at": { "type": "Date" },
+      "updated_at": { "type": "Date" }
+    }
+  },
+  "Card": {
+    "collection": "cards",
+    "description": "Saved payment card (Paystack)",
+    "fields": {
+      "userId": { "type": "ObjectId", "ref": "User", "required": true },
+      "currency": { "type": "String", "required": true },
+      "auth_code": { "type": "String", "required": true },
+      "last4Digit": { "type": "String", "required": true },
+      "expiry": { "type": "Date", "required": true },
+      "issuer": { "type": "String", "required": true },
+      "card_type": { "type": "String", "required": true },
+      "default": { "type": "Boolean", "default": false },
+      "created_at": { "type": "Date" },
+      "updated_at": { "type": "Date" }
+    }
+  },
+  "Rating": {
+    "collection": "ratings",
+    "description": "Specialist ratings from patients",
+    "fields": {
+      "specialist": { "type": "ObjectId", "ref": "User", "required": true },
+      "ratings": { "type": "Array", "description": "Array of { rating (1-5), message, reviewer (ObjectId ref User) }" },
+      "created_at": { "type": "Date" },
+      "updated_at": { "type": "Date" }
+    }
+  },
+  "Referral": {
+    "collection": "referrals",
+    "description": "Referral program tracking with reward statistics",
+    "fields": {
+      "referrer": { "type": "ObjectId", "ref": "User", "required": true },
+      "referral_code": { "type": "String", "required": true, "unique": true },
+      "referrals": { "type": "Array", "description": "Array of { referee (ObjectId), date_referred, status (pending|completed|rewarded), credits_awarded }" },
+      "total_clicks": { "type": "Number", "default": 0 },
+      "total_shares": { "type": "Number", "default": 0 },
+      "total_signups": { "type": "Number", "default": 0 },
+      "total_credits_earned": { "type": "Number", "default": 0 },
+      "shares_by_platform": { "type": "Object", "description": "{ whatsapp, facebook, twitter, linkedin, email, copy, sms }" },
+      "created_at": { "type": "Date" },
+      "updated_at": { "type": "Date" }
+    }
+  },
+  "UnifiedWallet": {
+    "collection": "unified_wallets",
+    "description": "Unified wallet for patients and specialists with balance caching, holds, and limits",
+    "fields": {
+      "wallet_id": { "type": "String", "required": true, "unique": true },
+      "owner_id": { "type": "ObjectId", "ref": "User", "required": true },
+      "owner_type": { "type": "String", "enum": ["patient", "specialist"], "required": true },
+      "currency": { "type": "String", "default": "NGN" },
+      "available_balance": { "type": "Number", "default": 0 },
+      "held_balance": { "type": "Number", "default": 0 },
+      "pending_balance": { "type": "Number", "default": 0 },
+      "total_credited": { "type": "Number", "default": 0 },
+      "total_debited": { "type": "Number", "default": 0 },
+      "status": { "type": "String", "enum": ["active", "suspended", "closed"], "default": "active" },
+      "daily_withdrawal_limit": { "type": "Number", "default": 0 },
+      "single_transaction_limit": { "type": "Number", "default": 0 },
+      "requires_pin": { "type": "Boolean", "default": false },
+      "transaction_count": { "type": "Number", "default": 0 },
+      "ledger_account_code": { "type": "String" },
+      "created_at": { "type": "Date" },
+      "updated_at": { "type": "Date" }
+    }
+  },
+  "LedgerEntry": {
+    "collection": "ledger_entries",
+    "description": "Immutable accounting ledger entry with batch grouping and reversal support",
+    "fields": {
+      "entry_id": { "type": "String", "required": true, "unique": true },
+      "batch_id": { "type": "String", "required": true },
+      "account_code": { "type": "String", "required": true },
+      "entry_type": { "type": "String", "enum": ["debit", "credit"], "required": true },
+      "amount": { "type": "Number", "required": true },
+      "currency": { "type": "String", "default": "NGN" },
+      "balance_before": { "type": "Number", "required": true },
+      "balance_after": { "type": "Number", "required": true },
+      "description": { "type": "String", "required": true },
+      "status": { "type": "String", "enum": ["posted", "pending", "reversed"], "default": "posted" },
+      "user_id": { "type": "ObjectId", "ref": "User" },
+      "wallet_id": { "type": "ObjectId", "ref": "UnifiedWallet" },
+      "reference_type": { "type": "String" },
+      "reference_id": { "type": "ObjectId" },
+      "reversed_by_batch": { "type": "String" },
+      "reverses_batch": { "type": "String" },
+      "created_at": { "type": "Date" },
+      "updated_at": { "type": "Date" }
+    }
+  },
+  "ConsultationService": {
+    "collection": "consultation_services",
+    "description": "Consultation service type with multi-currency pricing",
+    "fields": {
+      "name": { "type": "String", "required": true },
+      "slug": { "type": "String", "required": true, "unique": true },
+      "description": { "type": "String", "required": true },
+      "icon": { "type": "String" },
+      "pricing_type": { "type": "String", "enum": ["flat", "routine_urgent"], "default": "routine_urgent" },
+      "min_rate": { "type": "Number", "default": 2000 },
+      "max_rate": { "type": "Number" },
+      "rates": { "type": "Object", "description": "{ USD, GBP, EUR, NGN } each with { min_rate, max_rate }" },
+      "is_active": { "type": "Boolean", "default": true },
+      "display_order": { "type": "Number", "default": 0 },
+      "is_default": { "type": "Boolean", "default": false },
+      "show_ai_badge": { "type": "Boolean", "default": false },
+      "created_at": { "type": "Date" },
+      "updated_at": { "type": "Date" }
+    }
+  },
+  "HealthTip": {
+    "collection": "health_tips",
+    "description": "Personalized health tip from rules engine or AI",
+    "fields": {
+      "user_id": { "type": "ObjectId", "ref": "User", "required": true },
+      "title": { "type": "String", "required": true },
+      "content": { "type": "String", "required": true },
+      "action_text": { "type": "String" },
+      "action_route": { "type": "String" },
+      "category": { "type": "String", "enum": ["vitals", "lifestyle", "nutrition", "fitness", "mental_health", "preventive_care", "chronic_condition", "medication", "sleep", "hydration"] },
+      "priority": { "type": "String", "enum": ["urgent", "high", "medium", "low"], "default": "medium" },
+      "source": { "type": "String", "enum": ["rule_engine", "ai_generated", "curated"] },
+      "status": { "type": "String", "enum": ["active", "dismissed", "acted_upon", "expired"], "default": "active" },
+      "icon": { "type": "String" },
+      "generated_at": { "type": "Date" },
+      "expires_at": { "type": "Date" },
+      "display_count": { "type": "Number", "default": 0 },
+      "created_at": { "type": "Date" },
+      "updated_at": { "type": "Date" }
+    }
+  }
+}

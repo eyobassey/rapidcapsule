@@ -11,12 +11,15 @@ import {
   UploadedFile,
   Header,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { AdvancedHealthScoreService } from './advanced-health-score.service';
 import { sendSuccessResponse } from '../../core/responses/success.responses';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { SubmitAssessmentDto } from './dto/submit-assessment.dto';
 
+@ApiTags('Advanced Health Score')
+@ApiBearerAuth('JWT-auth')
 @UseGuards(JwtAuthGuard)
 @Controller('advanced-health-score')
 export class AdvancedHealthScoreController {

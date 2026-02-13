@@ -32,7 +32,9 @@ import {
 } from './dto/specialist-prescription.dto';
 import { PrescriptionPaymentMethod } from './entities/specialist-prescription.entity';
 import { RefillService } from './services/refill.service';
+import { ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Specialist Prescriptions')
 @Controller('specialist/prescriptions')
 export class SpecialistPrescriptionController {
   constructor(
@@ -527,6 +529,7 @@ export class SpecialistPrescriptionController {
 
 // ============ PATIENT ENDPOINTS ============
 
+@ApiTags('Specialist Prescriptions')
 @Controller('patient/prescriptions')
 export class PatientPrescriptionController {
   constructor(
@@ -838,6 +841,7 @@ export class PatientPrescriptionController {
 
 // ============ PUBLIC ENDPOINTS FOR PATIENT PAYMENT ============
 
+@ApiTags('Specialist Prescriptions')
 @Controller('prescriptions')
 export class PrescriptionPaymentController {
   constructor(

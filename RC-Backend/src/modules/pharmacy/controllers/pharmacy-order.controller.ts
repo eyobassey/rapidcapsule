@@ -10,6 +10,7 @@ import {
   UseGuards,
   Request,
 } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../../modules/auth/guards/jwt-auth.guard';
 import { PharmacyOrderService } from '../services/pharmacy-order.service';
 import { AbusePreventionService } from '../services/abuse-prevention.service';
@@ -39,6 +40,7 @@ import {
 import { Types } from 'mongoose';
 import { sendSuccessResponse } from '../../../core/responses/success.responses';
 
+@ApiTags('Pharmacy - Orders')
 @Controller('pharmacy-orders')
 export class PharmacyOrderController {
   constructor(

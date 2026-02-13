@@ -44,7 +44,9 @@ import {
   DeleteBiometricDto,
 } from './dto/biometric.dto';
 import { SessionService } from './session.service';
+import { ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
   constructor(

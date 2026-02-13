@@ -1,4 +1,5 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { SpecialistPrescriptionService } from './specialist-prescription.service';
 import { sendSuccessResponse } from '../../core/responses/success.responses';
 
@@ -6,6 +7,7 @@ import { sendSuccessResponse } from '../../core/responses/success.responses';
  * Public controller for prescription verification
  * No authentication required - used for QR code scanning
  */
+@ApiTags('Prescription Verification')
 @Controller('prescriptions/verify')
 export class PrescriptionVerifyController {
   constructor(

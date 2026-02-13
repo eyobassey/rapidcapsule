@@ -9,6 +9,7 @@ import {
   UseGuards,
   Request,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { ClinicalNotesService } from './clinical-notes.service';
 import { CreateNoteDto } from './dto/create-note.dto';
 import { UpdateNoteDto } from './dto/update-note.dto';
@@ -18,6 +19,8 @@ import {
 } from './dto/create-structured-note.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
+@ApiTags('Clinical Notes')
+@ApiBearerAuth('JWT-auth')
 @Controller('clinical-notes')
 @UseGuards(JwtAuthGuard)
 export class ClinicalNotesController {

@@ -10,6 +10,7 @@ import {
   Request,
   BadRequestException,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { Types } from 'mongoose';
 import { WhatsAppQueueService, QueueStats } from '../services/whatsapp-queue.service';
@@ -24,6 +25,8 @@ import {
 /**
  * Admin/Pharmacist endpoints for managing the WhatsApp prescription queue
  */
+@ApiTags('WhatsApp Queue')
+@ApiBearerAuth('JWT-auth')
 @Controller('whatsapp/queue')
 @UseGuards(JwtAuthGuard)
 export class WhatsAppQueueController {

@@ -9,6 +9,7 @@ import {
   UseGuards,
   Get,
 } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { LifeguardsService } from './lifeguards.service';
 import { CreateLifeguardDto } from './dto/create-lifeguard.dto';
 import { sendSuccessResponse } from '../../core/responses/success.responses';
@@ -24,6 +25,7 @@ import { IsEmailVerified } from './guards/is-email-verified.guards';
 import { FinishAddPaymentMethodDto } from './dto/finish-add-payment-method.dto';
 import { LifeguardJwtAuthGuard } from './guards/jwt-auth.guards';
 
+@ApiTags('Lifeguards')
 @Controller('lifeguards')
 export class LifeguardsController {
   constructor(private readonly lifeguardsService: LifeguardsService) {}

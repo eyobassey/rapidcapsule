@@ -10,6 +10,7 @@ import {
   Query,
   Patch,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { HealthIntegrationsService } from './health-integrations.service';
 import { ConnectIntegrationDto } from './dto/connect-integration.dto';
@@ -17,6 +18,8 @@ import { SyncHealthDataDto } from './dto/sync-health-data.dto';
 import { UpdateSyncSettingsDto } from './dto/update-sync-settings.dto';
 import { IntegrationProvider } from './schemas/health-integration.schema';
 
+@ApiTags('Health Integrations')
+@ApiBearerAuth('JWT-auth')
 @Controller('health-integrations')
 @UseGuards(JwtAuthGuard)
 export class HealthIntegrationsController {

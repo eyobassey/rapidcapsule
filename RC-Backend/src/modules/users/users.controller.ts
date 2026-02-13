@@ -32,7 +32,9 @@ import { FileUploadHelper } from '../../common/helpers/file-upload.helpers';
 import { BasicHealthScoreService } from '../basic-health-score/basic-health-score.service';
 import { ScoreChangeTrigger } from '../basic-health-score/entities/basic-health-score-history.entity';
 import { UpdateIdentityVerificationDto } from './dto/update-identity-verification.dto';
+import { ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Users')
 @Controller('users')
 export class UsersController {
   constructor(

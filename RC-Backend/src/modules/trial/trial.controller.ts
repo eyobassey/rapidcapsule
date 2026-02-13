@@ -13,6 +13,7 @@ import {
   HttpStatus,
   BadRequestException,
 } from '@nestjs/common';
+import { ApiTags, ApiSecurity } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { TrialService } from './trial.service';
 import { TrialGuard } from './trial.guard';
@@ -34,6 +35,7 @@ const ALLOWED_PRESCRIPTION_MIMES = [
   'image/gif', 'application/pdf',
 ];
 
+@ApiTags('Trial')
 @Controller('trial')
 export class TrialController {
   constructor(private readonly trialService: TrialService) {}
@@ -55,6 +57,7 @@ export class TrialController {
 
   // ============ TRIAL-GUARDED ENDPOINTS ============
 
+  @ApiSecurity('Trial-token')
   @UseGuards(TrialGuard)
   @Get('session')
   async getSession(@Request() req: any) {
@@ -65,6 +68,7 @@ export class TrialController {
 
   // ---- Symptom Checker Proxy Endpoints ----
 
+  @ApiSecurity('Trial-token')
   @UseGuards(TrialGuard)
   @Post('symptom-checker/begin')
   @HttpCode(HttpStatus.OK)
@@ -74,6 +78,7 @@ export class TrialController {
     return sendSuccessResponse('Checkup started', result);
   }
 
+  @ApiSecurity('Trial-token')
   @UseGuards(TrialGuard)
   @Post('symptom-checker/parse')
   @HttpCode(HttpStatus.OK)
@@ -83,6 +88,7 @@ export class TrialController {
     return sendSuccessResponse('Text parsed', result);
   }
 
+  @ApiSecurity('Trial-token')
   @UseGuards(TrialGuard)
   @Post('symptom-checker/diagnosis')
   @HttpCode(HttpStatus.OK)
@@ -92,6 +98,7 @@ export class TrialController {
     return sendSuccessResponse('Diagnosis checked', result);
   }
 
+  @ApiSecurity('Trial-token')
   @UseGuards(TrialGuard)
   @Get('symptom-checker/search')
   async searchSymptoms(@Query() dto: TrialSearchDto, @Request() req: any) {
@@ -100,6 +107,7 @@ export class TrialController {
     return sendSuccessResponse('Search completed', result);
   }
 
+  @ApiSecurity('Trial-token')
   @UseGuards(TrialGuard)
   @Post('symptom-checker/risk-factors')
   @HttpCode(HttpStatus.OK)
@@ -109,6 +117,7 @@ export class TrialController {
     return sendSuccessResponse('Risk factors retrieved', result);
   }
 
+  @ApiSecurity('Trial-token')
   @UseGuards(TrialGuard)
   @Post('symptom-checker/symptoms')
   @HttpCode(HttpStatus.OK)
@@ -123,6 +132,7 @@ export class TrialController {
 
   // ---- AI Health Summary Endpoint ----
 
+  @ApiSecurity('Trial-token')
   @UseGuards(TrialGuard)
   @Post('symptom-checker/ai-summary')
   @HttpCode(HttpStatus.OK)
@@ -134,6 +144,7 @@ export class TrialController {
 
   // ---- RxGPT Proxy Endpoint ----
 
+  @ApiSecurity('Trial-token')
   @UseGuards(TrialGuard)
   @Post('rxgpt/analyze')
   @HttpCode(HttpStatus.OK)
@@ -145,6 +156,7 @@ export class TrialController {
 
   // ---- Prescription Upload Proxy Endpoints ----
 
+  @ApiSecurity('Trial-token')
   @UseGuards(TrialGuard)
   @Post('prescription/upload')
   @HttpCode(HttpStatus.OK)
@@ -179,6 +191,7 @@ export class TrialController {
     return sendSuccessResponse('Prescription uploaded. Verification in progress.', result);
   }
 
+  @ApiSecurity('Trial-token')
   @UseGuards(TrialGuard)
   @Get('prescription/:uploadId/status')
   async getPrescriptionStatus(

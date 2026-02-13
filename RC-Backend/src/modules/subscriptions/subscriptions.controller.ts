@@ -16,7 +16,10 @@ import { sendSuccessResponse } from '../../core/responses/success.responses';
 import { Messages } from '../../core/messages/messages';
 import { VerifySubTransactionDto } from './dto/verify-sub-transaction.dto';
 import { CancelSubscriptionDto } from './dto/cancel-subscription.dto';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
+@ApiTags('Subscriptions')
+@ApiBearerAuth('JWT-auth')
 @UseGuards(JwtAuthGuard)
 @Controller('subscriptions')
 export class SubscriptionsController {

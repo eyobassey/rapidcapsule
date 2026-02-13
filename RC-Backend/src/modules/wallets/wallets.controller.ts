@@ -13,7 +13,10 @@ import { Messages } from '../../core/messages/messages';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { WithdrawFundDto } from './dto/withdraw-wallet-fund.dto';
 import { FundWalletDto, VerifyFundingDto } from './dto/fund-wallet.dto';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
+@ApiTags('Wallets')
+@ApiBearerAuth('JWT-auth')
 @UseGuards(JwtAuthGuard)
 @Controller('wallets')
 export class WalletsController {

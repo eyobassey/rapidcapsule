@@ -9,6 +9,7 @@ import {
   Request,
   UseGuards,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { InventoryService } from '../services/inventory.service';
 import {
   CreateInventoryDto,
@@ -24,6 +25,8 @@ import { sendSuccessResponse } from '../../../core/responses/success.responses';
 import { Messages } from '../../../core/messages/messages';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 
+@ApiTags('Pharmacy - Inventory')
+@ApiBearerAuth('JWT-auth')
 @UseGuards(JwtAuthGuard)
 @Controller('pharmacy/inventory')
 export class InventoryController {

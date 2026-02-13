@@ -1,8 +1,11 @@
 import { Controller, Get, Post, Param, Query, UseGuards, Request, Header } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { HealthTipsService } from './health-tips.service';
 import { sendSuccessResponse } from '../../core/responses/success.responses';
 
+@ApiTags('Health Tips')
+@ApiBearerAuth('JWT-auth')
 @Controller('health-tips')
 @UseGuards(JwtAuthGuard)
 export class HealthTipsController {

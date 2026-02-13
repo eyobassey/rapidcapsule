@@ -6,11 +6,14 @@ import {
   Request,
   UseGuards,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { BasicHealthScoreService } from './basic-health-score.service';
 import { sendSuccessResponse } from '../../core/responses/success.responses';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ScoreChangeTrigger } from './entities/basic-health-score-history.entity';
 
+@ApiTags('Basic Health Score')
+@ApiBearerAuth('JWT-auth')
 @UseGuards(JwtAuthGuard)
 @Controller('basic-health-score')
 export class BasicHealthScoreController {

@@ -11,11 +11,13 @@ import {
   Logger,
   UnauthorizedException,
 } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { Request, Response } from 'express';
 import { ZoomWebhookService } from '../services/zoom-webhook.service';
 import { Zoom } from '../../../common/external/zoom/zoom';
 import { ZoomWebhookEventType } from '../entities/zoom-webhook.entity';
 
+@ApiTags('Webhooks - Zoom')
 @Controller('webhooks/zoom')
 export class ZoomWebhookController {
   private readonly logger = new Logger(ZoomWebhookController.name);

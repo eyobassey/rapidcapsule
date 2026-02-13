@@ -37,7 +37,10 @@ import { ProcessAppointmentPaymentDto } from './dto/process-appointment-payment.
 import { AdminOrJwtGuard } from './guards/admin-or-jwt.guard';
 import { FileUploadHelper } from '../../common/helpers/file-upload.helpers';
 import { Types } from 'mongoose';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
+@ApiTags('Appointments')
+@ApiBearerAuth('JWT-auth')
 @UseGuards(AdminOrJwtGuard)
 @Controller('appointments')
 export class AppointmentsController {

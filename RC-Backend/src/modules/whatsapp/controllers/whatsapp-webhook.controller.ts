@@ -8,6 +8,7 @@ import {
   Logger,
   HttpStatus,
 } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { Request, Response } from 'express';
 import { ConfigService } from '@nestjs/config';
 import {
@@ -31,6 +32,7 @@ class TestMessageDto {
   imageUrl?: string;
 }
 
+@ApiTags('Webhooks - WhatsApp')
 @Controller('webhooks/whatsapp')
 export class WhatsAppWebhookController {
   private readonly logger = new Logger(WhatsAppWebhookController.name);

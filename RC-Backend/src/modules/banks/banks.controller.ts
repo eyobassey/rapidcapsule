@@ -16,7 +16,10 @@ import { MakeBankDefaultDto } from './dto/make-bank-default.dto';
 import { DeleteBankDto } from './dto/delete-bank.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ResolveAccountDto } from './dto/resolve-account.dto';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
+@ApiTags('Banks')
+@ApiBearerAuth('JWT-auth')
 @UseGuards(JwtAuthGuard)
 @Controller('banks')
 export class BanksController {

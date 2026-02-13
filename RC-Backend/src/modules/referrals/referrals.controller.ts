@@ -12,6 +12,7 @@ import {
   Ip,
   Headers,
 } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
 import { ReferralsService } from './referrals.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -21,6 +22,7 @@ import { UpdateReferralsDto } from './dto/update-referrals.dto';
 import { TrackShareDto } from './dto/track-share.dto';
 import { ClickSource } from './entities/referral-click.entity';
 
+@ApiTags('Referrals')
 @Controller('referrals')
 export class ReferralsController {
   constructor(private readonly referralsService: ReferralsService) {}
@@ -86,6 +88,7 @@ export class ReferralsController {
 }
 
 // Separate controller for public referral link redirect (no auth required)
+@ApiTags('Referrals')
 @Controller('r')
 export class ReferralRedirectController {
   constructor(private readonly referralsService: ReferralsService) {}

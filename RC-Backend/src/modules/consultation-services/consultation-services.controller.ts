@@ -1,9 +1,11 @@
 import { Controller, Get, Param, UseGuards } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { ConsultationServicesService } from './consultation-services.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { sendSuccessResponse } from '../../core/responses/success.responses';
 import { Messages } from '../../core/messages/messages';
 
+@ApiTags('Consultation Services')
 @Controller('consultation-services')
 export class ConsultationServicesController {
   constructor(private readonly consultationServicesService: ConsultationServicesService) {}

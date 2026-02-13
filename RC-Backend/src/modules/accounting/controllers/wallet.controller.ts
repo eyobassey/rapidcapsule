@@ -15,6 +15,7 @@ import {
   HttpStatus,
   Param,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { Types } from 'mongoose';
 
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
@@ -34,6 +35,8 @@ interface AuthenticatedRequest {
   ip: string;
 }
 
+@ApiTags('Accounting Wallet')
+@ApiBearerAuth('JWT-auth')
 @Controller('api/wallet')
 @UseGuards(JwtAuthGuard)
 export class WalletController {

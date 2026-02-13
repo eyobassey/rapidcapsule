@@ -8,6 +8,16 @@
         "include": "modules/pharmacy/data/**/*.json",
         "outDir": "dist/src"
       }
+    ],
+    "plugins": [
+      {
+        "name": "@nestjs/swagger",
+        "options": {
+          "classValidatorShim": true,
+          "introspectComments": true,
+          "dtoFileNameSuffix": [".dto.ts", ".entity.ts"]
+        }
+      }
     ]
   }
 }

@@ -10,6 +10,7 @@ import {
   Request,
   UseGuards,
 } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { PharmacyService } from '../services/pharmacy.service';
 import {
   CreatePharmacyDto,
@@ -22,6 +23,7 @@ import { sendSuccessResponse } from '../../../core/responses/success.responses';
 import { Messages } from '../../../core/messages/messages';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 
+@ApiTags('Pharmacy - Pharmacies')
 @Controller('pharmacy/pharmacies')
 export class PharmacyController {
   constructor(private readonly pharmacyService: PharmacyService) {}

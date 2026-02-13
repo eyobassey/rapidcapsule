@@ -14,7 +14,10 @@ import { Messages } from '../../core/messages/messages';
 import { Types } from 'mongoose';
 import { SpecialistAverageRating } from './dto/SpecialistAverageRating';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
+@ApiTags('Ratings')
+@ApiBearerAuth('JWT-auth')
 @UseGuards(JwtAuthGuard)
 @Controller('ratings')
 export class RatingsController {

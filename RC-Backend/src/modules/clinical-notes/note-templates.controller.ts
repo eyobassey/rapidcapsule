@@ -10,11 +10,14 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { NoteTemplatesService } from './note-templates.service';
 import { CreateTemplateDto } from './dto/create-template.dto';
 import { UpdateTemplateDto } from './dto/update-template.dto';
 
+@ApiTags('Clinical Note Templates')
+@ApiBearerAuth('JWT-auth')
 @Controller('clinical-notes/templates')
 @UseGuards(JwtAuthGuard)
 export class NoteTemplatesController {

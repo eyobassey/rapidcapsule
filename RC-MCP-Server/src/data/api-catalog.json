@@ -1,0 +1,619 @@
+{
+  "auth": {
+    "name": "Authentication",
+    "basePath": "/api/auth",
+    "description": "User login, registration verification, OAuth, 2FA, biometrics, password management, and session management",
+    "endpoints": [
+      { "method": "POST", "path": "/login", "summary": "Email/password login", "auth": false, "body": { "email": "string", "password": "string" }, "response": "JWT token and user data" },
+      { "method": "POST", "path": "/apple", "summary": "Apple OAuth login", "auth": false, "body": { "authorization": "AppleAuthorization", "user": "AppleUser (optional)" }, "response": "JWT token and user data" },
+      { "method": "POST", "path": "/google/alt-login", "summary": "Google OAuth login", "auth": false, "body": { "token": "string", "user_type": "string (Patient|Specialist|Lifeguard|Admin)" }, "response": "JWT token and user data" },
+      { "method": "POST", "path": "/forgot-password", "summary": "Send password reset email", "auth": false, "body": { "email": "string" }, "response": "Password reset link sent" },
+      { "method": "POST", "path": "/reset-password", "summary": "Reset password with token", "auth": false, "body": { "password": "string", "confirm_password": "string", "token": "string", "userId": "string" }, "response": "Password reset successful" },
+      { "method": "PATCH", "path": "/change-password", "summary": "Change password for authenticated user", "auth": true, "body": { "current_password": "string", "new_password": "string", "confirm_password": "string" }, "response": "Password changed" },
+      { "method": "POST", "path": "/otp/verify", "summary": "Verify email OTP", "auth": false, "body": { "token": "string", "email": "string" }, "response": "Login verified with JWT token" },
+      { "method": "POST", "path": "/otp/phone/verify", "summary": "Verify phone OTP", "auth": false, "body": { "code": "string", "email": "string" }, "response": "Login verified with JWT token" },
+      { "method": "GET", "path": "/email/:userId/verify/:token", "summary": "Verify email address with token link", "auth": false, "response": "Email verified" },
+      { "method": "POST", "path": "/phone/verify", "summary": "Verify phone number", "auth": false, "body": { "code": "string", "phone": "string" }, "response": "Phone verified" },
+      { "method": "POST", "path": "/resend-email-token", "summary": "Resend email verification token", "auth": false, "body": { "userId": "string" }, "response": "Token sent" },
+      { "method": "POST", "path": "/resend-phone-token", "summary": "Resend phone verification SMS", "auth": false, "body": { "phone": "string" }, "response": "SMS sent" },
+      { "method": "POST", "path": "/resend-email-otp", "summary": "Resend email OTP", "auth": false, "body": { "email": "string" }, "response": "OTP sent" },
+      { "method": "POST", "path": "/resend-phone-otp", "summary": "Resend phone OTP", "auth": false, "body": { "email": "string" }, "response": "OTP sent" },
+      { "method": "POST", "path": "/2fa/generate", "summary": "Generate 2FA QR code and secret", "auth": true, "response": "QR code data URL and secret key" },
+      { "method": "POST", "path": "/2fa/turn-on", "summary": "Enable 2FA", "auth": true, "body": { "code": "string" }, "response": "2FA enabled" },
+      { "method": "POST", "path": "/2fa/verify", "summary": "Verify 2FA code during login", "auth": false, "body": { "email": "string", "code": "string" }, "response": "JWT token" },
+      { "method": "PATCH", "path": "/change-phone-number", "summary": "Initiate phone number change", "auth": true, "body": { "country_code": "string", "phone": "string", "answer": "string" }, "response": "Verification SMS sent" },
+      { "method": "PATCH", "path": "/verify-phone-number-change", "summary": "Verify phone number change with code", "auth": true, "body": { "country_code": "string", "phone": "string", "code": "string" }, "response": "Phone changed" },
+      { "method": "PATCH", "path": "/change-email-address", "summary": "Initiate email address change", "auth": true, "body": { "email": "string", "answer": "string" }, "response": "Verification email sent" },
+      { "method": "PATCH", "path": "/verify-email-address-change", "summary": "Verify email address change with code", "auth": true, "body": { "email": "string", "code": "string" }, "response": "Email changed" },
+      { "method": "POST", "path": "/biometric/register/options", "summary": "Generate WebAuthn registration options", "auth": true, "response": "WebAuthn registration options" },
+      { "method": "POST", "path": "/biometric/register/verify", "summary": "Verify and register biometric credential", "auth": true, "body": { "credential": "WebAuthn credential object", "deviceName": "string (optional)" }, "response": "Credential registered" },
+      { "method": "POST", "path": "/biometric/login/options", "summary": "Generate WebAuthn auth options for email", "auth": false, "body": { "email": "string" }, "response": "WebAuthn auth options" },
+      { "method": "POST", "path": "/biometric/login/verify", "summary": "Verify biometric login", "auth": false, "body": { "email": "string", "credential": "WebAuthn credential object" }, "response": "JWT token" },
+      { "method": "POST", "path": "/biometric/passkey/options", "summary": "Generate discoverable passkey options", "auth": false, "response": "Passkey options" },
+      { "method": "POST", "path": "/biometric/passkey/verify", "summary": "Verify discoverable passkey login", "auth": false, "body": { "credential": "WebAuthn credential object" }, "response": "JWT token" },
+      { "method": "GET", "path": "/biometric/credentials", "summary": "List registered biometric credentials", "auth": true, "response": "Array of credentials" },
+      { "method": "POST", "path": "/biometric/delete", "summary": "Delete biometric credential", "auth": true, "body": { "credentialId": "string (optional)" }, "response": "Credential deleted" },
+      { "method": "POST", "path": "/biometric/check", "summary": "Check if biometric is enabled for user", "auth": false, "body": { "email": "string" }, "response": "{ enabled: boolean }" },
+      { "method": "GET", "path": "/sessions", "summary": "Get all active sessions", "auth": true, "response": "Array of sessions" },
+      { "method": "DELETE", "path": "/sessions/:sessionId", "summary": "Revoke a specific session", "auth": true, "response": "Session revoked" },
+      { "method": "POST", "path": "/sessions/revoke-all-other", "summary": "Revoke all sessions except current", "auth": true, "response": "Count of revoked sessions" },
+      { "method": "GET", "path": "/sessions/count", "summary": "Get active session count", "auth": true, "response": "Session count" }
+    ]
+  },
+  "users": {
+    "name": "Users",
+    "basePath": "/api/users",
+    "description": "User registration, profile management, specialist setup, availability, preferences, and file uploads",
+    "endpoints": [
+      { "method": "POST", "path": "/", "summary": "Register new user", "auth": false, "body": { "first_name": "string", "last_name": "string", "email": "string", "country_code": "string", "phone": "string", "password": "string", "confirm_password": "string", "date_of_birth": "Date", "terms": "boolean", "marketing": "boolean", "user_type": "string (Patient|Specialist|Lifeguard|Admin)" }, "response": "User created with JWT token" },
+      { "method": "GET", "path": "/me", "summary": "Get current authenticated user profile", "auth": true, "response": "User profile data" },
+      { "method": "GET", "path": "/availability", "summary": "Get user availability and preferences", "auth": true, "response": "Time availability and specialist preferences" },
+      { "method": "PATCH", "path": "/", "summary": "Setup/update user profile", "auth": true, "body": { "profile": "Profile object", "pre_existing_conditions": "Condition[]", "emergency_contacts": "EmergencyContact[]", "dependants": "Dependant[]", "security": "Security object", "medical_history": "MedicalHistoryDto", "allergies": "AllergiesDto", "preferred_currency": "string (USD|GBP|EUR|NGN)" }, "response": "Updated profile" },
+      { "method": "GET", "path": "/", "summary": "List users with filtering and pagination", "auth": true, "query": { "page": "number", "limit": "number" }, "response": "Paginated user list" },
+      { "method": "PATCH", "path": "/specialist-profile-setup", "summary": "Setup specialist profile", "auth": true, "body": { "profile": "Profile object", "professional_practice": "ProfessionalPractice object", "documents": "Documents[]", "payment_structure": "string", "security": "Security object" }, "response": "Updated specialist profile" },
+      { "method": "PATCH", "path": "/awards", "summary": "Add awards to user profile", "auth": true, "body": { "awards": "Award[]" }, "response": "Updated awards" },
+      { "method": "PATCH", "path": "/certifications", "summary": "Add certifications to profile", "auth": true, "body": { "documents": "Documents[]" }, "response": "Updated certifications" },
+      { "method": "GET", "path": "/detect-currency", "summary": "Detect user currency from IP address", "auth": false, "response": "Currency code (USD|GBP|EUR|NGN)" },
+      { "method": "PATCH", "path": "/identity-verification", "summary": "Update identity verification documents", "auth": true, "body": { "government_id": "GovernmentIdDto", "medical_license": "MedicalLicenseDto", "registry_check": "RegistryCheckDto" }, "response": "Updated verification status" },
+      { "method": "PATCH", "path": "/:id", "summary": "Update user profile by ID", "auth": true, "body": { "profile": "Profile object", "pre_existing_conditions": "Condition[]", "emergency_contacts": "EmergencyContact[]", "dependants": "Dependant[]" }, "response": "Updated profile" },
+      { "method": "GET", "path": "/security-question", "summary": "Get user's security question", "auth": true, "response": "Security question" },
+      { "method": "GET", "path": "/earnings", "summary": "Get user earnings (specialists)", "auth": true, "response": "Earnings data" },
+      { "method": "GET", "path": "/identity-verification", "summary": "Get identity verification status", "auth": true, "response": "Verification details" },
+      { "method": "GET", "path": "/:id", "summary": "Get user profile by ID", "auth": true, "response": "User profile" },
+      { "method": "DELETE", "path": "/pre-existing-conditions/:id", "summary": "Remove pre-existing condition", "auth": true, "response": "Updated conditions list" },
+      { "method": "DELETE", "path": "/emergency-contacts/:id", "summary": "Remove emergency contact", "auth": true, "response": "Updated contacts list" },
+      { "method": "DELETE", "path": "/dependants/:id", "summary": "Remove dependant", "auth": true, "response": "Updated dependants list" },
+      { "method": "POST", "path": "/availability", "summary": "Create specialist time availability", "auth": true, "body": { "time_availability": "TimeAvailability[]" }, "response": "Created availability" },
+      { "method": "POST", "path": "/preferences", "summary": "Create specialist preferences", "auth": true, "body": { "preferences": "Preferences object", "rate_cards": "RateCards object", "service_rates": "object", "two_factor": "TwoFactorSettings", "notifications": "NotificationPreferences" }, "response": "Created preferences" },
+      { "method": "GET", "path": "/file/presigned-url", "summary": "Generate presigned URL for S3 file upload", "auth": true, "query": { "fileName": "string", "fileType": "string" }, "response": "Presigned URL with 1 hour expiry" }
+    ]
+  },
+  "appointments": {
+    "name": "Appointments",
+    "basePath": "/api/appointments",
+    "description": "Appointment booking, specialist matching, Zoom video meetings, rescheduling, cancellation, ratings, and health records access",
+    "endpoints": [
+      { "method": "POST", "path": "/", "summary": "Create appointment (patient)", "auth": true, "body": { "specialist": "ObjectId", "category": "string", "appointment_date": "Date", "start_time": "string", "timezone": "string", "appointment_type": "string", "meeting_channel": "string", "patient_notes": "string", "appointment_fee": "number", "paymentMethod": "string (wallet|card)", "cardId": "string" }, "response": "Appointment with confirmation" },
+      { "method": "POST", "path": "/specialist/create", "summary": "Create appointment by specialist", "auth": true, "body": { "patient_id": "ObjectId", "is_new_patient": "boolean", "category": "string", "appointment_date": "Date", "start_time": "string", "duration_minutes": "number", "appointment_type": "string", "consultation_fee": "number", "payment_source": "string (specialist_wallet|patient_wallet)" }, "response": "Appointment created" },
+      { "method": "POST", "path": "/specialist/process-payment", "summary": "Process appointment payment (wizard step 4)", "auth": true, "body": { "patient_id": "string", "consultation_fee": "number", "platform_fee": "number", "total_amount": "number", "payment_source": "string" }, "response": "Payment processed" },
+      { "method": "POST", "path": "/transactions/verify", "summary": "Verify Paystack payment reference", "auth": false, "body": { "reference": "string" }, "response": "Transaction verified" },
+      { "method": "GET", "path": "/patient", "summary": "Get patient's appointments", "auth": true, "query": { "status": "string" }, "response": "Array of appointments" },
+      { "method": "GET", "path": "/specialist", "summary": "Get specialist's appointments", "auth": true, "query": { "status": "string" }, "response": "Array of appointments" },
+      { "method": "GET", "path": "/specialist-referrals", "summary": "Get specialist's patient referrals", "auth": true, "response": "Array of referrals" },
+      { "method": "POST", "path": "/available-specialists", "summary": "Get available specialists by filters", "auth": false, "body": { "professional_category": "string", "specialist_category": "string", "gender": "string", "urgency": "string (routine|urgent)", "languages": "string[]" }, "response": "Array of available specialists" },
+      { "method": "POST", "path": "/available-times", "summary": "Get available times for specialist", "auth": false, "body": { "preferredDates": "TimesParam[]", "specialistId": "string", "urgency": "string (routine|urgent)" }, "response": "Array of time slots" },
+      { "method": "GET", "path": "/filter-options", "summary": "Get appointment filter options", "auth": false, "response": "Filter options" },
+      { "method": "GET", "path": "/", "summary": "Get all appointments (admin)", "auth": true, "query": { "page": "number", "limit": "number" }, "response": "Paginated appointments" },
+      { "method": "GET", "path": "/:id", "summary": "Get single appointment by ID", "auth": true, "response": "Appointment object" },
+      { "method": "PATCH", "path": "/cancel", "summary": "Cancel appointment", "auth": true, "body": { "appointmentId": "ObjectId" }, "response": "Cancelled appointment" },
+      { "method": "PATCH", "path": "/:id/cancel", "summary": "Cancel appointment by ID", "auth": true, "response": "Cancelled appointment" },
+      { "method": "PATCH", "path": "/reschedule", "summary": "Reschedule appointment", "auth": true, "body": { "appointmentId": "ObjectId", "date": "Date", "time": "string", "reason": "string" }, "response": "Rescheduled appointment" },
+      { "method": "POST", "path": "/refer-specialist", "summary": "Refer patient to specialist(s)", "auth": true, "body": { "specialists": "ReferralType[]", "referral_note": "string", "patient": "ObjectId", "appointment": "ObjectId" }, "response": "Referral created" },
+      { "method": "PATCH", "path": "/end-meeting", "summary": "End Zoom meeting", "auth": true, "body": { "appointmentId": "ObjectId" }, "response": "Meeting ended" },
+      { "method": "PATCH", "path": "/meeting-notes", "summary": "Add meeting notes", "auth": true, "body": { "content": "string", "appointmentId": "ObjectId" }, "response": "Notes added" },
+      { "method": "PATCH", "path": "/:id/private-notes", "summary": "Update specialist's private notes", "auth": true, "body": { "private_notes": "string" }, "response": "Notes updated" },
+      { "method": "POST", "path": "/:id/rate", "summary": "Rate appointment (1-5 stars)", "auth": true, "body": { "score": "number (1-5)", "review": "string" }, "response": "Rating submitted" },
+      { "method": "POST", "path": "/:id/documents", "summary": "Upload document to appointment", "auth": true, "body": "multipart/form-data (file)", "response": "Document uploaded" },
+      { "method": "GET", "path": "/:id/documents", "summary": "Get appointment documents", "auth": true, "response": "Array of documents" },
+      { "method": "GET", "path": "/stats", "summary": "Get appointment statistics", "auth": true, "response": "Stats object" },
+      { "method": "GET", "path": "/patient/:patientId/health-profile", "summary": "Get patient health profile", "auth": true, "response": "Health profile" },
+      { "method": "GET", "path": "/patient/:patientId/full-health-records", "summary": "Get comprehensive patient health records", "auth": true, "query": { "checkupsPage": "string", "checkupsLimit": "string", "scoresPage": "string", "appointmentsPage": "string" }, "response": "Full health records" },
+      { "method": "GET", "path": "/patient/:patientId/health-scores", "summary": "Get patient health scores", "auth": true, "response": "Health scores" },
+      { "method": "GET", "path": "/health-scores", "summary": "Get current user's health scores", "auth": true, "response": "Health scores" },
+      { "method": "GET", "path": "/patient/:patientId/prescriptions", "summary": "Get patient prescriptions (specialist view)", "auth": true, "query": { "page": "string", "limit": "string" }, "response": "Paginated prescriptions" },
+      { "method": "GET", "path": "/patient/:patientId/uploaded-prescriptions", "summary": "Get patient uploaded prescriptions", "auth": true, "query": { "page": "string", "limit": "string" }, "response": "Paginated uploads" },
+      { "method": "GET", "path": "/patient/:patientId/pharmacy-orders", "summary": "Get patient pharmacy orders", "auth": true, "query": { "page": "string", "limit": "string" }, "response": "Paginated orders" },
+      { "method": "GET", "path": "/:appointmentId/specialist-details", "summary": "Get appointment details for specialist", "auth": true, "response": "Appointment details" }
+    ]
+  },
+  "health-checkup": {
+    "name": "Health Checkup",
+    "basePath": "/api/health-checkup",
+    "description": "AI-powered symptom checker using Infermedica API — begin checkup, parse symptoms, interview flow, diagnosis, and Claude AI summaries",
+    "endpoints": [
+      { "method": "POST", "path": "/", "summary": "Begin health checkup", "auth": true, "body": { "health_check_for": "string (SELF|DEPENDANT)", "checkup_owner_id": "ObjectId" }, "response": "Checkup session with interview token" },
+      { "method": "POST", "path": "/parse", "summary": "Parse free text symptoms", "auth": true, "body": { "sex": "string", "age": "Age object", "text": "string", "interview_token": "string" }, "response": "Parsed symptoms" },
+      { "method": "POST", "path": "/parse-enhanced", "summary": "Parse with enhanced NLP", "auth": true, "body": { "sex": "string", "age": "Age object", "text": "string", "interview_token": "string" }, "response": "Enhanced parsed symptoms" },
+      { "method": "POST", "path": "/risk-factors", "summary": "Get risk factors based on age", "auth": true, "body": { "age": "number", "interview_token": "string" }, "response": "Risk factors" },
+      { "method": "POST", "path": "/symptoms", "summary": "Get suggested symptoms", "auth": true, "body": { "sex": "string", "age": "Age object", "evidence": "any[]", "interview_token": "string" }, "response": "Suggested symptoms" },
+      { "method": "POST", "path": "/diagnosis", "summary": "Get diagnosis based on symptoms", "auth": true, "body": { "sex": "string", "age": "Age object", "evidence": "any[]", "should_stop": "boolean", "interview_token": "string" }, "response": "Diagnosis with conditions and triage level" },
+      { "method": "POST", "path": "/diagnosis-enhanced", "summary": "Get diagnosis with symptom duration support", "auth": true, "body": { "sex": "string", "age": "Age object", "evidence": "any[]", "should_stop": "boolean", "interview_token": "string", "extras": "object" }, "response": "Enhanced diagnosis" },
+      { "method": "POST", "path": "/explain-condition", "summary": "Get detailed explanation of condition", "auth": true, "body": { "sex": "string", "age": "Age object", "target": "string", "evidence": "any[]" }, "response": "Condition explanation" },
+      { "method": "GET", "path": "/search", "summary": "Search symptoms or conditions", "auth": true, "query": { "phrase": "string", "age": "number", "max_results": "number (1-20)", "sex": "string" }, "response": "Search results" },
+      { "method": "GET", "path": "/search-enhanced", "summary": "Search with enhanced NLP features", "auth": true, "query": { "phrase": "string", "age": "number", "max_results": "number", "sex": "string" }, "response": "Enhanced search results" },
+      { "method": "GET", "path": "/results/:id", "summary": "Get checkup results for user", "auth": true, "response": "Checkup results" },
+      { "method": "GET", "path": "/history", "summary": "Get checkup history", "auth": true, "query": { "page": "number", "limit": "number", "sortBy": "string (created_at|updated_at)", "sortOrder": "string (asc|desc)" }, "response": "Paginated checkup history" },
+      { "method": "GET", "path": "/:checkupId", "summary": "Get single health checkup", "auth": true, "response": "Checkup object" },
+      { "method": "DELETE", "path": "/:checkupId", "summary": "Delete health checkup", "auth": true, "response": "Deletion confirmation" },
+      { "method": "POST", "path": "/extended-diagnosis", "summary": "Get extended diagnosis with probability threshold", "auth": true, "body": { "interview_token": "string", "min_probability": "number (0.01-1)", "limit": "number (10-50)" }, "response": "Extended diagnosis list" },
+      { "method": "GET", "path": "/settings/test", "summary": "Test Infermedica API settings", "auth": true, "response": "API config" },
+      { "method": "GET", "path": "/claude-summary/status", "summary": "Check Claude summary availability and credits", "auth": true, "response": "Credit status" },
+      { "method": "GET", "path": "/:checkupId/claude-summary", "summary": "Get stored Claude AI summary", "auth": true, "response": "Claude summary" },
+      { "method": "POST", "path": "/:checkupId/generate-claude-summary", "summary": "Generate Claude AI summary (uses credits)", "auth": true, "body": { "answered_questions": "any[]" }, "response": "Generated summary" }
+    ]
+  },
+  "vitals": {
+    "name": "Vitals",
+    "basePath": "/api/vitals",
+    "description": "Track patient vital signs — temperature, weight, blood pressure, blood sugar, pulse rate with chart data",
+    "endpoints": [
+      { "method": "POST", "path": "/", "summary": "Record vital signs", "auth": true, "body": { "body_temp": "{ value, unit }", "body_weight": "{ value, unit }", "blood_pressure": "{ value, unit }", "blood_sugar_level": "{ value, unit }", "pulse_rate": "{ value, unit }" }, "response": "Created vitals record" },
+      { "method": "GET", "path": "/", "summary": "Get current user's vitals", "auth": true, "response": "Vitals array" },
+      { "method": "GET", "path": "/select", "summary": "Get specific vital field(s)", "auth": true, "query": { "fieldsToSelect": "string | string[]" }, "response": "Selected vitals" },
+      { "method": "GET", "path": "/recent", "summary": "Get most recent vital signs", "auth": true, "response": "Most recent vitals" },
+      { "method": "GET", "path": "/chart", "summary": "Get vitals chart data", "auth": true, "query": { "vitalToSelect": "string", "start_date": "Date", "end_date": "Date", "duration": "string" }, "response": "Chart data" },
+      { "method": "GET", "path": "/:patientId", "summary": "Get patient's vitals", "auth": true, "response": "Patient vitals" },
+      { "method": "PATCH", "path": "/:id", "summary": "Update vital record", "auth": true, "body": { "body_temp": "{ value, unit }", "body_weight": "{ value, unit }", "blood_pressure": "{ value, unit }", "blood_sugar_level": "{ value, unit }", "pulse_rate": "{ value, unit }" }, "response": "Updated vitals" },
+      { "method": "DELETE", "path": "/:id", "summary": "Delete vital record", "auth": true, "response": "Deletion confirmation" }
+    ]
+  },
+  "prescriptions": {
+    "name": "Prescriptions",
+    "basePath": "/api/prescriptions",
+    "description": "Specialist-created prescriptions, file uploads, orders, payments, and pharmacy dispatching",
+    "endpoints": [
+      { "method": "POST", "path": "/", "summary": "Create prescription (specialist)", "auth": true, "body": { "patient": "ObjectId", "items": "Item[]" }, "response": "Created prescription" },
+      { "method": "POST", "path": "/file", "summary": "Upload external prescription file", "auth": true, "body": { "specialist": "ObjectId", "documents": "Documents[]" }, "response": "Uploaded prescription" },
+      { "method": "POST", "path": "/start-payment", "summary": "Initiate payment for order", "auth": true, "body": { "amount": "number" }, "response": "Payment initialization" },
+      { "method": "GET", "path": "/", "summary": "Get user's prescriptions", "auth": true, "response": "Prescription array" },
+      { "method": "GET", "path": "/internal", "summary": "Get internal (specialist-created) prescriptions", "auth": true, "response": "Prescription array" },
+      { "method": "GET", "path": "/specialist", "summary": "Get specialist's prescriptions", "auth": true, "response": "Prescription array" },
+      { "method": "GET", "path": "/external", "summary": "Get external uploaded prescriptions", "auth": true, "response": "Prescription file array" },
+      { "method": "GET", "path": "/orders", "summary": "Get patient's orders", "auth": true, "response": "Order array" },
+      { "method": "GET", "path": "/orders/:id", "summary": "Get specific order", "auth": true, "response": "Order object" },
+      { "method": "GET", "path": "/:id", "summary": "Get prescription by ID", "auth": true, "response": "Prescription object" },
+      { "method": "PATCH", "path": "/send-patient", "summary": "Send prescription to patient", "auth": true, "body": { "prescriptionId": "ObjectId" }, "response": "Sent confirmation" },
+      { "method": "PATCH", "path": "/send-pharmacy", "summary": "Send prescription to pharmacy", "auth": true, "body": { "pharmacy": "ObjectId", "prescriptionId": "ObjectId" }, "response": "Sent to pharmacy" },
+      { "method": "PATCH", "path": "/verify-payment", "summary": "Verify order payment", "auth": true, "body": { "reference": "string", "orderId": "ObjectId" }, "response": "Payment verified" },
+      { "method": "PATCH", "path": "/confirm-order", "summary": "Confirm order", "auth": true, "body": { "orderId": "ObjectId" }, "response": "Order confirmed" },
+      { "method": "PATCH", "path": "/orders/:id", "summary": "Update order", "auth": true, "response": "Updated order" },
+      { "method": "PATCH", "path": "/:id", "summary": "Update prescription", "auth": true, "body": { "patient": "ObjectId", "items": "Item[]" }, "response": "Updated prescription" },
+      { "method": "DELETE", "path": "/:id", "summary": "Delete prescription", "auth": true, "response": "Deletion confirmation" }
+    ]
+  },
+  "pharmacy-drugs": {
+    "name": "Pharmacy Drugs",
+    "basePath": "/api/pharmacy/drugs",
+    "description": "Drug catalog — search, categories, safety info, interactions, similar drugs, and admin management",
+    "endpoints": [
+      { "method": "GET", "path": "/search", "summary": "Search drugs by name/strength", "auth": false, "query": { "name": "string", "page": "number", "limit": "number" }, "response": "Paginated drug results" },
+      { "method": "GET", "path": "/otc", "summary": "Get OTC drugs", "auth": false, "query": { "page": "number", "limit": "number" }, "response": "Paginated OTC drugs" },
+      { "method": "GET", "path": "/category/:category", "summary": "Get drugs by category", "auth": false, "query": { "page": "number", "limit": "number", "sort": "string", "priceRange": "string" }, "response": "Paginated drugs" },
+      { "method": "GET", "path": "/featured", "summary": "Get featured drugs", "auth": false, "response": "Featured drugs array" },
+      { "method": "GET", "path": "/categories", "summary": "Get all drug categories", "auth": false, "response": "Categories array" },
+      { "method": "GET", "path": "/manufacturers", "summary": "Get manufacturers", "auth": false, "response": "Manufacturers array" },
+      { "method": "GET", "path": "/symptoms", "summary": "Search drugs by symptoms", "auth": false, "query": { "symptoms": "string" }, "response": "Matching drugs" },
+      { "method": "GET", "path": "/:id", "summary": "Get drug by ID", "auth": false, "response": "Drug object with full details" },
+      { "method": "POST", "path": "/check-interactions", "summary": "Check drug interactions", "auth": true, "body": { "drug_ids": "string[]" }, "response": "Interaction results" },
+      { "method": "GET", "path": "/interaction-settings", "summary": "Get interaction checker settings", "auth": true, "response": "Settings object" },
+      { "method": "GET", "path": "/:id/safety", "summary": "Get drug safety info (public)", "auth": false, "response": "Safety info with AI summary" },
+      { "method": "GET", "path": "/:id/similar", "summary": "Get similar drugs", "auth": false, "response": "Similar drugs array" },
+      { "method": "POST", "path": "/", "summary": "Create drug (admin)", "auth": true, "body": { "name": "string", "generic_name": "string", "strength": "string", "dosage_form": "ObjectId", "route": "ObjectId", "categories": "ObjectId[]", "manufacturer": "string", "price": "number", "requires_prescription": "boolean" }, "response": "Created drug" },
+      { "method": "GET", "path": "/", "summary": "Get all drugs (admin)", "auth": true, "query": { "page": "number", "limit": "number" }, "response": "Paginated drugs" },
+      { "method": "GET", "path": "/admin/statistics", "summary": "Drug statistics (admin)", "auth": true, "response": "Statistics" },
+      { "method": "PATCH", "path": "/:id", "summary": "Update drug (admin)", "auth": true, "response": "Updated drug" },
+      { "method": "DELETE", "path": "/:id", "summary": "Soft delete drug", "auth": true, "response": "Deleted" },
+      { "method": "DELETE", "path": "/:id/permanent", "summary": "Hard delete drug", "auth": true, "response": "Permanently deleted" },
+      { "method": "GET", "path": "/:id/safety/admin", "summary": "Get full safety info (admin)", "auth": true, "response": "Full safety data" },
+      { "method": "POST", "path": "/:id/safety/sync", "summary": "Sync safety from OpenFDA (admin)", "auth": true, "response": "Sync result" },
+      { "method": "POST", "path": "/:id/safety/ai-summary", "summary": "Generate AI safety summary (admin)", "auth": true, "response": "Generated summary" },
+      { "method": "GET", "path": "/:id/similar/admin", "summary": "Get similar drugs breakdown (admin)", "auth": true, "response": "Similar drugs breakdown" },
+      { "method": "POST", "path": "/:id/similar/link", "summary": "Manually link similar drug", "auth": true, "response": "Link created" },
+      { "method": "DELETE", "path": "/:id/similar/unlink/:targetId", "summary": "Unlink similar drug", "auth": true, "response": "Unlinked" },
+      { "method": "POST", "path": "/:id/similar/exclude", "summary": "Exclude from auto-match", "auth": true, "response": "Excluded" },
+      { "method": "DELETE", "path": "/:id/similar/exclude/:targetId", "summary": "Remove exclusion", "auth": true, "response": "Exclusion removed" },
+      { "method": "GET", "path": "/admin/ai-status", "summary": "Check AI availability", "auth": true, "response": "AI status" },
+      { "method": "PATCH", "path": "/:id/safety", "summary": "Update safety customizations", "auth": true, "response": "Updated safety" },
+      { "method": "GET", "path": "/admin/safety-stats", "summary": "FDA sync statistics", "auth": true, "response": "Sync stats" },
+      { "method": "POST", "path": "/admin/safety-sync-batch", "summary": "Trigger batch FDA sync", "auth": true, "response": "Batch sync started" }
+    ]
+  },
+  "pharmacy-pharmacies": {
+    "name": "Pharmacy Pharmacies",
+    "basePath": "/api/pharmacy/pharmacies",
+    "description": "Pharmacy registration, search, verification, location-based lookup, and pickup centers",
+    "endpoints": [
+      { "method": "GET", "path": "/search", "summary": "Search pharmacies", "auth": false, "query": { "name": "string", "page": "number" }, "response": "Paginated pharmacies" },
+      { "method": "GET", "path": "/accepting-orders", "summary": "Get pharmacies accepting orders", "auth": false, "response": "Active pharmacies" },
+      { "method": "GET", "path": "/delivery-zone/:zone", "summary": "Get pharmacies by delivery zone", "auth": false, "response": "Pharmacies in zone" },
+      { "method": "GET", "path": "/nearby", "summary": "Get nearby pharmacies", "auth": false, "query": { "lat": "number", "lng": "number", "radius": "number" }, "response": "Nearby pharmacies" },
+      { "method": "GET", "path": "/pickup-centers", "summary": "Get available pickup centers", "auth": false, "response": "Pickup centers" },
+      { "method": "GET", "path": "/pickup-centers/recommend", "summary": "Recommend pickup centers", "auth": false, "response": "Recommended centers" },
+      { "method": "GET", "path": "/pickup-centers/:id", "summary": "Get pickup center details", "auth": false, "response": "Center details" },
+      { "method": "GET", "path": "/:id", "summary": "Get pharmacy by ID", "auth": false, "response": "Pharmacy object" },
+      { "method": "POST", "path": "/", "summary": "Register pharmacy", "auth": true, "body": { "name": "string", "address": "string", "phone": "string", "license_number": "string" }, "response": "Created pharmacy" },
+      { "method": "PATCH", "path": "/:id", "summary": "Update pharmacy profile", "auth": true, "response": "Updated pharmacy" },
+      { "method": "PATCH", "path": "/:id/online-status", "summary": "Set online/offline status", "auth": true, "body": { "is_online": "boolean" }, "response": "Status updated" },
+      { "method": "GET", "path": "/", "summary": "Get all pharmacies (admin)", "auth": true, "response": "All pharmacies" },
+      { "method": "GET", "path": "/admin/statistics", "summary": "Pharmacy statistics", "auth": true, "response": "Statistics" },
+      { "method": "PATCH", "path": "/:id/verify", "summary": "Verify pharmacy (admin)", "auth": true, "response": "Pharmacy verified" },
+      { "method": "PATCH", "path": "/:id/suspend", "summary": "Suspend pharmacy (admin)", "auth": true, "response": "Pharmacy suspended" },
+      { "method": "PATCH", "path": "/:id/reactivate", "summary": "Reactivate pharmacy", "auth": true, "response": "Pharmacy reactivated" },
+      { "method": "PATCH", "path": "/:id/rating", "summary": "Update rating", "auth": true, "response": "Rating updated" },
+      { "method": "DELETE", "path": "/:id", "summary": "Soft delete pharmacy", "auth": true, "response": "Deleted" }
+    ]
+  },
+  "pharmacy-orders": {
+    "name": "Pharmacy Orders",
+    "basePath": "/api/pharmacy-orders",
+    "description": "Drug ordering — OTC and prescription orders, cart validation, payment (wallet/card/split), delivery, pickup, tracking",
+    "endpoints": [
+      { "method": "POST", "path": "/", "summary": "Create general order", "auth": true, "body": { "items": "OrderItem[]", "delivery_method": "string (PICKUP|DELIVERY)", "delivery_address": "address object", "patient_notes": "string" }, "response": "Created order" },
+      { "method": "POST", "path": "/otc", "summary": "Create OTC order", "auth": true, "body": { "items": "OrderItem[]", "delivery_method": "string", "delivery_address": "address object" }, "response": "Created OTC order" },
+      { "method": "POST", "path": "/prescription", "summary": "Create prescription order", "auth": true, "body": { "prescription_id": "string", "items": "OrderItem[]", "delivery_method": "string" }, "response": "Created prescription order" },
+      { "method": "POST", "path": "/validate-cart", "summary": "Validate cart items", "auth": true, "body": { "items": "CartItem[]" }, "response": "Validation result" },
+      { "method": "GET", "path": "/allowance/:drugId", "summary": "Get purchase allowance", "auth": true, "response": "Allowance info" },
+      { "method": "GET", "path": "/purchase-history", "summary": "Get purchase history (30 days)", "auth": true, "response": "Purchase history" },
+      { "method": "GET", "path": "/my-orders", "summary": "Get patient's orders", "auth": true, "query": { "page": "number", "limit": "number", "status": "string" }, "response": "Paginated orders" },
+      { "method": "GET", "path": "/:id", "summary": "Get order by ID", "auth": true, "response": "Order details" },
+      { "method": "GET", "path": "/:id/pdf", "summary": "Get presigned URL for order PDF", "auth": true, "response": "Presigned PDF URL" },
+      { "method": "GET", "path": "/track/:orderNumber", "summary": "Track order by number", "auth": true, "response": "Order details" },
+      { "method": "PATCH", "path": "/:id/cancel", "summary": "Cancel order (patient)", "auth": true, "body": { "cancellation_reason": "string" }, "response": "Cancelled order" },
+      { "method": "PATCH", "path": "/:id/rate", "summary": "Rate order", "auth": true, "body": { "rating": "number", "review": "string" }, "response": "Order rated" },
+      { "method": "GET", "path": "/addresses/my", "summary": "Get patient's delivery addresses", "auth": true, "response": "Address array" },
+      { "method": "POST", "path": "/addresses/my", "summary": "Add delivery address", "auth": true, "body": { "label": "string", "recipient_name": "string", "phone": "string", "street": "string", "city": "string", "state": "string" }, "response": "Created address" },
+      { "method": "PATCH", "path": "/addresses/my/:addressId", "summary": "Update delivery address", "auth": true, "response": "Updated address" },
+      { "method": "DELETE", "path": "/addresses/my/:addressId", "summary": "Delete delivery address", "auth": true, "response": "Deleted" },
+      { "method": "PATCH", "path": "/addresses/my/:addressId/default", "summary": "Set default address", "auth": true, "response": "Default set" },
+      { "method": "GET", "path": "/pharmacy/:pharmacyId", "summary": "Get pharmacy's orders", "auth": true, "response": "Paginated orders" },
+      { "method": "PATCH", "path": "/:id/status", "summary": "Update order status (pharmacy)", "auth": true, "body": { "status": "PharmacyOrderStatus", "note": "string" }, "response": "Status updated" },
+      { "method": "PATCH", "path": "/:id/verify-prescription", "summary": "Verify prescription (pharmacist)", "auth": true, "body": { "verification_status": "string", "verification_notes": "string", "rejection_reason": "string" }, "response": "Verification updated" },
+      { "method": "PATCH", "path": "/:id/payment", "summary": "Process payment", "auth": true, "body": { "payment_reference": "string", "payment_method": "string", "amount": "number" }, "response": "Payment processed" },
+      { "method": "POST", "path": "/:id/pay-with-wallet", "summary": "Pay with wallet", "auth": true, "body": { "amount": "number" }, "response": "Payment result" },
+      { "method": "POST", "path": "/:id/split-payment", "summary": "Split payment (wallet + card)", "auth": true, "body": { "wallet_amount": "number", "card_payment_reference": "string", "card_amount": "number" }, "response": "Split payment result" },
+      { "method": "POST", "path": "/:id/initialize-payment", "summary": "Initialize Paystack payment", "auth": true, "response": "{ authorization_url }" },
+      { "method": "PATCH", "path": "/:id/dispense", "summary": "Dispense order (pharmacy)", "auth": true, "body": { "items": "DispenseItemDto[]", "dispensing_notes": "string" }, "response": "Dispensed" },
+      { "method": "PATCH", "path": "/:id/delivery", "summary": "Assign delivery", "auth": true, "body": { "tracking_number": "string", "estimated_delivery_date": "string", "delivery_notes": "string" }, "response": "Delivery assigned" },
+      { "method": "PATCH", "path": "/:id/pickup", "summary": "Complete pickup", "auth": true, "body": { "pickup_code": "string", "notes": "string" }, "response": "Pickup completed" },
+      { "method": "GET", "path": "/admin/search", "summary": "Search orders (admin)", "auth": true, "response": "Paginated results" },
+      { "method": "GET", "path": "/admin/statistics", "summary": "Order statistics", "auth": true, "response": "Statistics" }
+    ]
+  },
+  "pharmacy-rxgpt": {
+    "name": "RxGPT (AI Prescription Analysis)",
+    "basePath": "/api/pharmacy/rxgpt",
+    "description": "AI-powered prescription safety analysis, drug interaction checking, medication suggestions, and specialist feedback",
+    "endpoints": [
+      { "method": "POST", "path": "/analyze", "summary": "Full prescription safety analysis", "auth": true, "body": { "patient_id": "string", "proposed_drugs": "ProposedDrugDto[]", "linked_appointments": "string[]", "include_alternatives": "boolean", "skip_cache": "boolean" }, "response": "Analysis with alerts and recommendations" },
+      { "method": "POST", "path": "/quick-check", "summary": "Quick safety check for single drug", "auth": true, "body": { "patient_id": "string", "drug_name": "string", "generic_name": "string", "strength": "string", "dosage": "string" }, "response": "Quick safety result" },
+      { "method": "POST", "path": "/suggest-medications", "summary": "Suggest medications for diagnosis", "auth": true, "body": { "patient_id": "string", "diagnosis": "string", "symptoms": "string[]", "max_suggestions": "number", "prefer_inventory": "boolean" }, "response": "Medication suggestions" },
+      { "method": "POST", "path": "/standalone-analyze", "summary": "Standalone analysis without patient ID", "auth": true, "body": { "diagnosis": "string", "patient_context": "InlinePatientContextDto", "proposed_drugs": "ProposedDrugDto[]" }, "response": "Analysis result" },
+      { "method": "POST", "path": "/rerun", "summary": "Re-run analysis with same inputs", "auth": true, "body": { "source_analysis_id": "string" }, "response": "Rerun result" },
+      { "method": "POST", "path": "/check-interactions", "summary": "Standalone drug interaction checker", "auth": true, "body": { "drugs": "Array<{ name, dose?, route? }>" }, "response": "Interaction results" },
+      { "method": "GET", "path": "/credits", "summary": "Get specialist credit balance", "auth": true, "response": "Credit balance" },
+      { "method": "GET", "path": "/settings", "summary": "Get RxGPT settings", "auth": true, "response": "Settings" },
+      { "method": "GET", "path": "/status", "summary": "Check RxGPT availability", "auth": true, "response": "Availability status" },
+      { "method": "GET", "path": "/history", "summary": "Get analysis history", "auth": true, "query": { "page": "number", "limit": "number" }, "response": "Paginated history" },
+      { "method": "GET", "path": "/history/:id", "summary": "Get specific analysis", "auth": true, "response": "Analysis details" },
+      { "method": "GET", "path": "/stats", "summary": "Get analysis statistics", "auth": true, "response": "Statistics" },
+      { "method": "GET", "path": "/prescription/:prescriptionId/history", "summary": "Get analysis history for prescription", "auth": true, "response": "Analysis history" },
+      { "method": "GET", "path": "/patient/:patientId/history", "summary": "Get analysis history for patient", "auth": true, "response": "Paginated history" },
+      { "method": "PATCH", "path": "/analysis/:analysisId/link-prescription", "summary": "Link analysis to prescription", "auth": true, "body": { "prescription_id": "string" }, "response": "Linked" },
+      { "method": "POST", "path": "/feedback", "summary": "Submit feedback for analysis", "auth": true, "body": { "analysis_id": "string", "rating": "RxGPTFeedbackRating", "safety_assessment_correct": "boolean", "drug_feedback": "DrugFeedbackDto[]" }, "response": "Feedback submitted" },
+      { "method": "GET", "path": "/feedback/:analysisId", "summary": "Get feedback for analysis", "auth": true, "response": "Feedback" }
+    ]
+  },
+  "pharmacy-inventory": {
+    "name": "Pharmacy Inventory",
+    "basePath": "/api/pharmacy/inventory",
+    "description": "Inventory management — stock tracking, receiving, adjustments, dispensing, reservations, and alerts",
+    "endpoints": [
+      { "method": "POST", "path": "/", "summary": "Create inventory record", "auth": true, "body": { "pharmacy": "string", "drug": "string", "batch_number": "string", "expiry_date": "string", "quantity_on_hand": "number", "cost_price": "number", "selling_price": "number" }, "response": "Created record" },
+      { "method": "GET", "path": "/search", "summary": "Search inventory", "auth": true, "response": "Paginated results" },
+      { "method": "GET", "path": "/alerts/low-stock", "summary": "Get low stock alerts", "auth": true, "response": "Low stock items" },
+      { "method": "GET", "path": "/alerts/expiry", "summary": "Get expiry alerts", "auth": true, "response": "Expiring items" },
+      { "method": "GET", "path": "/summary/:pharmacyId", "summary": "Get inventory summary", "auth": true, "response": "Summary" },
+      { "method": "GET", "path": "/pharmacy/:pharmacyId", "summary": "Get pharmacy inventory", "auth": true, "response": "Inventory list" },
+      { "method": "GET", "path": "/available/:pharmacyId/:drugId", "summary": "Get available stock for drug", "auth": true, "response": "Available stock" },
+      { "method": "GET", "path": "/:id", "summary": "Get inventory by ID", "auth": true, "response": "Inventory record" },
+      { "method": "GET", "path": "/:id/history", "summary": "Get adjustment history", "auth": true, "response": "Paginated history" },
+      { "method": "PATCH", "path": "/:id", "summary": "Update inventory", "auth": true, "response": "Updated record" },
+      { "method": "POST", "path": "/receive", "summary": "Receive new stock", "auth": true, "body": { "pharmacy": "string", "drug": "string", "batch_number": "string", "expiry_date": "string", "quantity": "number", "cost_price": "number", "selling_price": "number" }, "response": "Stock received" },
+      { "method": "POST", "path": "/:id/adjust", "summary": "Adjust stock quantity", "auth": true, "body": { "reason": "AdjustmentReason", "quantity_change": "number", "notes": "string" }, "response": "Adjusted" },
+      { "method": "POST", "path": "/reserve", "summary": "Reserve stock for order", "auth": true, "body": { "inventory_id": "string", "quantity": "number", "order_id": "string" }, "response": "Reserved" },
+      { "method": "POST", "path": "/release", "summary": "Release reserved stock", "auth": true, "body": { "inventory_id": "string", "quantity": "number", "order_id": "string" }, "response": "Released" },
+      { "method": "POST", "path": "/:id/dispense", "summary": "Dispense stock", "auth": true, "body": { "quantity": "number", "orderId": "string" }, "response": "Dispensed" },
+      { "method": "POST", "path": "/:id/stock-count", "summary": "Perform stock count", "auth": true, "body": { "counted_quantity": "number", "notes": "string" }, "response": "Count result" }
+    ]
+  },
+  "prescription-upload": {
+    "name": "Prescription Upload",
+    "basePath": "/api/pharmacy/prescriptions",
+    "description": "Patient prescription image upload, AI verification, pharmacist review, and clarification workflow",
+    "endpoints": [
+      { "method": "POST", "path": "/upload", "summary": "Upload prescription image", "auth": true, "body": "multipart/form-data (prescription file + uploadSource)", "response": "Upload confirmation with prescription number" },
+      { "method": "GET", "path": "/my-uploads", "summary": "Get patient's prescription uploads", "auth": true, "response": "Paginated uploads" },
+      { "method": "GET", "path": "/approved", "summary": "Get approved prescriptions for orders", "auth": true, "response": "Approved prescriptions" },
+      { "method": "GET", "path": "/:uploadId", "summary": "Get upload details", "auth": true, "response": "Upload with presigned URL" },
+      { "method": "GET", "path": "/:uploadId/verification", "summary": "Get verification status", "auth": true, "response": "Verification status" },
+      { "method": "GET", "path": "/:uploadId/verification/details", "summary": "Get detailed verification checks", "auth": true, "response": "Detailed verification" },
+      { "method": "DELETE", "path": "/:uploadId", "summary": "Soft delete upload", "auth": true, "response": "Deleted" },
+      { "method": "POST", "path": "/:uploadId/retry-verification", "summary": "Retry failed verification", "auth": true, "response": "Retry initiated" },
+      { "method": "GET", "path": "/review/pending", "summary": "Get pending pharmacist reviews", "auth": true, "response": "Pending prescriptions" },
+      { "method": "PATCH", "path": "/:uploadId/review", "summary": "Submit pharmacist review", "auth": true, "body": { "decision": "string", "notes": "string", "rejectionReason": "string" }, "response": "Review submitted" },
+      { "method": "GET", "path": "/:uploadId/clarification", "summary": "Get clarification request details", "auth": true, "response": "Clarification details" },
+      { "method": "POST", "path": "/:uploadId/clarification/respond", "summary": "Submit clarification response", "auth": true, "body": { "response_message": "string", "document": "file" }, "response": "Response submitted" },
+      { "method": "GET", "path": "/clarifications/pending", "summary": "Get pending clarifications", "auth": true, "response": "Pending clarifications" },
+      { "method": "GET", "path": "/stats/summary", "summary": "Get upload statistics", "auth": true, "response": "Upload stats" }
+    ]
+  },
+  "specialist-pharmacy": {
+    "name": "Specialist Pharmacy",
+    "basePath": "/api/specialist/pharmacy",
+    "description": "Specialist access to patient records, drug catalog, prescriptions, and delivery addresses for prescribing workflow",
+    "endpoints": [
+      { "method": "GET", "path": "/dashboard", "summary": "Get specialist pharmacy dashboard", "auth": true, "response": "Dashboard stats" },
+      { "method": "GET", "path": "/patients", "summary": "Search patients", "auth": true, "query": { "search": "string", "type": "PatientSearchType", "page": "number" }, "response": "Paginated patients" },
+      { "method": "GET", "path": "/patients/:id", "summary": "Get patient details", "auth": true, "response": "Patient details" },
+      { "method": "GET", "path": "/patients/:id/medical-history", "summary": "Get medical history", "auth": true, "response": "Medical history" },
+      { "method": "GET", "path": "/patients/:id/prescriptions", "summary": "Get prescription history", "auth": true, "response": "Prescriptions" },
+      { "method": "GET", "path": "/patients/:id/vitals", "summary": "Get patient vitals", "auth": true, "response": "Vitals" },
+      { "method": "GET", "path": "/patients/:id/health-checkups", "summary": "Get health checkup history", "auth": true, "response": "Paginated checkups" },
+      { "method": "GET", "path": "/health-checkups/:id", "summary": "Get detailed health checkup", "auth": true, "response": "Checkup details" },
+      { "method": "GET", "path": "/patients/:id/appointments", "summary": "Get patient appointments", "auth": true, "response": "Paginated appointments" },
+      { "method": "GET", "path": "/patients/:id/health-scores", "summary": "Get patient health scores", "auth": true, "response": "Health scores" },
+      { "method": "GET", "path": "/patients/:id/vitals/:type", "summary": "Get vitals history by type", "auth": true, "response": "Vitals history" },
+      { "method": "GET", "path": "/drugs", "summary": "Search drug catalog", "auth": true, "query": { "search": "string", "category": "string", "stock_status": "string" }, "response": "Paginated drugs" },
+      { "method": "GET", "path": "/drugs/categories", "summary": "Get drug categories", "auth": true, "response": "Categories" },
+      { "method": "GET", "path": "/drugs/manufacturers", "summary": "Get manufacturers", "auth": true, "response": "Manufacturers" },
+      { "method": "GET", "path": "/drugs/:id", "summary": "Get drug details", "auth": true, "response": "Drug with availability" },
+      { "method": "GET", "path": "/drugs/:id/batches", "summary": "Get available batches", "auth": true, "response": "Batches" },
+      { "method": "GET", "path": "/patients/:id/addresses", "summary": "Get patient delivery addresses", "auth": true, "response": "Addresses" },
+      { "method": "POST", "path": "/patients/:id/addresses", "summary": "Add patient delivery address", "auth": true, "body": { "label": "string", "recipient_name": "string", "phone": "string", "street": "string", "city": "string", "state": "string" }, "response": "Created address" },
+      { "method": "PATCH", "path": "/patients/:id/addresses/:addressId", "summary": "Update delivery address", "auth": true, "response": "Updated address" },
+      { "method": "DELETE", "path": "/patients/:id/addresses/:addressId", "summary": "Delete delivery address", "auth": true, "response": "Deleted" },
+      { "method": "PATCH", "path": "/patients/:id/addresses/:addressId/default", "summary": "Set default address", "auth": true, "response": "Default set" }
+    ]
+  },
+  "wallets": {
+    "name": "Wallets (Legacy)",
+    "basePath": "/api/wallets",
+    "description": "Legacy wallet — balance, transactions, funding via Paystack, and withdrawals",
+    "endpoints": [
+      { "method": "GET", "path": "/balance", "summary": "Get wallet balance", "auth": true, "response": "Balance" },
+      { "method": "GET", "path": "/", "summary": "Get transaction history", "auth": true, "query": { "page": "number", "limit": "number" }, "response": "Paginated transactions" },
+      { "method": "POST", "path": "/withdraw", "summary": "Withdraw from wallet", "auth": true, "body": { "amount": "number" }, "response": "Withdrawal confirmation" },
+      { "method": "POST", "path": "/fund", "summary": "Initialize wallet funding (Paystack)", "auth": true, "body": { "amount": "number" }, "response": "Payment initialization" },
+      { "method": "POST", "path": "/fund/verify", "summary": "Verify funding payment", "auth": true, "body": { "reference": "string" }, "response": "Payment verified" }
+    ]
+  },
+  "accounting-wallet": {
+    "name": "Unified Wallet (Accounting)",
+    "basePath": "/api/wallet",
+    "description": "Unified wallet system — balance (available/held/pending), top-up, transfer, holds, releases, and bank withdrawals",
+    "endpoints": [
+      { "method": "GET", "path": "/", "summary": "Get wallet balance", "auth": true, "response": "Balance with available, held, pending amounts" },
+      { "method": "GET", "path": "/transactions", "summary": "Get transaction history", "auth": true, "query": { "page": "number", "limit": "number", "category": "string", "start_date": "Date", "end_date": "Date" }, "response": "Paginated transactions" },
+      { "method": "POST", "path": "/topup/initialize", "summary": "Initialize top-up via Paystack", "auth": true, "body": { "amount": "number" }, "response": "Top-up initialization" },
+      { "method": "POST", "path": "/topup/verify", "summary": "Verify top-up payment", "auth": true, "body": { "reference": "string" }, "response": "Verification result" },
+      { "method": "POST", "path": "/transfer", "summary": "Transfer to another wallet", "auth": true, "body": { "to_wallet_id": "string", "amount": "number", "description": "string" }, "response": "Transfer confirmation" },
+      { "method": "POST", "path": "/hold", "summary": "Hold funds (specialists)", "auth": true, "body": { "amount": "number", "reference_id": "string", "description": "string" }, "response": "Hold confirmation" },
+      { "method": "POST", "path": "/release/:referenceType/:referenceId", "summary": "Release held funds", "auth": true, "body": { "reason": "string" }, "response": "Release confirmation" },
+      { "method": "POST", "path": "/withdraw", "summary": "Withdraw to bank account", "auth": true, "body": { "amount": "number", "bank_code": "string", "account_number": "string" }, "response": "Withdrawal confirmation" }
+    ]
+  },
+  "cards": {
+    "name": "Cards",
+    "basePath": "/api/cards",
+    "description": "Saved payment cards via Paystack — add, verify, set default, delete",
+    "endpoints": [
+      { "method": "GET", "path": "/", "summary": "Get saved cards", "auth": true, "response": "Card array" },
+      { "method": "PATCH", "path": "/", "summary": "Make card default", "auth": true, "body": { "cardId": "string" }, "response": "Default set" },
+      { "method": "DELETE", "path": "/", "summary": "Delete card", "auth": true, "body": { "cardId": "string" }, "response": "Card deleted" },
+      { "method": "POST", "path": "/", "summary": "Add new card (Paystack)", "auth": true, "response": "Payment initialization" },
+      { "method": "POST", "path": "/verify", "summary": "Verify card addition", "auth": true, "body": { "reference": "string" }, "response": "Card added" }
+    ]
+  },
+  "notifications": {
+    "name": "Notifications",
+    "basePath": "/api/notifications",
+    "description": "Multi-channel notifications — in-app, email, SMS, push with preferences and batch operations",
+    "endpoints": [
+      { "method": "GET", "path": "/", "summary": "Get notifications", "auth": true, "query": { "page": "number", "limit": "number" }, "response": "Paginated notifications" },
+      { "method": "GET", "path": "/unread-count", "summary": "Get unread count", "auth": true, "response": "Unread count" },
+      { "method": "GET", "path": "/stats", "summary": "Get notification stats", "auth": true, "response": "Statistics" },
+      { "method": "GET", "path": "/preferences", "summary": "Get notification preferences", "auth": true, "response": "Preferences" },
+      { "method": "PATCH", "path": "/preferences", "summary": "Update notification preferences", "auth": true, "response": "Updated preferences" },
+      { "method": "PATCH", "path": "/read-all", "summary": "Mark all as read", "auth": true, "response": "All marked read" },
+      { "method": "POST", "path": "/read-multiple", "summary": "Mark multiple as read", "auth": true, "body": { "ids": "string[]" }, "response": "Marked read" },
+      { "method": "POST", "path": "/delete-multiple", "summary": "Delete multiple notifications", "auth": true, "body": { "ids": "string[]" }, "response": "Deleted" },
+      { "method": "GET", "path": "/:id", "summary": "Get single notification", "auth": true, "response": "Notification" },
+      { "method": "PATCH", "path": "/:id/read", "summary": "Mark single as read", "auth": true, "response": "Marked read" },
+      { "method": "DELETE", "path": "/:id", "summary": "Delete notification", "auth": true, "response": "Deleted" }
+    ]
+  },
+  "subscriptions": {
+    "name": "Subscriptions",
+    "basePath": "/api/subscriptions",
+    "description": "Plan subscriptions — subscribe, verify payment, get active subscription, cancel",
+    "endpoints": [
+      { "method": "POST", "path": "/", "summary": "Subscribe to plan", "auth": true, "body": { "planId": "ObjectId", "cardId": "ObjectId", "recurrence": "string (Monthly|Annually)" }, "response": "Subscription created" },
+      { "method": "POST", "path": "/transactions/verify", "summary": "Verify subscription payment", "auth": true, "body": { "reference": "string" }, "response": "Payment verified" },
+      { "method": "GET", "path": "/", "summary": "Get user subscriptions", "auth": true, "response": "Subscription array" },
+      { "method": "GET", "path": "/active", "summary": "Get active subscription", "auth": true, "response": "Active subscription" },
+      { "method": "PATCH", "path": "/cancel", "summary": "Cancel subscription", "auth": true, "response": "Subscription cancelled" }
+    ]
+  },
+  "plans": {
+    "name": "Plans",
+    "basePath": "/api/plans",
+    "description": "Subscription plan definitions with multi-currency pricing",
+    "endpoints": [
+      { "method": "GET", "path": "/", "summary": "Get all plans", "auth": false, "response": "Plan array" },
+      { "method": "GET", "path": "/:id", "summary": "Get plan by ID", "auth": false, "response": "Plan object" }
+    ]
+  },
+  "dashboard": {
+    "name": "Dashboard",
+    "basePath": "/api/dashboard",
+    "description": "Specialist dashboard with analytics and appointment statistics",
+    "endpoints": [
+      { "method": "GET", "path": "/specialist", "summary": "Get specialist dashboard", "auth": true, "response": "Dashboard data" },
+      { "method": "GET", "path": "/specialist/enhanced", "summary": "Get enhanced dashboard", "auth": true, "response": "Enhanced dashboard" },
+      { "method": "GET", "path": "/specialist/analytics", "summary": "Get specialist analytics", "auth": true, "query": { "period": "string" }, "response": "Analytics data" }
+    ]
+  },
+  "health-tips": {
+    "name": "Health Tips",
+    "basePath": "/api/health-tips",
+    "description": "Personalized health tips — rule-based and AI-generated with tracking and dismissal",
+    "endpoints": [
+      { "method": "GET", "path": "/", "summary": "Get active health tips", "auth": true, "query": { "category": "string", "priority": "string", "limit": "number" }, "response": "Tips array" },
+      { "method": "GET", "path": "/summary", "summary": "Get tips summary by category", "auth": true, "response": "Summary" },
+      { "method": "GET", "path": "/featured", "summary": "Get top priority tips (dashboard)", "auth": true, "query": { "limit": "number (default 3)" }, "response": "Featured tips" },
+      { "method": "GET", "path": "/history", "summary": "Get tip history", "auth": true, "query": { "page": "number", "limit": "number" }, "response": "Paginated history" },
+      { "method": "POST", "path": "/:id/dismiss", "summary": "Dismiss a health tip", "auth": true, "response": "Dismissed" },
+      { "method": "POST", "path": "/:id/acted", "summary": "Mark tip as acted upon", "auth": true, "response": "Marked" },
+      { "method": "POST", "path": "/:id/viewed", "summary": "Track tip view", "auth": true, "response": "View tracked" },
+      { "method": "POST", "path": "/generate", "summary": "Manually trigger tip generation", "auth": true, "response": "Generated tips" }
+    ]
+  },
+  "advanced-health-score": {
+    "name": "Advanced Health Score",
+    "basePath": "/api/advanced-health-score",
+    "description": "Comprehensive health assessment with questionnaire, document uploads, and AI-generated reports",
+    "endpoints": [
+      { "method": "GET", "path": "/questions", "summary": "Get assessment questions", "auth": true, "response": "Questions grouped by domain" },
+      { "method": "POST", "path": "/upload-document", "summary": "Upload supporting document", "auth": true, "body": "multipart/form-data", "response": "Document reference" },
+      { "method": "POST", "path": "/submit", "summary": "Submit assessment and generate report", "auth": true, "body": { "answers": "Array<{ question_id, domain, answer_value, answer_label }>", "document_ids": "string[]" }, "response": "Assessment report" },
+      { "method": "GET", "path": "/history", "summary": "Get assessment history", "auth": true, "query": { "page": "number", "limit": "number" }, "response": "Paginated history" },
+      { "method": "GET", "path": "/view/:id", "summary": "Get assessment for specialist view", "auth": true, "response": "Assessment report" },
+      { "method": "GET", "path": "/:id", "summary": "Get assessment by ID", "auth": true, "response": "Assessment object" }
+    ]
+  },
+  "basic-health-score": {
+    "name": "Basic Health Score",
+    "basePath": "/api/basic-health-score",
+    "description": "Automated health score calculation based on vitals, checkups, and activity",
+    "endpoints": [
+      { "method": "GET", "path": "/", "summary": "Get current health score", "auth": true, "response": "Health score and metrics" },
+      { "method": "POST", "path": "/calculate", "summary": "Calculate and store health score", "auth": true, "response": "Calculated score" },
+      { "method": "GET", "path": "/history", "summary": "Get score history", "auth": true, "query": { "page": "number", "limit": "number" }, "response": "Paginated history with trends" }
+    ]
+  },
+  "clinical-notes": {
+    "name": "Clinical Notes",
+    "basePath": "/api/clinical-notes",
+    "description": "Specialist clinical notes — free-text and structured (SOAP), templates, and Zoom transcript integration",
+    "endpoints": [
+      { "method": "GET", "path": "/specialist", "summary": "Get specialist's notes", "auth": true, "response": "Notes array" },
+      { "method": "GET", "path": "/appointment/:appointmentId", "summary": "Get notes for appointment", "auth": true, "response": "Notes array" },
+      { "method": "POST", "path": "/fetch-zoom/:appointmentId", "summary": "Fetch Zoom meeting notes", "auth": true, "response": "Zoom transcript and notes" },
+      { "method": "POST", "path": "/", "summary": "Create clinical note", "auth": true, "body": { "appointmentId": "string", "content": "string", "completed": "boolean" }, "response": "Created note" },
+      { "method": "POST", "path": "/structured", "summary": "Create structured note (SOAP)", "auth": true, "body": { "appointmentId": "string", "chief_complaint": "string", "history_of_present_illness": "string", "assessment": "string", "plan": "string" }, "response": "Created structured note" },
+      { "method": "PATCH", "path": "/structured/:appointmentId/:noteId", "summary": "Update structured note", "auth": true, "response": "Updated note" },
+      { "method": "PATCH", "path": "/:appointmentId/:noteId", "summary": "Update clinical note", "auth": true, "body": { "content": "string", "completed": "boolean" }, "response": "Updated note" },
+      { "method": "DELETE", "path": "/:appointmentId/:noteId", "summary": "Delete note", "auth": true, "response": "Deleted" },
+      { "method": "POST", "path": "/templates", "summary": "Create note template", "auth": true, "body": { "name": "string", "category": "string", "content": "string" }, "response": "Created template" },
+      { "method": "GET", "path": "/templates", "summary": "Get note templates", "auth": true, "query": { "category": "string" }, "response": "Templates array" },
+      { "method": "GET", "path": "/templates/categories", "summary": "Get template categories", "auth": true, "response": "Categories" },
+      { "method": "GET", "path": "/templates/:id", "summary": "Get template by ID", "auth": true, "response": "Template" },
+      { "method": "PATCH", "path": "/templates/:id", "summary": "Update template", "auth": true, "response": "Updated template" },
+      { "method": "DELETE", "path": "/templates/:id", "summary": "Delete template", "auth": true, "response": "Deleted" }
+    ]
+  },
+  "specialist-patients": {
+    "name": "Specialist Patients",
+    "basePath": "/api/specialist/patients",
+    "description": "Specialist patient management — patient list, health records, timeline, prescriptions, and starring",
+    "endpoints": [
+      { "method": "GET", "path": "/", "summary": "Get specialist's patients", "auth": true, "query": { "filter": "string (MY_PATIENTS|RECENT|STARRED|ALL)", "search": "string", "sort": "string (LAST_VISIT|NAME|RISK_LEVEL)", "page": "number", "limit": "number" }, "response": "Paginated patients" },
+      { "method": "GET", "path": "/stats", "summary": "Get patient statistics", "auth": true, "response": "Patient stats" },
+      { "method": "GET", "path": "/starred", "summary": "Get starred patients", "auth": true, "response": "Starred patients" },
+      { "method": "GET", "path": "/:patientId", "summary": "Get patient details", "auth": true, "response": "Patient details" },
+      { "method": "GET", "path": "/:patientId/overview", "summary": "Get patient overview", "auth": true, "response": "Overview" },
+      { "method": "GET", "path": "/:patientId/health-records", "summary": "Get health records", "auth": true, "query": { "page": "number", "limit": "number" }, "response": "Paginated records" },
+      { "method": "GET", "path": "/:patientId/prescriptions", "summary": "Get prescriptions", "auth": true, "query": { "type": "string (all|written|uploaded)" }, "response": "Paginated prescriptions" },
+      { "method": "GET", "path": "/:patientId/appointments", "summary": "Get appointments", "auth": true, "query": { "status": "string" }, "response": "Paginated appointments" },
+      { "method": "GET", "path": "/:patientId/purchases", "summary": "Get pharmacy purchases", "auth": true, "response": "Paginated orders" },
+      { "method": "GET", "path": "/:patientId/timeline", "summary": "Get activity timeline", "auth": true, "query": { "page": "number", "limit": "number" }, "response": "Paginated timeline" },
+      { "method": "GET", "path": "/:patientId/dependents", "summary": "Get patient's dependents", "auth": true, "response": "Dependents array" },
+      { "method": "POST", "path": "/:patientId/star", "summary": "Star/unstar patient", "auth": true, "body": { "starred": "boolean" }, "response": "Updated" }
+    ]
+  },
+  "trial": {
+    "name": "Trial Access",
+    "basePath": "/api/trial",
+    "description": "Public trial access — symptom checker, RxGPT analysis, and prescription verification without full registration",
+    "endpoints": [
+      { "method": "POST", "path": "/request", "summary": "Request trial access", "auth": false, "body": { "email": "string", "first_name": "string", "last_name": "string" }, "response": "Trial request confirmation" },
+      { "method": "GET", "path": "/verify/:token", "summary": "Verify trial token", "auth": false, "response": "Verification result" },
+      { "method": "GET", "path": "/session", "summary": "Get trial session status", "auth": "TrialGuard (x-trial-token header)", "response": "Session info" },
+      { "method": "POST", "path": "/symptom-checker/begin", "summary": "Begin trial symptom checker", "auth": "TrialGuard", "body": { "age": "number (12-120)", "gender": "string" }, "response": "Checkup initialization" },
+      { "method": "POST", "path": "/symptom-checker/parse", "summary": "Parse symptoms (trial)", "auth": "TrialGuard", "body": { "text": "string", "interview_token": "string" }, "response": "Parsed symptoms" },
+      { "method": "POST", "path": "/symptom-checker/diagnosis", "summary": "Get diagnosis (trial)", "auth": "TrialGuard", "body": { "evidence": "any[]", "age": "number", "sex": "string" }, "response": "Diagnosis results" },
+      { "method": "GET", "path": "/symptom-checker/search", "summary": "Search symptoms (trial)", "auth": "TrialGuard", "query": { "phrase": "string", "sex": "string", "age": "number" }, "response": "Search results" },
+      { "method": "POST", "path": "/symptom-checker/risk-factors", "summary": "Get risk factors (trial)", "auth": "TrialGuard", "body": { "age": "number" }, "response": "Risk factors" },
+      { "method": "POST", "path": "/symptom-checker/symptoms", "summary": "Get suggested symptoms (trial)", "auth": "TrialGuard", "body": { "evidence": "any[]", "age": "number", "sex": "string" }, "response": "Suggested symptoms" },
+      { "method": "POST", "path": "/symptom-checker/ai-summary", "summary": "Generate AI health summary (trial)", "auth": "TrialGuard", "body": { "conditions": "any[]", "evidence": "any[]", "triage_level": "string", "age": "number", "sex": "string" }, "response": "AI summary" },
+      { "method": "POST", "path": "/rxgpt/analyze", "summary": "RxGPT analysis (trial)", "auth": "TrialGuard", "body": { "diagnosis": "string", "treatment_goal": "string", "symptoms": "string[]" }, "response": "Medication suggestions" },
+      { "method": "POST", "path": "/prescription/upload", "summary": "Upload prescription (trial)", "auth": "TrialGuard", "body": "multipart/form-data", "response": "Upload confirmation" },
+      { "method": "GET", "path": "/prescription/:uploadId/status", "summary": "Get verification status (trial)", "auth": "TrialGuard", "response": "Verification status" },
+      { "method": "GET", "path": "/analytics", "summary": "Get trial analytics", "auth": false, "response": "Trial analytics" }
+    ]
+  },
+  "ratings": {
+    "name": "Ratings",
+    "basePath": "/api/ratings",
+    "description": "Specialist ratings and reviews",
+    "endpoints": [
+      { "method": "POST", "path": "/", "summary": "Create rating", "auth": true, "body": { "specialist": "ObjectId", "rating": "number (1-5)", "message": "string" }, "response": "Rating created" },
+      { "method": "GET", "path": "/", "summary": "Get ratings for specialist", "auth": true, "response": "Ratings array" }
+    ]
+  },
+  "referrals": {
+    "name": "Referrals",
+    "basePath": "/api/referrals",
+    "description": "Referral program — codes, sharing, tracking clicks, and rewards",
+    "endpoints": [
+      { "method": "GET", "path": "/", "summary": "Get user's referral data", "auth": true, "response": "Referral data with stats" },
+      { "method": "POST", "path": "/share", "summary": "Track referral share", "auth": true, "body": { "platform": "string" }, "response": "Share tracked" },
+      { "method": "GET", "path": "/click/:code", "summary": "Track referral click", "auth": false, "response": "Click tracked" }
+    ]
+  },
+  "banks": {
+    "name": "Banks",
+    "basePath": "/api/banks",
+    "description": "Bank list for withdrawals and account verification",
+    "endpoints": [
+      { "method": "GET", "path": "/", "summary": "Get bank list", "auth": true, "response": "Bank array" },
+      { "method": "GET", "path": "/resolve", "summary": "Resolve account number", "auth": true, "query": { "account_number": "string", "bank_code": "string" }, "response": "Account details" }
+    ]
+  },
+  "consultation-services": {
+    "name": "Consultation Services",
+    "basePath": "/api/consultation-services",
+    "description": "Consultation service types with pricing configuration",
+    "endpoints": [
+      { "method": "GET", "path": "/", "summary": "Get consultation services", "auth": false, "response": "Services array" },
+      { "method": "GET", "path": "/:id", "summary": "Get service by ID", "auth": false, "response": "Service object" }
+    ]
+  },
+  "claude-summary-credits": {
+    "name": "Claude Summary Credits",
+    "basePath": "/api/claude-summary-credits",
+    "description": "AI health summary credit system — plans, balances, and purchase",
+    "endpoints": [
+      { "method": "GET", "path": "/plans", "summary": "Get available credit plans", "auth": false, "response": "Credit plans" },
+      { "method": "GET", "path": "/balance", "summary": "Get user's credit balance", "auth": true, "response": "Credit balance" },
+      { "method": "POST", "path": "/purchase", "summary": "Purchase credits", "auth": true, "body": { "planId": "string" }, "response": "Purchase result" },
+      { "method": "GET", "path": "/transactions", "summary": "Get credit transactions", "auth": true, "response": "Transaction history" }
+    ]
+  },
+  "languages": {
+    "name": "Languages",
+    "basePath": "/api/languages",
+    "description": "Available languages for specialist profiles",
+    "endpoints": [
+      { "method": "GET", "path": "/", "summary": "Get available languages", "auth": false, "response": "Languages array" }
+    ]
+  },
+  "specialist-categories": {
+    "name": "Specialist Categories",
+    "basePath": "/api/specialist-categories",
+    "description": "Medical specialty categories for appointment booking",
+    "endpoints": [
+      { "method": "GET", "path": "/", "summary": "Get specialist categories", "auth": false, "response": "Categories array" }
+    ]
+  }
+}

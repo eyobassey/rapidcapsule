@@ -21,7 +21,10 @@ import {
   SpecialistTransactionType,
   SpecialistTransactionReference,
 } from './entities/specialist-wallet-transaction.entity';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
+@ApiTags('Wallets (Specialist)')
+@ApiBearerAuth('JWT-auth')
 @UseGuards(JwtAuthGuard)
 @Controller('specialist/wallet')
 export class SpecialistWalletController {

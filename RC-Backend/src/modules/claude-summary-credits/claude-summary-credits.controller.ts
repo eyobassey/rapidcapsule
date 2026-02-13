@@ -8,12 +8,15 @@ import {
   UseGuards,
   Header,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { ClaudeSummaryCreditsService } from './claude-summary-credits.service';
 import { sendSuccessResponse } from '../../core/responses/success.responses';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PurchasePlanDto } from './dto/purchase-plan.dto';
 import { TransferCreditsDto, SearchPatientsDto } from './dto/transfer-credits.dto';
 
+@ApiTags('Claude Summary Credits')
+@ApiBearerAuth('JWT-auth')
 @UseGuards(JwtAuthGuard)
 @Controller('claude-summary')
 export class ClaudeSummaryCreditsController {

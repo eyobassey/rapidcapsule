@@ -23,7 +23,10 @@ import { StartOrderPaymentDto } from './dto/start-order-payment.dto';
 import { VerifyOrderPaymentDto } from './dto/verify-order-payment.dto';
 import { ConfirmOrderDto } from './dto/confirm-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
+@ApiTags('Prescriptions')
+@ApiBearerAuth('JWT-auth')
 @UseGuards(JwtAuthGuard)
 @Controller('prescriptions')
 export class PrescriptionsController {

@@ -15,6 +15,7 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { Types } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -42,6 +43,8 @@ interface AdminAuthenticatedRequest {
   ip: string;
 }
 
+@ApiTags('Accounting Admin Wallet')
+@ApiBearerAuth('JWT-auth')
 @Controller('admin-api/wallets')
 @UseGuards(JwtAuthGuard)
 export class AdminWalletController {

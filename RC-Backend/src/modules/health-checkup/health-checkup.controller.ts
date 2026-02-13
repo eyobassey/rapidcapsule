@@ -33,7 +33,10 @@ import { Model } from 'mongoose';
 import { User, UserDocument } from '../users/entities/user.entity';
 import { BasicHealthScoreService } from '../basic-health-score/basic-health-score.service';
 import { ScoreChangeTrigger } from '../basic-health-score/entities/basic-health-score-history.entity';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
+@ApiTags('Health Checkup')
+@ApiBearerAuth('JWT-auth')
 @UseGuards(JwtAuthGuard)
 @Controller('health-checkup')
 export class HealthCheckupController {

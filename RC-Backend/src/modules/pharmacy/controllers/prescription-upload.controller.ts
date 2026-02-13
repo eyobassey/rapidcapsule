@@ -14,6 +14,7 @@ import {
   BadRequestException,
   NotFoundException,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { InjectModel } from '@nestjs/mongoose';
@@ -61,6 +62,8 @@ class SubmitReviewDto {
   clarificationRequest?: string;
 }
 
+@ApiTags('Pharmacy - Prescriptions')
+@ApiBearerAuth('JWT-auth')
 @Controller('pharmacy/prescriptions')
 @UseGuards(JwtAuthGuard)
 export class PrescriptionUploadController {

@@ -7,6 +7,7 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { InjectModel, InjectConnection } from '@nestjs/mongoose';
 import { Model, Connection, Types } from 'mongoose';
 import * as crypto from 'crypto';
@@ -30,6 +31,7 @@ enum PaystackEvent {
 /**
  * Controller for handling Paystack payment webhooks for WhatsApp orders
  */
+@ApiTags('Webhooks - Paystack')
 @Controller('webhooks/paystack')
 export class WhatsAppPaymentWebhookController {
   private readonly logger = new Logger(WhatsAppPaymentWebhookController.name);

@@ -1,6 +1,8 @@
 import { Controller, Get, Query } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { SpecialistCategoriesService } from './specialist-categories.service';
 
+@ApiTags('Specialist Categories')
 @Controller('specialist-categories')
 export class SpecialistCategoriesController {
   constructor(

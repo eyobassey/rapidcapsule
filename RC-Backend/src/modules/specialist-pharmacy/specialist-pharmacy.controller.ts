@@ -10,6 +10,7 @@ import {
   Request,
   UseGuards,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { Types } from 'mongoose';
 import { SpecialistPharmacyService } from './specialist-pharmacy.service';
 import { sendSuccessResponse } from '../../core/responses/success.responses';
@@ -23,6 +24,8 @@ import {
   UpdateDeliveryAddressDto,
 } from './dto/specialist-pharmacy.dto';
 
+@ApiTags('Pharmacy (Specialist)')
+@ApiBearerAuth('JWT-auth')
 @UseGuards(JwtAuthGuard)
 @Controller('specialist/pharmacy')
 export class SpecialistPharmacyController {

@@ -22,7 +22,10 @@ import { QueryVitalDto } from './dto/query.vital.dto';
 import { VitalChartDataDto } from './dto/vital-chart-data.dto';
 import { BasicHealthScoreService } from '../basic-health-score/basic-health-score.service';
 import { ScoreChangeTrigger } from '../basic-health-score/entities/basic-health-score-history.entity';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
+@ApiTags('Vitals')
+@ApiBearerAuth('JWT-auth')
 @UseGuards(JwtAuthGuard)
 @Controller('vitals')
 export class VitalsController {

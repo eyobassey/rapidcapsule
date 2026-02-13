@@ -8,6 +8,7 @@ import {
   Request,
   UseGuards,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { SpecialistPatientsService } from './specialist-patients.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { sendSuccessResponse } from '../../core/responses/success.responses';
@@ -16,6 +17,8 @@ import { GetPatientsQueryDto } from './dto/get-patients-query.dto';
 import { StarPatientDto } from './dto/star-patient.dto';
 import { AccessType } from './entities/patient-access-log.entity';
 
+@ApiTags('Specialist Patients')
+@ApiBearerAuth('JWT-auth')
 @UseGuards(JwtAuthGuard)
 @Controller('specialist/patients')
 export class SpecialistPatientsController {

@@ -18,7 +18,10 @@ import { Messages } from '../../core/messages/messages';
 import { MakeCardDefaultDto } from './dto/make-card-default.dto';
 import { DeleteCardDto } from './dto/delete-card.dto';
 import { VerifyCardDto } from './dto/verifyCard.dto';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
+@ApiTags('Cards')
+@ApiBearerAuth('JWT-auth')
 @UseGuards(JwtAuthGuard)
 @Controller('cards')
 export class CardsController {
