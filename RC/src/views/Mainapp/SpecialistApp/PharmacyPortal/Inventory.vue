@@ -255,6 +255,7 @@ import {
   mapGetters as useMapGetters,
 } from "@/utilities/utilityStore";
 import { debounce } from "lodash";
+import { useCurrency } from "@/composables/useCurrency";
 
 export default {
   name: "PharmacyInventory",
@@ -266,6 +267,7 @@ export default {
   },
   emits: ["openSideNav"],
   setup() {
+    const { format: formatPrice } = useCurrency();
     const searchQuery = ref("");
     const categoryFilter = ref("");
     const stockFilter = ref("");
@@ -317,13 +319,6 @@ export default {
       outOfStock: 0,
     });
     const totalPages = computed(() => Math.ceil((totalItems.value || 0) / itemsPerPage));
-
-    const formatPrice = (price) => {
-      return new Intl.NumberFormat("en-NG", {
-        style: "currency",
-        currency: "NGN",
-      }).format(price || 0);
-    };
 
     const stockClass = (quantity) => {
       if (quantity <= 0) return "out";

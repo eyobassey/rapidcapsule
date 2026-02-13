@@ -243,6 +243,7 @@ export default {
         routeAbbreviation: drug.route_abbreviation,
         manufacturer: drug.manufacturer,
         price: drug.selling_price,
+        prices: drug.prices || null,
         quantity: 1,
         imageUrl: drug.image_url,
       });

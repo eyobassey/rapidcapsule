@@ -519,7 +519,10 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue';
+import { useCurrency } from '@/composables/useCurrency';
 import apiFactory from '@/services/apiFactory';
+
+const { format: formatCurrency, formatCompact: formatCurrencyShort } = useCurrency();
 
 const selectedPeriod = ref('30d');
 const loading = ref(true);
@@ -692,22 +695,7 @@ function getTypePercent(value) {
   return totalType.value ? Math.round((value / totalType.value) * 100) : 0;
 }
 
-function formatCurrency(amount) {
-  return new Intl.NumberFormat('en-NG', {
-    style: 'currency',
-    currency: 'NGN',
-    minimumFractionDigits: 0,
-  }).format(amount);
-}
-
-function formatCurrencyShort(amount) {
-  if (amount >= 1000000) {
-    return `${(amount / 1000000).toFixed(1)}M`;
-  } else if (amount >= 1000) {
-    return `${(amount / 1000).toFixed(0)}K`;
-  }
-  return amount.toString();
-}
+// formatCurrency and formatCurrencyShort are provided by useCurrency composable
 
 function formatDateLabel(dateStr) {
   const date = new Date(dateStr);

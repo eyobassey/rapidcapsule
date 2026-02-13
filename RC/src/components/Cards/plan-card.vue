@@ -5,7 +5,7 @@
 				<h3 class="title" :class="{ active: active }">Rapid Capsule Premium</h3>
 			</div>
 			<div class="price__container">
-				<h3 class="price">5,200</h3>
+				<h3 class="price">{{ formattedPrice }}</h3>
 				<p class="freq">per Month</p>
 			</div>
 		</div>
@@ -28,6 +28,7 @@
 
 <script>
 import Button from "@/components/buttons/button-primary.vue";
+import { formatCurrency } from "@/utilities/currency";
 
 export default {
 	name: "Plan Card",
@@ -44,6 +45,25 @@ export default {
 		featured: {
 			type: Boolean,
 			default: false,
+		},
+		plan: {
+			type: Object,
+			default: () => ({}),
+		},
+	},
+
+	computed: {
+		currencyCode() {
+			return this.$store.getters['currency/currencyCode'];
+		},
+		formattedPrice() {
+			return formatCurrency(this.getPlanPrice(this.plan), this.currencyCode);
+		},
+	},
+
+	methods: {
+		getPlanPrice(plan) {
+			return plan?.prices?.[this.currencyCode]?.price ?? plan?.prices?.[this.currencyCode]?.amount ?? plan?.price ?? plan?.amount ?? 0;
 		},
 	},
 };
@@ -135,8 +155,7 @@ export default {
 			.price {
 				font-size: $size-32;
 
-				&::before {
-					content: "₦";
+				.currency-symbol {
 					font-size: $size-16;
 					font-weight: $fw-regular;
 					vertical-align: super;

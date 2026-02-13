@@ -229,6 +229,7 @@
 <script setup>
 import { ref, inject, onMounted, computed, watch } from 'vue';
 import { format, parseISO } from 'date-fns';
+import { useCurrency } from '@/composables/useCurrency';
 import RcAvatar from '@/components/RCAvatar';
 import Loader from '@/components/Loader/main-loader.vue';
 
@@ -277,9 +278,7 @@ const formatChannel = (channel) => {
   return map[channel] || channel || '-';
 };
 
-const formatCurrency = (amount) => {
-  return new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN' }).format(amount || 0);
-};
+const { format: formatCurrency } = useCurrency();
 
 onMounted(() => {
   if (booking.mode !== 'reschedule') {

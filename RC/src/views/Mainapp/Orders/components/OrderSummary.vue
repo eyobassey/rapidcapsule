@@ -13,7 +13,7 @@
           <p class="container__darkText">{{ drug_name }}</p>
         </div>
         <div>
-          <p class="container__darkText">₦ {{ formatAmountHandler(total) }}</p>
+          <p class="container__darkText">{{ format(total) }}</p>
           <p class="container__subGreyText">Qty: {{ quantity }} card</p>
         </div>
       </div>
@@ -23,7 +23,7 @@
         </div>
         <div>
           <p class="container__darkText">
-            ₦ {{ formatAmountHandler(deliveryFee) }}
+            {{ format(deliveryFee) }}
           </p>
           <p class="container__subGreyText">to {{ deliveryAddress }} card</p>
         </div>
@@ -34,7 +34,7 @@
         </div>
         <div>
           <p class="container__boldDarkText">
-            ₦ {{ formatAmountHandler(total) }}
+            {{ format(total) }}
           </p>
         </div>
       </div>
@@ -44,7 +44,7 @@
 
 <script>
 import { defineComponent } from "vue";
-import { formatAmount } from "@/utilities/utilityFunctions";
+import { formatCurrency } from "@/utilities/currency";
 
 export default defineComponent({
   name: "Order summary",
@@ -67,9 +67,15 @@ export default defineComponent({
       required: true,
     },
   },
-  setup: () => {
-    const formatAmountHandler = (amount) => formatAmount(amount);
-    return { formatAmountHandler };
+  computed: {
+    currencyCode() {
+      return this.$store.getters['currency/currencyCode'];
+    },
+  },
+  methods: {
+    format(amount) {
+      return formatCurrency(amount, this.currencyCode);
+    },
   },
 });
 </script>

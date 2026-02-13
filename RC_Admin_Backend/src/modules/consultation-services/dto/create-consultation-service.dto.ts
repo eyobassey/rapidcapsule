@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsBoolean, IsNumber, IsEnum, Min } from 'class-validator';
+import { IsString, IsOptional, IsBoolean, IsNumber, IsEnum, IsObject, Min } from 'class-validator';
 
 export class CreateConsultationServiceDto {
   @IsString()
@@ -59,4 +59,8 @@ export class CreateConsultationServiceDto {
   @IsOptional()
   @IsBoolean()
   show_ai_badge?: boolean;
+
+  @IsOptional()
+  @IsObject()
+  rates?: Record<string, { min_rate: number; max_rate: number }>;
 }

@@ -139,7 +139,7 @@
                 <span class="label">credits</span>
               </div>
               <div class="plan-name">{{ plan.name }}</div>
-              <div class="plan-price">{{ formatPrice(plan.price) }}</div>
+              <div class="plan-price">{{ format(plan.price) }}</div>
               <div class="plan-desc" v-if="plan.type === 'subscription'">
                 {{ plan.duration_days || 30 }} days unlimited
               </div>
@@ -150,11 +150,11 @@
           <div v-if="selectedPlan" class="wallet-section">
             <div class="wallet-balance">
               <span class="label">Wallet Balance:</span>
-              <span class="value">{{ formatPrice(walletBalance) }}</span>
+              <span class="value">{{ format(walletBalance) }}</span>
             </div>
             <div v-if="walletBalance < selectedPlan.price" class="insufficient-warning">
               <v-icon name="hi-exclamation-circle" scale="1" />
-              <span>Insufficient balance. You need {{ formatPrice(selectedPlan.price - walletBalance) }} more.</span>
+              <span>Insufficient balance. You need {{ format(selectedPlan.price - walletBalance) }} more.</span>
             </div>
           </div>
         </div>
@@ -249,6 +249,7 @@
 <script>
 import apiFactory from "@/services/apiFactory";
 import http from "@/services/http";
+import { formatCurrency } from '@/utilities/currency';
 
 export default {
   name: "AdvancedHealthScoreIndex",
@@ -273,6 +274,11 @@ export default {
   },
   async mounted() {
     await this.checkCanStart();
+  },
+  computed: {
+    currencyCode() {
+      return this.$store.getters['currency/currencyCode'];
+    },
   },
   methods: {
     async checkCanStart() {
@@ -366,11 +372,8 @@ export default {
       this.purchasingPlan = false;
     },
 
-    formatPrice(price) {
-      return new Intl.NumberFormat("en-NG", {
-        style: "currency",
-        currency: "NGN",
-      }).format(price || 0);
+    format(amount) {
+      return formatCurrency(amount, this.currencyCode);
     },
 
     goToWallet() {

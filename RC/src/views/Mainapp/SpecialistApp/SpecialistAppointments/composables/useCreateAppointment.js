@@ -10,11 +10,13 @@
 import { ref, reactive, computed, inject, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useToast } from 'vue-toast-notification';
+import { useCurrency } from '@/composables/useCurrency';
 
 export function useCreateAppointment() {
   const $http = inject('$http');
   const router = useRouter();
   const toast = useToast();
+  const { currencyCode } = useCurrency();
 
   // Wizard State
   const currentStep = ref(1);
@@ -137,7 +139,7 @@ export function useCreateAppointment() {
     consultationFee: 0,
     platformFee: 500,
     totalAmount: 0,
-    currency: 'NGN',
+    currency: currencyCode.value,
     timing: 'at_booking', // 'at_booking' | 'before' | 'after'
     // Video platform settings
     videoPlatform: 'zoom', // 'zoom' | 'google_meet' | 'microsoft_teams'
@@ -781,7 +783,7 @@ export function useCreateAppointment() {
       consultationFee: 0,
       platformFee: 500,
       totalAmount: 0,
-      currency: 'NGN',
+      currency: currencyCode.value,
       timing: 'at_booking',
       videoPlatform: 'zoom',
       autoGenerateLink: true,

@@ -38,6 +38,7 @@
     />
     <div v-if="showButtons" class="btn-group">
       <slot name="btns" />
+      <CurrencySelector class="currency-sel" />
       <RightPane class="right-pane" />
     </div>
   </div>
@@ -49,6 +50,7 @@ import avaterFixed from "../Avatars/avatar-fixed.vue";
 import SearchInput from "../inputs/search.vue";
 import Icons from "../icons.vue";
 import RightPane from "./Right-pane/pane-dock.vue";
+import CurrencySelector from "./CurrencySelector.vue";
 import IconButton from "../buttons/button-icon.vue";
 import ContextMenuKebab from "../utitlity/context-menu-kebab.vue";
 import BreadCrumb from "./breadCrumb.vue";
@@ -63,6 +65,7 @@ export default {
     SearchInput,
     Icons,
     RightPane,
+    CurrencySelector,
     IconButton,
     ContextMenuKebab,
     BreadCrumb,

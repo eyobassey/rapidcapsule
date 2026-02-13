@@ -41,8 +41,7 @@
         </div>
 
         <div class="plan-price">
-          <span class="currency">&#8358;</span>
-          <span class="amount">{{ formatPrice(plan.price) }}</span>
+          <span class="amount">{{ format(getPlanPrice(plan)) }}</span>
           <span v-if="plan.type === 'subscription'" class="period">/month</span>
         </div>
 
@@ -72,6 +71,7 @@
 
 <script>
 import Loader from "@/components/Loader/main-loader.vue";
+import { formatCurrency } from '@/utilities/currency';
 
 export default {
   name: "PlansGrid",
@@ -94,6 +94,9 @@ export default {
   },
   emits: ["selectPlan"],
   computed: {
+    currencyCode() {
+      return this.$store.getters['currency/currencyCode'];
+    },
     sortedPlans() {
       return [...this.plans].sort((a, b) => {
         // Sort by type first (bundle before subscription)
@@ -101,13 +104,16 @@ export default {
           return a.type === "bundle" ? -1 : 1;
         }
         // Then by price
-        return (a.price || 0) - (b.price || 0);
+        return (this.getPlanPrice(a)) - (this.getPlanPrice(b));
       });
     },
   },
   methods: {
-    formatPrice(price) {
-      return new Intl.NumberFormat("en-NG").format(price || 0);
+    format(amount) {
+      return formatCurrency(amount, this.currencyCode);
+    },
+    getPlanPrice(plan) {
+      return plan?.prices?.[this.currencyCode]?.price ?? plan?.prices?.[this.currencyCode]?.amount ?? plan?.price ?? plan?.amount ?? 0;
     },
     getFeatures(plan) {
       if (plan.features && plan.features.length) {

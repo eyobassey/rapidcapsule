@@ -108,6 +108,9 @@ export class CreateDrugDto {
   @IsOptional()
   discount_percentage?: number;
 
+  @IsOptional()
+  prices?: Record<string, { cost_price?: number; selling_price?: number }>;
+
   @IsNumber()
   @IsOptional()
   quantity?: number;
@@ -308,6 +311,9 @@ export class UpdateDrugDto {
   @IsNumber()
   @IsOptional()
   discount_percentage?: number;
+
+  @IsOptional()
+  prices?: Record<string, { cost_price?: number; selling_price?: number }>;
 
   @IsNumber()
   @IsOptional()

@@ -195,7 +195,6 @@
                 <div class="order-item__right">
                   <span class="order-date">{{ formatDate(order.created_at) }}</span>
                   <div class="order-amount" v-if="order.total_amount">
-                    <span class="currency">NGN</span>
                     <span class="amount">{{ formatCurrency(order.total_amount) }}</span>
                   </div>
                   <v-icon name="hi-chevron-right" scale="0.9" class="chevron" />
@@ -269,11 +268,13 @@ import {
   mapGetters as useMapGetters,
 } from "@/utilities/utilityStore";
 import moment from "moment";
+import { useCurrency } from "@/composables/useCurrency";
 
 export default {
   name: "MyOrders",
   emits: ["openSideNav"],
   setup() {
+    const { format: formatCurrency } = useCurrency();
     const router = useRouter();
     const activeTab = ref("all");
     const currentPage = ref(1);
@@ -396,14 +397,6 @@ export default {
       }
       return pages;
     });
-
-    const formatCurrency = (amount) => {
-      if (!amount) return "0.00";
-      return Number(amount).toLocaleString("en-NG", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      });
-    };
 
     const formatDate = (date) => {
       if (!date) return "";

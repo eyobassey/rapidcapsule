@@ -587,11 +587,13 @@ import {
   mapGetters as useMapGetters,
 } from "@/utilities/utilityStore";
 import moment from "moment";
+import { useCurrency } from "@/composables/useCurrency";
 
 export default {
   name: "PharmacyOrderDetails",
   emits: ["openSideNav"],
   setup() {
+    const { format: formatPrice } = useCurrency();
     const router = useRouter();
     const route = useRoute();
 
@@ -714,13 +716,6 @@ export default {
     });
 
     // Methods
-    const formatPrice = (price) => {
-      return new Intl.NumberFormat("en-NG", {
-        style: "currency",
-        currency: "NGN",
-      }).format(price || 0);
-    };
-
     const formatDateTime = (date) => {
       if (!date) return "";
       return moment(date).format("MMM D, YYYY h:mm A");

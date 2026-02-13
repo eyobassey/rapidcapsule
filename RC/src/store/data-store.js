@@ -11,6 +11,7 @@ import pharmacy from "./modules/pharmacy";
 import pharmacyPortal from "./modules/pharmacyPortal";
 import whatsapp from "./modules/whatsapp";
 import notifications from "./modules/notifications";
+import currency from "./modules/currency";
 import axios from "../services/http";
 
 export default createStore({
@@ -194,7 +195,7 @@ export default createStore({
 
   actions: {
     //Authentication attempt
-    async authenticate({ commit, state, rootGetters }, token) {
+    async authenticate({ commit, dispatch, state, rootGetters }, token) {
       if (token) {
         commit("SET_TOKEN", {
           token: token,
@@ -237,6 +238,9 @@ export default createStore({
                 commit("SET_REFERRAL", referrals.data.data);
                 commit("SET_USER_SECURITY_QUESTION", securitQuestion.data.data);
                 commit("SET_LOADING_STATE", false);
+
+                // Initialize currency from user profile or IP detection
+                dispatch("currency/initCurrency", null, { root: true });
               }
             )
           )
@@ -277,5 +281,6 @@ export default createStore({
     pharmacyPortal,
     whatsapp,
     notifications,
+    currency,
   },
 });

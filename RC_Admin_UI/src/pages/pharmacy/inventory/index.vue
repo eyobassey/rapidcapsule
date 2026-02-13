@@ -570,11 +570,13 @@
 
             <!-- Pricing & Inventory -->
             <div class="text-subtitle-1 font-weight-bold mb-3">Pricing & Inventory</div>
+
+            <!-- Primary Price (NGN) -->
             <VRow>
               <VCol cols="12" md="4">
                 <VTextField
                   v-model.number="drugData.cost_price"
-                  label="Cost Price *"
+                  label="Cost Price (NGN) *"
                   type="number"
                   prefix="₦"
                   :rules="[v => v >= 0 || 'Must be positive']"
@@ -583,7 +585,7 @@
               <VCol cols="12" md="4">
                 <VTextField
                   v-model.number="drugData.selling_price"
-                  label="Selling Price *"
+                  label="Selling Price (NGN) *"
                   type="number"
                   prefix="₦"
                   :rules="[v => v >= 0 || 'Must be positive']"
@@ -597,6 +599,36 @@
                   suffix="%"
                 />
               </VCol>
+            </VRow>
+
+            <!-- Multi-Currency Pricing -->
+            <div class="text-subtitle-2 font-weight-medium mb-2 mt-2">International Prices (optional)</div>
+            <div class="text-caption text-medium-emphasis mb-3">Set explicit prices for each currency. Leave empty to show only the NGN price.</div>
+            <VRow v-for="cur in currencyOptions" :key="cur.code">
+              <VCol cols="12" md="1" class="d-flex align-center">
+                <span class="text-body-2 font-weight-bold">{{ cur.flag }} {{ cur.code }}</span>
+              </VCol>
+              <VCol cols="12" md="4">
+                <VTextField
+                  v-model.number="drugData.prices[cur.code].cost_price"
+                  :label="`Cost Price (${cur.code})`"
+                  type="number"
+                  :prefix="cur.symbol"
+                  density="compact"
+                />
+              </VCol>
+              <VCol cols="12" md="4">
+                <VTextField
+                  v-model.number="drugData.prices[cur.code].selling_price"
+                  :label="`Selling Price (${cur.code})`"
+                  type="number"
+                  :prefix="cur.symbol"
+                  density="compact"
+                />
+              </VCol>
+            </VRow>
+
+            <VRow class="mt-2">
               <VCol cols="12" md="4">
                 <VTextField
                   v-model.number="drugData.quantity"
@@ -1399,6 +1431,12 @@ const drugData = reactive({
   cost_price: 0,
   selling_price: 0,
   discount_percentage: 0,
+  prices: {
+    USD: { cost_price: null, selling_price: null },
+    GBP: { cost_price: null, selling_price: null },
+    EUR: { cost_price: null, selling_price: null },
+    NGN: { cost_price: null, selling_price: null },
+  },
   quantity: 0,
   reorder_level: 10,
   pack_size: 1,
@@ -1415,6 +1453,13 @@ const drugData = reactive({
   is_featured: false,
   images: [],
 })
+
+const currencyOptions = [
+  { code: 'USD', symbol: '$', flag: '\u{1F1FA}\u{1F1F8}' },
+  { code: 'GBP', symbol: '\u00A3', flag: '\u{1F1EC}\u{1F1E7}' },
+  { code: 'EUR', symbol: '\u20AC', flag: '\u{1F1EA}\u{1F1FA}' },
+  { code: 'NGN', symbol: '\u20A6', flag: '\u{1F1F3}\u{1F1EC}' },
+]
 
 const stockOptions = [
   { title: 'In Stock', value: 'available' },
@@ -1460,10 +1505,18 @@ const getAuthHeaders = () => {
   }
 }
 
-const formatPrice = (price) => {
-  return new Intl.NumberFormat('en-NG', {
+const CURRENCY_LOCALES = {
+  USD: { locale: 'en-US', currency: 'USD' },
+  GBP: { locale: 'en-GB', currency: 'GBP' },
+  EUR: { locale: 'de-DE', currency: 'EUR' },
+  NGN: { locale: 'en-NG', currency: 'NGN' },
+}
+
+const formatPrice = (price, currencyCode = 'NGN') => {
+  const config = CURRENCY_LOCALES[currencyCode] || CURRENCY_LOCALES.NGN
+  return new Intl.NumberFormat(config.locale, {
     style: 'currency',
-    currency: 'NGN',
+    currency: config.currency,
   }).format(price || 0)
 }
 
@@ -1500,6 +1553,12 @@ const openAddDialog = () => {
     cost_price: 0,
     selling_price: 0,
     discount_percentage: 0,
+    prices: {
+      USD: { cost_price: null, selling_price: null },
+      GBP: { cost_price: null, selling_price: null },
+      EUR: { cost_price: null, selling_price: null },
+      NGN: { cost_price: null, selling_price: null },
+    },
     quantity: 0,
     reorder_level: 10,
     pack_size: 1,
@@ -1536,6 +1595,12 @@ const editDrug = (drug) => {
     cost_price: drug.cost_price || 0,
     selling_price: drug.selling_price || 0,
     discount_percentage: drug.discount_percentage || 0,
+    prices: {
+      USD: { cost_price: drug.prices?.USD?.cost_price ?? null, selling_price: drug.prices?.USD?.selling_price ?? null },
+      GBP: { cost_price: drug.prices?.GBP?.cost_price ?? null, selling_price: drug.prices?.GBP?.selling_price ?? null },
+      EUR: { cost_price: drug.prices?.EUR?.cost_price ?? null, selling_price: drug.prices?.EUR?.selling_price ?? null },
+      NGN: { cost_price: drug.prices?.NGN?.cost_price ?? null, selling_price: drug.prices?.NGN?.selling_price ?? null },
+    },
     quantity: drug.quantity || 0,
     reorder_level: drug.reorder_level || 10,
     pack_size: drug.pack_size || 1,
@@ -1550,7 +1615,13 @@ const editDrug = (drug) => {
     is_active: drug.is_active !== false,
     is_available: drug.is_available !== false,
     is_featured: drug.is_featured || false,
-    images: drug.images || [],
+    images: (drug.images || [])
+      .filter(img => img.url || img.originalUrl)
+      .map(img => ({
+        url: img.originalUrl || img.url,
+        is_primary: img.is_primary || false,
+        alt_text: img.alt_text || '',
+      })),
   })
   drugDialog.value = true
 }
@@ -1568,10 +1639,22 @@ const saveDrug = async () => {
       : '/admin-api/pharmacy/inventory'
     const method = editingDrug.value ? 'PATCH' : 'POST'
 
+    const payload = { ...drugData }
+    // Strip presigned URL query params from images before saving
+    if (payload.images && payload.images.length > 0) {
+      payload.images = payload.images
+        .filter(img => img.url)
+        .map(img => ({
+          url: img.url.split('?')[0],
+          is_primary: img.is_primary || false,
+          alt_text: img.alt_text || '',
+        }))
+    }
+
     const response = await fetch(url, {
       method,
       headers: getAuthHeaders(),
-      body: JSON.stringify(drugData),
+      body: JSON.stringify(payload),
     })
 
     const data = await response.json()

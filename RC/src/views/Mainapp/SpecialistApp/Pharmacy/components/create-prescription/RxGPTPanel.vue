@@ -349,7 +349,7 @@
               </div>
               <div v-if="med.unit_price" class="detail-row">
                 <span class="label">Price:</span>
-                <span class="value price">₦{{ formatPrice(med.unit_price) }}/unit</span>
+                <span class="value price">{{ formatPrice(med.unit_price) }}/unit</span>
               </div>
             </div>
 
@@ -796,6 +796,9 @@
 import { ref, computed, watch, onMounted, reactive } from 'vue';
 import { useToast } from 'vue-toast-notification';
 import apiFactory from '@/services/apiFactory';
+import { useCurrency } from '@/composables/useCurrency';
+
+const { format: formatPrice } = useCurrency();
 
 const $toast = useToast();
 
@@ -917,9 +920,6 @@ function formatAlertType(type) {
   return types[type] || type;
 }
 
-function formatPrice(price) {
-  return new Intl.NumberFormat('en-NG').format(price);
-}
 
 // Verification & Evidence helpers
 function hasVerificationInfo(med) {

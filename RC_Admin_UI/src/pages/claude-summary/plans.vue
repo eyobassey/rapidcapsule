@@ -17,6 +17,20 @@ const planTypes = [
   { title: 'Yearly Unlimited', value: 'unlimited_yearly' },
 ]
 
+const emptyPrices = () => ({
+  USD: { price: null },
+  GBP: { price: null },
+  EUR: { price: null },
+  NGN: { price: null },
+})
+
+const currencyOptions = [
+  { code: 'USD', symbol: '$', flag: '\u{1F1FA}\u{1F1F8}' },
+  { code: 'GBP', symbol: '\u00A3', flag: '\u{1F1EC}\u{1F1E7}' },
+  { code: 'EUR', symbol: '\u20AC', flag: '\u{1F1EA}\u{1F1FA}' },
+  { code: 'NGN', symbol: '\u20A6', flag: '\u{1F1F3}\u{1F1EC}' },
+]
+
 const defaultForm = {
   name: '',
   type: 'bundle',
@@ -27,6 +41,7 @@ const defaultForm = {
   is_active: true,
   sort_order: 0,
   description: '',
+  prices: emptyPrices(),
 }
 
 const form = ref({ ...defaultForm })
@@ -53,7 +68,7 @@ const fetchPlans = async () => {
 }
 
 const openCreateDialog = () => {
-  form.value = { ...defaultForm }
+  form.value = { ...defaultForm, prices: emptyPrices() }
   showCreateDialog.value = true
 }
 
@@ -69,6 +84,12 @@ const openEditDialog = (plan) => {
     is_active: plan.is_active,
     sort_order: plan.sort_order || 0,
     description: plan.description || '',
+    prices: {
+      USD: { price: plan.prices?.USD?.price ?? null },
+      GBP: { price: plan.prices?.GBP?.price ?? null },
+      EUR: { price: plan.prices?.EUR?.price ?? null },
+      NGN: { price: plan.prices?.NGN?.price ?? null },
+    },
   }
   showEditDialog.value = true
 }
@@ -289,6 +310,28 @@ onMounted(() => {
                   variant="outlined"
                 />
               </VCol>
+
+              <!-- Multi-Currency Prices -->
+              <VCol cols="12">
+                <div class="text-subtitle-2 font-weight-medium mb-2 mt-2">International Prices (optional)</div>
+                <div class="text-caption text-medium-emphasis mb-3">Set explicit prices for each currency. Leave empty to auto-convert from NGN.</div>
+                <VRow v-for="cur in currencyOptions" :key="cur.code" class="mb-1">
+                  <VCol cols="12" md="3" class="d-flex align-center">
+                    <span class="text-body-2 font-weight-bold">{{ cur.flag }} {{ cur.code }}</span>
+                  </VCol>
+                  <VCol cols="12" md="9">
+                    <VTextField
+                      v-model.number="form.prices[cur.code].price"
+                      :label="`Price (${cur.code})`"
+                      type="number"
+                      :prefix="cur.symbol"
+                      density="compact"
+                      variant="outlined"
+                    />
+                  </VCol>
+                </VRow>
+              </VCol>
+
               <VCol cols="12">
                 <VSwitch
                   v-model="form.is_active"
@@ -376,6 +419,28 @@ onMounted(() => {
                   variant="outlined"
                 />
               </VCol>
+
+              <!-- Multi-Currency Prices -->
+              <VCol cols="12">
+                <div class="text-subtitle-2 font-weight-medium mb-2 mt-2">International Prices (optional)</div>
+                <div class="text-caption text-medium-emphasis mb-3">Set explicit prices for each currency. Leave empty to auto-convert from NGN.</div>
+                <VRow v-for="cur in currencyOptions" :key="cur.code" class="mb-1">
+                  <VCol cols="12" md="3" class="d-flex align-center">
+                    <span class="text-body-2 font-weight-bold">{{ cur.flag }} {{ cur.code }}</span>
+                  </VCol>
+                  <VCol cols="12" md="9">
+                    <VTextField
+                      v-model.number="form.prices[cur.code].price"
+                      :label="`Price (${cur.code})`"
+                      type="number"
+                      :prefix="cur.symbol"
+                      density="compact"
+                      variant="outlined"
+                    />
+                  </VCol>
+                </VRow>
+              </VCol>
+
               <VCol cols="12">
                 <VSwitch
                   v-model="form.is_active"

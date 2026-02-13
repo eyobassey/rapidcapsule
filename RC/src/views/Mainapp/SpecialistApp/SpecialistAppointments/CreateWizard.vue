@@ -928,7 +928,7 @@
                         <span>Use Custom Fee</span>
                       </label>
                       <div v-if="payment.useCustomFee" class="custom-fee-input">
-                        <span class="currency-prefix">₦</span>
+                        <span class="currency-prefix">{{ symbol }}</span>
                         <input
                           type="text"
                           inputmode="numeric"
@@ -2509,12 +2509,14 @@ import { ref, reactive, computed, onMounted, inject, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useStore } from 'vuex';
 import { useToast } from 'vue-toast-notification';
+import { useCurrency } from '@/composables/useCurrency';
 
 const $http = inject('$http');
 const router = useRouter();
 const route = useRoute();
 const store = useStore();
 const toast = useToast();
+const { format: formatCurrency, symbol, currencyCode } = useCurrency();
 
 // Specialist Profile (logged-in user)
 const specialistProfile = computed(() => store.getters.userprofile);
@@ -3620,7 +3622,7 @@ const patientWalletError = computed(() => {
 
 const specialistWalletError = computed(() => {
   if (specialistWallet.isLoading) return '';
-  if (specialistWallet.available_balance < payment.totalAmount) return `Insufficient balance (₦${specialistWallet.available_balance.toLocaleString()})`;
+  if (specialistWallet.available_balance < payment.totalAmount) return `Insufficient balance (${formatCurrency(specialistWallet.available_balance)})`;
   return '';
 });
 
@@ -3637,9 +3639,7 @@ function selectPaymentSource(source) {
   paymentError.value = '';
 }
 
-function formatCurrency(amount) {
-  return `₦${(amount || 0).toLocaleString()}`;
-}
+// formatCurrency is provided by useCurrency composable
 
 function setCustomFee(enabled) {
   payment.useCustomFee = enabled;
@@ -4029,7 +4029,7 @@ async function submitAppointment() {
       total_amount: payment.totalAmount,
       payment_source: payment.source,
       payment_timing: 'at_booking',
-      currency: 'NGN',
+      currency: currencyCode.value,
 
       // Video settings
       video_settings: {

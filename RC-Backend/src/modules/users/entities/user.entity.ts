@@ -671,6 +671,9 @@ export class User {
   @Prop({ type: Boolean, default: false })
   enable_claude_health_summary: boolean;
 
+  @Prop({ type: String, enum: ['USD', 'GBP', 'EUR', 'NGN'], default: 'USD' })
+  preferred_currency: string;
+
   @Prop(
     raw({
       score: { type: Number },

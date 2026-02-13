@@ -1172,6 +1172,7 @@ import { ref, reactive, computed, onMounted, onUnmounted, inject, watch } from '
 import { useRoute, useRouter } from 'vue-router';
 import { useToast } from 'vue-toast-notification';
 import { format, formatDistanceToNow } from 'date-fns';
+import { useCurrency } from '@/composables/useCurrency';
 import RescheduleModal from './modals/RescheduleModal.vue';
 import CancelModal from './modals/CancelModal.vue';
 import ClinicalNoteModal from './modals/ClinicalNoteModal.vue';
@@ -1180,6 +1181,7 @@ const route = useRoute();
 const router = useRouter();
 const toast = useToast();
 const $http = inject('$_HTTP');
+const { format: formatCurrency } = useCurrency();
 
 // State
 const isLoading = ref(true);
@@ -1586,11 +1588,7 @@ function formatRelativeTime(dateStr) {
   catch { return ''; }
 }
 
-function formatCurrency(amount) {
-  if (amount === null || amount === undefined) return 'Not set';
-  if (amount === 0) return 'Free';
-  return new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN' }).format(amount);
-}
+// formatCurrency is provided by useCurrency composable
 
 function formatUrgency(urgency) {
   if (!urgency) return 'Routine';

@@ -147,7 +147,7 @@
         <p>Enter the amount you want to add</p>
 
         <div class="amount-input-wrapper">
-          <span class="currency-symbol">&#8358;</span>
+          <span class="currency-symbol">{{ currencySymbol }}</span>
           <input
             type="number"
             v-model.number="topUpAmount"
@@ -164,7 +164,7 @@
             @click="topUpAmount = amount"
             :class="{ active: topUpAmount === amount }"
           >
-            {{ formatPrice(amount) }}
+            {{ format(amount) }}
           </button>
         </div>
 
@@ -203,7 +203,7 @@
             </div>
             <div class="wallet-details">
               <span class="wallet-label">Your Wallet Balance</span>
-              <span class="wallet-amount">{{ formatPrice(walletBalance) }}</span>
+              <span class="wallet-amount">{{ format(walletBalance) }}</span>
             </div>
           </div>
 
@@ -228,15 +228,15 @@
             <div class="transaction-summary">
               <div class="summary-row">
                 <span class="label">Plan Price</span>
-                <span class="value">{{ formatPrice(selectedPlan.price) }}</span>
+                <span class="value">{{ format(selectedPlan.price) }}</span>
               </div>
               <div class="summary-row">
                 <span class="label">Current Balance</span>
-                <span class="value">{{ formatPrice(walletBalance) }}</span>
+                <span class="value">{{ format(walletBalance) }}</span>
               </div>
               <div class="summary-row total" :class="{ insufficient: walletBalance < selectedPlan.price }">
                 <span class="label">Balance After Purchase</span>
-                <span class="value">{{ formatPrice(Math.max(0, walletBalance - selectedPlan.price)) }}</span>
+                <span class="value">{{ format(Math.max(0, walletBalance - selectedPlan.price)) }}</span>
               </div>
             </div>
 
@@ -245,7 +245,7 @@
               <v-icon name="hi-exclamation-circle" scale="1" />
               <div class="alert-content">
                 <strong>Insufficient Balance</strong>
-                <p>You need {{ formatPrice(selectedPlan.price - walletBalance) }} more. Please top up your wallet.</p>
+                <p>You need {{ format(selectedPlan.price - walletBalance) }} more. Please top up your wallet.</p>
               </div>
             </div>
           </div>
@@ -1123,6 +1123,7 @@ import axios from "axios";
 import http from "@/services/http";
 import { useFormatDateNumbers, useConvertToFile } from "@/Utility-functions";
 import { TWO_FAS, SECURITY_UPDATE_OPTIONS, OTP_VERIFICATION_CONTENT } from "@/utilities/constants";
+import { formatCurrency, getCurrencySymbol } from '@/utilities/currency';
 
 // Layout Components
 import TopBar from "@/components/Navigation/top-bar.vue";
@@ -1331,6 +1332,14 @@ export default {
       userCards: "cards",
       QRCode: "userAccountSettings/qrCode",
     }),
+
+    currencyCode() {
+      return this.$store.getters['currency/currencyCode'];
+    },
+
+    currencySymbol() {
+      return getCurrencySymbol(this.currencyCode);
+    },
 
     qrUrl() {
       return this.QRCode?.data || "";
@@ -1692,11 +1701,8 @@ export default {
     },
 
     // Wallet methods
-    formatPrice(price) {
-      return new Intl.NumberFormat("en-NG", {
-        style: "currency",
-        currency: "NGN",
-      }).format(price || 0);
+    format(amount) {
+      return formatCurrency(amount, this.currencyCode);
     },
 
     async fetchWalletBalance() {

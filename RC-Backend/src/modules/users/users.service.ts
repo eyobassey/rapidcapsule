@@ -464,6 +464,7 @@ export class UsersService {
       professional_practice,
       medical_history,
       allergies,
+      preferred_currency,
     } = updateUserProfileDto || {};
 
     const user = await this.findById(userId);
@@ -542,6 +543,7 @@ export class UsersService {
           ...allergies,
         },
       }),
+      ...(preferred_currency && { preferred_currency }),
     };
 
     const updatedUser = await updateOne(
@@ -1111,6 +1113,34 @@ export class UsersService {
 
   async getUserEarning(userId: Types.ObjectId) {
     return this.walletsService.getUserEarnings(userId);
+  }
+
+  /**
+   * Detect currency based on IP address using geoip-lite.
+   */
+  detectCurrency(ip: string): { currency: string; country: string | null } {
+    const COUNTRY_CURRENCY_MAP: Record<string, string> = {
+      US: 'USD', GB: 'GBP', NG: 'NGN',
+      // Eurozone countries
+      DE: 'EUR', FR: 'EUR', IT: 'EUR', ES: 'EUR', NL: 'EUR', BE: 'EUR',
+      AT: 'EUR', PT: 'EUR', FI: 'EUR', IE: 'EUR', GR: 'EUR', SK: 'EUR',
+      SI: 'EUR', LV: 'EUR', LT: 'EUR', EE: 'EUR', CY: 'EUR', MT: 'EUR',
+      LU: 'EUR', HR: 'EUR',
+    };
+
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const geoip = require('geoip-lite');
+      const geo = geoip.lookup(ip);
+      if (geo?.country) {
+        const currency = COUNTRY_CURRENCY_MAP[geo.country] || 'USD';
+        return { currency, country: geo.country };
+      }
+    } catch (e) {
+      this.logger.error(`geoip-lite lookup failed for IP ${ip}: ${e}`);
+    }
+
+    return { currency: 'USD', country: null };
   }
 
   // Identity Verification Methods

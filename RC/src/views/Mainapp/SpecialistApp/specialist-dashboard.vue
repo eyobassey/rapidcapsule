@@ -120,9 +120,9 @@
 								<v-icon name="bi-wallet2" scale="1.3" />
 							</div>
 							<div class="stat-info">
-								<span class="stat-value">&#8358;{{ formatCurrency(dashboardData?.wallet?.balance) }}</span>
+								<span class="stat-value">{{ formatCurrencyAmount(dashboardData?.wallet?.balance) }}</span>
 								<span class="stat-label">Wallet Balance</span>
-								<span class="stat-sub">&#8358;{{ formatCurrency(dashboardData?.totalEarnings?.totalEarnings) }} total</span>
+								<span class="stat-sub">{{ formatCurrencyAmount(dashboardData?.totalEarnings?.totalEarnings) }} total</span>
 							</div>
 						</div>
 
@@ -525,12 +525,14 @@ import RcCalendar from "@/components/RCCalendar";
 import Loader from "@/components/Loader/main-loader";
 import DialogModal from "@/components/modals/dialog-modal.vue";
 import { calculatePercentageChange } from "@/utilities/utilityFunctions";
+import { useCurrency } from '@/composables/useCurrency';
 import RescheduleAppointment from "./Appointments/RescheduleAppointment";
 import CreateAppointmentModal from "./Appointments/CreateAppointmentModal.vue";
 
 const $http = inject("$_HTTP");
 const $toast = useToast();
 const router = useRouter();
+const { formatConverted: formatCurrencyAmount } = useCurrency();
 
 // State
 const isLoading = ref(true);
@@ -596,10 +598,6 @@ const formatRelativeTime = (date) => {
 	}
 };
 
-const formatCurrency = (amount) => {
-	if (!amount) return '0';
-	return new Intl.NumberFormat('en-NG').format(amount);
-};
 
 const getCompletedTrend = () => {
 	const current = dashboardData.value?.appointmentsData?.completedAppointments || 0;

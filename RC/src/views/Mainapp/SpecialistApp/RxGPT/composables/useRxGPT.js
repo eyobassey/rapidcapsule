@@ -1,5 +1,6 @@
 import { ref } from 'vue';
 import apiFactory from '@/services/apiFactory';
+import { formatCurrency } from '@/utilities/currency';
 
 // ============ Formatters ============
 
@@ -17,7 +18,7 @@ export function formatAlertType(type) {
 
 export function formatPrice(price) {
   if (!price && price !== 0) return '—';
-  return new Intl.NumberFormat('en-NG').format(price);
+  return formatCurrency(price);
 }
 
 export function formatRiskLevel(level) {

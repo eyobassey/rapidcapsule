@@ -122,12 +122,12 @@
 
           <!-- Consultation Fee -->
           <div class="form-group">
-            <label class="form-label">Consultation Fee (₦)</label>
+            <label class="form-label">Consultation Fee ({{ symbol }})</label>
             <currency-input
               v-model="consultationFee"
               name="consultationFee"
               placeholder="Enter fee (optional)"
-              :options="{ currency: 'NGN' }"
+              :options="{ currency: currencyCode }"
             />
           </div>
 
@@ -186,6 +186,7 @@
 import { ref, computed, inject, watch } from 'vue';
 import { useToast } from 'vue-toast-notification';
 import { format } from 'date-fns';
+import { useCurrency } from '@/composables/useCurrency';
 import DialogModal from '@/components/modals/dialog-modal.vue';
 import RcSelect from '@/components/RCSelect/RCSelect.vue';
 import RcAvatar from '@/components/RCAvatar';
@@ -197,6 +198,7 @@ import CurrencyInput from '@/components/inputs/currency-input.vue';
 
 const $http = inject('$_HTTP');
 const $toast = useToast();
+const { symbol, currencyCode } = useCurrency();
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },

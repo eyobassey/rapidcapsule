@@ -84,6 +84,7 @@
 <script setup>
 import { computed } from 'vue';
 import { format, parseISO } from 'date-fns';
+import { useCurrency } from '@/composables/useCurrency';
 import RcAvatar from '@/components/RCAvatar';
 
 const props = defineProps({
@@ -130,13 +131,7 @@ const formattedTime = computed(() => {
   return `${displayHours}:${String(minutes).padStart(2, '0')} ${period}`;
 });
 
-const formatCurrency = (amount) => {
-  return new Intl.NumberFormat('en-NG', {
-    style: 'currency',
-    currency: 'NGN',
-    minimumFractionDigits: 0,
-  }).format(amount || 0);
-};
+const { format: formatCurrency } = useCurrency();
 </script>
 
 <style scoped lang="scss">

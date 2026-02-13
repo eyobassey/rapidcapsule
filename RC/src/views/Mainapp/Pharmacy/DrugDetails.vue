@@ -93,7 +93,7 @@
                 <!-- Price Block -->
                 <div class="price-block">
                   <div class="price-row">
-                    <span class="current-price">{{ formatPrice(currentPrice) }}</span>
+                    <span class="current-price">{{ formatPrice(displayPrice) }}</span>
                     <span class="original-price" v-if="showOriginalPrice">{{ formatPrice(drug.original_price) }}</span>
                   </div>
                   <div class="stock-badge" :class="getStockClass">
@@ -441,7 +441,7 @@
                 </div>
                 <div class="related-info">
                   <span class="related-name">{{ item.name }}</span>
-                  <span class="related-price">{{ formatPrice(item.selling_price) }}</span>
+                  <span class="related-price">{{ formatPrice(getPrice(item)) }}</span>
                 </div>
               </div>
             </div>
@@ -493,11 +493,13 @@ import {
   mapActions as useMapActions,
   mapGetters as useMapGetters,
 } from "@/utilities/utilityStore";
+import { useCurrency } from "@/composables/useCurrency";
 
 export default {
   name: "DrugDetails",
   emits: ["openSideNav"],
   setup() {
+    const { format: formatPrice, getPrice } = useCurrency();
     const router = useRouter();
     const route = useRoute();
     const quantity = ref(1);
@@ -626,6 +628,11 @@ export default {
       return drug.value?.selling_price || 0;
     });
 
+    const displayPrice = computed(() => {
+      if (selectedBatch.value) return selectedBatch.value.price;
+      return getPrice(drug.value);
+    });
+
     const currentManufacturer = computed(() => {
       if (selectedBatch.value) return selectedBatch.value.manufacturer;
       return drug.value?.manufacturer || null;
@@ -648,15 +655,6 @@ export default {
 
     const selectBatch = (batch) => {
       selectedBatch.value = batch;
-    };
-
-    const formatPrice = (price) => {
-      return new Intl.NumberFormat("en-NG", {
-        style: "currency",
-        currency: "NGN",
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      }).format(price || 0);
     };
 
     const incrementQuantity = () => {
@@ -694,6 +692,7 @@ export default {
           route: drug.value.route,
           routeAbbreviation: drug.value.route_abbreviation,
           price: currentPrice.value,
+          prices: drug.value.prices || null,
           quantity: actualQtyToAdd,
           imageUrl: drug.value.image_url,
           purchaseType: drug.value.purchase_type,
@@ -814,6 +813,8 @@ export default {
       stockText,
       getStockClass,
       currentPrice,
+      displayPrice,
+      getPrice,
       currentManufacturer,
       showOriginalPrice,
       showCartModal,

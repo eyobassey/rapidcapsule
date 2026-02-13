@@ -396,12 +396,14 @@
 import { computed, ref, reactive, onMounted, inject, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useStore } from 'vuex';
+import { useCurrency } from '@/composables/useCurrency';
 import { useOnboardingState } from './composables/useOnboardingState';
 
 const router = useRouter();
 const store = useStore();
 const $http = inject('$http');
 const $toast = inject('$toast');
+const { format: formatRate } = useCurrency();
 
 const {
   stepCompletion,
@@ -861,11 +863,7 @@ const formatTime = (time) => {
   return `${displayHour}:${minutes || '00'} ${ampm}`;
 };
 
-// Helper: Format Rate
-const formatRate = (rate) => {
-  if (!rate) return '---';
-  return `₦${Number(rate).toLocaleString()}`;
-};
+// formatRate is provided by useCurrency composable (aliased as formatRate)
 
 // Bank methods
 const onBankChange = () => {

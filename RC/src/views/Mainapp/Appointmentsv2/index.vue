@@ -634,6 +634,7 @@ import { ref, computed, inject, onMounted, watch, nextTick, defineEmits, watchEf
 import { useRouter, useRoute } from 'vue-router';
 import { format, parseISO, isToday, isTomorrow, isYesterday, differenceInDays } from 'date-fns';
 import { useToast } from 'vue-toast-notification';
+import { useCurrency } from '@/composables/useCurrency';
 import Loader from '@/components/Loader/main-loader.vue';
 import AppointmentCard from './components/AppointmentCard.vue';
 
@@ -641,6 +642,7 @@ const router = useRouter();
 const route = useRoute();
 const $http = inject('$_HTTP');
 const $toast = useToast();
+const { format: formatCurrency } = useCurrency();
 
 // Payment verification state
 const isVerifyingPayment = ref(false);
@@ -1168,14 +1170,7 @@ const closeReceiptModal = () => {
   receiptAppointment.value = null;
 };
 
-const formatCurrency = (amount) => {
-  if (!amount && amount !== 0) return 'N/A';
-  return new Intl.NumberFormat('en-NG', {
-    style: 'currency',
-    currency: 'NGN',
-    minimumFractionDigits: 0,
-  }).format(amount);
-};
+// formatCurrency is provided by useCurrency composable
 
 const downloadReceipt = async () => {
   if (!receiptAppointment.value) return;

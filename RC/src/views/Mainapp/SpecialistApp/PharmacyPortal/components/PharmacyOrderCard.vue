@@ -74,6 +74,7 @@
 import { defineComponent, computed } from "vue";
 import RCIcon from "@/components/RCIcon/RCIcon.vue";
 import moment from "moment";
+import { useCurrency } from "@/composables/useCurrency";
 
 export default defineComponent({
   name: "PharmacyOrderCard",
@@ -86,12 +87,7 @@ export default defineComponent({
   },
   emits: ["view-details", "update-status"],
   setup(props) {
-    const formatPrice = (price) => {
-      return new Intl.NumberFormat("en-NG", {
-        style: "currency",
-        currency: "NGN",
-      }).format(price || 0);
-    };
+    const { format: formatPrice } = useCurrency();
 
     const formatDate = (date) => {
       return moment(date).format("MMM D, YYYY h:mm A");

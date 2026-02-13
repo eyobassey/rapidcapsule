@@ -372,6 +372,10 @@ export class SearchDrugsDto {
   @IsString()
   @IsOptional()
   sort_order?: 'asc' | 'desc';
+
+  @IsString()
+  @IsOptional()
+  currency?: string; // Display currency (USD, GBP, EUR, NGN)
 }
 
 /**

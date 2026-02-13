@@ -3,7 +3,7 @@
 		<div class="container-earnings">
 			<div class="container-earnings__balance">
 				<div class="earnings-balance__balance--earnings">
-					<h1 class="earnings-balance__earnings">₦ {{ specialistEarnings.currentBalance }}</h1>
+					<h1 class="earnings-balance__earnings">{{ formatConverted(specialistEarnings.currentBalance) }}</h1>
 					<p class="earnings-balance__footer" @click="isOpenWithdrawFunds = true">
 						Withdraw Funds
 					</p>
@@ -12,7 +12,7 @@
 			</div>
 			<div class="container-earnings__earnings">
 				<p class="container-earnings__earnings--text">Total Earnings:</p>
-				<p class="container-earnings__earnings--text">₦ {{ specialistEarnings.totalEarnings }}</p>
+				<p class="container-earnings__earnings--text">{{ formatConverted(specialistEarnings.totalEarnings) }}</p>
 			</div>
 		</div>
 		<loader v-if="isLoading" :useOverlay="false" style="position: absolute" />
@@ -175,14 +175,14 @@
 					<CurrencyInput
 						v-model="withdrawalAmount"
 						class="bank-account__headings--amount"
-						placeholder="₦ 0"
+						:placeholder="symbol + ' 0'"
 						:options="{
 							currency: 'NGN',
 							currencyDisplay: 'narrowSymbol',
 						}"
 					/>
 					<p class="bank-account__headings--text">
-						₦ {{ specialistEarnings.currentBalance }}
+						{{ formatConverted(specialistEarnings.currentBalance) }}
 					</p>
 				</div>
 				<div class="container-account">
@@ -330,6 +330,7 @@
 <script setup>
 import { ref, inject, onMounted, watchEffect } from "vue";
 import { useToast } from 'vue-toast-notification';
+import { useCurrency } from '@/composables/useCurrency';
 import RcButton from "@/components/buttons/button-primary";
 import RcButtonIcon from "@/components/buttons/button-icon";
 import RcRadio from "@/components/RCRadio";
@@ -343,6 +344,7 @@ import CurrencyInput from "@/components/inputs/currency-input";
 
 const $http = inject("$http");
 const $toast = useToast();
+const { format, formatConverted, symbol } = useCurrency();
 const emit = defineEmits(['success']);
 
 const isOpenBankAccount = ref(false);

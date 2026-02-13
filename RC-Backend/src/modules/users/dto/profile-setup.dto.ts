@@ -1,5 +1,5 @@
 import { ProfessionalPractice, Profile, Security } from '../types/profile.types';
-import { IsArray, IsObject, IsOptional, IsString, ValidateNested } from 'class-validator';
+import { IsArray, IsIn, IsObject, IsOptional, IsString, ValidateNested } from 'class-validator';
 import { Condition } from '../entities/pre-existing-condition.entity';
 import { Type } from 'class-transformer';
 import { EmergencyContact } from '../entities/emergency-contact.entity';
@@ -177,4 +177,9 @@ export class ProfileSetupDto {
   @ValidateNested()
   @Type(() => DeviceIntegrationDto)
   device_integration?: DeviceIntegrationDto;
+
+  @IsOptional()
+  @IsString()
+  @IsIn(['USD', 'GBP', 'EUR', 'NGN'])
+  preferred_currency?: string;
 }

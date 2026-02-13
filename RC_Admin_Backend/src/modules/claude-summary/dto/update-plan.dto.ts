@@ -1,4 +1,4 @@
-import { IsString, IsEnum, IsNumber, IsOptional, IsBoolean, Min } from 'class-validator';
+import { IsString, IsEnum, IsNumber, IsOptional, IsBoolean, IsObject, Min } from 'class-validator';
 import { PlanType } from '../entities/claude-summary-plan.entity';
 
 export class UpdatePlanDto {
@@ -41,4 +41,8 @@ export class UpdatePlanDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @IsOptional()
+  @IsObject()
+  prices?: Record<string, { price: number }>;
 }

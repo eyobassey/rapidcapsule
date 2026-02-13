@@ -1,4 +1,4 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { Prop, Schema, SchemaFactory, raw } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
 
 export type PlanDocument = HydratedDocument<Plan>;
@@ -13,6 +13,14 @@ export class Plan {
 
   @Prop({ type: Number, required: true })
   amount: number;
+
+  @Prop(raw({
+    USD: { amount: { type: Number } },
+    GBP: { amount: { type: Number } },
+    EUR: { amount: { type: Number } },
+    NGN: { amount: { type: Number } },
+  }))
+  prices: Record<string, { amount: number }>;
 
   @Prop({ type: Number, default: 14 })
   trial_days: number;

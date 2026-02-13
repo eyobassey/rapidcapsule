@@ -56,7 +56,7 @@
           <span class="txn-date">{{ formatDate(txn.created_at || txn.createdAt) }}</span>
         </div>
         <div class="txn-amount" :class="txn.type?.toLowerCase()">
-          {{ txn.type === 'Credit' || txn.type === 'credit' ? '+' : '-' }}{{ formatPrice(txn.amount) }}
+          {{ txn.type === 'Credit' || txn.type === 'credit' ? '+' : '-' }}{{ format(txn.amount) }}
         </div>
       </div>
     </div>
@@ -71,6 +71,7 @@
 
 <script>
 import Loader from "@/components/Loader/main-loader.vue";
+import { formatCurrency } from '@/utilities/currency';
 
 export default {
   name: "TransactionHistory",
@@ -109,12 +110,14 @@ export default {
       ],
     };
   },
+  computed: {
+    currencyCode() {
+      return this.$store.getters['currency/currencyCode'];
+    },
+  },
   methods: {
-    formatPrice(price) {
-      return new Intl.NumberFormat("en-NG", {
-        style: "currency",
-        currency: "NGN",
-      }).format(price || 0);
+    format(amount) {
+      return formatCurrency(amount, this.currencyCode);
     },
     formatDate(dateString) {
       if (!dateString) return "";

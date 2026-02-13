@@ -66,6 +66,28 @@ export class DrugService {
   ) {}
 
   /**
+   * Get the selling price for a drug in the requested currency.
+   * Falls back to the drug's default selling_price if no per-currency price is set.
+   */
+  static getDrugPrice(
+    drug: any,
+    currencyCode?: string,
+  ): { selling_price: number; cost_price: number; currency: string } {
+    if (currencyCode && drug.prices?.[currencyCode]?.selling_price != null) {
+      return {
+        selling_price: drug.prices[currencyCode].selling_price,
+        cost_price: drug.prices[currencyCode].cost_price ?? drug.cost_price,
+        currency: currencyCode,
+      };
+    }
+    return {
+      selling_price: drug.selling_price,
+      cost_price: drug.cost_price,
+      currency: drug.currency || 'NGN',
+    };
+  }
+
+  /**
    * Create a new drug
    */
   async create(
@@ -321,6 +343,7 @@ export class DrugService {
       limit = 20,
       sort_by = 'name',
       sort_order = 'asc',
+      currency,
     } = searchDto;
 
     const DrugsCollection = this.connection.collection('drugentities');
@@ -455,6 +478,9 @@ export class DrugService {
 
       const batches = batchMap.get(drug._id.toString()) || [];
 
+      // Resolve display price for requested currency
+      const priceInfo = DrugService.getDrugPrice(drug, currency);
+
       if (batches.length > 0) {
         for (const batch of batches) {
           const availableQty =
@@ -478,6 +504,9 @@ export class DrugService {
             route_abbreviation: routeInfo.abbreviation,
             manufacturer: batch.manufacturer || drugManufacturer,
             selling_price: batchPrice,
+            display_price: priceInfo.selling_price,
+            display_currency: priceInfo.currency,
+            prices: drug.prices || null,
             quantity: availableQty,
             quantity_in_stock: availableQty,
             expiry_date: batch.expiry_date,
@@ -506,6 +535,9 @@ export class DrugService {
           route_abbreviation: routeInfo.abbreviation,
           manufacturer: drugManufacturer,
           selling_price: drug.selling_price,
+          display_price: priceInfo.selling_price,
+          display_currency: priceInfo.currency,
+          prices: drug.prices || null,
           quantity: drug.quantity || 0,
           quantity_in_stock: drug.quantity || 0,
           expiry_date: null,

@@ -80,6 +80,14 @@ export class DrugEntity {
   @Prop({ type: Number, default: 0 })
   discount_percentage: number;
 
+  @Prop(raw({
+    USD: { cost_price: { type: Number }, selling_price: { type: Number } },
+    GBP: { cost_price: { type: Number }, selling_price: { type: Number } },
+    EUR: { cost_price: { type: Number }, selling_price: { type: Number } },
+    NGN: { cost_price: { type: Number }, selling_price: { type: Number } },
+  }))
+  prices: Record<string, { cost_price: number; selling_price: number }>;
+
   // ============ INVENTORY ============
 
   @Prop({ type: Number, default: 0 })

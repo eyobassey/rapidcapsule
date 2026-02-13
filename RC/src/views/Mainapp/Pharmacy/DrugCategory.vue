@@ -60,7 +60,7 @@
                 </div>
                 <div class="stat-divider"></div>
                 <div class="stat" v-if="priceRange.min !== null">
-                  <span class="stat-value">₦{{ formatNumber(priceRange.min) }} - ₦{{ formatNumber(priceRange.max) }}</span>
+                  <span class="stat-value">{{ formatNumber(priceRange.min) }} - {{ formatNumber(priceRange.max) }}</span>
                   <span class="stat-label">Price Range</span>
                 </div>
                 <div class="stat-divider" v-if="inStockCount > 0"></div>
@@ -192,7 +192,7 @@
             <label>Price Range:</label>
             <div class="price-inputs">
               <div class="price-input-group">
-                <span class="currency">₦</span>
+                <span class="currency">{{ currencySymbol }}</span>
                 <input
                   type="number"
                   v-model.number="minPrice"
@@ -202,7 +202,7 @@
               </div>
               <span class="price-separator">-</span>
               <div class="price-input-group">
-                <span class="currency">₦</span>
+                <span class="currency">{{ currencySymbol }}</span>
                 <input
                   type="number"
                   v-model.number="maxPrice"
@@ -324,6 +324,7 @@ import TopBar from "@/components/Navigation/top-bar";
 import RcButton from "@/components/buttons/button-primary";
 import RCIcon from "@/components/RCIcon/RCIcon.vue";
 import DrugCard from "./components/DrugCard.vue";
+import { useCurrency } from "@/composables/useCurrency";
 import {
   mapActions as useMapActions,
   mapGetters as useMapGetters,
@@ -339,6 +340,7 @@ export default {
   },
   emits: ["openSideNav"],
   setup() {
+    const { format: formatCurrencyValue, symbol: currencySymbol } = useCurrency();
     const router = useRouter();
     const route = useRoute();
 
@@ -542,8 +544,7 @@ export default {
     };
 
     const formatNumber = (num) => {
-      if (!num) return "0";
-      return Number(num).toLocaleString("en-NG");
+      return formatCurrencyValue(num);
     };
 
     const fetchCategoryDrugs = async (reset = false) => {
@@ -638,6 +639,7 @@ export default {
         routeAbbreviation: drug.route_abbreviation,
         manufacturer: drug.manufacturer,
         price: drug.selling_price,
+        prices: drug.prices || null,
         quantity: 1,
         imageUrl: drug.image_url || drug.primary_image,
       });
@@ -688,6 +690,7 @@ export default {
       categoryImageUrl,
       cartItemCount,
       formatNumber,
+      currencySymbol,
       fetchCategoryDrugs,
       loadMore,
       debouncedSearch,

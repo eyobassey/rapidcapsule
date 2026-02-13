@@ -122,9 +122,9 @@
 								<v-icon name="bi-wallet2" scale="1.3" />
 							</div>
 							<div class="stat-info">
-								<span class="stat-value">&#8358;{{ formatCurrency(dashboardStats.walletBalance) }}</span>
+								<span class="stat-value">{{ formatCompact(dashboardStats.walletBalance) }}</span>
 								<span class="stat-label">Wallet</span>
-								<span class="stat-sub">&#8358;{{ formatCurrency(dashboardStats.totalEarnings) }} total</span>
+								<span class="stat-sub">{{ formatCompact(dashboardStats.totalEarnings) }} total</span>
 							</div>
 						</div>
 					</div>
@@ -382,13 +382,12 @@
 							</div>
 							<div class="card-content earnings-content">
 								<div class="earnings-amount">
-									<span class="currency">&#8358;</span>
-									<span class="amount">{{ formatCurrency(dashboardStats.totalEarnings) }}</span>
+									<span class="amount">{{ formatCompact(dashboardStats.totalEarnings) }}</span>
 								</div>
 								<p class="earnings-label">Total Earnings</p>
 								<div class="earnings-wallet-pill">
 									<v-icon name="hi-credit-card" scale="0.8" />
-									<span>Wallet: &#8358;{{ formatCurrency(dashboardStats.walletBalance) }}</span>
+									<span>Wallet: {{ formatCompact(dashboardStats.walletBalance) }}</span>
 								</div>
 								<div class="earnings-stats">
 									<div class="earnings-stat">
@@ -520,10 +519,12 @@ import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useStore } from 'vuex';
 import { formatDistanceToNow } from 'date-fns';
+import { useCurrency } from '@/composables/useCurrency';
 import { useAppointments } from './composables/useAppointments';
 
 const router = useRouter();
 const store = useStore();
+const { format: formatCurrency, formatCompact, symbol } = useCurrency();
 const { dashboardStats, isLoading, fetchDashboard } = useAppointments();
 
 const dismissedGreeting = ref(false);
@@ -746,16 +747,7 @@ function formatRelativeTime(date) {
 	}
 }
 
-function formatCurrency(amount) {
-	if (!amount) return '0';
-	if (amount >= 1000000) {
-		return (amount / 1000000).toFixed(1) + 'M';
-	}
-	if (amount >= 1000) {
-		return (amount / 1000).toFixed(0) + 'K';
-	}
-	return amount.toLocaleString();
-}
+// formatCurrency and formatCompact are provided by useCurrency composable
 
 function getBarHeight(value) {
 	const max = Math.max(...currentWeekData.value.map(d => Math.max(d.scheduled, d.completed)), 1);

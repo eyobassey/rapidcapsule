@@ -16,7 +16,7 @@
               <span class="section-icon">📦</span>
               <div>
                 <h3>Order Summary</h3>
-                <span class="item-count">{{ cartItemCount }} item(s) • {{ formatPrice(cartTotal) }}</span>
+                <span class="item-count">{{ cartItemCount }} item(s) • {{ formatConverted(cartTotal) }}</span>
               </div>
             </div>
             <span class="toggle-icon" :class="{ open: showOrderSummary }">▼</span>
@@ -33,7 +33,7 @@
                   <span class="item-name">{{ item.name }}</span>
                   <span class="item-qty">Qty: {{ item.quantity }}</span>
                 </div>
-                <span class="item-price">{{ formatPrice(item.price * item.quantity) }}</span>
+                <span class="item-price">{{ formatPrice(getPrice(item) * item.quantity) }}</span>
               </div>
             </div>
           </div>
@@ -125,7 +125,7 @@
                   <span class="option-icon">👛</span>
                   <div class="option-info">
                     <strong>Pay with Wallet</strong>
-                    <span>Balance: {{ formatPrice(walletBalance) }}</span>
+                    <span>Balance: {{ formatConverted(walletBalance) }}</span>
                     <span v-if="walletBalance < totalAmount" class="insufficient">Insufficient balance</span>
                   </div>
                 </div>
@@ -142,7 +142,7 @@
                   <span class="option-icon">✂️</span>
                   <div class="option-info">
                     <strong>Split Payment</strong>
-                    <span>Wallet ({{ formatPrice(walletBalance) }}) + Card ({{ formatPrice(totalAmount - walletBalance) }})</span>
+                    <span>Wallet ({{ formatConverted(walletBalance) }}) + Card ({{ formatConverted(totalAmount - walletBalance) }})</span>
                   </div>
                 </div>
               </div>
@@ -168,7 +168,7 @@
             </button>
           </div>
           <div v-if="promoApplied" class="promo-success">
-            Promo applied! You saved {{ formatPrice(promoDiscount) }}
+            Promo applied! You saved {{ formatConverted(promoDiscount) }}
           </div>
         </div>
 
@@ -176,23 +176,23 @@
         <div class="price-breakdown">
           <div class="price-row">
             <span>Subtotal</span>
-            <span>{{ formatPrice(cartTotal) }}</span>
+            <span>{{ formatConverted(cartTotal) }}</span>
           </div>
           <div class="price-row" v-if="deliveryMethod === 'delivery'">
             <span>Delivery Fee</span>
-            <span>{{ formatPrice(deliveryFee) }}</span>
+            <span>{{ formatConverted(deliveryFee) }}</span>
           </div>
           <div class="price-row discount" v-if="promoDiscount > 0">
             <span>Promo Discount</span>
-            <span>-{{ formatPrice(promoDiscount) }}</span>
+            <span>-{{ formatConverted(promoDiscount) }}</span>
           </div>
           <div class="price-row discount" v-if="paymentMethod === 'wallet' || paymentMethod === 'split'">
             <span>Wallet Payment</span>
-            <span>-{{ formatPrice(walletPaymentAmount) }}</span>
+            <span>-{{ formatConverted(walletPaymentAmount) }}</span>
           </div>
           <div class="price-row total">
             <span>Total to Pay</span>
-            <span>{{ formatPrice(amountToPay) }}</span>
+            <span>{{ formatConverted(amountToPay) }}</span>
           </div>
         </div>
 
@@ -251,6 +251,7 @@ import {
   mapActions as useMapActions,
   mapGetters as useMapGetters,
 } from "@/utilities/utilityStore";
+import { useCurrency } from "@/composables/useCurrency";
 
 export default {
   name: "PharmacyCheckout",
@@ -260,6 +261,7 @@ export default {
   },
   emits: ["openSideNav"],
   setup() {
+    const { format: formatPrice, getPrice, formatConverted } = useCurrency();
     const router = useRouter();
     const route = useRoute();
 
@@ -347,15 +349,8 @@ export default {
     const placeOrderButtonLabel = computed(() => {
       if (placingOrder.value) return "Processing...";
       if (amountToPay.value === 0) return "Place Order (Free)";
-      return `Pay ${formatPrice(amountToPay.value)}`;
+      return `Pay ${formatConverted(amountToPay.value)}`;
     });
-
-    const formatPrice = (price) => {
-      return new Intl.NumberFormat("en-NG", {
-        style: "currency",
-        currency: "NGN",
-      }).format(price || 0);
-    };
 
     const formatAddressDisplay = (address) => {
       if (!address) return "";
@@ -622,6 +617,8 @@ export default {
       placeOrderButtonLabel,
       // Methods
       formatPrice,
+      formatConverted,
+      getPrice,
       formatAddressDisplay,
       formatPharmacyAddress,
       applyPromoCode,

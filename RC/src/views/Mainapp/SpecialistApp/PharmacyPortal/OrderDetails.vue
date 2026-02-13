@@ -239,6 +239,7 @@ import {
   mapGetters as useMapGetters,
 } from "@/utilities/utilityStore";
 import moment from "moment";
+import { useCurrency } from "@/composables/useCurrency";
 
 export default {
   name: "PharmacyOrderDetails",
@@ -250,6 +251,7 @@ export default {
   },
   emits: ["openSideNav"],
   setup() {
+    const { format: formatPrice } = useCurrency();
     const route = useRoute();
     const router = useRouter();
     const showCancelModal = ref(false);
@@ -268,13 +270,6 @@ export default {
 
     const loading = computed(() => isLoading.value);
     const order = computed(() => currentOrder.value);
-
-    const formatPrice = (price) => {
-      return new Intl.NumberFormat("en-NG", {
-        style: "currency",
-        currency: "NGN",
-      }).format(price || 0);
-    };
 
     const formatDate = (date) => moment(date).format("MMM D, YYYY");
     const formatTime = (date) => moment(date).format("h:mm A");

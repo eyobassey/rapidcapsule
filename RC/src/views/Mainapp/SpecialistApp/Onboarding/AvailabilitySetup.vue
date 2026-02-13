@@ -458,7 +458,7 @@
               </div>
               <div class="stat-item">
                 <span class="stat-label">Potential Earnings</span>
-                <span class="stat-value earnings">₦{{ formattedEarnings }}</span>
+                <span class="stat-value earnings">{{ formattedEarnings }}</span>
               </div>
             </div>
           </div>
@@ -583,7 +583,7 @@
               </div>
               <div class="stat-row">
                 <span class="stat-label">Potential Earnings</span>
-                <span class="stat-value earnings">₦{{ formattedEarnings }}</span>
+                <span class="stat-value earnings">{{ formattedEarnings }}</span>
               </div>
             </div>
           </div>
@@ -792,6 +792,7 @@
 import { ref, computed, onMounted, onUnmounted, inject, reactive, watch } from 'vue';
 import { useStore } from 'vuex';
 import { useRouter } from 'vue-router';
+import { useCurrency } from '@/composables/useCurrency';
 import { useOnboardingState } from './composables/useOnboardingState';
 import { useToast } from 'vue-toast-notification';
 
@@ -799,6 +800,7 @@ const store = useStore();
 const router = useRouter();
 const $http = inject('$http');
 const toast = useToast();
+const { format: formatAmount } = useCurrency();
 const { completeStep, goToStep, saveProgress, progressPercent, stepCompletion } = useOnboardingState();
 
 // Check if onboarding is already complete (editing mode vs setup mode)
@@ -1036,7 +1038,7 @@ const bothArc = computed(() => {
 
 const formattedEarnings = computed(() => {
   const earnings = totalHours.value * 12000;
-  return earnings.toLocaleString();
+  return formatAmount(earnings);
 });
 
 // User name for mobile drawer

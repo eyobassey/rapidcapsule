@@ -34,8 +34,7 @@
     </div>
     <div class="drug-card__footer">
       <div class="price">
-        <span class="currency">NGN</span>
-        <span class="amount">{{ formatCurrency(drug.selling_price) }}</span>
+        <span class="amount">{{ formatCurrency(getPrice(drug)) }}</span>
       </div>
       <div :class="['stock-status', getStockClass(drug)]">
         {{ getStockText(drug) }}
@@ -60,6 +59,7 @@
 
 <script>
 import { defineComponent, computed, ref } from "vue";
+import { useCurrency } from "@/composables/useCurrency";
 
 export default defineComponent({
   name: "DrugCard",
@@ -75,15 +75,8 @@ export default defineComponent({
   },
   emits: ["add-to-cart", "view-details"],
   setup(props) {
+    const { format: formatCurrency, getPrice } = useCurrency();
     const imageError = ref(false);
-
-    const formatCurrency = (amount) => {
-      if (!amount) return "0.00";
-      return Number(amount).toLocaleString("en-NG", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      });
-    };
 
     // Handle dosage_form that might be an ObjectId or object
     const formatDosageForm = (dosageForm) => {
@@ -127,6 +120,7 @@ export default defineComponent({
     return {
       imageError,
       formatCurrency,
+      getPrice,
       formatDosageForm,
       isInStock,
       getStockClass,

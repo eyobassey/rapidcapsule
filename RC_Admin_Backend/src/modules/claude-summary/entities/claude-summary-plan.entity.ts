@@ -1,4 +1,4 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { Prop, raw, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 import * as mongoose from 'mongoose';
 
@@ -41,6 +41,14 @@ export class ClaudeSummaryPlan {
 
   @Prop({ type: String })
   description: string;
+
+  @Prop(raw({
+    USD: { price: { type: Number } },
+    GBP: { price: { type: Number } },
+    EUR: { price: { type: Number } },
+    NGN: { price: { type: Number } },
+  }))
+  prices: Record<string, { price: number }>;
 
   @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'User' })
   created_by: Types.ObjectId;

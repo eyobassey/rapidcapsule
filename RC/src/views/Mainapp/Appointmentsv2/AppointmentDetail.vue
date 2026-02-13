@@ -411,7 +411,6 @@
             </span>
           </div>
           <div class="payment-amount">
-            <span class="currency">{{ appointment.currency || 'NGN' }}</span>
             <span class="amount">{{ formatAmount(appointment.appointment_fee) }}</span>
           </div>
           <div class="payment-details">
@@ -432,7 +431,7 @@
             </div>
             <div class="payment-detail-row" v-if="appointment.platform_fee">
               <span class="payment-label">Platform Fee</span>
-              <span class="payment-value">{{ appointment.currency || 'NGN' }} {{ formatAmount(appointment.platform_fee) }}</span>
+              <span class="payment-value">{{ formatAmount(appointment.platform_fee) }}</span>
             </div>
           </div>
         </div>
@@ -715,11 +714,13 @@ import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { format, parseISO, isAfter, addMinutes, differenceInMinutes } from 'date-fns';
 import { useToast } from 'vue-toast-notification';
+import { useCurrency } from '@/composables/useCurrency';
 import apiFactory from '@/services/apiFactory';
 
 const route = useRoute();
 const router = useRouter();
 const toast = useToast();
+const { format: formatAmount, currencyCode } = useCurrency();
 
 // State
 const isLoading = ref(true);
@@ -1282,10 +1283,7 @@ function formatDateTime(date) {
   return format(parseISO(date), 'MMM d, yyyy • h:mm a');
 }
 
-function formatAmount(amount) {
-  if (!amount) return '0';
-  return new Intl.NumberFormat('en-NG').format(amount);
-}
+// formatAmount is provided by useCurrency composable
 
 function formatMeetingId(id) {
   if (!id) return '';

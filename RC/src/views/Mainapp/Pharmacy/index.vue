@@ -123,7 +123,7 @@
                         {{ suggestion.strength }}{{ suggestion.dosage_form ? ' • ' + suggestion.dosage_form : '' }}
                       </span>
                     </div>
-                    <span class="suggestion-price">₦{{ formatCurrency(suggestion.selling_price) }}</span>
+                    <span class="suggestion-price">{{ formatCurrency(getPrice(suggestion)) }}</span>
                   </div>
                 </div>
               </transition>
@@ -329,7 +329,7 @@
                 </div>
                 <div class="feature-text">
                   <strong>Free Delivery</strong>
-                  <span>Orders over ₦10,000</span>
+                  <span>Orders over {{ formatCurrency(10000) }}</span>
                 </div>
               </div>
               <div class="feature-item">
@@ -434,12 +434,12 @@
                 <h4>Price Range</h4>
                 <div class="price-inputs">
                   <div class="price-input">
-                    <label>Min (₦)</label>
+                    <label>Min ({{ currencySymbol }})</label>
                     <input type="number" v-model.number="filters.minPrice" placeholder="0" />
                   </div>
                   <span class="price-separator">—</span>
                   <div class="price-input">
-                    <label>Max (₦)</label>
+                    <label>Max ({{ currencySymbol }})</label>
                     <input type="number" v-model.number="filters.maxPrice" placeholder="Any" />
                   </div>
                 </div>
@@ -513,6 +513,7 @@ import { useRouter, useRoute } from "vue-router";
 import { useStore } from "vuex";
 import DrugCard from "./components/DrugCard.vue";
 import axios from "@/services/http";
+import { useCurrency } from "@/composables/useCurrency";
 
 export default {
   name: "PharmacyIndex",
@@ -521,6 +522,7 @@ export default {
   },
   emits: ["openSideNav"],
   setup() {
+    const { format: formatCurrency, symbol: currencySymbol, getPrice } = useCurrency();
     const router = useRouter();
     const route = useRoute();
     const store = useStore();
@@ -660,14 +662,6 @@ export default {
     });
 
     // Methods
-    const formatCurrency = (amount) => {
-      if (!amount) return "0.00";
-      return Number(amount).toLocaleString("en-NG", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      });
-    };
-
     const formatCategoryName = (slug) => {
       if (!slug) return "";
       return slug.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
@@ -949,6 +943,7 @@ export default {
         routeAbbreviation: drug.route_abbreviation,
         manufacturer: drug.manufacturer,
         price: drug.selling_price,
+        prices: drug.prices || null,
         quantity: 1,
         imageUrl: drug.image_url,
         pharmacyId: null,
@@ -1015,6 +1010,8 @@ export default {
       cartItemCount,
       activeFiltersCount,
       formatCurrency,
+      currencySymbol,
+      getPrice,
       formatCategoryName,
       getCategoryIcon,
       handleImageError,

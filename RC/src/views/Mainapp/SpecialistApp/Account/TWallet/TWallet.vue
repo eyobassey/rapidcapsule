@@ -6,7 +6,7 @@
 				<div class="wallet-balance__main">
 					<div class="wallet-balance__available">
 						<p class="wallet-balance__label">Available Balance</p>
-						<h1 class="wallet-balance__amount">₦ {{ formatNumber(walletData.available_balance || 0) }}</h1>
+						<h1 class="wallet-balance__amount">{{ formatConverted(walletData.available_balance || 0) }}</h1>
 					</div>
 					<div class="wallet-balance__actions">
 						<button class="wallet-action-btn" @click="isOpenTopUp = true">
@@ -20,17 +20,17 @@
 						<span class="held-icon">🔒</span>
 						Held for pending transactions:
 					</p>
-					<p class="wallet-balance__held-amount">₦ {{ formatNumber(walletData.held_balance) }}</p>
+					<p class="wallet-balance__held-amount">{{ formatConverted(walletData.held_balance) }}</p>
 				</div>
 			</div>
 			<div class="container-wallet__stats">
 				<div class="stat-item">
 					<p class="stat-label">This Month</p>
-					<p class="stat-value credited">+₦ {{ formatNumber(walletStats?.this_month?.credited || 0) }}</p>
+					<p class="stat-value credited">+{{ formatConverted(walletStats?.this_month?.credited || 0) }}</p>
 				</div>
 				<div class="stat-item">
 					<p class="stat-label">Spent</p>
-					<p class="stat-value debited">-₦ {{ formatNumber(walletStats?.this_month?.debited || 0) }}</p>
+					<p class="stat-value debited">-{{ formatConverted(walletStats?.this_month?.debited || 0) }}</p>
 				</div>
 				<div class="stat-item">
 					<p class="stat-label">Transactions</p>
@@ -76,7 +76,7 @@
 						</div>
 					</div>
 					<div class="transaction-amount" :class="getTransactionClass(transaction.type)">
-						{{ getTransactionSign(transaction.type) }}₦ {{ formatNumber(transaction.amount) }}
+						{{ getTransactionSign(transaction.type) }}{{ formatConverted(transaction.amount) }}
 					</div>
 				</div>
 			</div>
@@ -120,10 +120,10 @@
 					<img :src="require('@/assets/icons/check-circle-solid.svg')" alt="Success Icon" />
 					<h1 class="success-heading">Top Up Successful!</h1>
 					<p class="success-description">
-						₦ {{ formatNumber(topUpAmount) }} has been added to your wallet.
+						{{ format(topUpAmount) }} has been added to your wallet.
 					</p>
 					<p class="success-balance">
-						New Balance: ₦ {{ formatNumber(walletData.available_balance) }}
+						New Balance: {{ formatConverted(walletData.available_balance) }}
 					</p>
 				</div>
 				<div v-else class="topup-body">
@@ -132,13 +132,13 @@
 						<CurrencyInput
 							v-model="topUpAmount"
 							class="topup-amount-input"
-							placeholder="₦ 0"
+							:placeholder="symbol + ' 0'"
 							:options="{
 								currency: 'NGN',
 								currencyDisplay: 'narrowSymbol',
 							}"
 						/>
-						<p class="topup-min">Minimum: ₦ 100</p>
+						<p class="topup-min">Minimum: {{ format(100) }}</p>
 					</div>
 					<div class="quick-amounts">
 						<button
@@ -148,7 +148,7 @@
 							@click="topUpAmount = amount"
 							:class="{ active: topUpAmount === amount }"
 						>
-							₦ {{ formatNumber(amount) }}
+							{{ format(amount) }}
 						</button>
 					</div>
 				</div>
@@ -178,6 +178,7 @@
 <script setup>
 import { ref, inject, onMounted, watch } from "vue";
 import { useToast } from 'vue-toast-notification';
+import { useCurrency } from '@/composables/useCurrency';
 import RcButton from "@/components/buttons/button-primary";
 import RcSelect from "@/components/inputs/select-dropdown";
 import RcModal from "@/components/modals/dialog-modal";
@@ -186,6 +187,7 @@ import CurrencyInput from "@/components/inputs/currency-input";
 
 const $http = inject("$http");
 const $toast = useToast();
+const { format, formatConverted, symbol } = useCurrency();
 
 // State
 const isLoading = ref(true);
@@ -212,9 +214,6 @@ const transactionTypes = [
 const quickAmounts = [1000, 5000, 10000, 20000, 50000];
 
 // Methods
-const formatNumber = (num) => {
-	return new Intl.NumberFormat('en-NG').format(num || 0);
-};
 
 const formatDate = (dateStr) => {
 	const date = new Date(dateStr);
@@ -298,7 +297,7 @@ const loadTransactions = async (page = 1) => {
 
 const initiateTopUp = async () => {
 	if (!topUpAmount.value || topUpAmount.value < 100) {
-		$toast.error('Minimum top-up amount is ₦100');
+		$toast.error(`Minimum top-up amount is ${format(100)}`);
 		return;
 	}
 

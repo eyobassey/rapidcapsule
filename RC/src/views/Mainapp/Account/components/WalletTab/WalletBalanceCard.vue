@@ -9,7 +9,6 @@
       </div>
 
       <div class="balance-amount">
-        <span class="currency">&#8358;</span>
         <span class="amount">{{ formattedBalance }}</span>
       </div>
 
@@ -48,6 +47,8 @@
 </template>
 
 <script>
+import { formatCurrency, convertFromNGN } from '@/utilities/currency';
+
 export default {
   name: "WalletBalanceCard",
   props: {
@@ -66,11 +67,11 @@ export default {
   },
   emits: ["topUp", "viewHistory", "toggleSpecialistCharge"],
   computed: {
+    currencyCode() {
+      return this.$store.getters['currency/currencyCode'];
+    },
     formattedBalance() {
-      return new Intl.NumberFormat("en-NG", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      }).format(this.balance || 0);
+      return formatCurrency(convertFromNGN(this.balance, this.currencyCode), this.currencyCode);
     },
   },
 };

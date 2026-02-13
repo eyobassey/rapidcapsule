@@ -27,7 +27,7 @@
 								</div>
 							</div>
 							<p class="specialist_details-spacialty">{{ appointment.category }}</p>
-							<p class="specialist_details-price">₦200 - ₦500/hour</p>
+							<p class="specialist_details-price">{{ priceRange }}</p>
 						</div>
 					</div>
 				</div>
@@ -67,18 +67,24 @@
 </template>
 
 <script>
-import { defineComponent, watchEffect, ref, inject } from 'vue'
+import { defineComponent, watchEffect, ref, inject, computed } from 'vue'
+import { useStore } from 'vuex'
 import RcIcon from "@/components/RCIcon";
 import RcButton from "@/components/buttons/button-primary.vue";
 import Loader from "@/components/Loader/main-loader.vue";
 import Avatar from "@/components/Avatars/avatar-fixed.vue";
+import { formatCurrency, getCurrencySymbol } from '@/utilities/currency';
 
 export default defineComponent({
 	setup(props) {
 		const $http = inject('$http');
+		const store = useStore();
 
 		const isLoading = ref(false);
 		const profile = ref({});
+		const currencyCode = computed(() => store.getters['currency/currencyCode']);
+		const format = (amount) => formatCurrency(amount, currencyCode.value);
+		const priceRange = computed(() => `${format(200)} - ${format(500)}/hour`);
 
 		watchEffect(() => {
 			isLoading.value = true;
@@ -94,7 +100,9 @@ export default defineComponent({
 		return {
 			isLoading,
 			profile,
-			handleStartMeetings
+			handleStartMeetings,
+			format,
+			priceRange
 		}
 	},
 	name: "AppointmentDetails",

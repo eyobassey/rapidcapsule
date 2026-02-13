@@ -489,10 +489,12 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useToast } from 'vue-toast-notification';
+import { useCurrency } from '@/composables/useCurrency';
 
 const router = useRouter();
 const route = useRoute();
 const toast = useToast();
+const { format: formatCurrency } = useCurrency();
 
 // Get appointment data from route query/state
 const appointmentId = ref(route.query.id || 'APT-2026-0130');
@@ -586,13 +588,7 @@ function calculateReminderDate(dateStr, hoursBefore) {
   });
 }
 
-function formatCurrency(amount) {
-  return new Intl.NumberFormat('en-NG', {
-    style: 'currency',
-    currency: 'NGN',
-    minimumFractionDigits: 0,
-  }).format(amount || 0);
-}
+// formatCurrency is provided by useCurrency composable
 
 function getInitials(name) {
   if (!name) return '?';

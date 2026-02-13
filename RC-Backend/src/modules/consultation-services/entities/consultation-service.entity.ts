@@ -1,4 +1,4 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { Prop, Schema, SchemaFactory, raw } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
 
 export type ConsultationServiceDocument = HydratedDocument<ConsultationService>;
@@ -35,6 +35,14 @@ export class ConsultationService {
 
   @Prop({ default: null })
   max_rate: number;
+
+  @Prop(raw({
+    USD: { min_rate: { type: Number }, max_rate: { type: Number } },
+    GBP: { min_rate: { type: Number }, max_rate: { type: Number } },
+    EUR: { min_rate: { type: Number }, max_rate: { type: Number } },
+    NGN: { min_rate: { type: Number }, max_rate: { type: Number } },
+  }))
+  rates: Record<string, { min_rate: number; max_rate: number }>;
 
   @Prop({ default: 'NGN' })
   default_currency: string;

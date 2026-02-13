@@ -35,7 +35,7 @@
           </p>
           <div class="hero__stats">
             <div class="hero-stat">
-              <span class="hero-stat__value">{{ formatCurrency(walletBalance) }}</span>
+              <span class="hero-stat__value">{{ formatWallet(walletBalance) }}</span>
               <span class="hero-stat__label">Balance</span>
             </div>
             <div class="hero-stat__divider"></div>
@@ -89,7 +89,6 @@
               </div>
             </div>
             <div class="balance-amount">
-              <span class="currency">&#8358;</span>
               <span class="amount">{{ formattedBalance }}</span>
             </div>
             <div class="balance-actions">
@@ -291,8 +290,7 @@
                 <span class="credits-unit">{{ plan.is_unlimited ? 'for 30 days' : 'credits' }}</span>
               </div>
               <div class="plan-price">
-                <span class="price-currency">&#8358;</span>
-                <span class="price-value">{{ formatNumber(plan.price) }}</span>
+                <span class="price-value">{{ format(getPlanPrice(plan)) }}</span>
               </div>
               <button
                 class="plan-btn"
@@ -351,7 +349,7 @@
                 <span class="txn-date">{{ formatDateTime(txn.created_at || txn.createdAt) }}</span>
               </div>
               <div class="txn-amount" :class="{ credit: isWalletTxnPositive(txn), debit: !isWalletTxnPositive(txn) }">
-                {{ isWalletTxnPositive(txn) ? '+' : '-' }}&#8358;{{ formatNumber(txn.amount) }}
+                {{ isWalletTxnPositive(txn) ? '+' : '-' }}{{ formatWallet(txn.amount) }}
               </div>
             </div>
           </div>
@@ -483,7 +481,7 @@
         </div>
         <div class="modal-body">
           <div class="amount-input-wrapper">
-            <span class="currency-symbol">&#8358;</span>
+            <span class="currency-symbol">{{ currencySymbol }}</span>
             <input
               type="number"
               v-model.number="topUpAmount"
@@ -501,7 +499,7 @@
               :class="{ active: topUpAmount === amount }"
               class="quick-amount-btn"
             >
-              {{ formatCurrency(amount) }}
+              {{ format(amount) }}
             </button>
           </div>
         </div>
@@ -546,7 +544,7 @@
             <div class="summary-divider"></div>
             <div class="summary-row total">
               <span>Total</span>
-              <span>&#8358;{{ formatNumber(selectedPlan?.price) }}</span>
+              <span>{{ format(getPlanPrice(selectedPlan)) }}</span>
             </div>
           </div>
           <div class="payment-info">
@@ -554,11 +552,11 @@
               <v-icon name="bi-wallet2" scale="1.2" />
               <div class="wallet-payment-text">
                 <span class="wallet-payment-title">Pay from Wallet</span>
-                <span class="wallet-payment-balance">Current Balance: &#8358;{{ formattedBalance }}</span>
+                <span class="wallet-payment-balance">Current Balance: {{ formattedBalance }}</span>
               </div>
             </div>
           </div>
-          <p v-if="walletBalance < selectedPlan?.price" class="insufficient-warning">
+          <p v-if="walletBalance < getPlanPrice(selectedPlan)" class="insufficient-warning">
             <v-icon name="hi-exclamation" scale="0.85" />
             Insufficient wallet balance. Please <a href="#" @click.prevent="showTopUpModal = true; closePurchaseModal()">add funds</a> to continue.
           </p>
@@ -568,9 +566,9 @@
           <button
             class="btn primary"
             @click="purchasePlan"
-            :disabled="purchasingPlan || walletBalance < selectedPlan?.price"
+            :disabled="purchasingPlan || walletBalance < getPlanPrice(selectedPlan)"
           >
-            {{ purchasingPlan ? 'Processing...' : 'Pay ₦' + formatNumber(selectedPlan?.price) }}
+            {{ purchasingPlan ? 'Processing...' : 'Pay ' + format(getPlanPrice(selectedPlan)) }}
           </button>
         </div>
       </div>
@@ -723,6 +721,7 @@
 
 <script>
 import { mapGetters, mapMutations } from "vuex";
+import { formatCurrency, formatCurrencyCompact, getCurrencySymbol, convertFromNGN } from '@/utilities/currency';
 import http from "@/services/http";
 
 export default {
@@ -799,11 +798,16 @@ export default {
       userCards: "cards",
     }),
 
+    currencyCode() {
+      return this.$store.getters['currency/currencyCode'];
+    },
+
+    currencySymbol() {
+      return getCurrencySymbol(this.currencyCode);
+    },
+
     formattedBalance() {
-      return new Intl.NumberFormat("en-NG", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      }).format(this.walletBalance || 0);
+      return formatCurrency(convertFromNGN(this.walletBalance, this.currencyCode), this.currencyCode);
     },
 
     totalCredits() {
@@ -1161,7 +1165,7 @@ export default {
 
     openPurchaseModal(plan) {
       this.selectedPlan = plan;
-      this.paymentMethod = this.walletBalance >= plan.price ? "wallet" : "card";
+      this.paymentMethod = this.walletBalance >= this.getPlanPrice(plan) ? "wallet" : "card";
       this.showPurchaseModal = true;
     },
 
@@ -1486,16 +1490,20 @@ export default {
     },
 
     // Utility methods
-    formatCurrency(amount) {
-      return new Intl.NumberFormat("en-NG", {
-        style: "currency",
-        currency: "NGN",
-        minimumFractionDigits: 0,
-      }).format(amount || 0).replace("NGN", "₦");
+    format(amount) {
+      return formatCurrency(amount, this.currencyCode);
     },
 
-    formatNumber(num) {
-      return new Intl.NumberFormat("en-NG").format(num || 0);
+    formatWallet(amount) {
+      return formatCurrency(convertFromNGN(amount, this.currencyCode), this.currencyCode);
+    },
+
+    getPlanPrice(plan) {
+      return plan?.prices?.[this.currencyCode]?.price ?? plan?.prices?.[this.currencyCode]?.amount ?? plan?.price ?? plan?.amount ?? 0;
+    },
+
+    formatCompact(amount) {
+      return formatCurrencyCompact(amount, this.currencyCode);
     },
 
     formatDate(date) {

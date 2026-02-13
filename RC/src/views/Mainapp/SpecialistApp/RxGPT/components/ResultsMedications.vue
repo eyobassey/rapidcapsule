@@ -56,7 +56,7 @@
         <div v-if="med.unit_price" class="detail-cell">
           <span class="detail-cell__label">Price</span>
           <span class="detail-cell__value detail-cell__value--price">
-            {{ med.currency || '\u20A6' }}{{ formatPrice(med.unit_price) }}/unit
+            {{ formatPrice(med.unit_price) }}/unit
           </span>
         </div>
       </div>

@@ -108,6 +108,29 @@ export class Drug {
   @Prop({ type: Number, default: 0 })
   discount_percentage: number; // Optional discount
 
+  // Multi-currency pricing (admin-set explicit prices per currency)
+  @Prop(
+    raw({
+      USD: {
+        cost_price: { type: Number },
+        selling_price: { type: Number },
+      },
+      GBP: {
+        cost_price: { type: Number },
+        selling_price: { type: Number },
+      },
+      EUR: {
+        cost_price: { type: Number },
+        selling_price: { type: Number },
+      },
+      NGN: {
+        cost_price: { type: Number },
+        selling_price: { type: Number },
+      },
+    }),
+  )
+  prices: Record<string, { cost_price: number; selling_price: number }>;
+
   // ============ REGULATORY ============
 
   @Prop({ type: String })

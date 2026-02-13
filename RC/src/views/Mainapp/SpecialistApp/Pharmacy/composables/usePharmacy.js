@@ -1,12 +1,9 @@
 import { format, formatDistanceToNow, differenceInYears, parseISO, isValid } from 'date-fns';
+import { formatCurrency as formatCurrencyUtil } from '@/utilities/currency';
 
 export function usePharmacy() {
   function formatCurrency(amount) {
-    if (!amount && amount !== 0) return '0.00';
-    return Number(amount).toLocaleString('en-NG', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
+    return formatCurrencyUtil(amount);
   }
 
   function formatDate(date, pattern = 'MMM d, yyyy') {

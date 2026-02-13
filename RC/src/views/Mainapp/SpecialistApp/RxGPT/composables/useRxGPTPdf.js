@@ -7,6 +7,8 @@
  * save-as-PDF or send directly to a printer.
  */
 
+import { formatCurrency } from '@/utilities/currency';
+
 // ─── Helpers ────────────────────────────────────────────────────────
 
 function escapeHtml(str) {
@@ -157,9 +159,9 @@ function formatHallucinationStatus(status) {
   return labels[status] || status || '--';
 }
 
-function formatPrice(price) {
+function formatPrice(price, currencyCode) {
   if (!price && price !== 0) return '--';
-  return new Intl.NumberFormat('en-NG').format(price);
+  return formatCurrency(price, currencyCode);
 }
 
 // ─── CSS ────────────────────────────────────────────────────────────
@@ -1391,7 +1393,7 @@ function buildReportHTML(result) {
         { label: 'Duration', value: med.suggested_duration },
         { label: 'Quantity', value: med.suggested_quantity },
         { label: 'Route', value: med.route },
-        { label: 'Price', value: med.unit_price ? `${med.currency || '\u20A6'}${formatPrice(med.unit_price)}/unit` : null },
+        { label: 'Price', value: med.unit_price ? `${formatPrice(med.unit_price, med.currency)}/unit` : null },
       ];
 
       details.forEach(d => {

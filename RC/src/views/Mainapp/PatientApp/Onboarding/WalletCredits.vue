@@ -29,7 +29,6 @@
                 </div>
 
                 <div class="balance-amount">
-                  <span class="currency">&#8358;</span>
                   <span class="amount">{{ formattedBalance }}</span>
                 </div>
 
@@ -121,7 +120,6 @@
                 </div>
 
                 <div class="plan-price">
-                  <span class="currency">&#8358;</span>
                   <span class="amount">{{ formatPrice(plan.price) }}</span>
                 </div>
 
@@ -188,7 +186,7 @@
         <p class="modal-subtitle">Enter the amount you want to add</p>
 
         <div class="amount-input-wrapper">
-          <span class="currency-symbol">&#8358;</span>
+          <span class="currency-symbol">{{ symbol }}</span>
           <input
             type="number"
             v-model.number="topUpAmount"
@@ -246,16 +244,16 @@
           <div class="price-summary">
             <div class="summary-row">
               <span>Plan Price</span>
-              <span>&#8358;{{ formatPrice(selectedPlan?.price || 0) }}</span>
+              <span>{{ formatPrice(selectedPlan?.price || 0) }}</span>
             </div>
             <div class="summary-row">
               <span>Wallet Balance</span>
-              <span>&#8358;{{ formattedBalance }}</span>
+              <span>{{ formattedBalance }}</span>
             </div>
             <div class="summary-divider"></div>
             <div class="summary-row total" :class="{ insufficient: walletBalance < (selectedPlan?.price || 0) }">
               <span>After Purchase</span>
-              <span>&#8358;{{ formatPrice(Math.max(0, walletBalance - (selectedPlan?.price || 0))) }}</span>
+              <span>{{ formatPrice(Math.max(0, walletBalance - (selectedPlan?.price || 0))) }}</span>
             </div>
           </div>
 
@@ -263,7 +261,7 @@
             <v-icon name="hi-exclamation-circle" scale="1" />
             <div>
               <strong>Insufficient Balance</strong>
-              <p>You need &#8358;{{ formatPrice((selectedPlan?.price || 0) - walletBalance) }} more. Please top up your wallet first.</p>
+              <p>You need {{ formatPrice((selectedPlan?.price || 0) - walletBalance) }} more. Please top up your wallet first.</p>
             </div>
           </div>
         </div>
@@ -295,12 +293,14 @@
 <script setup>
 import { ref, computed, onMounted, inject } from 'vue';
 import { useRouter } from 'vue-router';
+import { useCurrency } from '@/composables/useCurrency';
 import http from '@/services/http';
 import { usePatientOnboardingState } from './composables/usePatientOnboardingState';
 
 const router = useRouter();
 const $api = inject('$http'); // apiFactory with named methods
 const { completeStep, saveProgress, goToStep } = usePatientOnboardingState();
+const { format: formatCurrencyAmount, symbol } = useCurrency();
 
 // State
 const walletBalance = ref(0);
@@ -324,12 +324,7 @@ const purchasing = ref(false);
 const quickAmounts = [1000, 2000, 5000, 10000];
 
 // Computed
-const formattedBalance = computed(() => {
-  return new Intl.NumberFormat('en-NG', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(walletBalance.value || 0);
-});
+const formattedBalance = computed(() => formatCurrencyAmount(walletBalance.value));
 
 const totalCredits = computed(() => {
   return (healthCredits.value.free_remaining || 0) +
@@ -355,9 +350,7 @@ const sortedPlans = computed(() => {
 });
 
 // Methods
-const formatPrice = (price) => {
-  return new Intl.NumberFormat('en-NG').format(price || 0);
-};
+const formatPrice = (price) => formatCurrencyAmount(price);
 
 const getFeatures = (plan) => {
   if (plan.features && plan.features.length) {

@@ -82,7 +82,7 @@
             <v-icon :name="hasAICredits ? 'hi-sparkles' : 'bi-wallet2'" scale="0.9" />
           </div>
           <div class="stat-info">
-            <span class="stat-value">{{ hasAICredits ? aiCredits : formatWallet(walletBalance) }}</span>
+            <span class="stat-value">{{ hasAICredits ? aiCredits : formatConvertedCompact(walletBalance) }}</span>
             <span class="stat-label">{{ hasAICredits ? 'AI Credits' : 'Wallet' }}</span>
           </div>
         </div>
@@ -444,11 +444,13 @@ import { ref, computed, inject, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useStore } from 'vuex';
 import { format, formatDistanceToNow, parseISO, isToday, isTomorrow, differenceInMinutes } from 'date-fns';
+import { useCurrency } from '@/composables/useCurrency';
 import PasskeySetupPrompt from '@/components/Modals/PasskeySetupPrompt.vue';
 
 const router = useRouter();
 const store = useStore();
 const $http = inject('$_HTTP');
+const { formatConvertedCompact } = useCurrency();
 
 // State
 const loading = ref(true);
@@ -931,15 +933,6 @@ const healthDomains = computed(() => {
 });
 
 // Format helpers
-const formatWallet = (amount) => {
-  if (amount >= 1000000) {
-    return `₦${(amount / 1000000).toFixed(1)}M`;
-  }
-  if (amount >= 1000) {
-    return `₦${(amount / 1000).toFixed(0)}K`;
-  }
-  return `₦${amount.toLocaleString()}`;
-};
 
 const formatAppointmentDay = (date) => {
   const d = new Date(date);

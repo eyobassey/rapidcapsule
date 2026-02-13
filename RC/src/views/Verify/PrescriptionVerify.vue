@@ -116,7 +116,7 @@
           <!-- Total -->
           <div class="total-section">
             <span>Total Amount</span>
-            <span class="total-amount">{{ prescription.currency }} {{ formatAmount(prescription.total_amount) }}</span>
+            <span class="total-amount">{{ formatAmount(prescription.total_amount, prescription.currency) }}</span>
           </div>
 
           <!-- Download PDF -->
@@ -143,6 +143,7 @@
 <script>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import { formatCurrency } from '@/utilities/currency'
 
 export default {
   name: 'PrescriptionVerify',
@@ -196,12 +197,8 @@ export default {
       })
     }
 
-    const formatAmount = (amount) => {
-      if (!amount) return '0.00'
-      return Number(amount).toLocaleString('en-NG', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      })
+    const formatAmount = (amount, currencyCode) => {
+      return formatCurrency(amount, currencyCode)
     }
 
     const fetchPrescription = async () => {

@@ -1,4 +1,4 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { Prop, Schema, SchemaFactory, raw } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 import * as mongoose from 'mongoose';
 
@@ -26,6 +26,14 @@ export class ClaudeSummaryPlan {
 
   @Prop({ type: Number, required: true })
   price: number; // in NGN
+
+  @Prop(raw({
+    USD: { price: { type: Number } },
+    GBP: { price: { type: Number } },
+    EUR: { price: { type: Number } },
+    NGN: { price: { type: Number } },
+  }))
+  prices: Record<string, { price: number }>;
 
   @Prop({ type: String, default: 'NGN' })
   currency: string;

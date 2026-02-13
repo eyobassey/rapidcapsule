@@ -245,7 +245,7 @@
                                 @click="purchasePlan(plan._id)"
                             >
                                 <span class="plan-name">{{ plan.name }}</span>
-                                <span class="plan-price">₦{{ plan.price.toLocaleString() }}</span>
+                                <span class="plan-price">{{ formatCurrency(plan.price) }}</span>
                             </div>
                         </div>
                         <button class="view-plans-btn" @click="openPurchaseModal">View All Plans</button>
@@ -404,7 +404,7 @@
                         <v-icon name="bi-wallet2" scale="1.2" />
                         <div class="wallet-info">
                             <span class="wallet-label">Wallet Balance</span>
-                            <span class="wallet-amount">₦{{ walletBalance.toLocaleString() }}</span>
+                            <span class="wallet-amount">{{ formatCurrency(walletBalance) }}</span>
                         </div>
                     </div>
 
@@ -424,15 +424,15 @@
                         <div class="transaction-summary">
                             <div class="summary-row">
                                 <span>Plan Price</span>
-                                <span>₦{{ selectedPlanForPurchase.price.toLocaleString() }}</span>
+                                <span>{{ formatCurrency(selectedPlanForPurchase.price) }}</span>
                             </div>
                             <div class="summary-row">
                                 <span>Current Balance</span>
-                                <span>₦{{ walletBalance.toLocaleString() }}</span>
+                                <span>{{ formatCurrency(walletBalance) }}</span>
                             </div>
                             <div class="summary-row summary-row--total" :class="{ 'insufficient': walletBalance < selectedPlanForPurchase.price }">
                                 <span>Balance After</span>
-                                <span>₦{{ Math.max(0, walletBalance - selectedPlanForPurchase.price).toLocaleString() }}</span>
+                                <span>{{ formatCurrency(Math.max(0, walletBalance - selectedPlanForPurchase.price)) }}</span>
                             </div>
                         </div>
 
@@ -440,7 +440,7 @@
                             <v-icon name="hi-exclamation" scale="1" />
                             <div>
                                 <strong>Insufficient Balance</strong>
-                                <p>You need ₦{{ (selectedPlanForPurchase.price - walletBalance).toLocaleString() }} more.</p>
+                                <p>You need {{ formatCurrency(selectedPlanForPurchase.price - walletBalance) }} more.</p>
                             </div>
                         </div>
 
@@ -477,8 +477,7 @@
                                 </div>
                                 <h4>{{ plan.name }}</h4>
                                 <div class="plan-price">
-                                    <span class="currency">₦</span>
-                                    <span class="amount">{{ plan.price.toLocaleString() }}</span>
+                                    <span class="amount">{{ formatCurrency(plan.price) }}</span>
                                 </div>
                                 <p>{{ plan.credits ? `${plan.credits} credits` : `${plan.duration_days} days unlimited` }}</p>
                             </div>
@@ -496,6 +495,7 @@ import { ref, inject, computed, watchEffect, onMounted } from "vue";
 import { useToast } from 'vue-toast-notification';
 import { mapGetters } from "@/utilities/utilityStore";
 import { useRouter } from "vue-router";
+import { useCurrency } from '@/composables/useCurrency';
 
 const $toast = useToast();
 const $http = inject('$_HTTP');
@@ -504,6 +504,7 @@ const { diagnosis, useDiagnosis } = inject('$_DIAGNOSIS');
 const { patientInfo, usePatientInfo } = inject('$_PATIENT_INFO');
 const { recommendation, useRecommendation } = inject('$_RECOMMENDATION');
 const linkedCheckupInject = inject('$_LINKED_CHECKUP', null);
+const { format: formatCurrency, symbol } = useCurrency();
 
 // Linked appointment info - check both URL params (from appointment detail) and recommendation data (from history)
 const linkedAppointment = computed(() => {

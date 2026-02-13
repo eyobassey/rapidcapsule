@@ -33,17 +33,17 @@
 					</p>
 					<div class="hero__stats">
 						<div class="hero-stat">
-							<span class="hero-stat__value">&#8358;{{ formatNumber(walletData.available_balance || 0) }}</span>
+							<span class="hero-stat__value">{{ formatConverted(walletData.available_balance || 0) }}</span>
 							<span class="hero-stat__label">Available</span>
 						</div>
 						<div class="hero-stat__divider"></div>
 						<div class="hero-stat">
-							<span class="hero-stat__value hero-stat__value--warning">&#8358;{{ formatNumber(walletData.held_balance || 0) }}</span>
+							<span class="hero-stat__value hero-stat__value--warning">{{ formatConverted(walletData.held_balance || 0) }}</span>
 							<span class="hero-stat__label">Held</span>
 						</div>
 						<div class="hero-stat__divider"></div>
 						<div class="hero-stat">
-							<span class="hero-stat__value hero-stat__value--success">&#8358;{{ formatNumber(walletStats?.lifetime?.total_credited || 0) }}</span>
+							<span class="hero-stat__value hero-stat__value--success">{{ formatConverted(walletStats?.lifetime?.total_credited || 0) }}</span>
 							<span class="hero-stat__label">Total Earned</span>
 						</div>
 						<div class="hero-stat__divider"></div>
@@ -90,12 +90,11 @@
 						</div>
 					</div>
 					<div class="balance-amount">
-						<span class="currency">&#8358;</span>
-						<span class="amount">{{ formatNumber(walletData.available_balance || 0) }}</span>
+						<span class="amount">{{ formatConverted(walletData.available_balance || 0) }}</span>
 					</div>
 					<div v-if="walletData.held_balance > 0" class="balance-held">
 						<v-icon name="hi-lock-closed" scale="0.7" />
-						<span>&#8358;{{ formatNumber(walletData.held_balance) }} held for pending transactions</span>
+						<span>{{ formatConverted(walletData.held_balance) }} held for pending transactions</span>
 					</div>
 					<div class="balance-actions">
 						<button class="balance-btn primary" @click="showTopUpModal = true">
@@ -131,11 +130,11 @@
 								<div class="earnings-items">
 									<div class="earnings-item">
 										<span class="label">Credited</span>
-										<span class="value credited">+&#8358;{{ formatNumber(walletStats?.this_month?.credited || 0) }}</span>
+										<span class="value credited">+{{ formatConverted(walletStats?.this_month?.credited || 0) }}</span>
 									</div>
 									<div class="earnings-item">
 										<span class="label">Debited</span>
-										<span class="value debited">-&#8358;{{ formatNumber(walletStats?.this_month?.debited || 0) }}</span>
+										<span class="value debited">-{{ formatConverted(walletStats?.this_month?.debited || 0) }}</span>
 									</div>
 									<div class="earnings-item">
 										<span class="label">Transactions</span>
@@ -149,11 +148,11 @@
 								<div class="earnings-items">
 									<div class="earnings-item">
 										<span class="label">Total Earned</span>
-										<span class="value credited">&#8358;{{ formatNumber(walletStats?.lifetime?.total_credited || 0) }}</span>
+										<span class="value credited">{{ formatConverted(walletStats?.lifetime?.total_credited || 0) }}</span>
 									</div>
 									<div class="earnings-item">
 										<span class="label">Total Withdrawn</span>
-										<span class="value debited">&#8358;{{ formatNumber(walletStats?.lifetime?.total_debited || 0) }}</span>
+										<span class="value debited">{{ formatConverted(walletStats?.lifetime?.total_debited || 0) }}</span>
 									</div>
 								</div>
 							</div>
@@ -274,8 +273,7 @@
 									<span class="credits-unit">{{ plan.type !== 'bundle' ? `for ${plan.duration_days} days` : 'credits' }}</span>
 								</div>
 								<div class="plan-price">
-									<span class="price-currency">&#8358;</span>
-									<span class="price-value">{{ formatNumber(plan.price) }}</span>
+									<span class="price-value">{{ format(plan.price) }}</span>
 								</div>
 								<button
 									class="plan-btn"
@@ -335,7 +333,7 @@
 										{{ txn.credits_delta >= 0 ? '+' : '' }}{{ txn.credits_delta }} credits
 									</span>
 									<span v-if="txn.amount" class="credit-txn-amount">
-										&#8358;{{ formatNumber(txn.amount) }}
+										{{ formatConverted(txn.amount) }}
 									</span>
 								</div>
 							</div>
@@ -433,7 +431,7 @@
 									</div>
 								</div>
 								<div class="payout-right">
-									<span class="payout-amount">-&#8358;{{ formatNumber(payout.amount) }}</span>
+									<span class="payout-amount">-{{ formatConverted(payout.amount) }}</span>
 									<span class="payout-status" :class="getStatusClass(payout.status)">
 										{{ payout.status }}
 									</span>
@@ -486,7 +484,7 @@
 									</div>
 								</div>
 								<span class="txn-amount" :class="getTxnClass(txn.type)">
-									{{ getTxnSign(txn.type) }}&#8358;{{ formatNumber(txn.amount) }}
+									{{ getTxnSign(txn.type) }}{{ formatConverted(txn.amount) }}
 								</span>
 							</div>
 
@@ -527,7 +525,7 @@
 						<v-icon name="hi-check-circle" scale="3" />
 					</div>
 					<h2>Top Up Successful!</h2>
-					<p>&#8358;{{ formatNumber(topUpAmount) }} has been added to your wallet.</p>
+					<p>{{ format(topUpAmount) }} has been added to your wallet.</p>
 				</div>
 				<div v-else class="topup-body">
 					<div class="topup-amount-section">
@@ -535,10 +533,10 @@
 						<CurrencyInput
 							v-model="topUpAmount"
 							class="topup-amount-input"
-							placeholder="&#8358; 0"
+							:placeholder="symbol + ' 0'"
 							:options="{ currency: 'NGN', currencyDisplay: 'narrowSymbol' }"
 						/>
-						<p class="topup-min">Minimum: &#8358;100</p>
+						<p class="topup-min">Minimum: {{ format(100) }}</p>
 					</div>
 					<div class="quick-amounts">
 						<button
@@ -548,7 +546,7 @@
 							:class="{ active: topUpAmount === amt }"
 							@click="topUpAmount = amt"
 						>
-							&#8358;{{ formatNumber(amt) }}
+							{{ format(amt) }}
 						</button>
 					</div>
 				</div>
@@ -591,12 +589,12 @@
 						<v-icon name="hi-check-circle" scale="3" />
 					</div>
 					<h2>Withdrawal Initiated!</h2>
-					<p>&#8358;{{ formatNumber(withdrawAmount) }} is being transferred to your bank account.</p>
+					<p>{{ format(withdrawAmount) }} is being transferred to your bank account.</p>
 				</div>
 				<div v-else-if="withdrawStep === 'confirm'" class="withdraw-confirm">
 					<div class="confirm-card">
 						<p class="confirm-label">Transfer</p>
-						<p class="confirm-amount">&#8358;{{ formatNumber(withdrawAmount) }}</p>
+						<p class="confirm-amount">{{ format(withdrawAmount) }}</p>
 						<p class="confirm-to">to {{ withdrawBank?.bank_name }}</p>
 						<p class="confirm-account">****{{ withdrawBank?.account_number?.slice(-4) }}</p>
 						<p class="confirm-name">{{ withdrawBank?.account_name }}</p>
@@ -608,10 +606,10 @@
 						<CurrencyInput
 							v-model="withdrawAmount"
 							class="withdraw-amount-input"
-							placeholder="&#8358; 0"
+							:placeholder="symbol + ' 0'"
 							:options="{ currency: 'NGN', currencyDisplay: 'narrowSymbol' }"
 						/>
-						<p class="withdraw-balance">Balance: &#8358;{{ formatNumber(walletData.available_balance || 0) }}</p>
+						<p class="withdraw-balance">Balance: {{ formatConverted(walletData.available_balance || 0) }}</p>
 					</div>
 					<div class="withdraw-bank-section">
 						<div class="section-header">
@@ -787,14 +785,14 @@
 						<div class="summary-divider"></div>
 						<div class="summary-row total">
 							<span>Total</span>
-							<span>&#8358;{{ formatNumber(selectedPlan?.price) }}</span>
+							<span>{{ format(selectedPlan?.price) }}</span>
 						</div>
 					</div>
 					<div class="payment-source">
 						<v-icon name="bi-wallet2" scale="1.1" />
 						<div class="payment-info">
 							<span class="payment-title">Pay from Specialist Wallet</span>
-							<span class="payment-balance">Balance: &#8358;{{ formatNumber(walletData.available_balance || 0) }}</span>
+							<span class="payment-balance">Balance: {{ formatConverted(walletData.available_balance || 0) }}</span>
 						</div>
 					</div>
 					<p v-if="(walletData.available_balance || 0) < (selectedPlan?.price || 0)" class="insufficient-warning">
@@ -807,7 +805,7 @@
 				<rc-button
 					v-if="!purchaseSuccess"
 					type="primary"
-					:label="'Pay ₦' + formatNumber(selectedPlan?.price)"
+					:label="'Pay ' + format(selectedPlan?.price)"
 					size="large"
 					@click="executePurchase"
 					:loading="purchasingPlan"
@@ -828,6 +826,7 @@
 <script setup>
 import { ref, inject, onMounted, watchEffect, computed } from "vue";
 import { useToast } from 'vue-toast-notification';
+import { useCurrency } from '@/composables/useCurrency';
 import RcButton from "@/components/buttons/button-primary";
 import RcSelect from "@/components/inputs/select-dropdown";
 import RcText from "@/components/inputs/text";
@@ -838,6 +837,7 @@ import CurrencyInput from "@/components/inputs/currency-input";
 
 const $http = inject("$http");
 const $toast = useToast();
+const { format, formatConverted, symbol } = useCurrency();
 
 // Refs for scrolling
 const transactionsSection = ref(null);
@@ -936,7 +936,6 @@ const creditsProgressWidth = computed(() => {
 });
 
 // Formatters
-const formatNumber = (num) => new Intl.NumberFormat('en-NG').format(num || 0);
 
 const formatDate = (dateStr) => {
 	if (!dateStr) return '';
@@ -1191,7 +1190,7 @@ const selectBank = (account) => {
 // Top Up
 const initiateTopUp = async () => {
 	if (!topUpAmount.value || topUpAmount.value < 100) {
-		$toast.error('Minimum top-up amount is ₦100');
+		$toast.error(`Minimum top-up amount is ${format(100)}`);
 		return;
 	}
 	isProcessingTopUp.value = true;
@@ -1239,7 +1238,7 @@ const closeTopUpModal = () => {
 // Withdraw
 const proceedToConfirm = () => {
 	if (!withdrawAmount.value || withdrawAmount.value < 100) {
-		$toast.error('Minimum withdrawal is ₦100');
+		$toast.error(`Minimum withdrawal is ${format(100)}`);
 		return;
 	}
 	if (withdrawAmount.value > (walletData.value.available_balance || 0)) {

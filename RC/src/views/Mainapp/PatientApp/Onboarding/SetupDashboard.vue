@@ -244,11 +244,13 @@
 <script setup>
 import { computed, ref } from 'vue';
 import { useStore } from 'vuex';
+import { useCurrency } from '@/composables/useCurrency';
 import SetupCard from './components/SetupCard.vue';
 import ProgressRing from './components/ProgressRing.vue';
 import { usePatientOnboardingState } from './composables/usePatientOnboardingState';
 
 const store = useStore();
+const { format: formatAmount, symbol } = useCurrency();
 const {
   stepCompletion,
   progressPercent,
@@ -442,8 +444,7 @@ const walletCreditsSummary = computed(() => {
 
   // Show wallet balance if positive
   if (walletCredits.walletBalance > 0) {
-    const formatted = new Intl.NumberFormat('en-NG').format(walletCredits.walletBalance);
-    items.push({ icon: 'bi-wallet2', text: `\u20A6${formatted} balance` });
+    items.push({ icon: 'bi-wallet2', text: `${formatAmount(walletCredits.walletBalance)} balance` });
   }
 
   // Show total credits

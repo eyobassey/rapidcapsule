@@ -265,6 +265,7 @@ import { ref, reactive, provide, inject, computed, onMounted, defineEmits } from
 import { useRoute, useRouter } from 'vue-router';
 import { useStore } from 'vuex';
 import { useToast } from 'vue-toast-notification';
+import { useCurrency } from '@/composables/useCurrency';
 import { useBookingStateV2 } from './composables/useBookingStateV2';
 import WizardStepper from './WizardStepper.vue';
 import HealthSidebar from './HealthSidebar.vue';
@@ -322,14 +323,7 @@ const nextButtonLabel = computed(() => {
   return 'Next Step';
 });
 
-const formatCurrency = (amount) => {
-  if (!amount) return null;
-  return new Intl.NumberFormat('en-NG', {
-    style: 'currency',
-    currency: 'NGN',
-    minimumFractionDigits: 0,
-  }).format(amount || 0);
-};
+const { format: formatCurrency, symbol } = useCurrency();
 
 // Format cost display - shows range if available, otherwise single price
 const formattedCostDisplay = computed(() => {
@@ -340,7 +334,7 @@ const formattedCostDisplay = computed(() => {
     return `${min} - ${max}`;
   }
   // Otherwise show the single estimated cost
-  return formatCurrency(state.estimatedCost) || '₦5,000 - ₦15,000';
+  return formatCurrency(state.estimatedCost) || `${symbol.value}5,000 - ${symbol.value}15,000`;
 });
 
 const openSideNav = () => {

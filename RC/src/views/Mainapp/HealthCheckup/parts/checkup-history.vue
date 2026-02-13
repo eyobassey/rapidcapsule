@@ -269,7 +269,7 @@
                         </div>
                         <div class="wallet-card__info">
                             <span class="wallet-label">Your Wallet Balance</span>
-                            <span class="wallet-amount">₦{{ walletBalance.toLocaleString() }}</span>
+                            <span class="wallet-amount">{{ formatCurrency(walletBalance) }}</span>
                         </div>
                     </div>
 
@@ -295,15 +295,15 @@
                         <div class="transaction-summary">
                             <div class="summary-row">
                                 <span class="label">Plan Price</span>
-                                <span class="value">₦{{ selectedPlanForPurchase.price.toLocaleString() }}</span>
+                                <span class="value">{{ formatCurrency(selectedPlanForPurchase.price) }}</span>
                             </div>
                             <div class="summary-row">
                                 <span class="label">Current Balance</span>
-                                <span class="value">₦{{ walletBalance.toLocaleString() }}</span>
+                                <span class="value">{{ formatCurrency(walletBalance) }}</span>
                             </div>
                             <div class="summary-row total" :class="{ 'insufficient': walletBalance < selectedPlanForPurchase.price }">
                                 <span class="label">Balance After Purchase</span>
-                                <span class="value">₦{{ Math.max(0, walletBalance - selectedPlanForPurchase.price).toLocaleString() }}</span>
+                                <span class="value">{{ formatCurrency(Math.max(0, walletBalance - selectedPlanForPurchase.price)) }}</span>
                             </div>
                         </div>
 
@@ -312,7 +312,7 @@
                             <v-icon name="hi-exclamation" />
                             <div class="alert-content">
                                 <strong>Insufficient Balance</strong>
-                                <p>You need ₦{{ (selectedPlanForPurchase.price - walletBalance).toLocaleString() }} more. Please top up your wallet to continue.</p>
+                                <p>You need {{ formatCurrency(selectedPlanForPurchase.price - walletBalance) }} more. Please top up your wallet to continue.</p>
                             </div>
                         </div>
 
@@ -368,8 +368,7 @@
                                 </div>
                                 <h4 class="plan-card__name">{{ plan.name }}</h4>
                                 <div class="plan-card__price">
-                                    <span class="currency">₦</span>
-                                    <span class="amount">{{ plan.price.toLocaleString() }}</span>
+                                    <span class="amount">{{ formatCurrency(plan.price) }}</span>
                                 </div>
                                 <p class="plan-card__details">
                                     <span v-if="plan.credits">{{ plan.credits }} health summary credits</span>
@@ -422,10 +421,12 @@
 import { ref, inject, onMounted, computed } from "vue";
 import { useToast } from 'vue-toast-notification';
 import { useRouter } from 'vue-router';
+import { useCurrency } from '@/composables/useCurrency';
 
 const $toast = useToast();
 const router = useRouter();
 const $http = inject("$http");
+const { format: formatCurrency, symbol } = useCurrency();
 const { navigator, useNavigator } = inject('$_NAVIGATOR');
 const diagnosisInject = inject('$_DIAGNOSIS', null);
 const recommendationInject = inject('$_RECOMMENDATION', null);

@@ -6,6 +6,7 @@ import {
   Delete,
   UseGuards,
   Request,
+  Req,
   Post,
   Query,
   Param,
@@ -130,6 +131,16 @@ export class UsersController {
       req.user.sub,
     );
     return sendSuccessResponse(Messages.CREATED, result);
+  }
+
+  // Public endpoint - detect currency from IP (no auth required)
+  @Get('detect-currency')
+  async detectCurrency(@Req() req) {
+    const ip =
+      (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
+      req.ip;
+    const result = this.usersService.detectCurrency(ip);
+    return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
   // Identity Verification PATCH - MUST be before :id route

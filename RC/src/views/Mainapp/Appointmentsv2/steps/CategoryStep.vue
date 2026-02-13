@@ -75,7 +75,7 @@
         <div class="filter-group">
           <div class="price-header">
             <label class="filter-label">Consultation Fee</label>
-            <span class="price-value">₦{{ filters.priceMin.toLocaleString() }} - ₦{{ filters.priceMax.toLocaleString() }}</span>
+            <span class="price-value">{{ formatCurrency(filters.priceMin) }} - {{ formatCurrency(filters.priceMax) }}</span>
           </div>
           <input
             type="range"
@@ -86,8 +86,8 @@
             class="price-slider"
           />
           <div class="price-range-labels">
-            <span>₦5,000</span>
-            <span>₦50,000+</span>
+            <span>{{ formatCurrency(5000) }}</span>
+            <span>{{ formatCurrency(50000) }}+</span>
           </div>
         </div>
 
@@ -170,7 +170,7 @@
         <div class="filter-group">
           <div class="price-header">
             <label class="filter-label">Consultation Fee</label>
-            <span class="price-value">₦{{ filters.priceMin.toLocaleString() }} - ₦{{ filters.priceMax.toLocaleString() }}</span>
+            <span class="price-value">{{ formatCurrency(filters.priceMin) }} - {{ formatCurrency(filters.priceMax) }}</span>
           </div>
           <input
             type="range"
@@ -181,8 +181,8 @@
             class="price-slider"
           />
           <div class="price-range-labels">
-            <span>₦5,000</span>
-            <span>₦50,000+</span>
+            <span>{{ formatCurrency(5000) }}</span>
+            <span>{{ formatCurrency(50000) }}+</span>
           </div>
         </div>
       </aside>
@@ -331,8 +331,10 @@
 <script setup>
 import { ref, computed, inject, onMounted } from 'vue';
 import apiFactory from '@/services/apiFactory';
+import { useCurrency } from '@/composables/useCurrency';
 
 const booking = inject('bookingStateV2');
+const { format: formatCurrency } = useCurrency();
 
 const searchQuery = ref('');
 const showAllCategories = ref(false);

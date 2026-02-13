@@ -93,6 +93,9 @@
 import { ref, onMounted } from 'vue';
 import apiFactory from '@/services/apiFactory';
 import { format } from 'date-fns';
+import { useCurrency } from '@/composables/useCurrency';
+
+const { format: formatCurrency } = useCurrency();
 
 const props = defineProps({
   patientId: {
@@ -156,14 +159,6 @@ function getTimelineDescription(event) {
   }
 }
 
-function formatCurrency(amount) {
-  if (!amount && amount !== 0) return '';
-  return new Intl.NumberFormat('en-NG', {
-    style: 'currency',
-    currency: 'NGN',
-    minimumFractionDigits: 0,
-  }).format(amount);
-}
 
 async function fetchTimeline(page = 1) {
   try {

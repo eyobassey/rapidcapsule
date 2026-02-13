@@ -669,9 +669,9 @@
                     </div>
                   </div>
                   <div class="pricing-row">
-                    <div class="price-item"><span class="price-label">Subtotal</span><span class="price-value">{{ rx.currency }} {{ formatCurrency(rx.subtotal) }}</span></div>
-                    <div v-if="rx.delivery_fee" class="price-item"><span class="price-label">Delivery</span><span class="price-value">{{ rx.currency }} {{ formatCurrency(rx.delivery_fee) }}</span></div>
-                    <div class="price-item total"><span class="price-label">Total</span><span class="price-value">{{ rx.currency }} {{ formatCurrency(rx.total_amount) }}</span></div>
+                    <div class="price-item"><span class="price-label">Subtotal</span><span class="price-value">{{ formatCurrency(rx.subtotal) }}</span></div>
+                    <div v-if="rx.delivery_fee" class="price-item"><span class="price-label">Delivery</span><span class="price-value">{{ formatCurrency(rx.delivery_fee) }}</span></div>
+                    <div class="price-item total"><span class="price-label">Total</span><span class="price-value">{{ formatCurrency(rx.total_amount) }}</span></div>
                   </div>
                   <div v-if="rx.is_refillable" class="refill-info">
                     <v-icon name="hi-refresh" scale="0.8" />
@@ -835,9 +835,9 @@
                     </div>
                   </div>
                   <div class="pricing-row">
-                    <div class="price-item"><span class="price-label">Subtotal</span><span class="price-value">{{ order.currency }} {{ formatCurrency(order.subtotal) }}</span></div>
-                    <div v-if="order.delivery_fee" class="price-item"><span class="price-label">Delivery</span><span class="price-value">{{ order.currency }} {{ formatCurrency(order.delivery_fee) }}</span></div>
-                    <div class="price-item total"><span class="price-label">Total</span><span class="price-value">{{ order.currency }} {{ formatCurrency(order.total_amount) }}</span></div>
+                    <div class="price-item"><span class="price-label">Subtotal</span><span class="price-value">{{ formatCurrency(order.subtotal) }}</span></div>
+                    <div v-if="order.delivery_fee" class="price-item"><span class="price-label">Delivery</span><span class="price-value">{{ formatCurrency(order.delivery_fee) }}</span></div>
+                    <div class="price-item total"><span class="price-label">Total</span><span class="price-value">{{ formatCurrency(order.total_amount) }}</span></div>
                   </div>
                   <div v-if="order.delivery_method" class="delivery-info">
                     <v-icon :name="order.is_pickup ? 'hi-location-marker' : 'hi-truck'" scale="0.8" />
@@ -1055,10 +1055,12 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { format } from 'date-fns';
+import { useCurrency } from '@/composables/useCurrency';
 import apiFactory from '@/services/apiFactory';
 
 const route = useRoute();
 const router = useRouter();
+const { format: formatCurrency } = useCurrency();
 
 // State
 const loading = ref(true);
@@ -1493,10 +1495,7 @@ const formatPrescriptionStatus = (status) => {
   return statusMap[status?.toLowerCase()] || status || 'Unknown';
 };
 
-const formatCurrency = (amount) => {
-  if (amount === null || amount === undefined) return '0.00';
-  return Number(amount).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-};
+// formatCurrency is provided by useCurrency composable
 
 // Uploaded prescription status helpers
 const getUploadStatusClass = (status) => {

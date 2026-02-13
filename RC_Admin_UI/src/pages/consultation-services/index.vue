@@ -286,6 +286,35 @@
                   placeholder="2000"
                 />
               </VCol>
+
+              <!-- Multi-Currency Rates -->
+              <VCol cols="12">
+                <div class="text-subtitle-2 font-weight-medium mb-2 mt-2">International Rates (optional)</div>
+                <div class="text-caption text-medium-emphasis mb-3">Set explicit rates for each currency. Leave empty to auto-convert from NGN.</div>
+                <VRow v-for="cur in currencyOptions" :key="cur.code" class="mb-1">
+                  <VCol cols="12" md="2" class="d-flex align-center">
+                    <span class="text-body-2 font-weight-bold">{{ cur.flag }} {{ cur.code }}</span>
+                  </VCol>
+                  <VCol cols="12" md="5">
+                    <VTextField
+                      v-model.number="formData.rates[cur.code].min_rate"
+                      :label="`Min Rate (${cur.code})`"
+                      type="number"
+                      :prefix="cur.symbol"
+                      density="compact"
+                    />
+                  </VCol>
+                  <VCol cols="12" md="5">
+                    <VTextField
+                      v-model.number="formData.rates[cur.code].max_rate"
+                      :label="`Max Rate (${cur.code})`"
+                      type="number"
+                      :prefix="cur.symbol"
+                      density="compact"
+                    />
+                  </VCol>
+                </VRow>
+              </VCol>
               <VCol cols="12">
                 <VTextField
                   v-model="formData.info_text"
@@ -394,6 +423,20 @@ const showError = (message) => {
   snackbar.value = { show: true, message, color: 'error' }
 }
 
+const emptyRates = () => ({
+  USD: { min_rate: null, max_rate: null },
+  GBP: { min_rate: null, max_rate: null },
+  EUR: { min_rate: null, max_rate: null },
+  NGN: { min_rate: null, max_rate: null },
+})
+
+const currencyOptions = [
+  { code: 'USD', symbol: '$', flag: '\u{1F1FA}\u{1F1F8}' },
+  { code: 'GBP', symbol: '\u00A3', flag: '\u{1F1EC}\u{1F1E7}' },
+  { code: 'EUR', symbol: '\u20AC', flag: '\u{1F1EA}\u{1F1FA}' },
+  { code: 'NGN', symbol: '\u20A6', flag: '\u{1F1F3}\u{1F1EC}' },
+]
+
 const formData = ref({
   name: '',
   slug: '',
@@ -407,6 +450,7 @@ const formData = ref({
   is_active: true,
   is_default: false,
   show_ai_badge: false,
+  rates: emptyRates(),
 })
 
 const statusOptions = [
@@ -511,6 +555,7 @@ const openAddDialog = () => {
     is_active: true,
     is_default: false,
     show_ai_badge: false,
+    rates: emptyRates(),
   }
   dialogVisible.value = true
 }
@@ -530,6 +575,12 @@ const openEditDialog = (service) => {
     is_active: service.is_active !== false,
     is_default: service.is_default === true,
     show_ai_badge: service.show_ai_badge === true,
+    rates: {
+      USD: { min_rate: service.rates?.USD?.min_rate ?? null, max_rate: service.rates?.USD?.max_rate ?? null },
+      GBP: { min_rate: service.rates?.GBP?.min_rate ?? null, max_rate: service.rates?.GBP?.max_rate ?? null },
+      EUR: { min_rate: service.rates?.EUR?.min_rate ?? null, max_rate: service.rates?.EUR?.max_rate ?? null },
+      NGN: { min_rate: service.rates?.NGN?.min_rate ?? null, max_rate: service.rates?.NGN?.max_rate ?? null },
+    },
   }
   dialogVisible.value = true
 }

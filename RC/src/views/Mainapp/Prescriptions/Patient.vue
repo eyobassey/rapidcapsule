@@ -220,7 +220,6 @@
                 <div class="prescription-item__right">
                   <span class="prescription-date">{{ formatDate(prescription.created_at) }}</span>
                   <div class="prescription-amount" v-if="prescription.total_amount">
-                    <span class="currency">NGN</span>
                     <span class="amount">{{ formatCurrency(prescription.total_amount) }}</span>
                   </div>
                   <v-icon name="hi-chevron-right" scale="0.9" class="chevron" />
@@ -290,6 +289,7 @@
 import moment from "moment";
 import { debounce } from "lodash";
 import { mapGetters, mapActions } from "vuex";
+import { formatCurrency } from "@/utilities/currency";
 
 export default {
   name: "PatientPrescriptions",
@@ -605,11 +605,7 @@ export default {
       return moment(date).format("MMM D, YYYY");
     },
     formatCurrency(amount) {
-      if (!amount) return "0.00";
-      return Number(amount).toLocaleString("en-NG", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      });
+      return formatCurrency(amount);
     },
     formatStatus(prescription) {
       const status = prescription.status || prescription.verification_status || prescription.payment_status;

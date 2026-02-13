@@ -55,7 +55,11 @@ export default {
     getSelectedPharmacy: (state) => state.selectedPharmacy,
     getCart: (state) => state.cart,
     getCartItemCount: (state) => state.cart.reduce((sum, item) => sum + item.quantity, 0),
-    getCartTotal: (state) => state.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0),
+    getCartTotal: (state) => {
+      return state.cart.reduce((sum, item) => {
+        return sum + ((item.price || 0) * item.quantity);
+      }, 0);
+    },
     getCartValidation: (state) => state.cartValidation,
     getCartValidating: (state) => state.cartValidating,
     getCartHasIssues: (state) => state.cartValidation && state.cartValidation.issues?.length > 0,
@@ -1453,6 +1457,7 @@ export default {
                   dosageForm: drug.dosage_form,
                   manufacturer: drug.manufacturer,
                   price: drug.selling_price || drug.price || 0,
+                  prices: drug.prices || null,
                   quantity: quantity,
                   imageUrl: drug.image_url || drug.primary_image || null,
                   requiresPrescription: true,
@@ -1562,6 +1567,8 @@ export default {
             return {
               ...item,
               imageUrl: drug.image_url || drug.primary_image || null,
+              prices: drug.prices || item.prices || null,
+              price: item.price, // preserve original NGN price
             };
           } catch (error) {
             console.warn(`Failed to fetch image for drug ${item.drugId}:`, error.message);

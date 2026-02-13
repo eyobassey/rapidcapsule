@@ -528,3 +528,6 @@ app.use(vueGoogleLogin, {
   clientId: `${process.env.VUE_APP_GOOGLE_KEY}`,
 });
 app.mount("#app");
+
+// Initialize currency (IP detection for guests, profile-based for authenticated users)
+store.dispatch('currency/initCurrency');

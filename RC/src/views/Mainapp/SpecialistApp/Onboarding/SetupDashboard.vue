@@ -199,11 +199,13 @@
 <script setup>
 import { computed, ref } from 'vue';
 import { useStore } from 'vuex';
+import { useCurrency } from '@/composables/useCurrency';
 import SetupCard from './components/SetupCard.vue';
 import ProgressRing from './components/ProgressRing.vue';
 import { useOnboardingState } from './composables/useOnboardingState';
 
 const store = useStore();
+const { format: formatAmount } = useCurrency();
 const {
   stepCompletion,
   progressPercent,
@@ -320,7 +322,7 @@ const ratesSummary = computed(() => {
   if (!stepCompletion.rateCards) return null;
   const rate = rateCards.video_consultation.routine_rate;
   return [
-    { icon: 'bi-currency-dollar', text: rate ? `₦${rate.toLocaleString()}/session` : 'Not set' },
+    { icon: 'bi-currency-dollar', text: rate ? `${formatAmount(rate)}/session` : 'Not set' },
   ];
 });
 

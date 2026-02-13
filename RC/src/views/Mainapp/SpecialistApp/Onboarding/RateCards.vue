@@ -23,7 +23,7 @@
               :class="{ active: currency === 'NGN' }"
               @click="currency = 'NGN'"
             >
-              NGN (₦)
+              NGN ({{ getCurrencySymbol('NGN') }})
             </button>
             <button
               :class="{ active: currency === 'USD' }"
@@ -339,6 +339,7 @@ import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { useStore } from 'vuex';
 import { useRouter } from 'vue-router';
 import { useToast } from 'vue-toast-notification';
+import { getCurrencySymbol, SUPPORTED_CURRENCIES } from '@/utilities/currency';
 import apiFactory from '@/services/apiFactory';
 import { useOnboardingState } from './composables/useOnboardingState';
 
@@ -383,7 +384,7 @@ const bulkEdit = reactive({
 });
 
 // Computed values
-const currencySymbol = computed(() => currency.value === 'NGN' ? '₦' : '$');
+const currencySymbol = computed(() => getCurrencySymbol(currency.value));
 
 const availabilityHours = computed(() => {
   if (!availabilityData.value?.time_availability) return 0;

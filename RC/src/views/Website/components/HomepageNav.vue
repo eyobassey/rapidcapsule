@@ -10,6 +10,7 @@
 			</nav>
 
 			<div class="nav-actions">
+				<CurrencySelector />
 				<router-link to="/login" class="btn-signin">Sign In</router-link>
 				<router-link to="/signup/patient" class="btn-getstarted">Get Started</router-link>
 			</div>
@@ -37,6 +38,7 @@
 				<a v-for="link in navLinks" :key="link.href" :href="link.href" class="drawer-link" @click.prevent="scrollTo(link.href); drawerOpen = false">{{ link.label }}</a>
 			</nav>
 			<div class="drawer-actions">
+				<div class="drawer-currency"><CurrencySelector /></div>
 				<router-link to="/login" class="btn-signin drawer-btn" @click="drawerOpen = false">Sign In</router-link>
 				<router-link to="/signup/patient" class="btn-getstarted drawer-btn" @click="drawerOpen = false">Get Started</router-link>
 			</div>
@@ -46,6 +48,7 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue';
+import CurrencySelector from '@/components/Navigation/CurrencySelector.vue';
 
 const drawerOpen = ref(false);
 const scrolled = ref(false);
@@ -310,6 +313,12 @@ $navy: #0F172A;
 	display: flex;
 	flex-direction: column;
 	gap: 10px;
+}
+
+.drawer-currency {
+	display: flex;
+	justify-content: center;
+	margin-bottom: 4px;
 }
 
 .drawer-btn {

@@ -63,6 +63,9 @@
 
 <script setup>
 import RcAvatar from '@/components/RCAvatar';
+import { useCurrency } from '@/composables/useCurrency';
+
+const { format: formatPrice } = useCurrency();
 
 const props = defineProps({
   fullName: { type: String, required: true },
@@ -84,13 +87,7 @@ const props = defineProps({
 
 defineEmits(['select']);
 
-const formatPrice = (amount) => {
-  return new Intl.NumberFormat('en-NG', {
-    style: 'currency',
-    currency: 'NGN',
-    minimumFractionDigits: 0,
-  }).format(amount || 0);
-};
+// formatPrice is provided by useCurrency composable
 </script>
 
 <style scoped lang="scss">

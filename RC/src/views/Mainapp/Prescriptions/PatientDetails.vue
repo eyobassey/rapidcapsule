@@ -63,7 +63,7 @@
               <div class="hero-stat__divider"></div>
               <div class="hero-stat">
                 <span class="hero-stat__value hero-stat__value--info">{{ formatCurrency(prescription.total_amount || 0) }}</span>
-                <span class="hero-stat__label">Total (NGN)</span>
+                <span class="hero-stat__label">Total</span>
               </div>
               <div class="hero-stat__divider" v-if="prescription.pdf_url"></div>
               <div class="hero-stat hero-stat--action" v-if="prescription.pdf_url" @click="downloadPdf">
@@ -278,10 +278,10 @@
                 <div class="med-pricing">
                   <span class="qty-badge">Qty: {{ item.dose?.quantity || item.quantity || 1 }}</span>
                   <div class="price-breakdown" v-if="item.unit_price">
-                    <span class="unit-price">NGN {{ formatCurrency(item.unit_price) }} each</span>
+                    <span class="unit-price">{{ formatCurrency(item.unit_price) }} each</span>
                   </div>
                   <span class="total-price" v-if="item.total_price || item.unit_price">
-                    NGN {{ formatCurrency(item.total_price || item.unit_price * (item.dose?.quantity || item.quantity || 1)) }}
+                    {{ formatCurrency(item.total_price || item.unit_price * (item.dose?.quantity || item.quantity || 1)) }}
                   </span>
                 </div>
               </div>
@@ -297,15 +297,15 @@
             <div class="payment-grid">
               <div class="payment-item">
                 <span class="label">Subtotal</span>
-                <span class="value">NGN {{ formatCurrency(prescription.subtotal) }}</span>
+                <span class="value">{{ formatCurrency(prescription.subtotal) }}</span>
               </div>
               <div class="payment-item" v-if="prescription.delivery_fee">
                 <span class="label">Delivery Fee</span>
-                <span class="value">NGN {{ formatCurrency(prescription.delivery_fee) }}</span>
+                <span class="value">{{ formatCurrency(prescription.delivery_fee) }}</span>
               </div>
               <div class="payment-item total">
                 <span class="label">Total Amount</span>
-                <span class="value">NGN {{ formatCurrency(prescription.final_total || prescription.total_amount) }}</span>
+                <span class="value">{{ formatCurrency(prescription.final_total || prescription.total_amount) }}</span>
               </div>
             </div>
             <div class="payment-status">
@@ -491,7 +491,7 @@
               <div class="wallet-balance" v-if="walletBalance !== null">
                 <span class="label">Wallet Balance:</span>
                 <span :class="['balance', { sufficient: walletBalance >= (prescription.final_total || prescription.total_amount) }]">
-                  NGN {{ formatCurrency(walletBalance) }}
+                  {{ formatCurrency(walletBalance) }}
                 </span>
               </div>
               <div class="action-buttons">
@@ -731,20 +731,20 @@
 
             <div class="amount-section">
               <span class="amount-label">Amount to Pay</span>
-              <span class="amount-value">NGN {{ formatCurrency(prescription.final_total || prescription.total_amount) }}</span>
+              <span class="amount-value">{{ formatCurrency(prescription.final_total || prescription.total_amount) }}</span>
             </div>
 
             <div v-if="paymentMethod === 'wallet'" class="wallet-section">
               <div class="balance-row">
                 <span class="balance-label">Your Wallet Balance</span>
                 <span class="balance-value" :class="{ sufficient: walletBalance >= (prescription.final_total || prescription.total_amount), insufficient: walletBalance < (prescription.final_total || prescription.total_amount) }">
-                  NGN {{ formatCurrency(walletBalance) }}
+                  {{ formatCurrency(walletBalance) }}
                 </span>
               </div>
               <div class="balance-row after">
                 <span class="balance-label">Balance After Payment</span>
                 <span class="balance-value">
-                  NGN {{ formatCurrency(walletBalance - (prescription.final_total || prescription.total_amount)) }}
+                  {{ formatCurrency(walletBalance - (prescription.final_total || prescription.total_amount)) }}
                 </span>
               </div>
             </div>
@@ -813,7 +813,7 @@
                 <p>{{ formatPickupAddress(center.address) }}</p>
                 <div class="center-meta">
                   <span v-if="center.distance"><v-icon name="hi-location-marker" scale="0.7" /> {{ formatDistance(center.distance) }}</span>
-                  <span v-if="center.pickup_center_settings?.handling_fee">Fee: NGN {{ formatCurrency(center.pickup_center_settings.handling_fee) }}</span>
+                  <span v-if="center.pickup_center_settings?.handling_fee">Fee: {{ formatCurrency(center.pickup_center_settings.handling_fee) }}</span>
                 </div>
               </div>
             </div>
@@ -838,6 +838,7 @@
 import Loader from "@/components/Loader/main-loader.vue";
 import apiFactory from "@/services/apiFactory";
 import moment from "moment";
+import { formatCurrency } from "@/utilities/currency";
 
 export default {
   name: "PatientPrescriptionDetails",
@@ -1485,8 +1486,7 @@ export default {
       return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
     },
     formatCurrency(amount) {
-      if (!amount) return "0.00";
-      return Number(amount).toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      return formatCurrency(amount);
     },
     formatDate(date) {
       if (!date) return "";

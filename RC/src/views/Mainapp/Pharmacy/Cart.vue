@@ -88,13 +88,13 @@
                 </div>
                 <div class="hero-stats">
                   <div class="stat-item">
-                    <span class="stat-value">{{ formatPrice(cartTotal) }}</span>
+                    <span class="stat-value">{{ formatConverted(cartTotal) }}</span>
                     <span class="stat-label">Subtotal</span>
                   </div>
                   <div class="stat-divider"></div>
                   <div class="stat-item">
                     <span class="stat-value" :class="{ 'free': hasFreeDelivery }">
-                      {{ hasFreeDelivery ? 'FREE' : formatPrice(actualDeliveryFee) }}
+                      {{ hasFreeDelivery ? 'FREE' : formatConverted(actualDeliveryFee) }}
                     </span>
                     <span class="stat-label">Delivery</span>
                   </div>
@@ -104,7 +104,7 @@
               <div v-if="!hasFreeDelivery" class="delivery-progress">
                 <div class="progress-text">
                   <v-icon name="hi-truck" scale="0.9" />
-                  <span>Add <strong>{{ formatPrice(amountToFreeDelivery) }}</strong> more for FREE delivery</span>
+                  <span>Add <strong>{{ formatConverted(amountToFreeDelivery) }}</strong> more for FREE delivery</span>
                 </div>
                 <div class="progress-bar">
                   <div class="progress-fill" :style="{ width: freeDeliveryProgress + '%' }"></div>
@@ -197,8 +197,8 @@
                       </button>
                     </div>
                     <div class="item-price">
-                      <span class="price-total">{{ formatPrice(item.price * item.quantity) }}</span>
-                      <span class="price-each">{{ formatPrice(item.price) }} each</span>
+                      <span class="price-total">{{ formatPrice(getPrice(item) * item.quantity) }}</span>
+                      <span class="price-each">{{ formatPrice(getPrice(item)) }} each</span>
                     </div>
                     <div class="item-actions">
                       <button class="action-btn save" @click="saveForLater(item)" title="Save for later">
@@ -249,8 +249,8 @@
                       </button>
                     </div>
                     <div class="item-price">
-                      <span class="price-total">{{ formatPrice(item.price * item.quantity) }}</span>
-                      <span class="price-each">{{ formatPrice(item.price) }} each</span>
+                      <span class="price-total">{{ formatPrice(getPrice(item) * item.quantity) }}</span>
+                      <span class="price-each">{{ formatPrice(getPrice(item)) }} each</span>
                     </div>
                     <div class="item-actions">
                       <button class="action-btn save" @click="saveForLater(item)" title="Save for later">
@@ -431,7 +431,7 @@
                   <div class="promo-info">
                     <v-icon name="hi-tag" scale="0.9" />
                     <span class="promo-code">{{ promoCodeApplied.code }}</span>
-                    <span class="promo-discount">-{{ formatPrice(promoDiscount) }}</span>
+                    <span class="promo-discount">-{{ formatConverted(promoDiscount) }}</span>
                   </div>
                   <button class="remove-promo" @click="removePromoCode">
                     <v-icon name="hi-x" scale="0.8" />
@@ -444,21 +444,21 @@
               <div class="price-breakdown">
                 <div class="price-row">
                   <span>Subtotal</span>
-                  <span>{{ formatPrice(cartTotal) }}</span>
+                  <span>{{ formatConverted(cartTotal) }}</span>
                 </div>
                 <div v-if="promoDiscount > 0" class="price-row discount">
                   <span>Discount</span>
-                  <span>-{{ formatPrice(promoDiscount) }}</span>
+                  <span>-{{ formatConverted(promoDiscount) }}</span>
                 </div>
                 <div class="price-row" v-if="deliveryMethod === 'delivery'">
                   <span>Delivery</span>
                   <span :class="{ 'free-text': hasFreeDelivery }">
-                    {{ hasFreeDelivery ? 'FREE' : formatPrice(actualDeliveryFee) }}
+                    {{ hasFreeDelivery ? 'FREE' : formatConverted(actualDeliveryFee) }}
                   </span>
                 </div>
                 <div class="price-row total">
                   <span>Total</span>
-                  <span>{{ formatPrice(totalAmount) }}</span>
+                  <span>{{ formatConverted(totalAmount) }}</span>
                 </div>
               </div>
 
@@ -482,7 +482,7 @@
                       <v-icon name="bi-wallet-2" scale="1.1" />
                       <div class="option-text">
                         <strong>Wallet</strong>
-                        <span>{{ formatPrice(walletBalance) }} available</span>
+                        <span>{{ formatConverted(walletBalance) }} available</span>
                       </div>
                     </div>
                   </label>
@@ -540,7 +540,7 @@
                   <div class="saved-info">
                     <h4>{{ item.name }}</h4>
                     <p>{{ item.strength }} {{ item.dosageForm }}</p>
-                    <span class="saved-price">{{ formatPrice(item.price) }}</span>
+                    <span class="saved-price">{{ formatPrice(getPrice(item)) }}</span>
                   </div>
                   <div class="saved-actions">
                     <button class="move-btn" @click="moveToCart(item)">
@@ -560,7 +560,7 @@
           <div class="mobile-checkout-bar">
             <div class="mobile-total">
               <span class="label">Total</span>
-              <span class="amount">{{ formatPrice(totalAmount) }}</span>
+              <span class="amount">{{ formatConverted(totalAmount) }}</span>
             </div>
             <button class="mobile-checkout-btn" :disabled="!canProceedToCheckout || placingOrder" @click="placeOrder">
               {{ placingOrder ? 'Processing...' : 'Pay Now' }}
@@ -812,16 +812,16 @@
             <div class="wallet-details">
               <div class="detail-row">
                 <span class="detail-label">Current Balance</span>
-                <span class="detail-value balance">{{ formatPrice(walletBalance) }}</span>
+                <span class="detail-value balance">{{ formatConverted(walletBalance) }}</span>
               </div>
               <div class="detail-row debit">
                 <span class="detail-label">Amount to Debit</span>
-                <span class="detail-value">- {{ formatPrice(totalAmount) }}</span>
+                <span class="detail-value">- {{ formatConverted(totalAmount) }}</span>
               </div>
               <div class="detail-divider"></div>
               <div class="detail-row remaining">
                 <span class="detail-label">Remaining Balance</span>
-                <span class="detail-value">{{ formatPrice(walletBalance - totalAmount) }}</span>
+                <span class="detail-value">{{ formatConverted(walletBalance - totalAmount) }}</span>
               </div>
             </div>
 
@@ -854,6 +854,7 @@ import {
   mapGetters as useMapGetters,
 } from "@/utilities/utilityStore";
 import $api from "@/services/apiFactory";
+import { useCurrency } from "@/composables/useCurrency";
 
 export default {
   name: "PharmacyCart",
@@ -864,6 +865,7 @@ export default {
   },
   emits: ["openSideNav"],
   setup() {
+    const { format: formatPrice, getPrice, formatConverted } = useCurrency();
     const router = useRouter();
     const route = useRoute();
     const useWalletBalance = ref(false);
@@ -1249,14 +1251,7 @@ export default {
       return "Proceed to Checkout";
     });
 
-    const formatPrice = (price) => {
-      return new Intl.NumberFormat("en-NG", {
-        style: "currency",
-        currency: "NGN",
-      }).format(price || 0);
-    };
-
-    // Pay Now button label (must be after formatPrice definition)
+    // Pay Now button label
     const payNowButtonLabel = computed(() => {
       if (placingOrder.value) return "Processing...";
       if (!canProceedToCheckout.value) {
@@ -1274,7 +1269,7 @@ export default {
       if (paymentMethod.value === "wallet" && amountToPay.value === 0) {
         return "Pay Now (Wallet)";
       }
-      return `Pay ${formatPrice(amountToPay.value)}`;
+      return `Pay ${formatConverted(amountToPay.value)}`;
     });
 
     const formatDate = (dateString) => {
@@ -1548,7 +1543,7 @@ export default {
             code: code,
             discount_type: 'fixed',
             discount_value: 500,
-            description: '₦500 off your order'
+            description: `${formatConverted(500)} off your order`
           };
         } else {
           promoError.value = 'Invalid promo code';
@@ -2108,6 +2103,8 @@ export default {
       checkDrugInteractions,
       // Functions
       formatPrice,
+      formatConverted,
+      getPrice,
       formatDate,
       formatAddressDisplay,
       formatPharmacyAddress,

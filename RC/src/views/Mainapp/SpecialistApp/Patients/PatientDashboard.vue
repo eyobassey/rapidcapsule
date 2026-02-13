@@ -1378,7 +1378,7 @@
 												{{ event.data.triageLevel }}
 											</span>
 											<span v-if="event.data.totalAmount" class="meta-tag amount">
-												₦{{ formatCurrency(event.data.totalAmount) }}
+												{{ formatCurrency(event.data.totalAmount) }}
 											</span>
 										</div>
 									</div>
@@ -1451,6 +1451,7 @@
 import { ref, computed, onMounted, onUnmounted, inject } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import moment from 'moment';
+import { useCurrency } from '@/composables/useCurrency';
 import TopBar from "@/components/Navigation/top-bar";
 import Loader from "@/components/Loader/main-loader";
 import RcAvatar from "@/components/RCAvatar";
@@ -1462,6 +1463,7 @@ const $http = inject('$_HTTP');
 const $toast = inject('$_TOAST');
 const router = useRouter();
 const route = useRoute();
+const { format: formatCurrency } = useCurrency();
 
 // State
 const loading = ref(true);
@@ -2022,14 +2024,7 @@ function formatAptTime(date) {
 	return moment(date).format('h:mm A');
 }
 
-function formatCurrency(amount) {
-	if (!amount && amount !== 0) return null;
-	return new Intl.NumberFormat('en-NG', {
-		style: 'currency',
-		currency: 'NGN',
-		minimumFractionDigits: 0,
-	}).format(amount);
-}
+// formatCurrency is provided by useCurrency composable
 
 function formatAddress(address) {
 	if (!address) return '';
@@ -2429,12 +2424,7 @@ const formatAppointmentFee = (apt) => {
 	if (!fee && fee !== 0) return '-';
 	if (fee === 0) return 'Free';
 
-	// Format with Nigerian Naira
-	return new Intl.NumberFormat('en-NG', {
-		style: 'currency',
-		currency: 'NGN',
-		minimumFractionDigits: 0,
-	}).format(fee);
+	return formatCurrency(fee);
 };
 
 const viewAppointmentDetails = (apt) => {

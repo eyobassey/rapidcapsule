@@ -390,6 +390,7 @@
 <script setup>
 import { ref, computed, inject, onMounted, isRef, defineEmits, watch } from 'vue';
 import { format } from 'date-fns';
+import { useCurrency } from '@/composables/useCurrency';
 import Loader from '@/components/Loader/main-loader.vue';
 
 const emit = defineEmits(['edit']);
@@ -557,13 +558,7 @@ const getInitials = (specialist) => {
   return (first + last).toUpperCase() || 'DR';
 };
 
-const formatCurrency = (amount) => {
-  return new Intl.NumberFormat('en-NG', {
-    style: 'currency',
-    currency: 'NGN',
-    minimumFractionDigits: 2,
-  }).format(amount || 0);
-};
+const { format: formatCurrency } = useCurrency();
 
 // Health Check Summary
 const formatAssessmentDate = computed(() => {
