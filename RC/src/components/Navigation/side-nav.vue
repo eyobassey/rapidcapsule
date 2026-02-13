@@ -60,6 +60,9 @@
           </div>
         </div>
       </div>
+      <div class="nav__currency">
+        <CurrencySelector />
+      </div>
       <div class="nav__secondary">
         <div v-for="item of secondaryNav" :key="item.label">
           <div
@@ -94,6 +97,7 @@
 <script>
 import Icons from "../icons.vue";
 import Logos from "../logos.vue";
+import CurrencySelector from "./CurrencySelector.vue";
 
 export default {
   data() {
@@ -218,6 +222,7 @@ export default {
   components: {
     Icons,
     Logos,
+    CurrencySelector,
   },
 };
 </script>
@@ -278,6 +283,10 @@ export default {
 
   &__primary {
     height: 100%;
+  }
+
+  &__currency {
+    padding: $size-16 $size-32;
   }
 
   &__secondary {

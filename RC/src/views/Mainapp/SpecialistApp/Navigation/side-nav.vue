@@ -88,6 +88,9 @@
 
 		<!-- Normal Mode: Full navigation -->
 		<div v-else class="nav">
+			<div class="nav__currency">
+				<CurrencySelector />
+			</div>
 			<div class="nav__primary">
 				<div
 					class="nav__item nav__item--container"
@@ -159,6 +162,7 @@
 <script>
 import Icons from "@/components/icons.vue";
 import Logos from "@/components/logos.vue";
+import CurrencySelector from "@/components/Navigation/CurrencySelector.vue";
 import { mapGetters } from "vuex";
 
 export default {
@@ -377,6 +381,7 @@ export default {
 	components: {
 		Icons,
 		Logos,
+		CurrencySelector,
 	},
 };
 </script>
@@ -438,6 +443,10 @@ export default {
 	@include flexItem(vertical) {
 		height: 100%;
 		gap: $size-32;
+	}
+
+	&__currency {
+		padding: $size-12 1.5rem;
 	}
 
 	&__primary {
