@@ -993,6 +993,18 @@ const apiFactory = {
     return http.get(`/whatsapp/prescriptions/${prescriptionId}`);
   },
 
+  // ============ Eka AI Companion APIs ============
+
+  $_getEkaConversations() {
+    return http.get("/eka/conversations");
+  },
+  $_getEkaConversation(conversationId) {
+    return http.get(`/eka/conversations/${conversationId}`);
+  },
+  $_deleteEkaConversation(conversationId) {
+    return http.delete(`/eka/conversations/${conversationId}`);
+  },
+
   test(params) {
     console.log("PARAMS", params);
   },

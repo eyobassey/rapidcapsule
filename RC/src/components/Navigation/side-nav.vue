@@ -169,6 +169,13 @@ export default {
           icon: "wallet",
           iconColor: "#6F6F6F",
         },
+        {
+          link: "/app/patient/eka",
+          label: "EkaGPT",
+          children: [],
+          icon: "eka-chat",
+          iconColor: "#0288D1",
+        },
       ],
       secondaryNav: [
         {

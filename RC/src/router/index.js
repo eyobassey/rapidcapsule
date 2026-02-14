@@ -421,6 +421,11 @@ const routes = [
           },
         ],
       },
+      {
+        path: "eka",
+        name: "Eka",
+        component: () => import("@/components/EkaChat/EkaChatPanel.vue"),
+      },
     ],
   },
   {

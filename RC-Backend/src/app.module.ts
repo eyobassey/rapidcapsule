@@ -47,6 +47,7 @@ import { ConsultationServicesModule } from './modules/consultation-services/cons
 import { HealthTipsModule } from './modules/health-tips/health-tips.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { TrialModule } from './modules/trial/trial.module';
+import { EkaModule } from './modules/eka/eka.module';
 
 dotenv.config();
 
@@ -97,6 +98,7 @@ dotenv.config();
     HealthTipsModule,
     NotificationsModule,
     TrialModule,
+    EkaModule,
   ],
   controllers: [AppController],
   providers: [AppService, WebsocketGateway],

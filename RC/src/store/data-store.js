@@ -12,6 +12,7 @@ import pharmacyPortal from "./modules/pharmacyPortal";
 import whatsapp from "./modules/whatsapp";
 import notifications from "./modules/notifications";
 import currency from "./modules/currency";
+import eka from "./modules/eka";
 import axios from "../services/http";
 
 export default createStore({
@@ -282,5 +283,6 @@ export default createStore({
     whatsapp,
     notifications,
     currency,
+    eka,
   },
 });

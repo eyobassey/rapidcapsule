@@ -1157,6 +1157,24 @@
       :fill="fillColor || '#6F6F6F'"
     />
   </svg>
+
+  <svg
+    v-else-if="name === 'eka-chat'"
+    class="icons"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="M12 2C6.48 2 2 5.58 2 10C2 12.59 3.53 14.89 5.88 16.32L5 21L9.45 18.63C10.28 18.87 11.13 19 12 19C17.52 19 22 15.42 22 11C22 6.58 17.52 2 12 2Z"
+      :fill="fillColor || '#6F6F6F'"
+    />
+    <circle cx="8" cy="10.5" r="1.2" fill="white"/>
+    <circle cx="12" cy="10.5" r="1.2" fill="white"/>
+    <circle cx="16" cy="10.5" r="1.2" fill="white"/>
+  </svg>
 </template>
 
 <script>

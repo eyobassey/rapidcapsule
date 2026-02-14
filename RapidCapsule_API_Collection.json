@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "rapid-capsule-api-v4",
     "name": "Rapid Capsule API Collection v5.0",
-    "description": "Complete API documentation for Rapid Capsule Telemedicine Platform.\n\n**Patient API**: https://api.rapidcapsule.com/api\n**Specialist API**: https://api.rapidcapsule.com/api\n**Admin API**: https://admin.rapidcapsule.com/admin-api\n\nTotal Endpoints: 600+\n\nIncludes: Biometric/WebAuthn Authentication, Session Management, Notifications, RxGPT AI Prescription Analysis, Linked Records, Admin RxGPT Management, Trial Access, Health Integrations, Clinical Note Templates, Pharmacy Inventory, Accounting Wallet, WhatsApp Queue, Specialist Pharmacy Portal, Webhooks\n\nCreated by Bassey Eyo (eyobassey@gmail.com) - Founder & CTO",
+    "description": "Complete API documentation for Rapid Capsule Telemedicine Platform.\n\n**Patient API**: https://api.rapidcapsule.com/api\n**Specialist API**: https://api.rapidcapsule.com/api\n**Admin API**: https://admin.rapidcapsule.com/admin-api\n\nTotal Endpoints: 600+\n\nIncludes: Biometric/WebAuthn Authentication, Session Management, Notifications, RxGPT AI Prescription Analysis, Linked Records, Admin RxGPT Management, Trial Access, Health Integrations, Clinical Note Templates, Pharmacy Inventory, Accounting Wallet, WhatsApp Queue, Specialist Pharmacy Portal, Webhooks, Eka AI Companion\n\nCreated by Bassey Eyo (eyobassey@gmail.com) - Founder & CTO",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -124,6 +124,10 @@
     },
     {
       "key": "queue_id",
+      "value": ""
+    },
+    {
+      "key": "conversation_id",
       "value": ""
     }
   ],
@@ -15104,6 +15108,205 @@
                   "status": "Created",
                   "code": 201,
                   "body": "{\"success\": true, \"data\": {\"breached\": 2, \"at_risk\": 3}}"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Eka AI Companion",
+          "description": "Eka is an AI health companion powered by Claude. It uses streaming SSE responses and can access patient vitals, health checkups, prescriptions, appointments, pharmacy, orders, wallet, and profile via tool use.",
+          "item": [
+            {
+              "name": "Chat with Eka (SSE Stream)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{patient_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/eka/chat",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "eka",
+                    "chat"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"message\": \"What were my recent vitals?\",\n  \"conversation_id\": null\n}"
+                }
+              },
+              "response": [
+                {
+                  "name": "SSE Stream Response",
+                  "status": "OK",
+                  "code": 200,
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "text/event-stream"
+                    }
+                  ],
+                  "body": "data: {\"type\":\"tool_start\",\"tool\":\"get_vitals\"}\n\ndata: {\"type\":\"tool_done\",\"tool\":\"get_vitals\"}\n\ndata: {\"type\":\"text\",\"content\":\"Based on your recent vitals...\"}\n\ndata: {\"type\":\"text\",\"content\":\" your blood pressure was 120/80 mmHg.\"}\n\ndata: {\"type\":\"done\",\"conversation_id\":\"507f1f77bcf86cd799439011\"}\n\ndata: [DONE]"
+                },
+                {
+                  "name": "Continue Conversation",
+                  "status": "OK",
+                  "code": 200,
+                  "originalRequest": {
+                    "method": "POST",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                      },
+                      {
+                        "key": "Authorization",
+                        "value": "Bearer {{patient_token}}"
+                      }
+                    ],
+                    "url": {
+                      "raw": "{{patient_base_url}}/eka/chat",
+                      "host": [
+                        "{{patient_base_url}}"
+                      ],
+                      "path": [
+                        "eka",
+                        "chat"
+                      ]
+                    },
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"message\": \"What about my prescriptions?\",\n  \"conversation_id\": \"507f1f77bcf86cd799439011\"\n}"
+                    }
+                  },
+                  "body": "data: {\"type\":\"tool_start\",\"tool\":\"get_prescriptions\"}\n\ndata: {\"type\":\"tool_done\",\"tool\":\"get_prescriptions\"}\n\ndata: {\"type\":\"text\",\"content\":\"You have 2 active prescriptions...\"}\n\ndata: {\"type\":\"done\",\"conversation_id\":\"507f1f77bcf86cd799439011\"}\n\ndata: [DONE]"
+                }
+              ]
+            },
+            {
+              "name": "Get Conversations",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{patient_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/eka/conversations",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "eka",
+                    "conversations"
+                  ]
+                }
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "OK",
+                  "code": 200,
+                  "body": "{\"success\":true,\"message\":\"Conversations retrieved\",\"data\":[{\"_id\":\"507f1f77bcf86cd799439011\",\"title\":\"What were my recent vitals?\",\"message_count\":4,\"last_message\":\"You have 2 active prescriptions from Dr. Adeyemi...\",\"created_at\":\"2025-01-15T10:00:00.000Z\",\"updated_at\":\"2025-01-15T10:05:00.000Z\"}]}"
+                }
+              ]
+            },
+            {
+              "name": "Get Conversation by ID",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{patient_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/eka/conversations/:id",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "eka",
+                    "conversations",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{conversation_id}}"
+                    }
+                  ]
+                }
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "OK",
+                  "code": 200,
+                  "body": "{\"success\":true,\"message\":\"Conversation retrieved\",\"data\":{\"_id\":\"507f1f77bcf86cd799439011\",\"user\":\"507f1f77bcf86cd799439012\",\"title\":\"What were my recent vitals?\",\"messages\":[{\"role\":\"user\",\"content\":\"What were my recent vitals?\",\"created_at\":\"2025-01-15T10:00:00.000Z\"},{\"role\":\"assistant\",\"content\":\"Based on your recent vitals, your blood pressure was 120/80 mmHg, pulse rate 72 bpm, and temperature 36.5°C. Everything looks normal!\",\"tools_used\":[\"get_vitals\"],\"created_at\":\"2025-01-15T10:00:05.000Z\"}],\"is_active\":true,\"created_at\":\"2025-01-15T10:00:00.000Z\",\"updated_at\":\"2025-01-15T10:00:05.000Z\"}}"
+                }
+              ]
+            },
+            {
+              "name": "Delete Conversation",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{patient_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/eka/conversations/:id",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "eka",
+                    "conversations",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{conversation_id}}"
+                    }
+                  ]
+                }
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "OK",
+                  "code": 200,
+                  "body": "{\"success\":true,\"message\":\"Conversation deleted\",\"data\":{\"success\":true}}"
                 }
               ]
             }
