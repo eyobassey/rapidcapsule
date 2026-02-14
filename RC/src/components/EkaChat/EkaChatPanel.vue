@@ -18,25 +18,78 @@
           No conversations yet
         </div>
         <template v-for="group in groupedConversations" :key="group.label">
-          <div class="eka-sidebar__group-label">{{ group.label }}</div>
-          <div
-            v-for="conv in group.items"
-            :key="conv._id"
-            class="eka-sidebar__conv"
-            :class="{ active: conv._id === conversationId }"
-            @click="loadConversation(conv._id)"
-          >
-            <v-icon name="hi-chat" scale="0.75" />
-            <span class="eka-sidebar__conv-title">{{ conv.title || 'Untitled' }}</span>
-            <button
-              class="eka-sidebar__conv-delete"
-              @click.stop="deleteConversation(conv._id)"
-              title="Delete"
+          <button class="eka-sidebar__group-toggle" @click="toggleGroup(group.label)">
+            <v-icon name="hi-chevron-right" scale="0.6" class="eka-sidebar__group-chevron" :class="{ rotated: expandedGroups[group.label] }" />
+            <span>{{ group.label }}</span>
+            <span class="eka-sidebar__group-count">{{ group.items.length }}</span>
+          </button>
+          <template v-if="expandedGroups[group.label]">
+            <div
+              v-for="conv in visibleItems(group)"
+              :key="conv._id"
+              class="eka-sidebar__conv"
+              :class="{ active: conv._id === conversationId }"
+              @click="loadConversation(conv._id)"
             >
-              <v-icon name="hi-trash" scale="0.75" />
+              <v-icon name="hi-chat" scale="0.75" />
+              <!-- Inline edit mode -->
+              <input
+                v-if="editingConvId === conv._id"
+                ref="editInput"
+                v-model="editingTitle"
+                class="eka-sidebar__conv-edit-input"
+                @click.stop
+                @keydown.enter="saveConvTitle(conv._id)"
+                @keydown.esc="cancelEditConv"
+                @blur="saveConvTitle(conv._id)"
+              />
+              <span v-else class="eka-sidebar__conv-title">{{ conv.title || 'Untitled' }}</span>
+              <button
+                v-if="editingConvId !== conv._id"
+                class="eka-sidebar__conv-action"
+                @click.stop="startEditConv(conv)"
+                title="Rename"
+              >
+                <v-icon name="hi-pencil" scale="0.7" />
+              </button>
+              <button
+                v-if="editingConvId !== conv._id"
+                class="eka-sidebar__conv-action eka-sidebar__conv-action--delete"
+                @click.stop="deleteConversation(conv._id)"
+                title="Delete"
+              >
+                <v-icon name="hi-trash" scale="0.7" />
+              </button>
+            </div>
+            <button
+              v-if="group.items.length > 5"
+              class="eka-sidebar__show-more"
+              @click.stop="showAllGroups[group.label] = !showAllGroups[group.label]"
+            >
+              {{ showAllGroups[group.label] ? 'Show less' : `Show ${group.items.length - 5} more` }}
             </button>
-          </div>
+          </template>
         </template>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="eka-sidebar__actions">
+        <button class="eka-sidebar__actions-toggle" @click="toggleQuickActions">
+          <v-icon name="hi-lightning-bolt" scale="0.75" />
+          <span>Quick Actions</span>
+          <v-icon name="hi-chevron-down" scale="0.7" class="eka-sidebar__actions-chevron" :class="{ rotated: quickActionsOpen }" />
+        </button>
+        <div v-if="quickActionsOpen" class="eka-sidebar__actions-list">
+          <button
+            v-for="(action, idx) in quickActions"
+            :key="idx"
+            class="eka-sidebar__actions-item"
+            @click="triggerQuickAction(action)"
+          >
+            <v-icon :name="action.icon" scale="0.75" />
+            <span>{{ action.label }}</span>
+          </button>
+        </div>
       </div>
 
       <!-- Language selector -->
@@ -82,10 +135,10 @@
               <div class="eka-welcome__avatar">
                 <img src="/RapidCapsule_Logo.png" alt="EkaGPT" />
               </div>
-              <h2 class="eka-welcome__title">Hi, I'm EkaGPT!</h2>
+              <h2 class="eka-welcome__title">Hi, I'm Eka!</h2>
               <p class="eka-welcome__subtitle">
-                Your personal health companion. I can help you explore your health records,
-                check medication availability, or answer questions about your vitals and appointments.
+                Your AI health companion. I can run health checkups, check drug interactions,
+                review your vitals and prescriptions, search the pharmacy, and much more.
               </p>
               <div class="eka-welcome__suggestions">
                 <button
@@ -211,8 +264,8 @@
           <div v-if="artifactOpen && artifact" class="eka-artifact" :class="{ 'mobile-overlay': isMobile }">
             <div class="eka-artifact__header">
               <div class="eka-artifact__header-title">
-                <v-icon :name="artifactMode === 'report' ? 'hi-document-text' : 'hi-user'" scale="0.85" />
-                <span>{{ artifactMode === 'report' ? 'Health Report' : 'Body Diagram' }}</span>
+                <v-icon :name="artifactMode === 'report' ? 'hi-document-text' : artifactMode === 'interactions' ? 'ri-capsule-line' : 'hi-user'" scale="0.85" />
+                <span>{{ artifactMode === 'report' ? 'Health Report' : artifactMode === 'interactions' ? 'Interaction Report' : 'Body Diagram' }}</span>
               </div>
               <button class="eka-artifact__close" @click="toggleArtifact">
                 <v-icon name="hi-x" scale="0.85" />
@@ -228,6 +281,10 @@
                 v-else-if="artifactMode === 'report' && artifact.data"
                 :data="artifact.data"
               />
+              <EkaInteractionReport
+                v-else-if="artifactMode === 'interactions' && artifact.data"
+                :report="artifact.data"
+              />
             </div>
           </div>
         </transition>
@@ -241,10 +298,11 @@ import { mapGetters } from 'vuex'
 import EkaMessage from './EkaMessage.vue'
 import EkaCheckupReport from './EkaCheckupReport.vue'
 import EkaBodyAvatar from './EkaBodyAvatar.vue'
+import EkaInteractionReport from './EkaInteractionReport.vue'
 
 export default {
   name: 'EkaChatPanel',
-  components: { EkaMessage, EkaCheckupReport, EkaBodyAvatar },
+  components: { EkaMessage, EkaCheckupReport, EkaBodyAvatar, EkaInteractionReport },
 
   data() {
     return {
@@ -252,12 +310,28 @@ export default {
       sidebarCollapsed: false,
       isMobile: false,
       multiSelectChoices: [],
+      editingConvId: null,
+      editingTitle: '',
+      expandedGroups: { Today: true },
+      showAllGroups: {},
+      quickActionsOpen: localStorage.getItem('eka_quick_actions_open') === 'true',
+      quickActions: [
+        { label: 'Health Checkup', message: 'Start a health checkup', icon: 'fa-stethoscope' },
+        { label: 'Drug Interactions', message: 'Check my drug interactions', icon: 'ri-capsule-line' },
+        { label: 'My Vitals', message: 'Show my recent vitals', icon: 'fa-heartbeat' },
+        { label: 'Health Score', message: 'Show my health score', icon: 'hi-chart-bar' },
+        { label: 'Prescriptions', message: 'Show my prescriptions', icon: 'hi-clipboard-list' },
+        { label: 'Pharmacy', message: 'Search the pharmacy', icon: 'hi-shopping-bag' },
+        { label: 'Appointments', message: 'Show my appointments', icon: 'ri-calendar-check-line' },
+        { label: 'Wallet & Credits', message: 'Show my wallet and credits', icon: 'bi-wallet2' },
+      ],
       suggestions: [
-        { label: 'How are my vitals?', icon: 'fa-heartbeat' },
+        { label: 'How are my vitals?', icon: 'hi-heart' },
         { label: "What's my health score?", icon: 'hi-chart-bar' },
         { label: 'Check my prescriptions', icon: 'ri-capsule-line' },
         { label: 'Track my orders', icon: 'hi-shopping-bag' },
         { label: 'Start a health checkup', icon: 'fa-stethoscope' },
+        { label: 'Check drug interactions', icon: 'hi-beaker' },
         { label: 'Summarize my last appointment', icon: 'ri-calendar-check-line' },
       ],
       quickChips: [
@@ -265,8 +339,8 @@ export default {
         { label: 'Health score' },
         { label: 'Health checkup' },
         { label: 'My prescriptions' },
+        { label: 'Drug interactions' },
         { label: 'Wallet balance' },
-        { label: 'Search pharmacy' },
       ],
       languages: [
         { code: 'en', label: 'English', flag: '🇬🇧' },
@@ -296,7 +370,9 @@ export default {
     }),
     artifactMode() {
       if (!this.artifact) return null
-      return this.artifact.type === 'health_checkup_report' ? 'report' : 'avatar'
+      if (this.artifact.type === 'health_checkup_report') return 'report'
+      if (this.artifact.type === 'drug_interaction_report') return 'interactions'
+      return 'avatar'
     },
 
     groupedConversations() {
@@ -361,6 +437,28 @@ export default {
       this.sendMessage()
     },
 
+    toggleQuickActions() {
+      this.quickActionsOpen = !this.quickActionsOpen
+      localStorage.setItem('eka_quick_actions_open', String(this.quickActionsOpen))
+    },
+
+    triggerQuickAction(action) {
+      this.inputText = action.message
+      this.sendMessage()
+      if (window.innerWidth <= 768) {
+        this.sidebarCollapsed = true
+      }
+    },
+
+    toggleGroup(label) {
+      this.expandedGroups[label] = !this.expandedGroups[label]
+    },
+
+    visibleItems(group) {
+      if (this.showAllGroups[group.label]) return group.items
+      return group.items.slice(0, 5)
+    },
+
     startNewChat() {
       this.$store.dispatch('eka/startNewChat')
       this.$nextTick(() => this.$refs.inputField?.focus())
@@ -368,6 +466,29 @@ export default {
 
     loadConversation(id) {
       this.$store.dispatch('eka/loadConversation', id)
+    },
+
+    startEditConv(conv) {
+      this.editingConvId = conv._id
+      this.editingTitle = conv.title || ''
+      this.$nextTick(() => {
+        const input = this.$refs.editInput
+        if (input) (Array.isArray(input) ? input[0] : input).focus()
+      })
+    },
+
+    saveConvTitle(id) {
+      const title = this.editingTitle.trim()
+      if (title && this.editingConvId === id) {
+        this.$store.dispatch('eka/renameConversation', { conversationId: id, title })
+      }
+      this.editingConvId = null
+      this.editingTitle = ''
+    },
+
+    cancelEditConv() {
+      this.editingConvId = null
+      this.editingTitle = ''
     },
 
     deleteConversation(id) {
@@ -495,6 +616,7 @@ export default {
     .ov-icon {
       color: #ffffff;
       fill: #ffffff;
+      stroke: #ffffff;
     }
 
     span {
@@ -523,6 +645,7 @@ export default {
     .ov-icon {
       color: #ffffff;
       fill: #ffffff;
+      stroke: #ffffff;
     }
 
     span {
@@ -551,13 +674,76 @@ export default {
     font-size: 13px;
   }
 
-  &__group-label {
-    font-size: 11px;
+  &__group-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 8px 12px 4px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: background 0.15s;
+    border-radius: 6px;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    span {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.55);
+      letter-spacing: 0.5px;
+    }
+
+    .ov-icon {
+      color: rgba(255, 255, 255, 0.4);
+      fill: rgba(255, 255, 255, 0.4);
+      stroke: rgba(255, 255, 255, 0.4);
+      flex-shrink: 0;
+    }
+  }
+
+  &__group-chevron {
+    transition: transform 0.2s ease;
+
+    &.rotated {
+      transform: rotate(90deg);
+    }
+  }
+
+  &__group-count {
+    margin-left: auto;
+    background: rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.6) !important;
+    font-size: 10px !important;
     font-weight: 600;
-    text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.55);
-    padding: 12px 12px 4px;
-    letter-spacing: 0.5px;
+    padding: 1px 6px;
+    border-radius: 10px;
+    min-width: 18px;
+    text-align: center;
+    text-transform: none !important;
+    letter-spacing: 0 !important;
+  }
+
+  &__show-more {
+    display: block;
+    width: 100%;
+    padding: 6px 12px;
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 12px;
+    cursor: pointer;
+    text-align: left;
+    padding-left: 30px;
+    transition: color 0.15s;
+
+    &:hover {
+      color: rgba(255, 255, 255, 0.8);
+    }
   }
 
   &__conv {
@@ -574,7 +760,7 @@ export default {
     &:hover {
       background: rgba(255, 255, 255, 0.12);
 
-      .eka-sidebar__conv-delete {
+      .eka-sidebar__conv-action {
         opacity: 1;
       }
     }
@@ -586,6 +772,7 @@ export default {
     > .ov-icon {
       color: rgba(255, 255, 255, 0.55);
       fill: rgba(255, 255, 255, 0.55);
+      stroke: rgba(255, 255, 255, 0.55);
       flex-shrink: 0;
     }
   }
@@ -598,7 +785,7 @@ export default {
     color: rgba(255, 255, 255, 0.9);
   }
 
-  &__conv-delete {
+  &__conv-action {
     opacity: 0;
     background: transparent;
     border: none;
@@ -611,8 +798,111 @@ export default {
     flex-shrink: 0;
 
     &:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    &--delete:hover {
       color: #f38ba8;
       background: rgba(243, 139, 168, 0.1);
+    }
+  }
+
+  &__conv-edit-input {
+    flex: 1;
+    min-width: 0;
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+    color: #fff;
+    font-size: 13px;
+    padding: 2px 6px;
+    outline: none;
+
+    &:focus {
+      border-color: rgba(255, 255, 255, 0.5);
+    }
+  }
+
+  &__actions {
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+  }
+
+  &__actions-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 10px 16px;
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: rgba(255, 255, 255, 0.9);
+    }
+
+    .ov-icon {
+      color: rgba(255, 255, 255, 0.55);
+      fill: rgba(255, 255, 255, 0.55);
+      stroke: rgba(255, 255, 255, 0.55);
+      flex-shrink: 0;
+    }
+
+    span {
+      flex: 1;
+      text-align: left;
+      color: rgba(255, 255, 255, 0.7);
+    }
+  }
+
+  &__actions-chevron {
+    transition: transform 0.2s ease;
+
+    &.rotated {
+      transform: rotate(180deg);
+    }
+  }
+
+  &__actions-list {
+    padding: 0 8px 8px;
+  }
+
+  &__actions-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 7px 12px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.15s;
+    text-align: left;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    .ov-icon {
+      color: rgba(255, 255, 255, 0.55);
+      fill: rgba(255, 255, 255, 0.55);
+      stroke: rgba(255, 255, 255, 0.55);
+      flex-shrink: 0;
+    }
+
+    span {
+      color: rgba(255, 255, 255, 0.85);
     }
   }
 
@@ -626,6 +916,7 @@ export default {
     .ov-icon {
       color: rgba(255, 255, 255, 0.6);
       fill: rgba(255, 255, 255, 0.6);
+      stroke: rgba(255, 255, 255, 0.6);
       flex-shrink: 0;
     }
 
@@ -1104,7 +1395,6 @@ export default {
 
     .ov-icon {
       color: #FF5C00;
-      fill: #FF5C00;
       flex-shrink: 0;
     }
 

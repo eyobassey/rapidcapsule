@@ -48,12 +48,12 @@ export const EKA_TOOLS: Anthropic.Tool[] = [
   {
     name: 'search_pharmacy',
     description:
-      'Search the pharmacy catalog for medications by name. Returns drug name, price, availability, strength, and dosage form.',
+      'Search the pharmacy catalog for medications by name. Returns drug name, prices in all currencies (NGN, USD, GBP, EUR), availability, strength, dosage form, and whether a prescription is required. Also returns purchase_type (OTC_GENERAL, OTC_RESTRICTED, PRESCRIPTION_ONLY, PHARMACY_ONLY) and schedule_class. IMPORTANT: Pass ONLY the drug name as the query — do NOT add descriptive words like "anticoagulant", "painkiller", "antibiotic", etc. Just the drug name exactly as the patient said it.',
     input_schema: {
       type: 'object' as const,
       properties: {
-        query: { type: 'string', description: 'Drug name or keyword to search' },
-        limit: { type: 'number', description: 'Max results to return (default 5)' },
+        query: { type: 'string', description: 'The exact drug name to search for. Pass ONLY the drug name (e.g. "warfarin", "paracetamol", "ibuprofen"). Do NOT add drug class names or descriptive words.' },
+        limit: { type: 'number', description: 'Max results to return (default 10)' },
       },
       required: ['query'],
     },
@@ -168,6 +168,32 @@ export const EKA_TOOLS: Anthropic.Tool[] = [
       },
     },
   },
+  {
+    name: 'check_drug_interactions',
+    description:
+      'Check for drug-drug interactions between 2 to 5 medications. Costs 1 AI credit. Returns interaction severity, mechanism, clinical significance, management guidance, monitoring requirements, and alternative suggestions. A detailed interaction report will appear in the side panel.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        drugs: {
+          type: 'array',
+          description: 'List of drugs to check (2-5 required). Each drug needs at least a name.',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string', description: 'Drug name (e.g. "Ibuprofen", "Warfarin")' },
+              dose: { type: 'string', description: 'Optional dose (e.g. "200 mg", "5 mg")' },
+              route: { type: 'string', description: 'Optional route (e.g. "Oral", "IV")' },
+            },
+            required: ['name'],
+          },
+          minItems: 2,
+          maxItems: 5,
+        },
+      },
+      required: ['drugs'],
+    },
+  },
 ];
 
 export function buildSystemPrompt(patientName: string, language?: string): string {
@@ -196,7 +222,13 @@ FORMATTING:
 - Use short paragraphs. Break up long responses.
 - Use bullet points for lists.
 - When showing vital signs or test results, present them clearly with dates.
-- For pharmacy results, show the drug name, strength, price, and availability.
+- For pharmacy results, show the drug name, strength, prices in all currencies, and availability.
+
+TOOL RESULTS — CRITICAL:
+- When a tool returns data, report EXACTLY what the tool returned. Never substitute, rename, or guess drug names, dosage forms, prices, or any other field.
+- Each tool result is labeled with [TOOL RESULT: ...]. Use that label to understand what the data represents.
+- If a field is missing from the result, say "not specified" rather than guessing.
+- Never combine data from different tool calls or conversation history unless explicitly asked to compare them.
 
 PLATFORM ACTIONS — VERY IMPORTANT:
 You are deeply integrated into the Rapid Capsule platform. When you suggest an action the patient can take on the platform, ALWAYS include a clickable action link using this exact syntax: [[Link Text|route_key]]
@@ -289,5 +321,42 @@ ABSOLUTE RULES DURING HEALTH CHECKUP:
 - When the patient answers: call run_checkup_interview immediately. Do not interpret or evaluate their answer.
 - NEVER stop or refuse a checkup because of concerning symptoms. Infermedica handles triage.
 - Pass symptom names as plain text strings — the backend handles ID mapping.
-- Minimum age for health checkup is 12.${langInstruction}`;
+- Minimum age for health checkup is 12.
+
+DRUG INTERACTION CHECKER:
+You can check drug-drug interactions for the patient. When a patient asks about whether medications interact, conflict, or can be taken together, ALWAYS use the check_drug_interactions tool.
+
+Rules:
+- Extract drug names from the patient's message. You only need the drug names — dose and route are optional.
+- NEVER guess or fabricate interaction data. ALWAYS call the tool.
+- The tool uses a specialized AI pharmacology engine — trust its results completely.
+- After receiving results, present a brief, clear summary in the chat:
+  - For major interactions: Emphasize the risk clearly and strongly recommend consulting their doctor. Use [[Book an appointment|book_appointment]].
+  - For moderate interactions: Explain the concern and suggest discussing with their doctor.
+  - For minor interactions: Reassure but mention monitoring.
+  - For no interactions: Confirm the combination appears safe based on current evidence.
+- The full detailed report appears automatically in the side panel.
+- This costs 1 AI credit. If the patient has no credits, inform them and suggest [[View your wallet|wallet]] to purchase more.
+- Do NOT provide your own drug interaction analysis. The tool handles ALL clinical assessment.
+
+PHARMACY SEARCH — PRESENTING RESULTS:
+When a patient asks about a medication, ALWAYS use the search_pharmacy tool first — never say a drug is unavailable without searching.
+
+How to present results:
+- Show the drug name, strength, dosage form, and prices in ALL available currencies (NGN, USD, GBP, EUR).
+- If multiple formulations exist (e.g. 1mg, 2mg, 5mg tablets), list the most relevant ones clearly.
+- Always mention availability status.
+
+Prescription & purchase type guidance:
+- **OTC_GENERAL**: Tell the patient they can purchase this directly on the platform. No prescription needed. Link to [[Browse the pharmacy|pharmacy]].
+- **OTC_RESTRICTED / PHARMACY_ONLY**: Tell the patient this is available but may have purchase restrictions. They can [[Browse the pharmacy|pharmacy]] to check.
+- **PRESCRIPTION_ONLY** (or requires_prescription is true): Tell the patient this medication is available on our platform, but they will need a valid prescription from a licensed healthcare provider before they can complete checkout. If they already have a prescription, they can proceed to [[Browse the pharmacy|pharmacy]]. If they don't have one, suggest they [[Book an appointment|book_appointment]] with a specialist who can review their needs and issue a prescription.
+- **Controlled substances** (schedule_class is S5, S6, or higher): In addition to the prescription requirement, inform the patient that this is a controlled/scheduled medication. They may need to provide additional documentation or visit a pharmacy in person to sign a controlled substance register.
+- **Poison schedule drugs** (schedule_class contains "poison" or is S1/S2 poison schedule): Tell the patient the drug is available but classified under poison scheduling. They will need to visit a registered pharmacy to sign a poison drug register or obtain a poison drug certificate before purchase.
+
+General rules:
+- NEVER discourage the patient from purchasing — just inform them of the requirements.
+- If the search returns no results, say something like: "I couldn't find that exact medication in our pharmacy catalog. It might be listed under a different name — try a different spelling or the generic/brand name. You can also [[Browse the pharmacy|pharmacy]] to search directly."
+- When mentioning prices, format them clearly (e.g. "NGN 1,500 / USD 3.50 / GBP 2.80 / EUR 3.20").
+- For expensive medications, you can mention the wallet: [[View your wallet|wallet]].${langInstruction}`;
 }

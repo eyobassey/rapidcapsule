@@ -8,6 +8,7 @@ import { EKA_TOOLS, buildSystemPrompt } from './eka-tools';
 import { Infermedica } from '../../common/external/infermedica/infermedica';
 import { ClaudeHealthSummaryService } from '../health-checkup/services/claude-health-summary.service';
 import { ClaudeSummaryCreditsService } from '../claude-summary-credits/claude-summary-credits.service';
+import { ClaudeAIService } from '../pharmacy/services/claude-ai.service';
 
 const MAX_CONTEXT_MESSAGES = 20;
 const MODEL = 'claude-haiku-4-5-20251001';
@@ -37,6 +38,7 @@ export class EkaService {
     @InjectModel('ClaudeSummaryPlan') private summaryPlanModel: Model<any>,
     private readonly claudeHealthSummaryService: ClaudeHealthSummaryService,
     private readonly claudeSummaryCreditsService: ClaudeSummaryCreditsService,
+    private readonly claudeAIService: ClaudeAIService,
   ) {
     this.initializeClient();
   }
@@ -99,6 +101,7 @@ export class EkaService {
       role: m.role as 'user' | 'assistant',
       content: m.content,
     }));
+    this.logger.log(`[Chat] conversation=${conversation._id}, messages_in_context=${recentMessages.length}, last_user_msg="${dto.message}"`);
 
     // Check if there's an active health checkup — forces the correct tool at each phase
     // Only consider checkups from the last 2 hours to avoid stale sessions
@@ -251,16 +254,66 @@ export class EkaService {
         return fullResponse;
       }
 
-      // Execute all tool calls in parallel
+      // Execute all tool calls
       for (const tc of toolCalls) {
         toolsUsed.push(tc.name);
       }
-      const toolResults = await Promise.all(
-        toolCalls.map(async (tc) => {
-          const result = await this.executeTool(tc.name, tc.input, userId);
-          return { id: tc.id, name: tc.name, result };
-        }),
-      );
+
+      // Slow tools: show fun loading text while executing
+      const SLOW_TOOLS = ['check_drug_interactions', 'generate_checkup_report'];
+      const slowToolName = toolCalls.find(tc => SLOW_TOOLS.includes(tc.name))?.name;
+
+      let toolResults: { id: string; name: string; result: any }[];
+
+      if (slowToolName) {
+        // Clear stale artifact before starting a new slow tool (like health checkup clears stale phases)
+        yield { type: 'clear_artifact' };
+
+        let toolsDone = false;
+        const toolPromise = Promise.all(
+          toolCalls.map(async (tc) => {
+            const result = await this.executeTool(tc.name, tc.input, userId);
+            return { id: tc.id, name: tc.name, result };
+          }),
+        );
+        toolPromise.then(() => { toolsDone = true; }).catch(() => { toolsDone = true; });
+
+        // Type out fun messages while the tool runs
+        const loadingMessages = this.getLoadingMessages(slowToolName);
+        for (const msg of loadingMessages) {
+          if (toolsDone) break;
+          for (const char of msg) {
+            if (toolsDone) break;
+            yield { type: 'text', content: char };
+            await new Promise(r => setTimeout(r, 30));
+          }
+          if (!toolsDone) {
+            yield { type: 'text', content: '\n\n' };
+            await new Promise(r => setTimeout(r, 800));
+          }
+        }
+
+        // Final fallback if tool is still running
+        if (!toolsDone) {
+          const waitMsg = 'Just a moment more...';
+          for (const char of waitMsg) {
+            if (toolsDone) break;
+            yield { type: 'text', content: char };
+            await new Promise(r => setTimeout(r, 35));
+          }
+        }
+
+        toolResults = await toolPromise;
+        // Signal frontend to clear loading text before real content
+        yield { type: 'clear_loading' };
+      } else {
+        toolResults = await Promise.all(
+          toolCalls.map(async (tc) => {
+            const result = await this.executeTool(tc.name, tc.input, userId);
+            return { id: tc.id, name: tc.name, result };
+          }),
+        );
+      }
 
       // Emit tool_done events + artifact events + checkup question events
       for (const tr of toolResults) {
@@ -316,12 +369,26 @@ export class EkaService {
       }
 
       const toolResultContent: any[] = toolResults.map((tr) => {
-        const resultForClaude = { ...tr.result };
-        delete resultForClaude.__artifact;
+        // Clone result — handle both arrays and objects safely
+        let resultForClaude = Array.isArray(tr.result)
+          ? [...tr.result]
+          : { ...tr.result };
+        if (!Array.isArray(resultForClaude)) {
+          delete resultForClaude.__artifact;
+        }
+        resultForClaude = this.cleanToolResult(resultForClaude);
+
+        // Wrap with explicit label so Haiku cannot confuse results with conversation history
+        const toolInput = toolCalls.find((tc) => tc.id === tr.id)?.input;
+        const label = this.getToolResultLabel(tr.name, toolInput);
+        const content = `[TOOL RESULT: ${label}]\n${JSON.stringify(resultForClaude)}`;
+
+        this.logger.log(`[Tool Result → Claude] tool=${tr.name}, label="${label}", content_length=${content.length}`);
+
         return {
           type: 'tool_result',
           tool_use_id: tr.id,
-          content: JSON.stringify(resultForClaude),
+          content,
         };
       });
 
@@ -339,6 +406,78 @@ export class EkaService {
     return fullResponse;
   }
 
+  private getLoadingMessages(toolName: string): string[] {
+    const messages: Record<string, string[]> = {
+      check_drug_interactions: [
+        'Hold on while I check those medications for you...',
+        'Diving into the clinical databases — let me cross-reference everything...',
+        'Almost there! By the time you take your next sip, your results will be ready...',
+        'Just putting the final pieces together...',
+      ],
+      generate_checkup_report: [
+        'Let me put your health report together...',
+        'Crunching your health data — this is the important stuff...',
+        'Almost done! Your personalized report is coming together nicely...',
+        'Good things take a little time — nearly there...',
+      ],
+    };
+    return messages[toolName] || ['Working on that for you...'];
+  }
+
+  /** Label each tool result so Haiku cannot confuse it with conversation history */
+  private getToolResultLabel(toolName: string, input?: any): string {
+    switch (toolName) {
+      case 'search_pharmacy':
+        return `Pharmacy search results for "${input?.query || 'unknown'}"`;
+      case 'get_vitals':
+        return 'Patient vital signs';
+      case 'get_health_checkups':
+        return 'Patient health checkup history';
+      case 'get_prescriptions':
+        return 'Patient prescriptions';
+      case 'get_appointments':
+        return 'Patient appointments';
+      case 'get_orders':
+        return 'Patient pharmacy orders';
+      case 'get_wallet':
+        return 'Patient wallet and AI credits';
+      case 'get_profile':
+        return 'Patient profile';
+      case 'get_health_score':
+        return 'Patient health score';
+      case 'get_subscription':
+        return 'Patient subscription details';
+      case 'check_drug_interactions':
+        return `Drug interaction check for: ${(input?.drugs || []).map((d: any) => d.name).join(', ')}`;
+      case 'start_health_checkup':
+        return 'New health checkup session created';
+      case 'submit_checkup_symptoms':
+        return 'Parsed symptoms from patient description';
+      case 'run_checkup_interview':
+        return 'Health checkup interview step';
+      case 'generate_checkup_report':
+        return 'Generated health checkup report';
+      default:
+        return toolName;
+    }
+  }
+
+  /** Strip null, undefined, and empty-string values to reduce noise sent to Haiku */
+  private cleanToolResult(obj: any): any {
+    if (Array.isArray(obj)) {
+      return obj.map((item) => this.cleanToolResult(item));
+    }
+    if (obj && typeof obj === 'object') {
+      const cleaned: any = {};
+      for (const [key, value] of Object.entries(obj)) {
+        if (value === null || value === undefined || value === '') continue;
+        cleaned[key] = this.cleanToolResult(value);
+      }
+      return cleaned;
+    }
+    return obj;
+  }
+
   private async executeTool(name: string, input: any, userId: string): Promise<any> {
     const uid = new Types.ObjectId(userId);
 
@@ -352,7 +491,7 @@ export class EkaService {
       case 'get_appointments':
         return this.toolGetAppointments(uid, input.limit || 5);
       case 'search_pharmacy':
-        return this.toolSearchPharmacy(input.query, input.limit || 5);
+        return this.toolSearchPharmacy(input.query, input.limit || 10);
       case 'get_orders':
         return this.toolGetOrders(uid, input.limit || 5);
       case 'get_wallet':
@@ -371,6 +510,8 @@ export class EkaService {
         return this.toolRunCheckupInterview(uid, input.session_id, input);
       case 'generate_checkup_report':
         return this.toolGenerateCheckupReport(uid, input.session_id);
+      case 'check_drug_interactions':
+        return this.toolCheckDrugInteractions(uid, input.drugs);
       default:
         return { error: `Unknown tool: ${name}` };
     }
@@ -591,35 +732,88 @@ export class EkaService {
   }
 
   private async toolSearchPharmacy(query: string, limit: number) {
-    const drugs = await this.drugModel
-      .find({
-        is_active: true,
-        is_available: true,
-        $or: [
-          { name: { $regex: query, $options: 'i' } },
-          { generic_name: { $regex: query, $options: 'i' } },
-          { brand_name: { $regex: query, $options: 'i' } },
-        ],
-      })
-      .limit(limit)
-      .select('name generic_name strength selling_price quantity dosage_form prices')
-      .populate('dosage_form', 'name')
-      .lean();
+    this.logger.log(`[Pharmacy Search] query="${query}", limit=${limit}`);
 
+    // Use native MongoDB driver — same pattern as DrugService.search() (drug.service.ts:349)
+    // Required because Drug schema types (String enum) don't match actual DB data (ObjectIds)
+    const drugCollection = this.drugModel.db.collection('drugentities');
+    const searchDrugs = async (q: string) => {
+      const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      return drugCollection
+        .find({
+          is_active: { $ne: false },
+          is_available: { $ne: false },
+          $or: [
+            { name: { $regex: escaped, $options: 'i' } },
+            { generic_name: { $regex: escaped, $options: 'i' } },
+            { brand_name: { $regex: escaped, $options: 'i' } },
+          ],
+        })
+        .limit(limit)
+        .project({ name: 1, generic_name: 1, strength: 1, selling_price: 1, quantity: 1, dosage_form: 1, prices: 1, requires_prescription: 1, purchase_type: 1, schedule_class: 1 })
+        .toArray();
+    };
+
+    let drugs = await searchDrugs(query);
+
+    // Fallback: if multi-word query returned nothing, try individual words
+    if (!drugs.length && query.includes(' ')) {
+      const words = query.split(/\s+/).filter((w) => w.length >= 3);
+      for (const word of words) {
+        drugs = await searchDrugs(word);
+        if (drugs.length) {
+          this.logger.log(`[Pharmacy Search] fallback matched on word "${word}" (${drugs.length} results)`);
+          break;
+        }
+      }
+    }
+
+    this.logger.log(`[Pharmacy Search] found ${drugs.length} results for "${query}"`);
     if (!drugs.length) return { message: `No medications found matching "${query}".` };
 
-    return drugs.map((d: any) => ({
-      name: d.name,
-      generic_name: d.generic_name,
-      strength: d.strength,
-      dosage_form: d.dosage_form?.name,
-      price_ngn: d.selling_price,
-      price_usd: d.prices?.USD?.selling_price,
-      price_gbp: d.prices?.GBP?.selling_price,
-      price_eur: d.prices?.EUR?.selling_price,
-      in_stock: d.quantity > 0,
-      stock_quantity: d.quantity,
-    }));
+    // Batch-resolve dosage_form ObjectIds to human-readable names
+    const dosageFormIds = drugs
+      .map((d: any) => d.dosage_form)
+      .filter((id: any) => id && String(id).match(/^[0-9a-fA-F]{24}$/));
+
+    let dosageFormMap = new Map<string, string>();
+    if (dosageFormIds.length > 0) {
+      try {
+        const dfCollection = this.drugModel.db.collection('dosageformentities');
+        const formDocs = await dfCollection
+          .find({ _id: { $in: dosageFormIds.map((id: any) => new Types.ObjectId(String(id))) } })
+          .toArray();
+        dosageFormMap = new Map(formDocs.map((f: any) => [f._id.toString(), f.name]));
+      } catch (e) {
+        this.logger.warn(`[Pharmacy Search] Failed to resolve dosage forms: ${e.message}`);
+      }
+    }
+
+    return drugs.map((d: any) => {
+      // Resolve dosage_form: ObjectId → name, or use string value directly
+      let dosageForm: string | null = null;
+      if (d.dosage_form) {
+        const idStr = String(d.dosage_form);
+        dosageForm = dosageFormMap.get(idStr) || (idStr.match(/^[0-9a-fA-F]{24}$/) ? null : idStr);
+      }
+
+      return {
+        name: d.name,
+        generic_name: d.generic_name,
+        strength: d.strength,
+        dosage_form: dosageForm,
+        prices: {
+          NGN: d.prices?.NGN?.selling_price || d.selling_price,
+          USD: d.prices?.USD?.selling_price,
+          GBP: d.prices?.GBP?.selling_price,
+          EUR: d.prices?.EUR?.selling_price,
+        },
+        in_stock: (d.quantity || 0) > 0,
+        requires_prescription: d.requires_prescription || false,
+        purchase_type: d.purchase_type || 'OTC_GENERAL',
+        schedule_class: d.schedule_class,
+      };
+    });
   }
 
   private async toolGetOrders(userId: Types.ObjectId, limit: number) {
@@ -1386,6 +1580,68 @@ export class EkaService {
     };
   }
 
+  // ============ DRUG INTERACTION CHECKER ============
+
+  private async toolCheckDrugInteractions(userId: Types.ObjectId, drugs: any[]) {
+    if (!drugs || drugs.length < 2) {
+      return { error: 'Please provide at least 2 medications to check for interactions.' };
+    }
+    if (drugs.length > 5) {
+      return { error: 'You can check up to 5 medications at a time.' };
+    }
+
+    // Validate drug names
+    const validDrugs = drugs.filter((d: any) => d?.name?.trim());
+    if (validDrugs.length < 2) {
+      return { error: 'Please provide at least 2 valid drug names.' };
+    }
+
+    // Check credits
+    const creditCheck = await this.claudeSummaryCreditsService.canGenerateSummary(userId);
+    if (!creditCheck.can_generate) {
+      return {
+        error: 'No AI credits available. You need at least 1 credit to check drug interactions.',
+        suggestion: 'You can purchase more credits from your wallet.',
+      };
+    }
+
+    // Call the existing Sonnet-powered interaction checker
+    try {
+      const result = await this.claudeAIService.checkDrugInteractionsDetailed(
+        validDrugs.map((d: any) => ({
+          name: d.name.trim(),
+          dose: d.dose?.trim() || undefined,
+          route: d.route?.trim() || undefined,
+        })),
+      );
+
+      // Consume 1 credit
+      try {
+        await this.claudeSummaryCreditsService.consumeCredit(userId, new Types.ObjectId().toString());
+      } catch (e) {
+        this.logger.error('Failed to consume credit for interaction check:', e.message);
+      }
+
+      const drugNames = validDrugs.map((d: any) => d.name.trim());
+
+      return {
+        ...result,
+        drugs_checked: drugNames,
+        credits_used: 1,
+        __artifact: {
+          type: 'drug_interaction_report',
+          data: {
+            ...result,
+            drugs_checked: drugNames,
+          },
+        },
+      };
+    } catch (e) {
+      this.logger.error('Drug interaction check failed:', e.message);
+      return { error: 'Failed to check drug interactions. Please try again.' };
+    }
+  }
+
   // ============ CHECKUP PHASE MANAGEMENT ============
 
   async clearStaleCheckupPhases(userId: string) {
@@ -1467,6 +1723,16 @@ export class EkaService {
 
     if (!convo) throw new NotFoundException('Conversation not found');
     return convo;
+  }
+
+  async renameConversation(id: string, userId: string, title: string) {
+    const convo = await this.conversationModel.findOneAndUpdate(
+      { _id: id, user: new Types.ObjectId(userId) },
+      { title: (title || '').trim().slice(0, 100) },
+      { new: true },
+    );
+    if (!convo) throw new NotFoundException('Conversation not found');
+    return { _id: convo._id, title: convo.title };
   }
 
   async deleteConversation(id: string, userId: string) {

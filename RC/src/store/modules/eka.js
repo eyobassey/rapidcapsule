@@ -54,6 +54,12 @@ export default {
         last.content += text
       }
     },
+    CLEAR_LAST_MESSAGE(state) {
+      const last = state.messages[state.messages.length - 1]
+      if (last && last.role === 'assistant') {
+        last.content = ''
+      }
+    },
     SET_CONVERSATION_ID(state, id) {
       state.conversationId = id
     },
@@ -146,6 +152,18 @@ export default {
       }
     },
 
+    async renameConversation({ commit, state }, { conversationId, title }) {
+      try {
+        await http.patch(`/eka/conversations/${conversationId}`, { title })
+        const updated = state.conversations.map((c) =>
+          c._id === conversationId ? { ...c, title } : c,
+        )
+        commit('SET_CONVERSATIONS', updated)
+      } catch (e) {
+        console.error('Failed to rename conversation:', e)
+      }
+    },
+
     async deleteConversation({ commit, state }, conversationId) {
       try {
         await http.delete(`/eka/conversations/${conversationId}`)
@@ -222,7 +240,13 @@ export default {
                   commit('SET_ARTIFACT', { type: 'health_checkup_start', data: chunk.data })
                 } else if (chunk.artifact_type === 'health_checkup_report') {
                   commit('SET_ARTIFACT', { type: 'health_checkup_report', data: chunk.data })
+                } else if (chunk.artifact_type === 'drug_interaction_report') {
+                  commit('SET_ARTIFACT', { type: 'drug_interaction_report', data: chunk.data })
                 }
+              } else if (chunk.type === 'clear_loading') {
+                commit('CLEAR_LAST_MESSAGE')
+              } else if (chunk.type === 'clear_artifact') {
+                commit('CLEAR_ARTIFACT')
               } else if (chunk.type === 'checkup_question' && chunk.question) {
                 commit('SET_CHECKUP_QUESTION', chunk.question)
               }

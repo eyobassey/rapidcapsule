@@ -2,6 +2,7 @@ import {
   Controller,
   Post,
   Get,
+  Patch,
   Delete,
   Body,
   Param,
@@ -52,6 +53,12 @@ export class EkaController {
   async getConversation(@Param('id') id: string, @Req() req: any) {
     const conversation = await this.ekaService.getConversation(id, req.user.sub);
     return sendSuccessResponse('Conversation retrieved', conversation);
+  }
+
+  @Patch('conversations/:id')
+  async renameConversation(@Param('id') id: string, @Body() body: { title: string }, @Req() req: any) {
+    const result = await this.ekaService.renameConversation(id, req.user.sub, body.title);
+    return sendSuccessResponse('Conversation renamed', result);
   }
 
   @Delete('conversations/:id')

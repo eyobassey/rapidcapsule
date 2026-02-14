@@ -20,6 +20,7 @@ import { User, UserSchema } from '../users/entities/user.entity';
 import { ClaudeSummaryCredit, ClaudeSummaryCreditSchema } from '../claude-summary-credits/entities/claude-summary-credit.entity';
 import { ClaudeSummaryPlan, ClaudeSummaryPlanSchema } from '../claude-summary-credits/entities/claude-summary-plan.entity';
 import { ClaudeSummaryCreditsModule } from '../claude-summary-credits/claude-summary-credits.module';
+import { ClaudeAIService } from '../pharmacy/services/claude-ai.service';
 
 @Module({
   imports: [
@@ -44,6 +45,6 @@ import { ClaudeSummaryCreditsModule } from '../claude-summary-credits/claude-sum
     ClaudeSummaryCreditsModule,
   ],
   controllers: [EkaController],
-  providers: [EkaService, ClaudeHealthSummaryService],
+  providers: [EkaService, ClaudeHealthSummaryService, ClaudeAIService],
 })
 export class EkaModule {}
