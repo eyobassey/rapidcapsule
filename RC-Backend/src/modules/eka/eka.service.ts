@@ -798,6 +798,7 @@ export class EkaService {
       }
 
       return {
+        id: d._id.toString(),
         name: d.name,
         generic_name: d.generic_name,
         strength: d.strength,

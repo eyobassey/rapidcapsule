@@ -97,7 +97,12 @@ export default {
       // Replace action links with "Link Text (full URL)"
       let text = this.msg.content
         .replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, (match, linkText, routeKey) => {
-          const route = ROUTE_MAP[routeKey.trim()]
+          const key = routeKey.trim()
+          if (key.startsWith('drug:')) {
+            const drugId = key.slice(5)
+            return `${linkText.trim()} (https://rapidcapsule.com/app/patient/pharmacy/drug/${drugId})`
+          }
+          const route = ROUTE_MAP[key]
           if (route) return `${linkText.trim()} (https://rapidcapsule.com${route})`
           return linkText.trim()
         })
@@ -113,9 +118,16 @@ export default {
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
 
-      // Platform action links: [[Link Text|route_key]]
+      // Platform action links: [[Link Text|route_key]] or [[Link Text|drug:ID]]
       text = text.replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, (match, linkText, routeKey) => {
-        const route = ROUTE_MAP[routeKey.trim()]
+        const key = routeKey.trim()
+        // Drug product deep link: drug:MONGO_ID
+        if (key.startsWith('drug:')) {
+          const drugId = key.slice(5)
+          const route = `/app/patient/pharmacy/drug/${drugId}`
+          return `<span class="eka-action-link eka-drug-link" data-route="${route}" data-new-tab="true">${linkText.trim()}</span>`
+        }
+        const route = ROUTE_MAP[key]
         if (route) {
           return `<span class="eka-action-link" data-route="${route}">${linkText.trim()}</span>`
         }
@@ -141,7 +153,12 @@ export default {
       e.preventDefault()
       e.stopPropagation()
       const route = link.getAttribute('data-route')
-      if (route) this.$router.push(route)
+      if (!route) return
+      if (link.getAttribute('data-new-tab') === 'true') {
+        window.open(route, '_blank')
+      } else {
+        this.$router.push(route)
+      }
     },
 
     copyText() {
