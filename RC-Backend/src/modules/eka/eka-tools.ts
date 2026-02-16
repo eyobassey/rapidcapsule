@@ -194,6 +194,42 @@ export const EKA_TOOLS: Anthropic.Tool[] = [
       required: ['drugs'],
     },
   },
+  {
+    name: 'analyze_prescription_upload',
+    description:
+      'Analyze a prescription image that the patient just uploaded in chat. Extracts medications via OCR and AI vision, checks each medication against our pharmacy inventory, reports prices in all currencies (NGN, USD, GBP, EUR), and provides a prescription readiness assessment for ordering. The upload_id is provided in the conversation when the patient uploads a file.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        upload_id: {
+          type: 'string',
+          description: 'The prescription upload ID from the file attachment',
+        },
+      },
+      required: ['upload_id'],
+    },
+  },
+  {
+    name: 'analyze_existing_prescription',
+    description:
+      "Analyze an existing prescription from the patient's account — either a specialist prescription or a previously uploaded prescription. Checks each medication against our pharmacy inventory, reports prices in all currencies (NGN, USD, GBP, EUR), and provides availability status. Use get_prescriptions first to find the prescription ID and source.",
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        prescription_id: {
+          type: 'string',
+          description: 'The prescription ID to analyze',
+        },
+        source: {
+          type: 'string',
+          enum: ['specialist', 'uploaded'],
+          description:
+            'Whether this is a specialist prescription or a patient-uploaded one',
+        },
+      },
+      required: ['prescription_id', 'source'],
+    },
+  },
 ];
 
 export function buildSystemPrompt(patientName: string, language?: string): string {
@@ -245,6 +281,7 @@ Available route keys and when to use them:
 - [[View your appointments|appointments]] — when referencing past or upcoming appointments
 - [[View health tips|health_tips]] — when suggesting they check personalized health tips
 - [[Drug Name|drug:DRUG_ID]] — when showing pharmacy search results, link each drug to its product page using the id from the search result
+- [[Upload for Order|upload_prescription]] — when the patient wants to proceed to formally upload their prescription for ordering
 
 RULES for action links:
 - Always use action links when suggesting platform features. Never just say "book an appointment" without the link.
@@ -360,5 +397,28 @@ General rules:
 - NEVER discourage the patient from purchasing — just inform them of the requirements.
 - If the search returns no results, say something like: "I couldn't find that exact medication in our pharmacy catalog. It might be listed under a different name — try a different spelling or the generic/brand name. You can also [[Browse the pharmacy|pharmacy]] to search directly."
 - When mentioning prices, format them clearly (e.g. "NGN 1,500 / USD 3.50 / GBP 2.80 / EUR 3.20").
-- For expensive medications, you can mention the wallet: [[View your wallet|wallet]].${langInstruction}`;
+- For expensive medications, you can mention the wallet: [[View your wallet|wallet]].
+
+PRESCRIPTION ANALYSIS:
+You can analyze prescription images that patients upload in the chat, and also analyze existing prescriptions from their account.
+
+When a patient uploads a prescription image:
+- The system will inject a message with the upload_id. Call analyze_prescription_upload with that upload_id immediately.
+- A detailed analysis report will appear in the side panel (artifact).
+
+When a patient asks to analyze an existing prescription:
+- First call get_prescriptions to find the prescription ID and determine the source (specialist or uploaded).
+- Then call analyze_existing_prescription with the prescription_id and source.
+
+How to present results:
+- ALWAYS present drug details and prices FIRST — never withhold results because of validity issues.
+- List each medication with: name, dosage, availability status, price in ALL currencies (NGN, USD, GBP, EUR).
+- For medications not found in our inventory, say "Not currently available in our pharmacy" — never guess alternatives.
+- Show the total estimated cost in all currencies.
+- Include deep links to each matched drug: [[Drug Name Strength|drug:DRUG_ID]]
+- AFTER showing prices, present the "prescription readiness" summary — explain which validity checks passed or have issues.
+- Frame readiness issues helpfully: "Your prescription looks good but may need a visible date before ordering" — not "Your prescription failed validation."
+- If the prescription contains controlled substances, mention they require pharmacist review when ordering.
+- Suggest the full upload flow if the patient wants to order: [[Upload for Order|upload_prescription]]
+- When users mention prescriptions, uploading, or analyzing medications, remind them they can attach a prescription image using the paperclip button next to the message input.${langInstruction}`;
 }

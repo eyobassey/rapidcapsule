@@ -9,7 +9,11 @@ import {
   Req,
   Res,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { EkaService } from './eka.service';
@@ -65,6 +69,44 @@ export class EkaController {
   async deleteConversation(@Param('id') id: string, @Req() req: any) {
     const result = await this.ekaService.deleteConversation(id, req.user.sub);
     return sendSuccessResponse('Conversation deleted', result);
+  }
+
+  @Post('upload-prescription')
+  @UseInterceptors(
+    FileInterceptor('prescription', {
+      limits: { fileSize: 10 * 1024 * 1024 },
+      fileFilter: (req, file, cb) => {
+        const allowed = [
+          'image/jpeg',
+          'image/png',
+          'image/webp',
+          'application/pdf',
+        ];
+        if (allowed.includes(file.mimetype)) {
+          cb(null, true);
+        } else {
+          cb(
+            new BadRequestException(
+              'Invalid file type. Allowed: JPEG, PNG, WebP, PDF',
+            ),
+            false,
+          );
+        }
+      },
+    }),
+  )
+  async uploadPrescription(
+    @UploadedFile() file: Express.Multer.File,
+    @Req() req: any,
+  ) {
+    if (!file) {
+      throw new BadRequestException('No file uploaded');
+    }
+    const result = await this.ekaService.uploadPrescriptionFile(
+      req.user.sub,
+      file,
+    );
+    return sendSuccessResponse('Prescription uploaded', result);
   }
 
   @Post('clear-checkup-phase')

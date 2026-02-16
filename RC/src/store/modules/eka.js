@@ -16,6 +16,7 @@ export default {
       artifactOpen: false,
       checkupSession: null,
       checkupQuestion: null, // { text, type, items } — for interactive answer buttons
+      suggestions: [], // Array<{ label, message }> — contextual follow-up chips
     }
   },
 
@@ -30,6 +31,7 @@ export default {
     isArtifactOpen: (state) => state.artifactOpen,
     getCheckupSession: (state) => state.checkupSession,
     getCheckupQuestion: (state) => state.checkupQuestion,
+    getSuggestions: (state) => state.suggestions,
   },
 
   mutations: {
@@ -42,8 +44,12 @@ export default {
     SET_MESSAGES(state, messages) {
       state.messages = messages
     },
-    APPEND_USER_MESSAGE(state, content) {
-      state.messages.push({ role: 'user', content, created_at: new Date() })
+    APPEND_USER_MESSAGE(state, payload) {
+      if (typeof payload === 'string') {
+        state.messages.push({ role: 'user', content: payload, created_at: new Date() })
+      } else {
+        state.messages.push({ role: 'user', content: payload.text, attachment: payload.attachment || null, created_at: new Date() })
+      }
     },
     APPEND_ASSISTANT_MESSAGE(state) {
       state.messages.push({ role: 'assistant', content: '', created_at: new Date() })
@@ -76,6 +82,7 @@ export default {
       state.artifactOpen = false
       state.checkupSession = null
       state.checkupQuestion = null
+      state.suggestions = []
     },
     SET_ARTIFACT(state, artifact) {
       state.artifact = artifact
@@ -97,6 +104,12 @@ export default {
     },
     CLEAR_CHECKUP_QUESTION(state) {
       state.checkupQuestion = null
+    },
+    SET_SUGGESTIONS(state, suggestions) {
+      state.suggestions = suggestions
+    },
+    CLEAR_SUGGESTIONS(state) {
+      state.suggestions = []
     },
     SET_LANGUAGE(state, lang) {
       state.language = lang
@@ -179,9 +192,14 @@ export default {
       }
     },
 
-    async sendMessage({ commit, state }, message) {
+    async sendMessage({ commit, state }, payload) {
+      // payload can be a string or { text, attachment }
+      const messageText = typeof payload === 'string' ? payload : payload.text
+      const attachment = typeof payload === 'object' ? payload.attachment : null
+
       commit('CLEAR_CHECKUP_QUESTION') // Clear answer buttons when user sends
-      commit('APPEND_USER_MESSAGE', message)
+      commit('CLEAR_SUGGESTIONS') // Clear follow-up suggestions when user sends
+      commit('APPEND_USER_MESSAGE', attachment ? { text: messageText, attachment } : messageText)
       commit('APPEND_ASSISTANT_MESSAGE')
       commit('SET_STREAMING', true)
 
@@ -198,7 +216,7 @@ export default {
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
-            message,
+            message: messageText,
             conversation_id: state.conversationId || undefined,
             language: state.language || 'English',
           }),
@@ -242,6 +260,8 @@ export default {
                   commit('SET_ARTIFACT', { type: 'health_checkup_report', data: chunk.data })
                 } else if (chunk.artifact_type === 'drug_interaction_report') {
                   commit('SET_ARTIFACT', { type: 'drug_interaction_report', data: chunk.data })
+                } else if (chunk.artifact_type === 'prescription_analysis') {
+                  commit('SET_ARTIFACT', { type: 'prescription_analysis', data: chunk.data })
                 }
               } else if (chunk.type === 'clear_loading') {
                 commit('CLEAR_LAST_MESSAGE')
@@ -249,6 +269,8 @@ export default {
                 commit('CLEAR_ARTIFACT')
               } else if (chunk.type === 'checkup_question' && chunk.question) {
                 commit('SET_CHECKUP_QUESTION', chunk.question)
+              } else if (chunk.type === 'suggestions' && chunk.suggestions) {
+                commit('SET_SUGGESTIONS', chunk.suggestions)
               }
             } catch {}
           }

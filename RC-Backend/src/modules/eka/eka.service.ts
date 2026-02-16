@@ -9,6 +9,10 @@ import { Infermedica } from '../../common/external/infermedica/infermedica';
 import { ClaudeHealthSummaryService } from '../health-checkup/services/claude-health-summary.service';
 import { ClaudeSummaryCreditsService } from '../claude-summary-credits/claude-summary-credits.service';
 import { ClaudeAIService } from '../pharmacy/services/claude-ai.service';
+import { TextractService } from '../pharmacy/services/textract.service';
+import { PrescriptionNumberHelper } from '../../common/helpers/prescription-number.helper';
+import { UploadSource } from '../pharmacy/entities/patient-prescription-upload.entity';
+import * as AWS from 'aws-sdk';
 
 const MAX_CONTEXT_MESSAGES = 20;
 const MODEL = 'claude-haiku-4-5-20251001';
@@ -39,9 +43,18 @@ export class EkaService {
     private readonly claudeHealthSummaryService: ClaudeHealthSummaryService,
     private readonly claudeSummaryCreditsService: ClaudeSummaryCreditsService,
     private readonly claudeAIService: ClaudeAIService,
+    private readonly textractService: TextractService,
+    private readonly prescriptionNumberHelper: PrescriptionNumberHelper,
   ) {
     this.initializeClient();
+    this.s3 = new AWS.S3({
+      accessKeyId: process.env.AWS_ACCESS_KEY,
+      secretAccessKey: process.env.AWS_ACCESS_SECRET_KEY,
+      region: process.env.AWS_REGION || 'us-east-2',
+    });
   }
+
+  private s3: AWS.S3;
 
   private initializeClient() {
     const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -260,7 +273,7 @@ export class EkaService {
       }
 
       // Slow tools: show fun loading text while executing
-      const SLOW_TOOLS = ['check_drug_interactions', 'generate_checkup_report'];
+      const SLOW_TOOLS = ['check_drug_interactions', 'generate_checkup_report', 'analyze_prescription_upload', 'analyze_existing_prescription'];
       const slowToolName = toolCalls.find(tc => SLOW_TOOLS.includes(tc.name))?.name;
 
       let toolResults: { id: string; name: string; result: any }[];
@@ -338,7 +351,30 @@ export class EkaService {
         }
       }
 
-      // After checkup tools return, go text-only so Haiku presents results conversationally
+      // Emit contextual follow-up suggestions based on tool results
+      // Skip during active health checkup interview — Infermedica drives the Q&A flow
+      const isCheckupInProgress = toolResults.some(
+        (tr) =>
+          tr.name === 'start_health_checkup' ||
+          tr.name === 'submit_checkup_symptoms' ||
+          (tr.name === 'run_checkup_interview' && tr.result?.status === 'in_progress'),
+      );
+      if (!isCheckupInProgress) {
+        const allSuggestions: Array<{ label: string; message: string }> = [];
+        for (const tr of toolResults) {
+          const toolInput = toolCalls.find((tc) => tc.id === tr.id)?.input;
+          const sug = this.buildContextualSuggestions(tr.name, toolInput, tr.result);
+          allSuggestions.push(...sug);
+        }
+        if (allSuggestions.length > 0) {
+          const unique = allSuggestions
+            .filter((s, i, arr) => arr.findIndex((x) => x.message === s.message) === i)
+            .slice(0, 4);
+          yield { type: 'suggestions', suggestions: unique };
+        }
+      }
+
+      // After certain tools return, go text-only so Haiku presents results conversationally
       for (const tr of toolResults) {
         if (tr.name === 'submit_checkup_symptoms') {
           textOnlyNextRound = true; // Present parsed symptoms + suggestions as text
@@ -354,6 +390,10 @@ export class EkaService {
         }
         // Report generated → text-only to present summary
         if (tr.name === 'generate_checkup_report' && !tr.result?.error) {
+          textOnlyNextRound = true;
+        }
+        // Prescription analysis → text-only to present summary + action links
+        if (tr.name === 'analyze_prescription_upload' || tr.name === 'analyze_existing_prescription') {
           textOnlyNextRound = true;
         }
       }
@@ -420,8 +460,155 @@ export class EkaService {
         'Almost done! Your personalized report is coming together nicely...',
         'Good things take a little time — nearly there...',
       ],
+      analyze_prescription_upload: [
+        'Reading your prescription...',
+        'Extracting medications and checking our pharmacy inventory...',
+        'Matching prices and checking availability across all currencies...',
+        'Running prescription readiness checks...',
+      ],
+      analyze_existing_prescription: [
+        'Pulling up your prescription details...',
+        'Checking medication availability and pricing...',
+        'Almost there — putting the analysis together...',
+      ],
     };
     return messages[toolName] || ['Working on that for you...'];
+  }
+
+  /** Build contextual follow-up suggestions based on tool results */
+  private buildContextualSuggestions(
+    toolName: string,
+    toolInput: any,
+    result: any,
+  ): Array<{ label: string; message: string }> {
+    const suggestions: Array<{ label: string; message: string }> = [];
+    if (!result || result.error) return suggestions;
+
+    switch (toolName) {
+      case 'analyze_prescription_upload':
+      case 'analyze_existing_prescription': {
+        const meds = (result.medications || []).filter((m: any) => m.in_inventory);
+        if (meds.length >= 2) {
+          const names = meds.slice(0, 4).map((m: any) => m.matched_drug_name || m.name);
+          suggestions.push({
+            label: `Check interactions between these medications`,
+            message: `Check drug interactions between ${names.join(', ')}`,
+          });
+        }
+        suggestions.push({
+          label: 'Upload for ordering',
+          message: 'I want to order these medications through the pharmacy',
+        });
+        suggestions.push({
+          label: 'View my prescriptions',
+          message: 'Show my prescriptions',
+        });
+        break;
+      }
+
+      case 'get_vitals': {
+        if (!result.message?.includes('No vital')) {
+          suggestions.push(
+            { label: 'What do my vitals mean?', message: 'Explain what my vitals mean and if anything needs attention' },
+            { label: 'Start a health checkup', message: 'Start a health checkup' },
+            { label: 'Show my health score', message: 'Show my health score' },
+          );
+        }
+        break;
+      }
+
+      case 'get_health_checkups': {
+        suggestions.push(
+          { label: 'Start a new checkup', message: 'Start a health checkup' },
+          { label: 'Book an appointment', message: 'Book an appointment' },
+        );
+        break;
+      }
+
+      case 'get_prescriptions': {
+        const rxList = Array.isArray(result) ? result : result.prescriptions;
+        if (rxList?.length > 0) {
+          suggestions.push(
+            { label: 'Analyze my latest prescription', message: 'Analyze my most recent prescription' },
+            { label: 'Check drug interactions', message: 'Check my drug interactions' },
+          );
+        }
+        suggestions.push({ label: 'Browse pharmacy', message: 'Search the pharmacy' });
+        break;
+      }
+
+      case 'search_pharmacy': {
+        const drugs = Array.isArray(result) ? result : result.results;
+        if (drugs?.length > 0) {
+          suggestions.push(
+            { label: 'Check interactions with my meds', message: 'Check if this drug interacts with my current medications' },
+            { label: 'View my prescriptions', message: 'Show my prescriptions' },
+          );
+        }
+        break;
+      }
+
+      case 'get_appointments': {
+        suggestions.push(
+          { label: 'Book a new appointment', message: 'Book an appointment' },
+          { label: 'View my prescriptions', message: 'Show my prescriptions' },
+        );
+        break;
+      }
+
+      case 'get_orders': {
+        suggestions.push(
+          { label: 'Browse pharmacy', message: 'Search the pharmacy' },
+          { label: 'View my prescriptions', message: 'Show my prescriptions' },
+        );
+        break;
+      }
+
+      case 'get_health_score': {
+        suggestions.push(
+          { label: 'How can I improve my score?', message: 'How can I improve my health score?' },
+          { label: 'Start a health checkup', message: 'Start a health checkup' },
+          { label: 'Check my vitals', message: 'Show my recent vitals' },
+        );
+        break;
+      }
+
+      case 'check_drug_interactions': {
+        suggestions.push(
+          { label: 'Search pharmacy for alternatives', message: 'Search the pharmacy for alternative medications' },
+          { label: 'View my prescriptions', message: 'Show my prescriptions' },
+          { label: 'Book an appointment', message: 'Book an appointment to discuss this' },
+        );
+        break;
+      }
+
+      case 'generate_checkup_report': {
+        suggestions.push(
+          { label: 'Book an appointment', message: 'Book an appointment with a specialist' },
+          { label: 'Check drug interactions', message: 'Check my drug interactions' },
+          { label: 'Browse pharmacy', message: 'Search the pharmacy' },
+        );
+        break;
+      }
+
+      case 'get_wallet': {
+        suggestions.push(
+          { label: 'Browse pharmacy', message: 'Search the pharmacy' },
+          { label: 'View my subscription', message: 'Show my subscription details' },
+        );
+        break;
+      }
+
+      case 'get_profile': {
+        suggestions.push(
+          { label: 'Start a health checkup', message: 'Start a health checkup' },
+          { label: 'Show my health score', message: 'Show my health score' },
+        );
+        break;
+      }
+    }
+
+    return suggestions;
   }
 
   /** Label each tool result so Haiku cannot confuse it with conversation history */
@@ -457,6 +644,10 @@ export class EkaService {
         return 'Health checkup interview step';
       case 'generate_checkup_report':
         return 'Generated health checkup report';
+      case 'analyze_prescription_upload':
+        return 'Prescription image analysis';
+      case 'analyze_existing_prescription':
+        return `Existing prescription analysis (${input?.source || 'unknown'})`;
       default:
         return toolName;
     }
@@ -512,6 +703,10 @@ export class EkaService {
         return this.toolGenerateCheckupReport(uid, input.session_id);
       case 'check_drug_interactions':
         return this.toolCheckDrugInteractions(uid, input.drugs);
+      case 'analyze_prescription_upload':
+        return this.toolAnalyzePrescriptionUpload(uid, input.upload_id);
+      case 'analyze_existing_prescription':
+        return this.toolAnalyzeExistingPrescription(uid, input.prescription_id, input.source);
       default:
         return { error: `Unknown tool: ${name}` };
     }
@@ -1640,6 +1835,754 @@ export class EkaService {
     } catch (e) {
       this.logger.error('Drug interaction check failed:', e.message);
       return { error: 'Failed to check drug interactions. Please try again.' };
+    }
+  }
+
+  // ============ PRESCRIPTION UPLOAD & ANALYSIS ============
+
+  async uploadPrescriptionFile(userId: string, file: Express.Multer.File) {
+    const patientId = new Types.ObjectId(userId);
+    const bucket = process.env.AWS_BUCKET_NAME || 'rapidcapsule';
+    const { v4: uuidv4 } = require('uuid');
+    const key = `prescriptions/eka/${patientId}/${uuidv4()}-${file.originalname}`;
+
+    // Upload to S3
+    const uploadResult = await this.s3
+      .upload({
+        Bucket: bucket,
+        Key: key,
+        Body: file.buffer,
+        ContentType: file.mimetype,
+      })
+      .promise();
+
+    // Generate prescription number
+    const prescriptionNumber =
+      await this.prescriptionNumberHelper.generatePrescriptionNumber();
+
+    // Create upload record
+    const upload = await this.prescriptionUploadModel.create({
+      patient: patientId,
+      prescription_number: prescriptionNumber,
+      original_filename: file.originalname,
+      mimetype: file.mimetype,
+      file_size: file.size,
+      s3_key: key,
+      s3_bucket: bucket,
+      s3_url: uploadResult.Location,
+      upload_source: UploadSource.EKA_CHAT,
+      processing_status: 'PENDING',
+      verification_status: 'PENDING',
+      fraud_score: 0,
+      fraud_flags: [],
+      usage_count: 0,
+      used_in_orders: [],
+      is_deleted: false,
+    });
+
+    this.logger.log(
+      `[Eka Prescription Upload] ${prescriptionNumber} uploaded for patient ${patientId}`,
+    );
+
+    return {
+      uploadId: upload._id.toString(),
+      prescriptionNumber: upload.prescription_number,
+      s3Key: key,
+      s3Bucket: bucket,
+      filename: file.originalname,
+      mimetype: file.mimetype,
+    };
+  }
+
+  /**
+   * Search drugs by medication name using native MongoDB driver
+   * Returns matched drug info with multi-currency pricing
+   */
+  private async matchDrugToInventory(medicationName: string) {
+    const drugCollection = this.drugModel.db.collection('drugentities');
+    const escaped = medicationName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+    let drugs = await drugCollection
+      .find({
+        is_active: { $ne: false },
+        is_available: { $ne: false },
+        $or: [
+          { name: { $regex: escaped, $options: 'i' } },
+          { generic_name: { $regex: escaped, $options: 'i' } },
+        ],
+      })
+      .limit(3)
+      .project({
+        name: 1,
+        generic_name: 1,
+        strength: 1,
+        selling_price: 1,
+        quantity: 1,
+        dosage_form: 1,
+        prices: 1,
+        requires_prescription: 1,
+        purchase_type: 1,
+        schedule_class: 1,
+      })
+      .toArray();
+
+    // Fallback: try individual words if multi-word name returns nothing
+    if (!drugs.length && medicationName.includes(' ')) {
+      const words = medicationName.split(/\s+/).filter((w) => w.length >= 3);
+      for (const word of words) {
+        const wordEscaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        drugs = await drugCollection
+          .find({
+            is_active: { $ne: false },
+            is_available: { $ne: false },
+            $or: [
+              { name: { $regex: wordEscaped, $options: 'i' } },
+              { generic_name: { $regex: wordEscaped, $options: 'i' } },
+            ],
+          })
+          .limit(3)
+          .project({
+            name: 1,
+            generic_name: 1,
+            strength: 1,
+            selling_price: 1,
+            quantity: 1,
+            dosage_form: 1,
+            prices: 1,
+            requires_prescription: 1,
+            purchase_type: 1,
+            schedule_class: 1,
+          })
+          .toArray();
+        if (drugs.length) break;
+      }
+    }
+
+    if (!drugs.length) return null;
+
+    // Use best match (first result)
+    const d = drugs[0] as any;
+
+    // Resolve dosage_form ObjectId if needed
+    let dosageForm: string | null = null;
+    if (d.dosage_form) {
+      const idStr = String(d.dosage_form);
+      if (idStr.match(/^[0-9a-fA-F]{24}$/)) {
+        try {
+          const dfCollection =
+            this.drugModel.db.collection('dosageformentities');
+          const formDoc = await dfCollection.findOne({
+            _id: new Types.ObjectId(idStr),
+          });
+          dosageForm = formDoc?.name || null;
+        } catch {}
+      } else {
+        dosageForm = idStr;
+      }
+    }
+
+    return {
+      matched_drug_id: d._id.toString(),
+      matched_drug_name: d.name,
+      matched_generic_name: d.generic_name,
+      strength: d.strength,
+      dosage_form: dosageForm,
+      prices: {
+        NGN: d.prices?.NGN?.selling_price || d.selling_price,
+        USD: d.prices?.USD?.selling_price,
+        GBP: d.prices?.GBP?.selling_price,
+        EUR: d.prices?.EUR?.selling_price,
+      },
+      in_stock: (d.quantity || 0) > 0,
+      requires_prescription: d.requires_prescription || false,
+      purchase_type: d.purchase_type || 'OTC_GENERAL',
+      schedule_class: d.schedule_class,
+    };
+  }
+
+  /**
+   * Run advisory readiness checks on a prescription (never blocking)
+   */
+  private buildReadinessChecks(
+    analysis: any,
+    ocrData: any,
+    medications: any[],
+  ) {
+    const issues: Array<{
+      check: string;
+      status: 'passed' | 'warning' | 'failed';
+      message: string;
+    }> = [];
+
+    // Doctor name check
+    const doctorName =
+      analysis?.extractedData?.prescriber?.name || ocrData?.doctorName;
+    if (doctorName) {
+      issues.push({
+        check: 'Doctor Name',
+        status: 'passed',
+        message: `${doctorName} detected`,
+      });
+    } else {
+      issues.push({
+        check: 'Doctor Name',
+        status: 'failed',
+        message: 'No prescriber name found — required for ordering',
+      });
+    }
+
+    // Prescription date check
+    const prescDate =
+      analysis?.extractedData?.prescription?.date ||
+      ocrData?.prescriptionDate;
+    if (prescDate) {
+      const dateObj = new Date(prescDate);
+      const daysSince = Math.floor(
+        (Date.now() - dateObj.getTime()) / (1000 * 60 * 60 * 24),
+      );
+      if (daysSince <= 180) {
+        issues.push({
+          check: 'Prescription Date',
+          status: 'passed',
+          message: `Dated ${dateObj.toLocaleDateString()} (${daysSince} days ago)`,
+        });
+      } else {
+        issues.push({
+          check: 'Prescription Date',
+          status: 'failed',
+          message: `Prescription is ${daysSince} days old — may be expired (max 180 days)`,
+        });
+      }
+    } else {
+      issues.push({
+        check: 'Prescription Date',
+        status: 'failed',
+        message: 'No prescription date found — required for ordering',
+      });
+    }
+
+    // Patient name check
+    const patientName =
+      analysis?.extractedData?.patient?.name || ocrData?.patientName;
+    if (patientName) {
+      issues.push({
+        check: 'Patient Name',
+        status: 'passed',
+        message: `${patientName} found on prescription`,
+      });
+    } else {
+      issues.push({
+        check: 'Patient Name',
+        status: 'warning',
+        message:
+          'No patient name found — may need verification when ordering',
+      });
+    }
+
+    // Doctor license check
+    const license =
+      analysis?.extractedData?.prescriber?.license ||
+      ocrData?.doctorLicense;
+    if (license) {
+      issues.push({
+        check: 'Doctor License',
+        status: 'passed',
+        message: `License ${license} found`,
+      });
+    } else {
+      issues.push({
+        check: 'Doctor License',
+        status: 'warning',
+        message: 'No license number detected — may require manual verification',
+      });
+    }
+
+    // OCR confidence check
+    const confidence = ocrData?.confidence || analysis?.confidence;
+    if (confidence && confidence >= 60) {
+      issues.push({
+        check: 'Document Readability',
+        status: 'passed',
+        message: `${Math.round(confidence)}% readable`,
+      });
+    } else if (confidence) {
+      issues.push({
+        check: 'Document Readability',
+        status: 'warning',
+        message: `Only ${Math.round(confidence)}% readable — a clearer image may improve results`,
+      });
+    }
+
+    // Controlled substance check
+    const controlledMeds = medications.filter(
+      (m) =>
+        m.in_inventory &&
+        m.schedule_class &&
+        !['OTC', 'OTC_GENERAL'].includes(m.schedule_class),
+    );
+    if (controlledMeds.length > 0) {
+      issues.push({
+        check: 'Controlled Substances',
+        status: 'warning',
+        message: `Contains ${controlledMeds.length} controlled/scheduled medication(s) — requires pharmacist review when ordering`,
+      });
+    }
+
+    // Fraud flags from Claude analysis
+    if (analysis?.fraudScore > 50) {
+      issues.push({
+        check: 'Document Authenticity',
+        status: 'warning',
+        message: 'Some authenticity concerns detected — may require additional verification',
+      });
+    }
+
+    // Calculate score
+    const failed = issues.filter((i) => i.status === 'failed').length;
+    const warnings = issues.filter((i) => i.status === 'warning').length;
+    const score = Math.max(
+      0,
+      100 - failed * 20 - warnings * 5,
+    );
+    const readyForOrder = failed === 0;
+
+    const summary = readyForOrder
+      ? 'This prescription appears ready for ordering on our platform.'
+      : `This prescription may need attention before ordering: ${issues
+          .filter((i) => i.status === 'failed')
+          .map((i) => i.message.toLowerCase())
+          .join(', ')}.`;
+
+    return {
+      ready_for_order: readyForOrder,
+      score,
+      issues,
+      summary,
+    };
+  }
+
+  private async toolAnalyzePrescriptionUpload(
+    userId: Types.ObjectId,
+    uploadId: string,
+  ) {
+    if (!uploadId) {
+      return { error: 'No upload ID provided.' };
+    }
+
+    // Fetch the upload record
+    const upload = await this.prescriptionUploadModel
+      .findOne({ _id: uploadId, patient: userId, is_deleted: { $ne: true } })
+      .lean();
+
+    if (!upload) {
+      return {
+        error: 'Prescription upload not found. It may have been deleted.',
+      };
+    }
+
+    this.logger.log(
+      `[Eka Prescription Analysis] Analyzing upload ${upload.prescription_number}`,
+    );
+
+    try {
+      // Step 1: Download image from S3 as buffer
+      const s3Object = await this.s3
+        .getObject({
+          Bucket: upload.s3_bucket,
+          Key: upload.s3_key,
+        })
+        .promise();
+
+      const fileBuffer = s3Object.Body as Buffer;
+      const imageBase64 = fileBuffer.toString('base64');
+
+      // Step 2: Run OCR via Textract
+      // Use S3 variant (supports PDF + images) — same as standalone pipeline
+      let ocrData: any = { rawText: '', confidence: 0, medications: [] };
+      try {
+        const ocrResult = await this.textractService.analyzeDocumentFromS3(
+          upload.s3_bucket,
+          upload.s3_key,
+        );
+        if (ocrResult?.success && ocrResult.data) {
+          ocrData = ocrResult.data;
+        } else if (ocrResult?.error) {
+          this.logger.warn(
+            `[Eka Prescription Analysis] Textract returned error: ${ocrResult.error}`,
+          );
+        }
+      } catch (e) {
+        this.logger.warn(
+          `[Eka Prescription Analysis] OCR failed: ${e.message}`,
+        );
+      }
+
+      // Step 3: Get patient info for Claude analysis
+      const user = await this.userModel.findById(userId).lean();
+      const patientInfo = {
+        fullName: `${user?.profile?.first_name || ''} ${user?.profile?.last_name || ''}`.trim(),
+        dateOfBirth: user?.profile?.date_of_birth,
+        gender: user?.profile?.gender,
+      };
+
+      // Step 4: Run Claude Vision analysis (primary extractor — handles printed, digital, and handwritten prescriptions)
+      const hasOcrData = ocrData.rawText || ocrData.medications?.length;
+      this.logger.log(
+        `[Eka Prescription Analysis] OCR ${hasOcrData ? 'succeeded' : 'empty/failed'}, running Claude Vision (mimetype: ${upload.mimetype})`,
+      );
+
+      let analysis: any = {};
+      try {
+        analysis = await this.claudeAIService.analyzePrescription(
+          {
+            raw_text: ocrData?.rawText || '',
+            doctor_name: ocrData?.doctorName,
+            patient_name: ocrData?.patientName,
+            prescription_date: ocrData?.prescriptionDate,
+            medications: ocrData?.medications || [],
+            doctor_license: ocrData?.doctorLicense,
+          },
+          patientInfo,
+          imageBase64,
+          upload.mimetype,
+        );
+        this.logger.log(
+          `[Eka Prescription Analysis] Claude extracted ${analysis?.extractedData?.medications?.length || 0} medications, confidence: ${analysis?.confidence || 0}`,
+        );
+      } catch (e) {
+        this.logger.warn(
+          `[Eka Prescription Analysis] Claude Vision failed: ${e.message}`,
+        );
+      }
+
+      // Step 5: Merge medication lists from OCR and Claude
+      const rawMedications: Array<{
+        name: string;
+        dosage?: string;
+        quantity?: string;
+        instructions?: string;
+      }> = [];
+
+      // Prefer Claude's extracted medications
+      if (analysis?.extractedData?.medications?.length) {
+        for (const med of analysis.extractedData.medications) {
+          rawMedications.push({
+            name: med.name || med.drug_name,
+            dosage: med.dosage || med.dose,
+            quantity: med.quantity,
+            instructions: med.frequency || med.instructions,
+          });
+        }
+      }
+      // Fallback to OCR medications
+      if (!rawMedications.length && ocrData.medications?.length) {
+        for (const med of ocrData.medications) {
+          rawMedications.push({
+            name: med.name,
+            dosage: med.dosage,
+            quantity: med.quantity,
+            instructions: med.instructions,
+          });
+        }
+      }
+
+      if (!rawMedications.length) {
+        // Update upload record with OCR data even if no meds found
+        await this.prescriptionUploadModel.updateOne(
+          { _id: uploadId },
+          {
+            $set: {
+              processing_status: 'COMPLETED',
+              'ocr_data.raw_text': ocrData.rawText,
+              'ocr_data.confidence': ocrData.confidence,
+            },
+          },
+        );
+
+        return {
+          prescription_number: upload.prescription_number,
+          confidence: ocrData.confidence || analysis?.confidence || 0,
+          medications: [],
+          message:
+            'Could not extract any medications from this prescription. This can happen with very faint handwriting, low-resolution images, or documents where medications are not clearly listed. Try uploading a clearer photo or a different format.',
+          prescription_readiness: this.buildReadinessChecks(
+            analysis,
+            ocrData,
+            [],
+          ),
+        };
+      }
+
+      // Step 6: Match each medication against inventory
+      const medications: any[] = [];
+      let totalCost = { NGN: 0, USD: 0, GBP: 0, EUR: 0 };
+
+      for (const med of rawMedications) {
+        const match = await this.matchDrugToInventory(med.name);
+        if (match) {
+          const medResult = {
+            name: med.name,
+            prescribed_dosage: med.dosage,
+            prescribed_quantity: med.quantity,
+            instructions: med.instructions,
+            in_inventory: true,
+            ...match,
+          };
+          medications.push(medResult);
+
+          // Add to total cost (using quantity if parseable, else 1)
+          const qty = parseInt(med.quantity || '1', 10) || 1;
+          if (match.prices.NGN) totalCost.NGN += match.prices.NGN * qty;
+          if (match.prices.USD) totalCost.USD += match.prices.USD * qty;
+          if (match.prices.GBP) totalCost.GBP += match.prices.GBP * qty;
+          if (match.prices.EUR) totalCost.EUR += match.prices.EUR * qty;
+        } else {
+          medications.push({
+            name: med.name,
+            prescribed_dosage: med.dosage,
+            prescribed_quantity: med.quantity,
+            instructions: med.instructions,
+            in_inventory: false,
+            matched_drug_id: null,
+            matched_drug_name: null,
+          });
+        }
+      }
+
+      // Round totals
+      totalCost = {
+        NGN: Math.round(totalCost.NGN * 100) / 100,
+        USD: Math.round(totalCost.USD * 100) / 100,
+        GBP: Math.round(totalCost.GBP * 100) / 100,
+        EUR: Math.round(totalCost.EUR * 100) / 100,
+      };
+
+      // Step 7: Build readiness checks
+      const prescriptionReadiness = this.buildReadinessChecks(
+        analysis,
+        ocrData,
+        medications,
+      );
+
+      // Step 8: Update upload record
+      await this.prescriptionUploadModel.updateOne(
+        { _id: uploadId },
+        {
+          $set: {
+            processing_status: 'COMPLETED',
+            'ocr_data.raw_text': ocrData.rawText,
+            'ocr_data.confidence': ocrData.confidence,
+            'ocr_data.doctor_name': analysis?.extractedData?.prescriber?.name || ocrData.doctorName,
+            'ocr_data.patient_name': analysis?.extractedData?.patient?.name || ocrData.patientName,
+            'ocr_data.prescription_date': analysis?.extractedData?.prescription?.date || ocrData.prescriptionDate,
+            'ocr_data.medications': rawMedications,
+            verified_medications: medications
+              .filter((m) => m.in_inventory)
+              .map((m) => ({
+                prescription_medication_name: m.name,
+                matched_drug_id: m.matched_drug_id
+                  ? new Types.ObjectId(m.matched_drug_id)
+                  : null,
+                matched_drug_name: m.matched_drug_name,
+                matched_generic_name: m.matched_generic_name,
+                dosage: m.prescribed_dosage,
+                quantity: m.prescribed_quantity,
+                instructions: m.instructions,
+                is_valid: true,
+              })),
+          },
+        },
+      );
+
+      const resultData = {
+        prescription_number: upload.prescription_number,
+        doctor_name:
+          analysis?.extractedData?.prescriber?.name || ocrData.doctorName,
+        prescription_date:
+          analysis?.extractedData?.prescription?.date ||
+          ocrData.prescriptionDate,
+        confidence: ocrData.confidence || analysis?.confidence || 0,
+        medications,
+        total_estimated_cost: totalCost,
+        prescription_readiness: prescriptionReadiness,
+        patient_summary: analysis?.patientSummary,
+      };
+
+      return {
+        ...resultData,
+        __artifact: {
+          type: 'prescription_analysis',
+          data: resultData,
+        },
+      };
+    } catch (e) {
+      this.logger.error(
+        `[Eka Prescription Analysis] Failed: ${e.message}`,
+        e.stack,
+      );
+      return {
+        error:
+          'Failed to analyze the prescription. Please try uploading a clearer image.',
+      };
+    }
+  }
+
+  private async toolAnalyzeExistingPrescription(
+    userId: Types.ObjectId,
+    prescriptionId: string,
+    source: string,
+  ) {
+    if (!prescriptionId) {
+      return { error: 'No prescription ID provided.' };
+    }
+
+    let rawMedications: Array<{
+      name: string;
+      dosage?: string;
+      quantity?: string;
+      instructions?: string;
+    }> = [];
+    let prescriptionNumber = '';
+    let doctorName = '';
+    let prescriptionDate: any = null;
+
+    try {
+      if (source === 'specialist') {
+        const rx = await this.specialistPrescriptionModel
+          .findOne({ _id: prescriptionId, patient_id: userId })
+          .lean();
+
+        if (!rx) {
+          return { error: 'Specialist prescription not found.' };
+        }
+
+        prescriptionNumber = rx.prescription_number || '';
+        doctorName = rx.specialist_name || '';
+        prescriptionDate = rx.created_at;
+
+        for (const item of rx.items || []) {
+          rawMedications.push({
+            name: item.drug_name || item.name,
+            dosage: item.drug_strength || item.dosage,
+            quantity: String(item.quantity || ''),
+            instructions: [item.dosage, item.frequency, item.duration]
+              .filter(Boolean)
+              .join(', '),
+          });
+        }
+      } else {
+        // uploaded
+        const upload = await this.prescriptionUploadModel
+          .findOne({
+            _id: prescriptionId,
+            patient: userId,
+            is_deleted: { $ne: true },
+          })
+          .lean();
+
+        if (!upload) {
+          return { error: 'Uploaded prescription not found.' };
+        }
+
+        prescriptionNumber = upload.prescription_number || '';
+        doctorName = upload.ocr_data?.doctor_name || '';
+        prescriptionDate =
+          upload.ocr_data?.prescription_date || upload.created_at;
+
+        // Use verified medications if available, else OCR data
+        if (upload.verified_medications?.length) {
+          for (const med of upload.verified_medications) {
+            rawMedications.push({
+              name:
+                med.prescription_medication_name ||
+                med.matched_drug_name ||
+                '',
+              dosage: med.dosage,
+              quantity: med.quantity,
+              instructions: med.instructions,
+            });
+          }
+        } else if (upload.ocr_data?.medications?.length) {
+          for (const med of upload.ocr_data.medications) {
+            rawMedications.push({
+              name: med.name,
+              dosage: med.dosage,
+              quantity: med.quantity,
+              instructions: med.instructions,
+            });
+          }
+        }
+      }
+
+      if (!rawMedications.length) {
+        return {
+          prescription_number: prescriptionNumber,
+          message: 'No medications found in this prescription.',
+        };
+      }
+
+      // Match each medication against inventory
+      const medications: any[] = [];
+      let totalCost = { NGN: 0, USD: 0, GBP: 0, EUR: 0 };
+
+      for (const med of rawMedications) {
+        const match = await this.matchDrugToInventory(med.name);
+        if (match) {
+          medications.push({
+            name: med.name,
+            prescribed_dosage: med.dosage,
+            prescribed_quantity: med.quantity,
+            instructions: med.instructions,
+            in_inventory: true,
+            ...match,
+          });
+
+          const qty = parseInt(med.quantity || '1', 10) || 1;
+          if (match.prices.NGN) totalCost.NGN += match.prices.NGN * qty;
+          if (match.prices.USD) totalCost.USD += match.prices.USD * qty;
+          if (match.prices.GBP) totalCost.GBP += match.prices.GBP * qty;
+          if (match.prices.EUR) totalCost.EUR += match.prices.EUR * qty;
+        } else {
+          medications.push({
+            name: med.name,
+            prescribed_dosage: med.dosage,
+            prescribed_quantity: med.quantity,
+            instructions: med.instructions,
+            in_inventory: false,
+            matched_drug_id: null,
+            matched_drug_name: null,
+          });
+        }
+      }
+
+      totalCost = {
+        NGN: Math.round(totalCost.NGN * 100) / 100,
+        USD: Math.round(totalCost.USD * 100) / 100,
+        GBP: Math.round(totalCost.GBP * 100) / 100,
+        EUR: Math.round(totalCost.EUR * 100) / 100,
+      };
+
+      const resultData = {
+        prescription_number: prescriptionNumber,
+        source,
+        doctor_name: doctorName,
+        prescription_date: prescriptionDate,
+        medications,
+        total_estimated_cost: totalCost,
+      };
+
+      return {
+        ...resultData,
+        __artifact: {
+          type: 'prescription_analysis',
+          data: resultData,
+        },
+      };
+    } catch (e) {
+      this.logger.error(
+        `[Eka Existing Prescription Analysis] Failed: ${e.message}`,
+      );
+      return { error: 'Failed to analyze this prescription. Please try again.' };
     }
   }
 

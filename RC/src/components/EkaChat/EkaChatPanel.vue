@@ -225,10 +225,11 @@
           <!-- Quick suggestions (shown after messages exist but not streaming, and no checkup question) -->
           <div v-if="messages.length > 0 && !isStreaming && !checkupQuestion" class="eka-main__quick-chips">
             <button
-              v-for="(s, idx) in quickChips"
+              v-for="(s, idx) in displayChips"
               :key="idx"
               class="eka-main__chip"
-              @click="sendSuggestion(s)"
+              :class="{ 'eka-main__chip--contextual': contextualSuggestions.length > 0 }"
+              @click="sendChipSuggestion(s)"
             >
               {{ s.label }}
             </button>
@@ -236,21 +237,45 @@
 
           <!-- Input area -->
           <div class="eka-main__input-wrapper">
+            <!-- File preview bar -->
+            <div v-if="attachedFile" class="eka-main__file-preview">
+              <div class="eka-main__file-preview-info">
+                <img v-if="attachedPreview" :src="attachedPreview" class="eka-main__file-thumb" alt="Preview" />
+                <v-icon v-else name="hi-document" scale="1.2" class="eka-main__file-icon" />
+                <div class="eka-main__file-meta">
+                  <span class="eka-main__file-name">{{ attachedFile.name }}</span>
+                  <span class="eka-main__file-size">{{ formatFileSize(attachedFile.size) }}</span>
+                </div>
+              </div>
+              <button class="eka-main__file-remove" @click="removeAttachment" title="Remove">
+                <v-icon name="hi-x" scale="0.7" />
+              </button>
+            </div>
             <div class="eka-main__input">
+              <input type="file" ref="fileInput" style="display:none" accept="image/jpeg,image/png,image/webp,application/pdf" @change="handleFileSelect" />
+              <button
+                class="eka-main__attach"
+                :disabled="isStreaming || isUploading"
+                @click="triggerFileInput"
+                title="Attach prescription"
+              >
+                <v-icon name="hi-paper-clip" scale="0.9" />
+              </button>
               <input
                 ref="inputField"
                 v-model="inputText"
                 type="text"
-                placeholder="Ask Eka anything..."
-                :disabled="isStreaming"
+                :placeholder="attachedFile ? 'Add a message or send...' : 'Ask Eka anything...'"
+                :disabled="isStreaming || isUploading"
                 @keydown.enter="sendMessage"
               />
               <button
                 class="eka-main__send"
-                :disabled="!inputText.trim() || isStreaming"
+                :disabled="(!inputText.trim() && !attachedFile) || isStreaming || isUploading"
                 @click="sendMessage"
               >
-                <v-icon name="hi-paper-airplane" scale="0.85" />
+                <v-icon v-if="isUploading" name="hi-refresh" scale="0.85" class="eka-spin" />
+                <v-icon v-else name="hi-paper-airplane" scale="0.85" />
               </button>
             </div>
             <p class="eka-main__disclaimer">
@@ -264,8 +289,8 @@
           <div v-if="artifactOpen && artifact" class="eka-artifact" :class="{ 'mobile-overlay': isMobile }">
             <div class="eka-artifact__header">
               <div class="eka-artifact__header-title">
-                <v-icon :name="artifactMode === 'report' ? 'hi-document-text' : artifactMode === 'interactions' ? 'ri-capsule-line' : 'hi-user'" scale="0.85" />
-                <span>{{ artifactMode === 'report' ? 'Health Report' : artifactMode === 'interactions' ? 'Interaction Report' : 'Body Diagram' }}</span>
+                <v-icon :name="artifactIcon" scale="0.85" />
+                <span>{{ artifactTitle }}</span>
               </div>
               <button class="eka-artifact__close" @click="toggleArtifact">
                 <v-icon name="hi-x" scale="0.85" />
@@ -285,6 +310,10 @@
                 v-else-if="artifactMode === 'interactions' && artifact.data"
                 :report="artifact.data"
               />
+              <EkaPrescriptionAnalysis
+                v-else-if="artifactMode === 'prescription' && artifact.data"
+                :data="artifact.data"
+              />
             </div>
           </div>
         </transition>
@@ -299,10 +328,12 @@ import EkaMessage from './EkaMessage.vue'
 import EkaCheckupReport from './EkaCheckupReport.vue'
 import EkaBodyAvatar from './EkaBodyAvatar.vue'
 import EkaInteractionReport from './EkaInteractionReport.vue'
+import EkaPrescriptionAnalysis from './EkaPrescriptionAnalysis.vue'
+import http from '@/services/http'
 
 export default {
   name: 'EkaChatPanel',
-  components: { EkaMessage, EkaCheckupReport, EkaBodyAvatar, EkaInteractionReport },
+  components: { EkaMessage, EkaCheckupReport, EkaBodyAvatar, EkaInteractionReport, EkaPrescriptionAnalysis },
 
   data() {
     return {
@@ -314,6 +345,9 @@ export default {
       editingTitle: '',
       expandedGroups: { Today: true },
       showAllGroups: {},
+      attachedFile: null,
+      attachedPreview: null,
+      isUploading: false,
       quickActionsOpen: localStorage.getItem('eka_quick_actions_open') === 'true',
       quickActions: [
         { label: 'Health Checkup', message: 'Start a health checkup', icon: 'fa-stethoscope' },
@@ -324,6 +358,7 @@ export default {
         { label: 'Pharmacy', message: 'Search the pharmacy', icon: 'hi-shopping-bag' },
         { label: 'Appointments', message: 'Show my appointments', icon: 'ri-calendar-check-line' },
         { label: 'Wallet & Credits', message: 'Show my wallet and credits', icon: 'bi-wallet2' },
+        { label: 'Upload Prescription', message: null, icon: 'hi-upload', action: 'upload_prescription' },
       ],
       suggestions: [
         { label: 'How are my vitals?', icon: 'hi-heart' },
@@ -367,12 +402,28 @@ export default {
       artifactOpen: 'isArtifactOpen',
       checkupSession: 'getCheckupSession',
       checkupQuestion: 'getCheckupQuestion',
+      contextualSuggestions: 'getSuggestions',
     }),
+    displayChips() {
+      if (this.contextualSuggestions.length > 0) {
+        return this.contextualSuggestions
+      }
+      return this.quickChips.map((c) => ({ label: c.label, message: c.label }))
+    },
     artifactMode() {
       if (!this.artifact) return null
       if (this.artifact.type === 'health_checkup_report') return 'report'
       if (this.artifact.type === 'drug_interaction_report') return 'interactions'
+      if (this.artifact.type === 'prescription_analysis') return 'prescription'
       return 'avatar'
+    },
+    artifactIcon() {
+      const icons = { report: 'hi-document-text', interactions: 'ri-capsule-line', prescription: 'hi-clipboard-list', avatar: 'hi-user' }
+      return icons[this.artifactMode] || 'hi-document-text'
+    },
+    artifactTitle() {
+      const titles = { report: 'Health Report', interactions: 'Interaction Report', prescription: 'Prescription Analysis', avatar: 'Body Diagram' }
+      return titles[this.artifactMode] || 'Report'
     },
 
     groupedConversations() {
@@ -427,13 +478,55 @@ export default {
   methods: {
     async sendMessage() {
       const text = this.inputText.trim()
-      if (!text || this.isStreaming) return
+      const hasFile = !!this.attachedFile
+      if ((!text && !hasFile) || this.isStreaming || this.isUploading) return
+
       this.inputText = ''
-      await this.$store.dispatch('eka/sendMessage', text)
+
+      if (hasFile) {
+        // Upload file first, then send message with upload context
+        this.isUploading = true
+        try {
+          const formData = new FormData()
+          formData.append('prescription', this.attachedFile)
+          const res = await http.post('/eka/upload-prescription', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+          })
+          const upload = res.data?.data || res.data?.result || res.data
+          const uploadId = upload.uploadId || upload._id
+          const filename = this.attachedFile.name
+          const preview = this.attachedPreview
+
+          this.removeAttachment()
+          this.isUploading = false
+
+          // Send chat message with upload context and attachment metadata
+          const message = text
+            ? `${text}\n\n[Prescription uploaded: ${filename}, Upload ID: ${uploadId}]`
+            : `I've uploaded a prescription image. Please analyze it.\n\n[Prescription uploaded: ${filename}, Upload ID: ${uploadId}]`
+          await this.$store.dispatch('eka/sendMessage', { text: message, attachment: { type: preview ? 'image' : 'pdf', url: preview, filename } })
+        } catch (e) {
+          this.isUploading = false
+          console.error('Prescription upload failed:', e)
+          // Show error inline
+          this.$store.commit('eka/APPEND_USER_MESSAGE', text || 'Upload prescription')
+          this.$store.commit('eka/APPEND_ASSISTANT_MESSAGE')
+          this.$store.commit('eka/APPEND_TO_LAST_MESSAGE',
+            "Sorry, I couldn't upload your prescription. Please make sure it's a JPEG, PNG, WebP, or PDF file under 10MB and try again."
+          )
+        }
+      } else {
+        await this.$store.dispatch('eka/sendMessage', text)
+      }
     },
 
     sendSuggestion(s) {
       this.inputText = s.label
+      this.sendMessage()
+    },
+
+    sendChipSuggestion(s) {
+      this.inputText = s.message || s.label
       this.sendMessage()
     },
 
@@ -443,6 +536,19 @@ export default {
     },
 
     triggerQuickAction(action) {
+      if (action.action === 'upload_prescription') {
+        // Show intro message from Eka, then open file picker
+        if (this.messages.length === 0) {
+          this.$store.commit('eka/APPEND_ASSISTANT_MESSAGE')
+          this.$store.commit(
+            'eka/APPEND_TO_LAST_MESSAGE',
+            "I can analyze your prescription and check medication availability and pricing across our pharmacy. Just attach a prescription image or PDF using the button below — I'll extract the medications, match them to our inventory, and show you estimated costs in all currencies.\n\nSupported formats: **JPEG, PNG, WebP, or PDF** (up to 10MB).",
+          )
+        }
+        this.triggerFileInput()
+        if (window.innerWidth <= 768) this.sidebarCollapsed = true
+        return
+      }
       this.inputText = action.message
       this.sendMessage()
       if (window.innerWidth <= 768) {
@@ -539,6 +645,51 @@ export default {
       this.$store.commit('eka/TOGGLE_ARTIFACT')
       this.inputText = message
       this.sendMessage()
+    },
+
+    triggerFileInput() {
+      this.$refs.fileInput?.click()
+    },
+
+    handleFileSelect(event) {
+      const file = event.target.files?.[0]
+      if (!file) return
+
+      // Validate type
+      const allowed = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']
+      if (!allowed.includes(file.type)) {
+        alert('Please select a JPEG, PNG, WebP, or PDF file.')
+        return
+      }
+      // Validate size (10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        alert('File is too large. Maximum size is 10MB.')
+        return
+      }
+
+      this.attachedFile = file
+      this.attachedPreview = null
+
+      // Generate preview for images
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader()
+        reader.onload = (e) => { this.attachedPreview = e.target.result }
+        reader.readAsDataURL(file)
+      }
+
+      // Reset input so same file can be re-selected
+      event.target.value = ''
+    },
+
+    removeAttachment() {
+      this.attachedFile = null
+      this.attachedPreview = null
+    },
+
+    formatFileSize(bytes) {
+      if (bytes < 1024) return bytes + ' B'
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
+      return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
     },
 
     checkMobile() {
@@ -1162,6 +1313,19 @@ export default {
       color: #FF5C00;
       background: #FFF3ED;
     }
+
+    &--contextual {
+      border-color: #FDDCB5;
+      background: #FFF8F0;
+      color: #9A3412;
+      font-weight: 500;
+
+      &:hover {
+        border-color: #FF5C00;
+        background: #FFF3ED;
+        color: #FF5C00;
+      }
+    }
   }
 
   &__input-wrapper {
@@ -1169,6 +1333,96 @@ export default {
     max-width: 900px;
     margin: 0 auto;
     width: 100%;
+  }
+
+  &__file-preview {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+  }
+
+  &__file-preview-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  &__file-thumb {
+    width: 40px;
+    height: 40px;
+    border-radius: 6px;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+
+  &__file-icon {
+    color: #6b7280;
+    flex-shrink: 0;
+  }
+
+  &__file-meta {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  &__file-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: #374151;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__file-size {
+    font-size: 11px;
+    color: #9ca3af;
+  }
+
+  &__file-remove {
+    background: none;
+    border: none;
+    color: #9ca3af;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    flex-shrink: 0;
+
+    &:hover {
+      color: #ef4444;
+      background: #fef2f2;
+    }
+  }
+
+  &__attach {
+    background: none;
+    border: none;
+    color: #6b7280;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.2s;
+
+    &:hover:not(:disabled) {
+      color: #FF5C00;
+      background: rgba(255, 92, 0, 0.08);
+    }
+
+    &:disabled {
+      color: #d1d5db;
+      cursor: not-allowed;
+    }
   }
 
   &__input {
@@ -1405,5 +1659,13 @@ export default {
       box-shadow: 0 2px 8px rgba(255, 92, 0, 0.1);
     }
   }
+}
+
+.eka-spin {
+  animation: eka-spin 1s linear infinite;
+}
+@keyframes eka-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 </style>

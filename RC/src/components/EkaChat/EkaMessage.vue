@@ -5,6 +5,14 @@
     </div>
     <div class="eka-msg__body" :class="[msg.role]">
       <div class="eka-bubble" :class="[msg.role]">
+        <!-- Attached file preview (user messages with prescription uploads) -->
+        <div v-if="msg.attachment" class="eka-bubble__attachment">
+          <img v-if="msg.attachment.type === 'image' && msg.attachment.url" :src="msg.attachment.url" class="eka-bubble__attach-img" alt="Prescription" @click="openAttachment" />
+          <div v-else class="eka-bubble__attach-file">
+            <v-icon name="hi-document" scale="1.2" />
+            <span>{{ msg.attachment.filename || 'Prescription' }}</span>
+          </div>
+        </div>
         <div class="eka-bubble__text" v-html="formattedContent" @click="handleLinkClick"></div>
         <span v-if="isStreaming && msg.role === 'assistant' && isLast" class="eka-cursor">|</span>
       </div>
@@ -64,6 +72,7 @@ const ROUTE_MAP = {
   wallet: '/app/patient/wallet',
   profile: '/app/patient/onboarding',
   health_tips: '/app/patient/health-tips',
+  upload_prescription: '/app/patient/pharmacy/upload-prescription',
 }
 
 // Cache logo as base64 so we only fetch once
@@ -158,6 +167,12 @@ export default {
         window.open(route, '_blank')
       } else {
         this.$router.push(route)
+      }
+    },
+
+    openAttachment() {
+      if (this.msg.attachment?.url) {
+        window.open(this.msg.attachment.url, '_blank')
       }
     },
 
@@ -343,6 +358,32 @@ export default {
     background: #f3f4f6;
     color: #1f2937;
     border-bottom-left-radius: 4px;
+  }
+
+  &__attachment {
+    margin-bottom: 8px;
+  }
+
+  &__attach-img {
+    max-width: 200px;
+    max-height: 160px;
+    border-radius: 8px;
+    cursor: pointer;
+    object-fit: cover;
+    display: block;
+
+    &:hover {
+      opacity: 0.85;
+    }
+  }
+
+  &__attach-file {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    opacity: 0.8;
+    margin-bottom: 4px;
   }
 
   &__text {

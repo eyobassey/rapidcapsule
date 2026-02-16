@@ -174,38 +174,48 @@ export class ClaudeAIService {
 
       const messages: Anthropic.MessageParam[] = [];
 
-      // If we have image data, include it for visual analysis
+      // If we have image/document data, include it for visual analysis
       if (imageBase64) {
-        // Determine media type - default to jpeg if not specified
-        // Note: 'image/jpg' is mapped to 'image/jpeg' (API standard)
-        let mediaType: 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp' = 'image/jpeg';
-        if (imageMimeType === 'image/png') {
-          mediaType = 'image/png';
-        } else if (imageMimeType === 'image/gif') {
-          mediaType = 'image/gif';
-        } else if (imageMimeType === 'image/webp') {
-          mediaType = 'image/webp';
-        }
-        // 'image/jpeg' and 'image/jpg' both use default 'image/jpeg'
+        const contentBlocks: any[] = [];
 
-        this.logger.log(`Sending image to Claude for vision analysis (${mediaType}, original: ${imageMimeType})`);
+        if (imageMimeType === 'application/pdf') {
+          // PDFs use Claude's native document content type
+          this.logger.log(`Sending PDF to Claude for document analysis`);
+          contentBlocks.push({
+            type: 'document',
+            source: {
+              type: 'base64',
+              media_type: 'application/pdf',
+              data: imageBase64,
+            },
+          });
+        } else {
+          // Images use the image content type
+          let mediaType: 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp' = 'image/jpeg';
+          if (imageMimeType === 'image/png') {
+            mediaType = 'image/png';
+          } else if (imageMimeType === 'image/gif') {
+            mediaType = 'image/gif';
+          } else if (imageMimeType === 'image/webp') {
+            mediaType = 'image/webp';
+          }
+
+          this.logger.log(`Sending image to Claude for vision analysis (${mediaType}, original: ${imageMimeType})`);
+          contentBlocks.push({
+            type: 'image',
+            source: {
+              type: 'base64',
+              media_type: mediaType,
+              data: imageBase64,
+            },
+          });
+        }
+
+        contentBlocks.push({ type: 'text', text: prompt });
 
         messages.push({
           role: 'user',
-          content: [
-            {
-              type: 'image',
-              source: {
-                type: 'base64',
-                media_type: mediaType,
-                data: imageBase64,
-              },
-            },
-            {
-              type: 'text',
-              text: prompt,
-            },
-          ],
+          content: contentBlocks,
         });
       } else {
         this.logger.log('No image available - Claude will analyze OCR data only');
@@ -246,13 +256,15 @@ export class ClaudeAIService {
 3. CORRECT any OCR errors and note the discrepancies
 4. ANALYZE for authenticity, validity, and potential fraud
 
-CRITICAL: OCR systems often make mistakes. You must look at the actual prescription image and extract:
+CRITICAL: OCR systems often make mistakes — especially with handwritten prescriptions. You must look at the actual prescription image/document and extract:
 - Patient information (name, DOB, age, address)
 - Prescriber/Doctor information (name, license, clinic, signature)
 - All medications with dosage, quantity, instructions
 - Prescription date and validity
 
-Then compare with OCR data and flag any corrections needed.
+HANDWRITTEN PRESCRIPTIONS: Many prescriptions are handwritten by doctors. Use your best interpretation of the handwriting. If a medication name is ambiguous, note low confidence but still provide your best reading. Common handwriting patterns: drug names may use abbreviations (e.g., "Amox" for Amoxicillin, "PCM" for Paracetamol), dosages may use "mg", "g", "ml" shorthand, and instructions may use Latin abbreviations (bd = twice daily, tds = three times daily, od = once daily, prn = as needed, stat = immediately).
+
+Then compare with OCR data and flag any corrections needed. If OCR data is empty or absent, rely entirely on your visual analysis of the document.
 
 You MUST respond with ONLY a valid JSON object (no markdown, no explanation) in this exact format:
 {
@@ -375,7 +387,9 @@ You MUST respond with ONLY a valid JSON object (no markdown, no explanation) in 
       year: 'numeric'
     });
 
-    return `Analyze this prescription image and extract ALL data directly from it.
+    const hasOcrData = ocrData.raw_text || ocrData.patient_name || ocrData.doctor_name || (ocrData.medications && ocrData.medications.length > 0);
+
+    return `Analyze this prescription document/image and extract ALL data directly from it.
 
 IMPORTANT DATE CONTEXT:
 - Today's date is: ${todayFormatted}
@@ -383,19 +397,19 @@ IMPORTANT DATE CONTEXT:
 - A prescription dated today is VALID (not "future dated")
 - Prescriptions are typically valid for 28-30 days from issue date
 
-YOUR PRIMARY TASK: Look at the prescription image and extract:
+YOUR PRIMARY TASK: Look at the prescription document/image and extract:
 1. PATIENT details (name, DOB, age, address as shown on prescription)
 2. PRESCRIBER/DOCTOR details (name, license, clinic, signature present?)
 3. ALL MEDICATIONS (name, dosage, quantity, instructions, frequency, duration)
 4. DATES (prescription date, validity period)
 
-Then COMPARE your extraction with the OCR data below and note any discrepancies.
+This may be a printed, digital, or handwritten prescription. For handwritten prescriptions, interpret the handwriting carefully — doctors often use abbreviations and shorthand.
 
 ACCOUNT HOLDER (the person uploading this prescription):
 - Name: ${patientInfo.fullName}
 - Date of Birth: ${patientInfo.dateOfBirth ? new Date(patientInfo.dateOfBirth).toLocaleDateString() : 'Not provided'}
 - Gender: ${patientInfo.gender || 'Not provided'}
-
+${hasOcrData ? `
 OCR SYSTEM EXTRACTED (often INCORRECT - compare with what you see):
 - Patient Name: ${ocrData.patient_name || 'Not detected'}
 - Doctor Name: ${ocrData.doctor_name || 'Not detected'}
@@ -404,9 +418,12 @@ OCR SYSTEM EXTRACTED (often INCORRECT - compare with what you see):
 - Prescription Date: ${ocrData.prescription_date ? new Date(ocrData.prescription_date).toLocaleDateString() : 'Not detected'}
 - Medications: ${medicationsList || 'None extracted'}
 
+Compare your extraction with the OCR data above and note any discrepancies in ocrCorrections.` : `
+NOTE: OCR preprocessing was unavailable for this document. Rely ENTIRELY on your visual analysis to extract all prescription data. Set ocrCorrectionsMade to false and ocrCorrections to an empty array.`}
+
 Provide your response as JSON with:
-- "extractedData": Complete data YOU extracted from the image (patient, prescriber, medications, dates)
-- "ocrCorrections": List any fields where OCR was wrong (field name, OCR value, your corrected value, reason)
+- "extractedData": Complete data YOU extracted from the document (patient, prescriber, medications, dates)
+- "ocrCorrections": List any fields where OCR was wrong (or empty array if no OCR data)
 - "ocrCorrectionsMade": true if ANY OCR data was incorrect
 - Compare patient name on prescription vs account holder name
 - Flag any fraud concerns, controlled substances, or document authenticity issues`;

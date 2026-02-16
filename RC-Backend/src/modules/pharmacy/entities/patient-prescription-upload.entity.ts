@@ -12,6 +12,7 @@ export enum UploadSource {
   FILE_UPLOAD = 'FILE_UPLOAD',
   GALLERY = 'GALLERY',
   SCANNER = 'SCANNER',
+  EKA_CHAT = 'EKA_CHAT',
 }
 
 /**
