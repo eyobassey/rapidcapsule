@@ -938,6 +938,15 @@ const routes = [
       return true;
     },
   },
+  {
+    path: "/trial/eka",
+    name: "Trial Eka Chat",
+    component: () => import("../views/Trial/TrialEkaChat.vue"),
+    beforeEnter: (to, from) => {
+      if (!sessionStorage.getItem("trial_token")) return { name: "Home" };
+      return true;
+    },
+  },
 ];
 
 const router = createRouter({

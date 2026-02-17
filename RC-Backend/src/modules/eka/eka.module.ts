@@ -47,5 +47,6 @@ import { TextractService } from '../pharmacy/services/textract.service';
   ],
   controllers: [EkaController],
   providers: [EkaService, ClaudeHealthSummaryService, ClaudeAIService, TextractService],
+  exports: [EkaService],
 })
 export class EkaModule {}

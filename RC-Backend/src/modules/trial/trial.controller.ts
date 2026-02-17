@@ -6,6 +6,7 @@ import {
   Param,
   Query,
   Request,
+  Res,
   UseGuards,
   UseInterceptors,
   UploadedFile,
@@ -201,6 +202,42 @@ export class TrialController {
     const token = req.headers['x-trial-token'];
     const result = await this.trialService.trialPrescriptionStatus(token, uploadId);
     return sendSuccessResponse('Verification status retrieved', result);
+  }
+
+  // ---- Eka AI Chat Endpoints ----
+
+  @ApiSecurity('Trial-token')
+  @UseGuards(TrialGuard)
+  @Post('eka/chat')
+  @HttpCode(HttpStatus.OK)
+  async ekaChat(@Body() body: { message: string; language?: string }, @Request() req: any, @Res() res: any) {
+    const token = req.headers['x-trial-token'];
+
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders();
+
+    try {
+      for await (const chunk of this.trialService.trialEkaChat(token, body.message, body.language)) {
+        res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+      }
+    } catch (error) {
+      res.write(`data: ${JSON.stringify({ type: 'error', content: 'An unexpected error occurred.' })}\n\n`);
+    }
+
+    res.write('data: [DONE]\n\n');
+    res.end();
+  }
+
+  @ApiSecurity('Trial-token')
+  @UseGuards(TrialGuard)
+  @Get('eka/status')
+  async getEkaStatus(@Request() req: any) {
+    const token = req.headers['x-trial-token'];
+    const result = await this.trialService.getEkaStatus(token);
+    return sendSuccessResponse('Eka status retrieved', result);
   }
 
   // ---- Trial Analytics (public for admin use) ----

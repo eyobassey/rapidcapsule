@@ -10,7 +10,10 @@ export enum TrialStatus {
   EXHAUSTED = 'exhausted',
 }
 
-@Schema({ timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' }, collection: 'trial_sessions' })
+@Schema({
+  timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' },
+  collection: 'trial_sessions',
+})
 export class TrialSession {
   @Prop({ required: true, lowercase: true, trim: true, index: true })
   email: string;
@@ -36,7 +39,6 @@ export class TrialSession {
   @Prop({ required: true, enum: TrialStatus, default: TrialStatus.PENDING })
   status: TrialStatus;
 
-  // Usage tracking
   @Prop({ default: false })
   symptom_checker_used: boolean;
 
@@ -61,7 +63,6 @@ export class TrialSession {
   @Prop({ type: Object, default: null })
   eka_chat_result: Record<string, any>;
 
-  // Eka chat messages stored inline (no separate conversation collection)
   @Prop({
     type: [
       {
@@ -83,15 +84,12 @@ export class TrialSession {
   @Prop({ default: 0 })
   eka_message_count: number;
 
-  // Reference to the prescription upload record (for status polling)
   @Prop({ default: null })
   prescription_upload_id: string;
 
-  // Infermedica interview token for multi-step symptom checker
   @Prop({ default: null })
   interview_token: string;
 
-  // Abuse prevention
   @Prop({ default: 0 })
   verification_attempts: number;
 
@@ -106,6 +104,3 @@ export class TrialSession {
 }
 
 export const TrialSessionSchema = SchemaFactory.createForClass(TrialSession);
-
-// TTL index: auto-delete expired sessions after 30 days
-TrialSessionSchema.index({ expires_at: 1 }, { expireAfterSeconds: 30 * 24 * 60 * 60 });

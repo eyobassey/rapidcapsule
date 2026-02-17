@@ -108,11 +108,44 @@
 						<v-icon name="hi-arrow-right" scale="0.85" />
 					</button>
 				</div>
+
+				<!-- Eka AI Companion Card -->
+				<div class="trial-card trial-card--eka" :ref="reveal" style="transition-delay: 300ms">
+					<div class="trial-card__icon-box trial-card__icon-box--eka">
+						<v-icon name="hi-chat-alt-2" scale="1.4" />
+					</div>
+					<h3 class="trial-card__title">Eka AI Companion</h3>
+					<p class="trial-card__desc">
+						Chat with Eka, your caring AI health companion — search medications, check interactions, and get health checkups.
+					</p>
+					<ul class="trial-card__features">
+						<li>
+							<v-icon name="hi-check" scale="0.7" />
+							<span>Pharmacy catalog search</span>
+						</li>
+						<li>
+							<v-icon name="hi-check" scale="0.7" />
+							<span>Drug interaction checker</span>
+						</li>
+						<li>
+							<v-icon name="hi-check" scale="0.7" />
+							<span>AI health checkup</span>
+						</li>
+						<li>
+							<v-icon name="hi-check" scale="0.7" />
+							<span>15 free messages</span>
+						</li>
+					</ul>
+					<button class="trial-card__cta trial-card__cta--eka" @click="$emit('openModal', 'eka')">
+						Chat with Eka
+						<v-icon name="hi-arrow-right" scale="0.85" />
+					</button>
+				</div>
 			</div>
 
 			<p class="trial__note" :ref="reveal">
 				<v-icon name="hi-shield-check" scale="0.85" />
-				One free use per feature. No credit card required.
+				Free to try — no account or credit card required.
 			</p>
 		</div>
 	</section>
@@ -218,12 +251,12 @@ $bg: #f8fafc;
 // Grid
 .trial__grid {
 	display: grid;
-	grid-template-columns: repeat(3, 1fr);
-	gap: 32px;
-	max-width: 1200px;
+	grid-template-columns: repeat(4, 1fr);
+	gap: 28px;
+	max-width: 1400px;
 	margin: 0 auto;
 
-	@media (max-width: 1024px) {
+	@media (max-width: 1200px) {
 		grid-template-columns: 1fr 1fr;
 		max-width: 800px;
 	}
@@ -271,6 +304,10 @@ $bg: #f8fafc;
 		border-color: #7c3aed;
 	}
 
+	&--eka {
+		border-color: $emerald;
+	}
+
 	@media (max-width: 768px) {
 		padding: 32px 24px;
 	}
@@ -299,6 +336,11 @@ $bg: #f8fafc;
 	&--prescription {
 		background: linear-gradient(135deg, #ede9fe, #ddd6fe);
 		color: #7c3aed;
+	}
+
+	&--eka {
+		background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+		color: #047857;
 	}
 }
 
@@ -389,6 +431,18 @@ $bg: #f8fafc;
 			background: #6d28d9;
 			transform: translateY(-2px);
 			box-shadow: 0 8px 28px rgba(#7c3aed, 0.4);
+		}
+	}
+
+	&--eka {
+		background: $emerald;
+		color: #fff;
+		box-shadow: 0 6px 20px rgba($emerald, 0.3);
+
+		&:hover {
+			background: darken($emerald, 5%);
+			transform: translateY(-2px);
+			box-shadow: 0 8px 28px rgba($emerald, 0.4);
 		}
 	}
 }

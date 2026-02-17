@@ -112,10 +112,37 @@
 							<v-icon name="hi-arrow-right" scale="0.85" />
 						</router-link>
 					</div>
+
+					<!-- Eka AI Chat -->
+					<div
+						class="feature-card"
+						:class="{
+							'feature-card--eka': true,
+							'feature-card--used': !sessionData.eka_available
+						}"
+					>
+						<div class="feature-card__icon feature-card__icon--eka">
+							<v-icon name="hi-chat-alt-2" scale="1.6" />
+						</div>
+						<h3>Eka AI Companion</h3>
+						<p>Chat with Eka — search meds, check interactions, and run health checkups</p>
+						<div v-if="!sessionData.eka_available" class="feature-card__used">
+							<v-icon name="hi-check-circle" scale="0.9" />
+							<span>{{ sessionData.eka_messages_used || 0 }}/{{ sessionData.eka_message_limit || 15 }} messages used</span>
+						</div>
+						<router-link
+							v-else
+							to="/trial/eka"
+							class="feature-card__btn feature-card__btn--eka"
+						>
+							Chat with Eka
+							<v-icon name="hi-arrow-right" scale="0.85" />
+						</router-link>
+					</div>
 				</div>
 
 				<!-- All used CTA -->
-				<div v-if="!sessionData.symptom_checker_available && !sessionData.rxgpt_available && !sessionData.prescription_available" class="trial-landing__complete">
+				<div v-if="!sessionData.symptom_checker_available && !sessionData.rxgpt_available && !sessionData.prescription_available && !sessionData.eka_available" class="trial-landing__complete">
 					<v-icon name="hi-sparkles" scale="1.2" />
 					<h3>You've tried all features!</h3>
 					<p>Sign up to unlock unlimited access to all our AI-powered healthcare tools.</p>
@@ -304,11 +331,11 @@ $bg: #f8fafc;
 // Feature cards
 .trial-landing__cards {
 	display: grid;
-	grid-template-columns: repeat(3, 1fr);
+	grid-template-columns: repeat(4, 1fr);
 	gap: 24px;
 	margin-bottom: 40px;
 
-	@media (max-width: 900px) {
+	@media (max-width: 1100px) {
 		grid-template-columns: 1fr 1fr;
 	}
 
@@ -329,6 +356,7 @@ $bg: #f8fafc;
 	&--symptom { border-color: $primary; }
 	&--rxgpt { border-color: $secondary; }
 	&--prescription { border-color: #7c3aed; }
+	&--eka { border-color: $emerald; }
 
 	&--used {
 		opacity: 0.65;
@@ -378,6 +406,11 @@ $bg: #f8fafc;
 		background: #ede9fe;
 		color: #7c3aed;
 	}
+
+	&--eka {
+		background: #d1fae5;
+		color: #047857;
+	}
 }
 
 .feature-card__btn {
@@ -418,6 +451,16 @@ $bg: #f8fafc;
 
 		&:hover {
 			background: #6d28d9;
+			transform: translateY(-2px);
+		}
+	}
+
+	&--eka {
+		background: $emerald;
+		box-shadow: 0 4px 12px rgba($emerald, 0.3);
+
+		&:hover {
+			background: darken($emerald, 5%);
 			transform: translateY(-2px);
 		}
 	}

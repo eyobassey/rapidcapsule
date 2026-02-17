@@ -25,6 +25,7 @@ import { LanguagesModule } from './modules/languages/languages.module';
 import { SpecialistCategoriesModule } from './modules/specialist-categories/specialist-categories.module';
 import { ConsultationServicesModule } from './modules/consultation-services/consultation-services.module';
 import { RxGPTModule } from './modules/rxgpt/rxgpt.module';
+import { TrialAdminModule } from './modules/trial/trial-admin.module';
 
 dotenv.config();
 @Module({
@@ -52,6 +53,7 @@ dotenv.config();
     SpecialistCategoriesModule,
     ConsultationServicesModule,
     RxGPTModule,
+    TrialAdminModule,
   ],
   controllers: [AppController],
   providers: [AppService],

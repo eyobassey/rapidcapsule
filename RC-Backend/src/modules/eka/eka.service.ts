@@ -5,6 +5,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { EkaConversation, EkaConversationDocument } from './entities/eka-conversation.entity';
 import { EkaChatDto } from './dto/eka.dto';
 import { EKA_TOOLS, buildSystemPrompt } from './eka-tools';
+import { EKA_TRIAL_TOOLS, buildTrialSystemPrompt } from './eka-trial-tools';
 import { Infermedica } from '../../common/external/infermedica/infermedica';
 import { ClaudeHealthSummaryService } from '../health-checkup/services/claude-health-summary.service';
 import { ClaudeSummaryCreditsService } from '../claude-summary-credits/claude-summary-credits.service';
@@ -2687,5 +2688,519 @@ export class EkaService {
     );
     if (!convo) throw new NotFoundException('Conversation not found');
     return { success: true };
+  }
+
+  // ============ TRIAL MODE ============
+  // Credit-free, profile-free variants for unauthenticated trial users.
+
+  async *chatForTrial(options: {
+    message: string;
+    firstName: string;
+    messages: Array<{ role: string; content: string }>;
+    messagesUsed: number;
+    messageLimit: number;
+    language?: string;
+    systemUserId: string;
+  }): AsyncGenerator<any> {
+    if (!this.client) {
+      yield { type: 'error', content: 'Eka is currently unavailable. Please try again later.' };
+      return;
+    }
+
+    const { message, firstName, messages, messagesUsed, messageLimit, language, systemUserId } = options;
+
+    // Build Claude messages from recent history
+    const recentMessages = messages.slice(-MAX_CONTEXT_MESSAGES);
+    const claudeMessages: Anthropic.MessageParam[] = recentMessages.map((m) => ({
+      role: m.role as 'user' | 'assistant',
+      content: m.content,
+    }));
+    claudeMessages.push({ role: 'user', content: message });
+
+    this.logger.log(`[Trial Chat] user=${firstName}, messages_in_context=${claudeMessages.length}, msg="${message}"`);
+
+    // Detect active health checkup for the system user
+    const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+    const lastUserMessage = (message || '').toLowerCase();
+    const isStartingNewCheckup = /\b(start|begin|new|do|want)\b.*\b(checkup|check[\s-]?up|health check)\b/.test(lastUserMessage)
+      || /\bhealth checkup\b/.test(lastUserMessage);
+
+    const uid = new Types.ObjectId(systemUserId);
+    if (isStartingNewCheckup) {
+      await this.healthCheckupModel.updateMany(
+        { user: uid, 'request.checkup_phase': { $in: ['awaiting_symptoms', 'awaiting_confirmation', 'interview'] } },
+        { $set: { 'request.checkup_phase': null } },
+      );
+    }
+
+    const activeCheckup = isStartingNewCheckup ? null : await this.healthCheckupModel.findOne({
+      user: uid,
+      deleted_at: null,
+      'request.checkup_phase': { $in: ['awaiting_symptoms', 'awaiting_confirmation', 'interview'] },
+      created_at: { $gte: twoHoursAgo },
+    });
+    const activeCheckupPhase: string | null = activeCheckup?.request?.checkup_phase || null;
+
+    // Stream with trial tool loop
+    let fullResponse = '';
+    const toolsUsed: string[] = [];
+
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        fullResponse = yield* this.streamWithToolsTrial(
+          claudeMessages, firstName, systemUserId, toolsUsed,
+          messagesUsed, messageLimit, language, activeCheckupPhase,
+        );
+        break;
+      } catch (error: any) {
+        const isOverloaded = error?.message?.includes('overloaded') || error?.message?.includes('Overloaded') || error?.error?.type === 'overloaded_error';
+        if (isOverloaded && attempt < 2) {
+          this.logger.warn(`Trial Eka overloaded (attempt ${attempt + 1}/3), retrying in ${(attempt + 1) * 2}s...`);
+          await new Promise((r) => setTimeout(r, (attempt + 1) * 2000));
+          continue;
+        }
+        this.logger.error('Trial Eka chat error:', error);
+        yield { type: 'error', content: "I'm sorry, I ran into an issue. Please try again in a moment." };
+        return;
+      }
+    }
+
+    yield { type: 'done', assistantText: fullResponse, toolsUsed };
+  }
+
+  private async *streamWithToolsTrial(
+    messages: Anthropic.MessageParam[],
+    firstName: string,
+    systemUserId: string,
+    toolsUsed: string[],
+    messagesUsed: number,
+    messageLimit: number,
+    language?: string,
+    activeCheckupPhase?: string | null,
+  ): AsyncGenerator<any, string> {
+    let currentMessages = [...messages];
+    let fullResponse = '';
+    let textOnlyNextRound = false;
+    let forceToolNextRound: string | null = null;
+
+    for (let round = 0; round < 5; round++) {
+      const apiParams: any = {
+        model: MODEL,
+        max_tokens: MAX_TOKENS,
+        system: buildTrialSystemPrompt(firstName, messagesUsed, messageLimit, language),
+        messages: currentMessages,
+      };
+
+      if (textOnlyNextRound) {
+        this.logger.log('Trial: Checkup tool returned — text-only round');
+      } else {
+        apiParams.tools = EKA_TRIAL_TOOLS;
+
+        if (forceToolNextRound) {
+          apiParams.tool_choice = { type: 'tool', name: forceToolNextRound };
+          this.logger.log(`Trial: Forcing tool_choice: ${forceToolNextRound} (auto-chain)`);
+          forceToolNextRound = null;
+        } else if (activeCheckupPhase && round === 0) {
+          if (activeCheckupPhase === 'awaiting_symptoms') {
+            apiParams.tool_choice = { type: 'tool', name: 'submit_checkup_symptoms' };
+            this.logger.log('Trial: Forcing tool_choice: submit_checkup_symptoms');
+          } else if (activeCheckupPhase === 'awaiting_confirmation' || activeCheckupPhase === 'interview') {
+            apiParams.tool_choice = { type: 'tool', name: 'run_checkup_interview' };
+            this.logger.log(`Trial: Forcing tool_choice: run_checkup_interview (phase: ${activeCheckupPhase})`);
+          }
+        }
+      }
+
+      const stream = this.client!.messages.stream(apiParams);
+
+      let toolCalls: { id: string; name: string; input: any }[] = [];
+      let currentToolId = '';
+      let currentToolName = '';
+      let currentToolInput = '';
+      let stopReason = '';
+
+      for await (const event of stream) {
+        if (event.type === 'content_block_start') {
+          if (event.content_block.type === 'tool_use') {
+            currentToolId = event.content_block.id;
+            currentToolName = event.content_block.name;
+            currentToolInput = '';
+            yield { type: 'tool_start', tool: currentToolName };
+          }
+        } else if (event.type === 'content_block_delta') {
+          if (event.delta.type === 'text_delta') {
+            fullResponse += event.delta.text;
+            yield { type: 'text', content: event.delta.text };
+          } else if (event.delta.type === 'input_json_delta') {
+            currentToolInput += event.delta.partial_json;
+          }
+        } else if (event.type === 'content_block_stop') {
+          if (currentToolId) {
+            let parsedInput = {};
+            try {
+              parsedInput = currentToolInput ? JSON.parse(currentToolInput) : {};
+            } catch {}
+            toolCalls.push({ id: currentToolId, name: currentToolName, input: parsedInput });
+            currentToolId = '';
+            currentToolName = '';
+            currentToolInput = '';
+          }
+        } else if (event.type === 'message_delta') {
+          stopReason = (event as any).delta?.stop_reason || '';
+        }
+      }
+
+      // No tool calls → done
+      if (toolCalls.length === 0 || stopReason !== 'tool_use') {
+        return fullResponse;
+      }
+
+      // Execute tool calls
+      for (const tc of toolCalls) {
+        toolsUsed.push(tc.name);
+      }
+
+      // Slow tool loading animation
+      const SLOW_TOOLS = ['check_drug_interactions', 'generate_checkup_report'];
+      const slowToolName = toolCalls.find((tc) => SLOW_TOOLS.includes(tc.name))?.name;
+
+      let toolResults: { id: string; name: string; result: any }[];
+
+      if (slowToolName) {
+        yield { type: 'clear_artifact' };
+
+        let toolsDone = false;
+        const toolPromise = Promise.all(
+          toolCalls.map(async (tc) => {
+            const result = await this.executeToolForTrial(tc.name, tc.input, systemUserId);
+            return { id: tc.id, name: tc.name, result };
+          }),
+        );
+        toolPromise.then(() => { toolsDone = true; }).catch(() => { toolsDone = true; });
+
+        const loadingMessages = this.getLoadingMessages(slowToolName);
+        for (const msg of loadingMessages) {
+          if (toolsDone) break;
+          for (const char of msg) {
+            if (toolsDone) break;
+            yield { type: 'text', content: char };
+            await new Promise((r) => setTimeout(r, 30));
+          }
+          if (!toolsDone) {
+            yield { type: 'text', content: '\n\n' };
+            await new Promise((r) => setTimeout(r, 800));
+          }
+        }
+
+        if (!toolsDone) {
+          const waitMsg = 'Just a moment more...';
+          for (const char of waitMsg) {
+            if (toolsDone) break;
+            yield { type: 'text', content: char };
+            await new Promise((r) => setTimeout(r, 35));
+          }
+        }
+
+        toolResults = await toolPromise;
+        yield { type: 'clear_loading' };
+      } else {
+        toolResults = await Promise.all(
+          toolCalls.map(async (tc) => {
+            const result = await this.executeToolForTrial(tc.name, tc.input, systemUserId);
+            return { id: tc.id, name: tc.name, result };
+          }),
+        );
+      }
+
+      // Emit tool_done + artifact + checkup question events
+      for (const tr of toolResults) {
+        yield { type: 'tool_done', tool: tr.name };
+        if (tr.result?.__artifact) {
+          yield { type: 'artifact', artifact_type: tr.result.__artifact.type, data: tr.result.__artifact.data };
+        }
+        if (tr.name === 'run_checkup_interview' && tr.result?.status === 'in_progress' && tr.result?.question) {
+          yield { type: 'checkup_question', question: tr.result.question };
+        }
+        if (tr.name === 'submit_checkup_symptoms' && tr.result?.suggestions?.length > 0) {
+          yield {
+            type: 'checkup_question',
+            question: {
+              text: 'Do any of these also apply to you?',
+              type: 'group_multiple',
+              items: tr.result.suggestions,
+            },
+          };
+        }
+      }
+
+      // Contextual suggestions (skip during active checkup)
+      const isCheckupInProgress = toolResults.some(
+        (tr) =>
+          tr.name === 'start_health_checkup' ||
+          tr.name === 'submit_checkup_symptoms' ||
+          (tr.name === 'run_checkup_interview' && tr.result?.status === 'in_progress'),
+      );
+      if (!isCheckupInProgress) {
+        const allSuggestions: Array<{ label: string; message: string }> = [];
+        for (const tr of toolResults) {
+          const toolInput = toolCalls.find((tc) => tc.id === tr.id)?.input;
+          const sug = this.buildContextualSuggestions(tr.name, toolInput, tr.result);
+          allSuggestions.push(...sug);
+        }
+        if (allSuggestions.length > 0) {
+          const unique = allSuggestions
+            .filter((s, i, arr) => arr.findIndex((x) => x.message === s.message) === i)
+            .slice(0, 4);
+          yield { type: 'suggestions', suggestions: unique };
+        }
+      }
+
+      // Control flow for next round
+      for (const tr of toolResults) {
+        if (tr.name === 'submit_checkup_symptoms') {
+          textOnlyNextRound = true;
+        }
+        if (tr.name === 'run_checkup_interview' && tr.result?.status === 'in_progress') {
+          textOnlyNextRound = true;
+        }
+        if (tr.name === 'run_checkup_interview' && tr.result?.status === 'completed') {
+          textOnlyNextRound = false;
+          forceToolNextRound = 'generate_checkup_report';
+          this.logger.log('Trial: Interview completed — will auto-chain generate_checkup_report');
+        }
+        if (tr.name === 'generate_checkup_report' && !tr.result?.error) {
+          textOnlyNextRound = true;
+        }
+      }
+
+      // Build tool result messages for next round
+      const assistantContent: any[] = [];
+      if (fullResponse) {
+        assistantContent.push({ type: 'text', text: fullResponse });
+      }
+      for (const tc of toolCalls) {
+        assistantContent.push({ type: 'tool_use', id: tc.id, name: tc.name, input: tc.input });
+      }
+
+      const toolResultContent: any[] = toolResults.map((tr) => {
+        let resultForClaude = Array.isArray(tr.result)
+          ? [...tr.result]
+          : { ...tr.result };
+        if (!Array.isArray(resultForClaude)) {
+          delete resultForClaude.__artifact;
+        }
+        resultForClaude = this.cleanToolResult(resultForClaude);
+
+        const toolInput = toolCalls.find((tc) => tc.id === tr.id)?.input;
+        const label = this.getToolResultLabel(tr.name, toolInput);
+        const content = `[TOOL RESULT: ${label}]\n${JSON.stringify(resultForClaude)}`;
+
+        return {
+          type: 'tool_result',
+          tool_use_id: tr.id,
+          content,
+        };
+      });
+
+      currentMessages = [
+        ...currentMessages,
+        { role: 'assistant', content: assistantContent },
+        { role: 'user', content: toolResultContent },
+      ];
+
+      toolCalls = [];
+      fullResponse = '';
+    }
+
+    return fullResponse;
+  }
+
+  private async executeToolForTrial(name: string, input: any, systemUserId: string): Promise<any> {
+    const uid = new Types.ObjectId(systemUserId);
+
+    switch (name) {
+      case 'search_pharmacy':
+        return this.toolSearchPharmacy(input.query, input.limit || 10);
+      case 'check_drug_interactions':
+        return this.toolCheckDrugInteractionsTrial(input.drugs);
+      case 'start_health_checkup':
+        return this.toolStartHealthCheckupTrial(uid, input.age, input.gender);
+      case 'submit_checkup_symptoms':
+        return this.toolSubmitCheckupSymptoms(uid, input.session_id, input.symptoms_text);
+      case 'run_checkup_interview':
+        return this.toolRunCheckupInterview(uid, input.session_id, input);
+      case 'generate_checkup_report':
+        return this.toolGenerateCheckupReportTrial(uid, input.session_id);
+      default:
+        return { error: 'This feature requires a full Rapid Capsule account. Sign up at rapidcapsule.com to unlock it!' };
+    }
+  }
+
+  private async toolStartHealthCheckupTrial(userId: Types.ObjectId, age: number, gender: string) {
+    if (!age || age < 12) return { error: 'Health checkups are available for ages 12 and above.' };
+    if (age > 120) return { error: 'Please provide a valid age.' };
+
+    const sex = gender === 'female' ? 'female' : 'male';
+
+    // Clear stale checkup phases
+    await this.healthCheckupModel.updateMany(
+      { user: userId, 'request.checkup_phase': { $in: ['awaiting_symptoms', 'awaiting_confirmation', 'interview'] } },
+      { $set: { 'request.checkup_phase': null } },
+    );
+
+    const interview_token = new Types.ObjectId().toString();
+
+    const checkup = await this.healthCheckupModel.create({
+      user: userId,
+      health_check_for: 'Self',
+      checkup_owner_id: userId,
+      interview_token,
+      request: {
+        sex,
+        age: { value: age },
+        evidence: [],
+        checkup_phase: 'awaiting_symptoms',
+      },
+    });
+
+    let riskFactors: any[] = [];
+    try {
+      const infermedica = new Infermedica(interview_token);
+      const response = await infermedica.getRiskFactors(age);
+      riskFactors = response?.data || [];
+    } catch (e) {
+      this.logger.warn('Trial: Failed to get risk factors:', e.message);
+    }
+
+    return {
+      session_id: checkup._id.toString(),
+      interview_token,
+      patient: {
+        age,
+        gender: sex,
+        medical_history: [],
+        health_risk_factors: [],
+      },
+      risk_factors: riskFactors.map((rf: any) => ({
+        id: rf.id,
+        name: rf.name,
+        common_name: rf.common_name || rf.name,
+      })),
+      __artifact: {
+        type: 'health_checkup_start',
+        data: {
+          session_id: checkup._id.toString(),
+          patient_gender: sex,
+          patient_age: age,
+        },
+      },
+    };
+  }
+
+  private async toolGenerateCheckupReportTrial(userId: Types.ObjectId, sessionId: string) {
+    const checkup = await this.resolveCheckup(userId, sessionId, false);
+    if (!checkup) return { error: 'Health checkup session not found.' };
+    if (!checkup.response?.data) return { error: 'Health checkup is not yet complete. Please complete the interview first.' };
+
+    // No credit check — free in trial mode
+
+    const diagnosisData = {
+      conditions: checkup.response.data.conditions || [],
+      evidence: checkup.request?.evidence || [],
+      triage_level: checkup.response.data.triage_level,
+      has_emergency_evidence: checkup.response.data.has_emergency_evidence,
+    };
+
+    const patientInfo = {
+      age: checkup.request?.age?.value || 0,
+      gender: checkup.request?.sex || 'male',
+    };
+
+    const summary = await this.claudeHealthSummaryService.generateHealthSummary(
+      diagnosisData,
+      patientInfo,
+    );
+
+    // Store summary on checkup + clear phase
+    checkup.claude_summary = {
+      generated_at: summary.generated_at,
+      model: summary.model,
+      content: summary.content,
+      error: summary.error,
+    };
+    if (checkup.request) {
+      checkup.request = { ...checkup.request, checkup_phase: null };
+      checkup.markModified('request');
+    }
+    checkup.markModified('claude_summary');
+    await checkup.save();
+
+    return {
+      report: summary.content,
+      triage_level: checkup.response.data.triage_level,
+      conditions: (checkup.response.data.conditions || []).slice(0, 5).map((c: any) => ({
+        name: c.common_name || c.name,
+        probability: Math.round(c.probability * 100),
+      })),
+      credits_used: 0,
+      __artifact: {
+        type: 'health_checkup_report',
+        data: {
+          checkup_id: checkup._id.toString(),
+          triage_level: checkup.response.data.triage_level,
+          conditions: (checkup.response.data.conditions || []).slice(0, 8).map((c: any) => ({
+            name: c.common_name || c.name,
+            probability: Math.round(c.probability * 100),
+          })),
+          report: summary.content,
+          patient: patientInfo,
+          date: new Date().toISOString(),
+        },
+      },
+    };
+  }
+
+  private async toolCheckDrugInteractionsTrial(drugs: any[]) {
+    if (!drugs || drugs.length < 2) {
+      return { error: 'Please provide at least 2 medications to check for interactions.' };
+    }
+    if (drugs.length > 5) {
+      return { error: 'You can check up to 5 medications at a time.' };
+    }
+
+    const validDrugs = drugs.filter((d: any) => d?.name?.trim());
+    if (validDrugs.length < 2) {
+      return { error: 'Please provide at least 2 valid drug names.' };
+    }
+
+    // No credit check — free in trial mode
+
+    try {
+      const result = await this.claudeAIService.checkDrugInteractionsDetailed(
+        validDrugs.map((d: any) => ({
+          name: d.name.trim(),
+          dose: d.dose?.trim() || undefined,
+          route: d.route?.trim() || undefined,
+        })),
+      );
+
+      const drugNames = validDrugs.map((d: any) => d.name.trim());
+
+      return {
+        ...result,
+        drugs_checked: drugNames,
+        credits_used: 0,
+        __artifact: {
+          type: 'drug_interaction_report',
+          data: {
+            ...result,
+            drugs_checked: drugNames,
+          },
+        },
+      };
+    } catch (e) {
+      this.logger.error('Trial drug interaction check failed:', e.message);
+      return { error: 'Failed to check drug interactions. Please try again.' };
+    }
   }
 }

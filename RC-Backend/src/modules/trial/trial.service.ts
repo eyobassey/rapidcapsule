@@ -38,6 +38,8 @@ import { ClaudeHealthSummaryService } from '../health-checkup/services/claude-he
 import { GeneralHelpers } from '../../common/helpers/general.helpers';
 import { trialEmail } from '../../core/emails/mails/trialEmail';
 import { CheckupOwner } from '../health-checkup/entities/health-checkup.entity';
+import { EkaService } from '../eka/eka.service';
+import { TrialSettings, TrialSettingsDocument } from './trial-settings.entity';
 
 const TRIAL_EXPIRY_HOURS = 48;
 const MAX_IP_REQUESTS_PER_DAY = 3;
@@ -79,12 +81,15 @@ export class TrialService {
     private trialSessionModel: Model<TrialSessionDocument>,
     @InjectModel(PatientPrescriptionUpload.name)
     private uploadModel: Model<PatientPrescriptionUploadDocument>,
+    @InjectModel(TrialSettings.name)
+    private trialSettingsModel: Model<TrialSettingsDocument>,
     private readonly healthCheckupService: HealthCheckupService,
     private readonly rxgptService: RxGPTService,
     private readonly prescriptionVerificationService: PrescriptionVerificationService,
     private readonly prescriptionNumberHelper: PrescriptionNumberHelper,
     private readonly claudeHealthSummaryService: ClaudeHealthSummaryService,
     private readonly generalHelpers: GeneralHelpers,
+    private readonly ekaService: EkaService,
   ) {
     this.s3 = new AWS.S3({
       accessKeyId: process.env.AWS_ACCESS_KEY,
@@ -222,6 +227,9 @@ export class TrialService {
     symptom_checker_available?: boolean;
     rxgpt_available?: boolean;
     prescription_available?: boolean;
+    eka_available?: boolean;
+    eka_messages_used?: number;
+    eka_message_limit?: number;
   }> {
     const tokenHash = this.hashToken(token);
 
@@ -258,12 +266,17 @@ export class TrialService {
       },
     );
 
+    const settings = await this.getTrialSettings();
+
     return {
       valid: true,
       first_name: session.first_name,
       symptom_checker_available: !session.symptom_checker_used,
       rxgpt_available: !(session as any).rxgpt_used,
       prescription_available: !(session as any).prescription_used,
+      eka_available: !(session as any).eka_chat_used,
+      eka_messages_used: (session as any).eka_message_count || 0,
+      eka_message_limit: settings.eka_message_limit,
     };
   }
 
@@ -302,6 +315,7 @@ export class TrialService {
 
   async getSessionStatus(token: string) {
     const session = await this.validateTrialSession(token);
+    const settings = await this.getTrialSettings();
 
     return {
       first_name: session.first_name,
@@ -309,7 +323,20 @@ export class TrialService {
       symptom_checker_available: !session.symptom_checker_used,
       rxgpt_available: !(session as any).rxgpt_used,
       prescription_available: !(session as any).prescription_used,
+      eka_available: !(session as any).eka_chat_used,
+      eka_messages_used: (session as any).eka_message_count || 0,
+      eka_message_limit: settings.eka_message_limit,
       expires_at: session.expires_at,
+    };
+  }
+
+  // ============ TRIAL SETTINGS ============
+
+  private async getTrialSettings(): Promise<{ eka_message_limit: number; eka_enabled: boolean }> {
+    const settings = await this.trialSettingsModel.findOne().lean();
+    return {
+      eka_message_limit: settings?.eka_message_limit ?? 15,
+      eka_enabled: settings?.eka_enabled ?? true,
     };
   }
 
@@ -390,7 +417,7 @@ export class TrialService {
       );
 
       // Check if all features are now used
-      if ((session as any).rxgpt_used && (session as any).prescription_used) {
+      if ((session as any).rxgpt_used && (session as any).prescription_used && (session as any).eka_chat_used) {
         await this.trialSessionModel.updateOne(
           { _id: session._id },
           { status: TrialStatus.EXHAUSTED },
@@ -515,7 +542,7 @@ export class TrialService {
     );
 
     // Check if all features are now used
-    if (session.symptom_checker_used && (session as any).prescription_used) {
+    if (session.symptom_checker_used && (session as any).prescription_used && (session as any).eka_chat_used) {
       await this.trialSessionModel.updateOne(
         { _id: session._id },
         { status: TrialStatus.EXHAUSTED },
@@ -720,8 +747,8 @@ export class TrialService {
         },
       );
 
-      // Check if all three features are now used
-      if ((session as any).symptom_checker_used && (session as any).rxgpt_used && (session as any).prescription_used) {
+      // Check if all four features are now used
+      if ((session as any).symptom_checker_used && (session as any).rxgpt_used && (session as any).prescription_used && (session as any).eka_chat_used) {
         await this.trialSessionModel.updateOne(
           { _id: session._id },
           { status: TrialStatus.EXHAUSTED },
@@ -779,6 +806,165 @@ export class TrialService {
     return result;
   }
 
+  // ============ EKA AI CHAT ============
+
+  async *trialEkaChat(token: string, message: string, language?: string): AsyncGenerator<any> {
+    const session = await this.validateTrialSession(token);
+    const settings = await this.getTrialSettings();
+
+    if (!settings.eka_enabled) {
+      yield { type: 'error', content: 'Eka AI Chat is temporarily unavailable. Please try again later.' };
+      return;
+    }
+
+    if ((session as any).eka_chat_used) {
+      yield { type: 'exhausted', content: 'You have used all your trial messages. Sign up for unlimited access!' };
+      return;
+    }
+
+    const messageCount = (session as any).eka_message_count || 0;
+    const messageLimit = settings.eka_message_limit;
+
+    if (messageCount >= messageLimit) {
+      // Mark as used + check exhaustion
+      await this.markEkaChatUsed(session);
+      yield { type: 'exhausted', content: 'You have used all your trial messages. Sign up for unlimited access!' };
+      return;
+    }
+
+    // Append user message + increment count
+    const newCount = messageCount + 1;
+    await this.trialSessionModel.updateOne(
+      { _id: session._id },
+      {
+        $push: {
+          eka_messages: {
+            role: 'user',
+            content: message,
+            tools_used: [],
+            created_at: new Date(),
+          },
+        },
+        $set: {
+          eka_message_count: newCount,
+          last_activity_at: new Date(),
+        },
+      },
+    );
+
+    // Emit message count update
+    yield {
+      type: 'message_count',
+      messages_used: newCount,
+      message_limit: messageLimit,
+      messages_remaining: messageLimit - newCount,
+    };
+
+    // Build existing messages for context
+    const existingMessages = ((session as any).eka_messages || []).map((m: any) => ({
+      role: m.role,
+      content: m.content,
+    }));
+
+    // Delegate to EkaService
+    let assistantText = '';
+    let toolsUsed: string[] = [];
+
+    for await (const event of this.ekaService.chatForTrial({
+      message,
+      firstName: session.first_name,
+      messages: existingMessages,
+      messagesUsed: newCount,
+      messageLimit,
+      language,
+      systemUserId: this.TRIAL_SYSTEM_USER_ID,
+    })) {
+      if (event.type === 'done') {
+        assistantText = event.assistantText || '';
+        toolsUsed = event.toolsUsed || [];
+      } else {
+        yield event;
+      }
+    }
+
+    // Save assistant response
+    if (assistantText) {
+      await this.trialSessionModel.updateOne(
+        { _id: session._id },
+        {
+          $push: {
+            eka_messages: {
+              role: 'assistant',
+              content: assistantText,
+              tools_used: toolsUsed.length > 0 ? toolsUsed : [],
+              created_at: new Date(),
+            },
+          },
+        },
+      );
+    }
+
+    // Check if message limit reached after this message
+    if (newCount >= messageLimit) {
+      await this.markEkaChatUsed(session);
+      yield {
+        type: 'exhausted',
+        content: 'You have used all your trial messages. Sign up at rapidcapsule.com for unlimited access!',
+      };
+    }
+
+    yield { type: 'done' };
+  }
+
+  async getEkaStatus(token: string) {
+    const session = await this.validateTrialSession(token);
+    const settings = await this.getTrialSettings();
+
+    const messageCount = (session as any).eka_message_count || 0;
+    const messageLimit = settings.eka_message_limit;
+
+    return {
+      first_name: session.first_name,
+      messages_used: messageCount,
+      message_limit: messageLimit,
+      messages_remaining: Math.max(0, messageLimit - messageCount),
+      eka_enabled: settings.eka_enabled,
+      eka_exhausted: (session as any).eka_chat_used || false,
+      messages: ((session as any).eka_messages || []).map((m: any) => ({
+        role: m.role,
+        content: m.content,
+        tools_used: m.tools_used || [],
+        created_at: m.created_at,
+      })),
+    };
+  }
+
+  private async markEkaChatUsed(session: TrialSessionDocument) {
+    await this.trialSessionModel.updateOne(
+      { _id: session._id },
+      {
+        eka_chat_used: true,
+        eka_chat_result: {
+          messages_sent: (session as any).eka_message_count || 0,
+          completed_at: new Date(),
+        },
+        last_activity_at: new Date(),
+      },
+    );
+
+    // Check if all four features are now used
+    if (
+      session.symptom_checker_used &&
+      (session as any).rxgpt_used &&
+      (session as any).prescription_used
+    ) {
+      await this.trialSessionModel.updateOne(
+        { _id: session._id },
+        { status: TrialStatus.EXHAUSTED },
+      );
+    }
+  }
+
   // ============ TRIAL ANALYTICS ============
 
   async getTrialAnalytics() {
@@ -808,6 +994,12 @@ export class TrialService {
             },
             prescription_used: {
               $sum: { $cond: ['$prescription_used', 1, 0] },
+            },
+            eka_chat_used: {
+              $sum: { $cond: ['$eka_chat_used', 1, 0] },
+            },
+            eka_total_messages: {
+              $sum: { $ifNull: ['$eka_message_count', 0] },
             },
           },
         },
@@ -890,6 +1082,8 @@ export class TrialService {
       symptom_checker_used: 0,
       rxgpt_used: 0,
       prescription_used: 0,
+      eka_chat_used: 0,
+      eka_total_messages: 0,
     };
 
     const usage = featureUsage[0] || {
@@ -915,6 +1109,14 @@ export class TrialService {
         symptom_checker: stats.symptom_checker_used,
         rxgpt: stats.rxgpt_used,
         prescription: stats.prescription_used,
+        eka_chat: stats.eka_chat_used,
+      },
+      eka_engagement: {
+        total_eka_users: stats.eka_chat_used,
+        total_messages_sent: stats.eka_total_messages,
+        avg_messages_per_user: stats.eka_chat_used > 0
+          ? Math.round(stats.eka_total_messages / stats.eka_chat_used)
+          : 0,
       },
       engagement: usage,
       daily_trend: dailyTrend,
