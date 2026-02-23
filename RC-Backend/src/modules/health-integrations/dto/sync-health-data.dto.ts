@@ -1,9 +1,11 @@
-import { IsOptional, IsArray, IsDate, IsObject } from 'class-validator';
+import { IsOptional, IsArray, IsDate, IsString, ArrayMaxSize } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class SyncHealthDataDto {
   @IsOptional()
   @IsArray()
+  @IsString({ each: true })
+  @ArrayMaxSize(20)
   dataTypes?: string[];
 
   @IsOptional()
@@ -18,6 +20,7 @@ export class SyncHealthDataDto {
 
   @IsOptional()
   @IsArray()
+  @ArrayMaxSize(500)
   healthData?: Array<{
     type: string;
     value: any;

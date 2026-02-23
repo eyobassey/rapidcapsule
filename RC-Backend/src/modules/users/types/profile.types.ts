@@ -11,6 +11,7 @@ export enum MaritalStatus {
   DIVORCED = 'Divorced',
   WIDOW = 'Widow',
   WIDOWER = 'Widower',
+  WIDOWED = 'Widowed',
 }
 
 export enum BloodType {

@@ -4,7 +4,7 @@ export const EKA_TOOLS: Anthropic.Tool[] = [
   {
     name: 'get_vitals',
     description:
-      "Get the patient's recent vital signs including blood pressure, blood sugar, pulse rate, body temperature, and body weight.",
+      "Get the patient's recent vital signs. Returns all recorded vital types (e.g. blood pressure, blood sugar, pulse rate, temperature, weight, SpO2, steps, sleep, calories burned, distance, respiratory rate, stress level, and any other vitals the patient has logged).",
     input_schema: {
       type: 'object' as const,
       properties: {
@@ -257,8 +257,41 @@ BOUNDARIES:
 FORMATTING:
 - Use short paragraphs. Break up long responses.
 - Use bullet points for lists.
-- When showing vital signs or test results, present them clearly with dates.
 - For pharmacy results, show the drug name, strength, prices in all currencies, and availability.
+
+VITAL SIGNS — PRESENTATION RULES:
+The get_vitals tool returns ALL vital types the patient has recorded. Each vital comes pre-analyzed in one of three summary formats:
+
+A. "cumulative_daily" (steps, calories_burned, distance) — aggregated by day:
+   - today_total, yesterday_total, daily_average_7d, daily_breakdown[]
+   - Present as: "Today so far: X (last synced Y ago). Yesterday: Z. Your 7-day average is W."
+   - Compare today vs yesterday and vs average — "You're ahead of/behind your average today."
+
+B. "duration_daily" (sleep) — per-night summaries:
+   - most_recent_night, average_last_7_nights, recent_nights[]
+   - Present as: "Last night you slept X hours. Your average over the past week is Y hours."
+   - Note consistency or irregularity across nights.
+
+C. "snapshot" (blood_pressure, pulse_rate, body_temp, body_weight, spo2, etc.) — point-in-time readings:
+   - latest_value + latest_time_ago, recent_average, recent_min, recent_max, recent_readings[]
+   - Present as: "Your latest reading was X (taken Y ago). Recent average: Z (range: min–max)."
+   - Highlight if latest is notably different from the average.
+
+GENERAL RULES:
+1. Present EVERY vital type returned — do not skip or omit any. Group them logically (Core Health, Activity & Fitness, Sleep, etc.).
+2. ALWAYS use the "time_ago" fields — say "2 hrs ago" or "3 days ago", not just a raw date.
+3. For cumulative vitals: focus on daily totals and comparisons, NOT individual raw readings.
+4. INTERPRET the data — translate numbers into plain language:
+   - BP 120/80 → "Normal range" | BP 140/90 → "Elevated — worth monitoring"
+   - Steps 8,500 → "Great activity!" | Steps 500 → "Light activity day"
+   - Sleep 7.5 hrs → "Solid rest" | Sleep 4 hrs → "That's quite low"
+   - SpO2 98% → "Healthy oxygen levels"
+   You are NOT diagnosing — you're helping them understand their numbers.
+5. After all vitals, give a brief overall takeaway — what's looking good, what needs attention, and actionable suggestions.
+
+SPECIFIC REQUESTS (e.g. "show my steps", "how's my sleep?"):
+- Focus on the requested vital in detail — show the daily breakdown or recent readings with dates.
+- Still briefly mention related vitals (e.g. steps → also mention calories/distance if available).
 
 TOOL RESULTS — CRITICAL:
 - When a tool returns data, report EXACTLY what the tool returned. Never substitute, rename, or guess drug names, dosage forms, prices, or any other field.

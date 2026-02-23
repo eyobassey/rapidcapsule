@@ -527,7 +527,7 @@ export class PrescriptionVerificationService {
             patient_name: ocrResult.data.patientName,
             clinic_name: ocrResult.data.clinicName,
             clinic_address: ocrResult.data.clinicAddress,
-            prescription_date: ocrResult.data.prescriptionDate,
+            prescription_date: this.parsePrescriptionDate(ocrResult.data.prescriptionDate as any) || undefined,
             medications: ocrResult.data.medications,
             doctor_license: ocrResult.data.doctorLicense,
             validity_period: ocrResult.data.validityPeriod,
@@ -2209,9 +2209,14 @@ export class PrescriptionVerificationService {
           updateData['ocr_data.clinic_name'] = extractedData.prescriber.clinic_name;
         }
 
-        // Update prescription date if corrected
+        // Update prescription date if corrected (parse string to Date)
         if (extractedData.prescription_date) {
-          updateData['ocr_data.prescription_date'] = extractedData.prescription_date;
+          const parsedDate = this.parsePrescriptionDate(extractedData.prescription_date);
+          if (parsedDate) {
+            updateData['ocr_data.prescription_date'] = parsedDate;
+          } else {
+            this.logger.warn(`Could not parse prescription date: ${extractedData.prescription_date}`);
+          }
         }
 
         // Update medications if extracted
@@ -2408,6 +2413,39 @@ export class PrescriptionVerificationService {
         return match[1]?.trim() || match[0]?.trim() || null;
       }
     }
+
+    return null;
+  }
+
+  /**
+   * Parse a prescription date string in various formats to a Date object.
+   * Handles DD/MM/YYYY, DD-MM-YYYY, YYYY-MM-DD, and natural language dates.
+   */
+  private parsePrescriptionDate(dateStr: string | null | undefined): Date | null {
+    if (!dateStr || typeof dateStr !== 'string') return null;
+
+    const trimmed = dateStr.trim();
+    if (!trimmed) return null;
+
+    // Try DD/MM/YYYY or DD-MM-YYYY
+    const ddmmyyyy = trimmed.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);
+    if (ddmmyyyy) {
+      const [, day, month, year] = ddmmyyyy;
+      const date = new Date(Number(year), Number(month) - 1, Number(day));
+      if (!isNaN(date.getTime())) return date;
+    }
+
+    // Try YYYY-MM-DD or YYYY/MM/DD
+    const yyyymmdd = trimmed.match(/^(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})$/);
+    if (yyyymmdd) {
+      const [, year, month, day] = yyyymmdd;
+      const date = new Date(Number(year), Number(month) - 1, Number(day));
+      if (!isNaN(date.getTime())) return date;
+    }
+
+    // Fallback: try native Date parsing (handles "February 21, 2026", etc.)
+    const fallback = new Date(trimmed);
+    if (!isNaN(fallback.getTime())) return fallback;
 
     return null;
   }

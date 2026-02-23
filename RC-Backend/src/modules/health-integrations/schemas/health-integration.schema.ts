@@ -7,6 +7,15 @@ export enum IntegrationProvider {
   APPLE_HEALTH = 'apple_health',
   SAMSUNG_HEALTH = 'samsung_health',
   GOOGLE_FIT = 'google_fit',
+  GARMIN = 'garmin',
+  POLAR = 'polar',
+  SUUNTO = 'suunto',
+  WHOOP = 'whoop',
+}
+
+export enum ProviderType {
+  DIRECT = 'direct',
+  OPEN_WEARABLES = 'open_wearables',
 }
 
 export enum IntegrationStatus {
@@ -23,6 +32,9 @@ export class HealthIntegration {
 
   @Prop({ type: String, enum: IntegrationProvider, required: true })
   provider: IntegrationProvider;
+
+  @Prop({ type: String, enum: ProviderType, default: ProviderType.DIRECT })
+  providerType: ProviderType;
 
   @Prop({ type: String, enum: IntegrationStatus, default: IntegrationStatus.PENDING })
   status: IntegrationStatus;

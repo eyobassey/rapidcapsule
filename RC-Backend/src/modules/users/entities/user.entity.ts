@@ -88,6 +88,7 @@ export class User {
             MaritalStatus.MARRIED,
             MaritalStatus.WIDOW,
             MaritalStatus.WIDOWER,
+            MaritalStatus.WIDOWED,
           ],
         },
       },

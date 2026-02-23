@@ -199,7 +199,7 @@ export class AuthService {
 
     const salt = await bcrypt.genSalt(10);
     user.profile.password = await bcrypt.hash(password, salt);
-    await user.save();
+    await user.save({ validateModifiedOnly: true });
 
     await this.tokensService.removeToken(passwordResetToken._id);
 
@@ -231,7 +231,7 @@ export class AuthService {
     // Hash and save new password
     const salt = await bcrypt.genSalt(10);
     user.profile.password = await bcrypt.hash(newPassword, salt);
-    await user.save();
+    await user.save({ validateModifiedOnly: true });
 
     // Send confirmation email
     this.generalHelpers.generateEmailAndSend({

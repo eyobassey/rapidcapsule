@@ -716,85 +716,156 @@ export class EkaService {
   // ============ TOOL HANDLERS ============
   // Each returns lean JSON with only essential fields
 
+  private static readonly VITAL_SKIP_FIELDS = new Set(['_id', 'userId', 'created_at', 'updated_at', 'createdAt', 'updatedAt', '__v']);
+  private static readonly CUMULATIVE_VITALS = new Set(['steps', 'calories_burned', 'distance']);
+  private static readonly DURATION_VITALS = new Set(['sleep']);
+
   private async toolGetVitals(userId: Types.ObjectId, limit: number) {
     const vitals = await this.vitalModel
       .find({ userId })
-      .select('body_temp body_weight blood_pressure blood_sugar_level pulse_rate created_at')
       .lean();
 
     if (!vitals.length) return { message: 'No vital signs recorded yet.' };
 
-    // Vitals are stored as arrays of readings per type per document
-    // Flatten and return the most recent readings
-    const result: any = {};
+    const now = new Date();
 
+    // Collect all readings per vital type from all vital documents
+    const allReadings: Record<string, any[]> = {};
     for (const v of vitals as any[]) {
-      if (v.blood_pressure?.length) {
-        const readings = v.blood_pressure
-          .filter((r: any) => r.value)
-          .sort((a: any, b: any) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-          .slice(0, limit);
-        result.blood_pressure = readings.map((r: any) => ({
-          value: r.value,
-          unit: r.unit || 'mmHg',
-          date: r.updatedAt,
-        }));
-      }
-
-      if (v.blood_sugar_level?.length) {
-        const readings = v.blood_sugar_level
-          .filter((r: any) => r.value)
-          .sort((a: any, b: any) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-          .slice(0, limit);
-        result.blood_sugar = readings.map((r: any) => ({
-          value: r.value,
-          unit: r.unit || 'mg/dL',
-          date: r.updatedAt,
-        }));
-      }
-
-      if (v.pulse_rate?.length) {
-        const readings = v.pulse_rate
-          .filter((r: any) => r.value)
-          .sort((a: any, b: any) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-          .slice(0, limit);
-        result.pulse_rate = readings.map((r: any) => ({
-          value: r.value,
-          unit: r.unit || 'bpm',
-          date: r.updatedAt,
-        }));
-      }
-
-      if (v.body_temp?.length) {
-        const readings = v.body_temp
-          .filter((r: any) => r.value)
-          .sort((a: any, b: any) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-          .slice(0, limit);
-        result.temperature = readings.map((r: any) => ({
-          value: r.value,
-          unit: r.unit || '°C',
-          date: r.updatedAt,
-        }));
-      }
-
-      if (v.body_weight?.length) {
-        const readings = v.body_weight
-          .filter((r: any) => r.value)
-          .sort((a: any, b: any) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-          .slice(0, limit);
-        result.weight = readings.map((r: any) => ({
-          value: r.value,
-          unit: r.unit || 'kg',
-          date: r.updatedAt,
-        }));
+      for (const [key, arr] of Object.entries(v)) {
+        if (EkaService.VITAL_SKIP_FIELDS.has(key)) continue;
+        if (!Array.isArray(arr) || !arr.length) continue;
+        const readings = arr.filter((r: any) => r.value);
+        if (!readings.length) continue;
+        allReadings[key] = [...(allReadings[key] || []), ...readings];
       }
     }
 
-    if (Object.keys(result).length === 0) {
+    if (!Object.keys(allReadings).length) {
       return { message: 'Vital sign records exist but no readings have been logged yet.' };
     }
 
+    const result: Record<string, any> = {};
+    for (const [key, readings] of Object.entries(allReadings)) {
+      readings.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+
+      if (EkaService.CUMULATIVE_VITALS.has(key)) {
+        result[key] = this.buildCumulativeSummary(readings, now);
+      } else if (EkaService.DURATION_VITALS.has(key)) {
+        result[key] = this.buildDurationSummary(readings, now);
+      } else {
+        result[key] = this.buildSnapshotSummary(readings, now, limit);
+      }
+    }
+
     return result;
+  }
+
+  private vitalTimeAgo(date: Date, now: Date): string {
+    const diffMs = now.getTime() - date.getTime();
+    const mins = Math.floor(diffMs / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins} min${mins > 1 ? 's' : ''} ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours} hr${hours > 1 ? 's' : ''} ago`;
+    const days = Math.floor(hours / 24);
+    return `${days} day${days > 1 ? 's' : ''} ago`;
+  }
+
+  private dayKey(date: Date): string {
+    return date.toISOString().split('T')[0];
+  }
+
+  /** Steps, calories_burned, distance — sum per day, compare today/yesterday, 7-day avg */
+  private buildCumulativeSummary(readings: any[], now: Date) {
+    const unit = readings[0]?.unit || '';
+    const byDay: Record<string, number> = {};
+    for (const r of readings) {
+      const day = this.dayKey(new Date(r.updatedAt));
+      byDay[day] = (byDay[day] || 0) + parseFloat(r.value);
+    }
+
+    const today = this.dayKey(now);
+    const yesterday = this.dayKey(new Date(now.getTime() - 86400000));
+    const sortedDays = Object.keys(byDay).sort().reverse();
+    const last7 = sortedDays.slice(0, 7);
+
+    const todayTotal = Math.round((byDay[today] || 0) * 100) / 100;
+    const yesterdayTotal = byDay[yesterday] !== undefined ? Math.round(byDay[yesterday] * 100) / 100 : null;
+    const avg7d = last7.length > 0
+      ? Math.round(last7.reduce((s, d) => s + byDay[d], 0) / last7.length * 100) / 100
+      : null;
+
+    return {
+      type: 'cumulative_daily',
+      unit,
+      today_total: todayTotal,
+      yesterday_total: yesterdayTotal,
+      daily_average_7d: avg7d,
+      last_recorded: readings[0].updatedAt,
+      last_recorded_time_ago: this.vitalTimeAgo(new Date(readings[0].updatedAt), now),
+      daily_breakdown: last7.map(d => ({ date: d, total: Math.round(byDay[d] * 100) / 100 })),
+    };
+  }
+
+  /** Sleep — max per night, recent nights, average */
+  private buildDurationSummary(readings: any[], now: Date) {
+    const unit = readings[0]?.unit || '';
+    const byDay: Record<string, number> = {};
+    for (const r of readings) {
+      const day = this.dayKey(new Date(r.updatedAt));
+      const val = parseFloat(r.value);
+      byDay[day] = Math.max(byDay[day] || 0, val);
+    }
+
+    const sortedDays = Object.keys(byDay).sort().reverse();
+    const last7 = sortedDays.slice(0, 7);
+    const recentNights = last7.map(d => ({ date: d, value: Math.round(byDay[d] * 100) / 100, unit }));
+    const avg = last7.length > 0
+      ? Math.round(last7.reduce((s, d) => s + byDay[d], 0) / last7.length * 100) / 100
+      : null;
+
+    return {
+      type: 'duration_daily',
+      unit,
+      most_recent_night: recentNights[0] || null,
+      average_last_7_nights: avg,
+      last_recorded: readings[0].updatedAt,
+      last_recorded_time_ago: this.vitalTimeAgo(new Date(readings[0].updatedAt), now),
+      recent_nights: recentNights,
+    };
+  }
+
+  /** BP, pulse, temp, weight, spo2, etc. — latest + time ago, average, min/max, trend */
+  private buildSnapshotSummary(readings: any[], now: Date, limit: number) {
+    const unit = readings[0]?.unit || '';
+    const latest = readings[0];
+    const recent = readings.slice(0, limit);
+
+    // Compute stats for numeric vitals (skip compound values like BP "120/80")
+    const isNumeric = !String(latest.value).includes('/');
+    let stats: { average: number; min: number; max: number } | null = null;
+    if (isNumeric) {
+      const vals = recent.map(r => parseFloat(r.value)).filter(v => !isNaN(v));
+      if (vals.length > 1) {
+        stats = {
+          average: Math.round(vals.reduce((s, v) => s + v, 0) / vals.length * 100) / 100,
+          min: Math.round(Math.min(...vals) * 100) / 100,
+          max: Math.round(Math.max(...vals) * 100) / 100,
+        };
+      }
+    }
+
+    return {
+      type: 'snapshot',
+      unit,
+      latest_value: latest.value,
+      latest_recorded: latest.updatedAt,
+      latest_time_ago: this.vitalTimeAgo(new Date(latest.updatedAt), now),
+      ...(stats ? { recent_average: stats.average, recent_min: stats.min, recent_max: stats.max } : {}),
+      recent_readings: recent.map(r => ({ value: r.value, recorded_at: r.updatedAt })),
+      total_readings: readings.length,
+    };
   }
 
   private async toolGetCheckups(userId: Types.ObjectId, limit: number) {

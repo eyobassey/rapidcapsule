@@ -10,6 +10,12 @@ import { VitalChartDataDto } from './dto/vital-chart-data.dto';
 import { GeneralHelpers } from '../../common/helpers/general.helpers';
 import * as moment from 'moment';
 
+const VITAL_FIELDS = [
+  'body_temp', 'body_weight', 'blood_pressure', 'blood_sugar_level', 'pulse_rate',
+  'spo2', 'steps', 'sleep', 'calories_burned', 'distance', 'respiratory_rate', 'stress_level',
+  'body_fat', 'active_minutes', 'hydration', 'muscle_mass', 'bone_mass', 'body_water', 'visceral_fat', 'bmr',
+];
+
 @Injectable()
 export class VitalsService {
   constructor(
@@ -47,41 +53,46 @@ export class VitalsService {
 
   async findUserVitals(userId: Types.ObjectId) {
     const vitals = await find(this.vitalModel, { userId });
-    return vitals.reduce(
-      (
-        acc,
-        {
-          body_temp,
-          blood_pressure,
-          blood_sugar_level,
-          body_weight,
-          pulse_rate,
-          _id,
-          userId,
-        },
-      ) => {
-        if (body_temp?.length) acc.body_temp = body_temp;
-        if (blood_pressure?.length) acc.blood_pressure = blood_pressure;
-        if (blood_sugar_level?.length)
-          acc.blood_sugar_level = blood_sugar_level;
-        if (body_weight?.length) acc.body_weight = body_weight;
-        if (pulse_rate?.length) acc.pulse_rate = pulse_rate;
-        acc.userId = userId;
-        acc._id = _id;
-        return acc;
-      },
-      {},
-    );
+    return vitals.reduce((acc, doc) => {
+      for (const field of VITAL_FIELDS) {
+        if (doc[field]?.length) acc[field] = doc[field];
+      }
+      acc.userId = doc.userId;
+      acc._id = doc._id;
+      return acc;
+    }, {});
   }
+
+  // Vitals where daily entries should be summed (not just show latest reading)
+  private readonly cumulativeVitals = new Set([
+    'steps', 'calories_burned', 'active_minutes', 'distance',
+  ]);
 
   async getMostRecentVitals(userId: Types.ObjectId) {
     const vitals = await this.findUserVitals(userId);
     const recentVitals = {};
     for (const [key, values] of Object.entries(vitals)) {
       if (Array.isArray(values) && values.length > 0) {
-        recentVitals[key] = values.reduce((a, b) =>
-          a.updatedAt > b.updatedAt ? a : b,
-        );
+        const validEntries = values.filter((v: any) => v.value);
+        if (validEntries.length === 0) continue;
+
+        if (this.cumulativeVitals.has(key)) {
+          // For cumulative vitals, sum today's entries
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const todayEntries = validEntries.filter(
+            (v: any) => new Date(v.updatedAt) >= today,
+          );
+          const entries = todayEntries.length > 0 ? todayEntries : [validEntries[validEntries.length - 1]];
+          const sum = entries.reduce((acc, v: any) => acc + parseFloat(v.value || '0'), 0);
+          const latest = entries.reduce((a, b) => (a.updatedAt > b.updatedAt ? a : b));
+          const rounded = key === 'distance' ? parseFloat(sum.toFixed(1)) : Math.round(sum);
+          recentVitals[key] = { value: String(rounded), unit: latest.unit, updatedAt: latest.updatedAt };
+        } else {
+          recentVitals[key] = validEntries.reduce((a, b) =>
+            a.updatedAt > b.updatedAt ? a : b,
+          );
+        }
       }
     }
     return recentVitals;

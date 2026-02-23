@@ -22,6 +22,14 @@ export enum HealthDataType {
   WATER_INTAKE = 'water_intake',
   STRESS_LEVEL = 'stress_level',
   RESPIRATORY_RATE = 'respiratory_rate',
+  BODY_FAT = 'body_fat',
+  ACTIVE_MINUTES = 'active_minutes',
+  HYDRATION = 'hydration',
+  MUSCLE_MASS = 'muscle_mass',
+  BONE_MASS = 'bone_mass',
+  BODY_WATER = 'body_water',
+  VISCERAL_FAT = 'visceral_fat',
+  BMR = 'bmr',
 }
 
 @Schema({ timestamps: true })

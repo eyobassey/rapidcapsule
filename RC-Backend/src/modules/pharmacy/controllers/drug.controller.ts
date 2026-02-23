@@ -132,15 +132,6 @@ export class DrugController {
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
-  /**
-   * Get a single drug by ID
-   */
-  @Get(':id')
-  async findOne(@Param('id') id: string) {
-    const result = await this.drugService.findById(id);
-    return sendSuccessResponse(Messages.RETRIEVED, result);
-  }
-
   // ============ AUTHENTICATED ENDPOINTS ============
 
   /**
@@ -208,6 +199,15 @@ export class DrugController {
   @Get('admin/statistics')
   async getStatistics() {
     const result = await this.drugService.getStatistics();
+    return sendSuccessResponse(Messages.RETRIEVED, result);
+  }
+
+  /**
+   * Get a single drug by ID (must be after all static GET routes to avoid catching them)
+   */
+  @Get(':id')
+  async findOne(@Param('id') id: string) {
+    const result = await this.drugService.findById(id);
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 

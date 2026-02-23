@@ -1,4 +1,4 @@
-import { IsEnum, IsOptional, IsArray, IsBoolean, IsObject } from 'class-validator';
+import { IsEnum, IsOptional, IsArray, IsBoolean, IsObject, IsString, IsIn, ArrayMaxSize } from 'class-validator';
 import { IntegrationProvider } from '../schemas/health-integration.schema';
 
 export class ConnectIntegrationDto {
@@ -7,6 +7,8 @@ export class ConnectIntegrationDto {
 
   @IsOptional()
   @IsArray()
+  @IsString({ each: true })
+  @ArrayMaxSize(20)
   dataTypes?: string[];
 
   @IsOptional()
@@ -14,6 +16,7 @@ export class ConnectIntegrationDto {
   autoSync?: boolean;
 
   @IsOptional()
+  @IsIn(['pull', 'push', 'bidirectional'])
   syncDirection?: 'pull' | 'push' | 'bidirectional';
 
   @IsOptional()
