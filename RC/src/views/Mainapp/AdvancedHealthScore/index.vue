@@ -139,7 +139,7 @@
                 <span class="label">credits</span>
               </div>
               <div class="plan-name">{{ plan.name }}</div>
-              <div class="plan-price">{{ format(plan.price) }}</div>
+              <div class="plan-price">{{ formatPlanPrice(plan) }}</div>
               <div class="plan-desc" v-if="plan.type === 'subscription'">
                 {{ plan.duration_days || 30 }} days unlimited
               </div>
@@ -154,7 +154,7 @@
             </div>
             <div v-if="walletBalance < selectedPlan.price" class="insufficient-warning">
               <v-icon name="hi-exclamation-circle" scale="1" />
-              <span>Insufficient balance. You need {{ format(selectedPlan.price - walletBalance) }} more.</span>
+              <span>Insufficient balance. You need {{ formatPlanPrice(selectedPlan) }} more.</span>
             </div>
           </div>
         </div>
@@ -249,7 +249,7 @@
 <script>
 import apiFactory from "@/services/apiFactory";
 import http from "@/services/http";
-import { formatCurrency } from '@/utilities/currency';
+import { formatCurrency, convertFromNGN } from '@/utilities/currency';
 
 export default {
   name: "AdvancedHealthScoreIndex",
@@ -374,6 +374,12 @@ export default {
 
     format(amount) {
       return formatCurrency(amount, this.currencyCode);
+    },
+
+    formatPlanPrice(plan) {
+      const multiPrice = plan?.prices?.[this.currencyCode]?.price ?? plan?.prices?.[this.currencyCode]?.amount;
+      if (multiPrice != null) return formatCurrency(multiPrice, this.currencyCode);
+      return formatCurrency(convertFromNGN(plan?.price ?? plan?.amount ?? 0, this.currencyCode), this.currencyCode);
     },
 
     goToWallet() {

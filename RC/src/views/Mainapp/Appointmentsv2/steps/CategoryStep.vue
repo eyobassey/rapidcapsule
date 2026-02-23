@@ -334,7 +334,7 @@ import apiFactory from '@/services/apiFactory';
 import { useCurrency } from '@/composables/useCurrency';
 
 const booking = inject('bookingStateV2');
-const { format: formatCurrency } = useCurrency();
+const { formatConverted: formatCurrency } = useCurrency();
 
 const searchQuery = ref('');
 const showAllCategories = ref(false);

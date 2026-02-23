@@ -323,7 +323,7 @@ const nextButtonLabel = computed(() => {
   return 'Next Step';
 });
 
-const { format: formatCurrency, symbol } = useCurrency();
+const { formatConverted: formatCurrency, symbol } = useCurrency();
 
 // Format cost display - shows range if available, otherwise single price
 const formattedCostDisplay = computed(() => {
@@ -334,7 +334,7 @@ const formattedCostDisplay = computed(() => {
     return `${min} - ${max}`;
   }
   // Otherwise show the single estimated cost
-  return formatCurrency(state.estimatedCost) || `${symbol.value}5,000 - ${symbol.value}15,000`;
+  return formatCurrency(state.estimatedCost) || '';
 });
 
 const openSideNav = () => {

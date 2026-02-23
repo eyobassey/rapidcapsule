@@ -48,7 +48,7 @@
               {{ formatDistance(center.distance) }}
             </span>
             <span v-if="center.pickup_center_settings?.handling_fee" class="fee">
-              Fee: NGN {{ formatCurrency(center.pickup_center_settings.handling_fee) }}
+              Fee: {{ formatCurrency(center.pickup_center_settings.handling_fee) }}
             </span>
           </div>
         </div>

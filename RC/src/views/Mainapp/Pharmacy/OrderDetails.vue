@@ -593,7 +593,7 @@ export default {
   name: "PharmacyOrderDetails",
   emits: ["openSideNav"],
   setup() {
-    const { format: formatPrice } = useCurrency();
+    const { formatConverted: formatPrice } = useCurrency();
     const router = useRouter();
     const route = useRoute();
 

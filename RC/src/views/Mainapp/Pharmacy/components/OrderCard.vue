@@ -62,7 +62,7 @@ export default defineComponent({
   },
   emits: ["view-details", "track"],
   setup(props) {
-    const { format: formatPrice } = useCurrency();
+    const { formatConverted: formatPrice } = useCurrency();
 
     const formatDate = (date) => {
       return moment(date).format("MMM D, YYYY");

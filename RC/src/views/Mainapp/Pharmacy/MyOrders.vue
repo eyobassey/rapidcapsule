@@ -274,7 +274,7 @@ export default {
   name: "MyOrders",
   emits: ["openSideNav"],
   setup() {
-    const { format: formatCurrency } = useCurrency();
+    const { formatConverted: formatCurrency } = useCurrency();
     const router = useRouter();
     const activeTab = ref("all");
     const currentPage = ref(1);

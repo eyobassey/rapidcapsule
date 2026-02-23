@@ -906,15 +906,15 @@
                     <div class="fee-amounts">
                       <div class="fee-row">
                         <span class="fee-label">Consultation Fee</span>
-                        <span class="fee-value">{{ formatCurrency(displayFee) }}</span>
+                        <span class="fee-value">{{ formatFee(displayFee) }}</span>
                       </div>
                       <div class="fee-row">
                         <span class="fee-label">Platform Fee</span>
-                        <span class="fee-value">{{ formatCurrency(payment.platformFee) }}</span>
+                        <span class="fee-value">{{ formatFee(payment.platformFee) }}</span>
                       </div>
                       <div class="fee-row total">
                         <span class="fee-label">Total Amount</span>
-                        <span class="fee-value">{{ formatCurrency(payment.totalAmount) }}</span>
+                        <span class="fee-value">{{ formatFee(payment.totalAmount) }}</span>
                       </div>
                     </div>
 
@@ -1018,7 +1018,7 @@
                       <p v-if="specialistWallet.isLoading">Loading your wallet balance...</p>
                       <p v-else-if="specialistWalletError" class="error-text">{{ specialistWalletError }}</p>
                       <p v-else>
-                        Free for patient • Your balance: {{ formatCurrency(specialistWallet.available_balance) }}
+                        Free for patient • Your balance: {{ formatConverted(specialistWallet.available_balance) }}
                       </p>
                       <span class="payment-tag">For courtesy appointments or cash already received</span>
                     </div>
@@ -1039,10 +1039,10 @@
                       Patient will be redirected to Paystack to complete payment when the appointment is confirmed.
                     </p>
                     <p class="banner-text" v-else-if="payment.source === 'patient_wallet'">
-                      The amount of {{ formatCurrency(payment.totalAmount) }} will be debited from the patient's Rapid Wallet upon your confirmation.
+                      The amount of {{ formatFee(payment.totalAmount) }} will be debited from the patient's Rapid Wallet upon your confirmation.
                     </p>
                     <p class="banner-text" v-else-if="payment.source === 'specialist_wallet'">
-                      The amount of {{ formatCurrency(payment.totalAmount) }} will be debited from your wallet. This is typically used for complimentary appointments or when you've already collected cash from the patient.
+                      The amount of {{ formatFee(payment.totalAmount) }} will be debited from your wallet. This is typically used for complimentary appointments or when you've already collected cash from the patient.
                     </p>
                   </div>
                 </div>
@@ -1053,7 +1053,7 @@
                     <v-icon name="hi-check-circle" scale="1.2" />
                     <div>
                       <h4>Payment Authorized</h4>
-                      <p>{{ formatCurrency(payment.totalAmount) }} will be charged from {{ payment.source === 'patient_wallet' ? "patient's wallet" : 'your wallet' }}</p>
+                      <p>{{ formatFee(payment.totalAmount) }} will be charged from {{ payment.source === 'patient_wallet' ? "patient's wallet" : 'your wallet' }}</p>
                     </div>
                     <button class="change-btn" @click="resetPaymentConsent">Change</button>
                   </div>
@@ -1064,7 +1064,7 @@
                     @click="showPaymentConsentModal = true"
                   >
                     <v-icon name="hi-lock-closed" scale="0.9" />
-                    Authorize Payment of {{ formatCurrency(payment.totalAmount) }}
+                    Authorize Payment of {{ formatFee(payment.totalAmount) }}
                   </button>
                 </div>
 
@@ -1151,7 +1151,7 @@
                   <div class="consent-summary">
                     <div class="consent-amount">
                       <span class="label">Amount</span>
-                      <span class="value">{{ formatCurrency(payment.totalAmount) }}</span>
+                      <span class="value">{{ formatFee(payment.totalAmount) }}</span>
                     </div>
                     <div class="consent-source">
                       <span class="label">Payment Source</span>
@@ -1193,7 +1193,7 @@
 
                   <label class="consent-checkbox-label">
                     <input type="checkbox" v-model="paymentConsentChecked" />
-                    <span>I understand and authorize this payment of {{ formatCurrency(payment.totalAmount) }}</span>
+                    <span>I understand and authorize this payment of {{ formatFee(payment.totalAmount) }}</span>
                   </label>
                 </div>
 
@@ -1696,7 +1696,7 @@
                       </div>
                       <div>
                         <p class="fee-label">Consultation Fee</p>
-                        <p class="fee-value">{{ formatCurrency(displayFee) }}</p>
+                        <p class="fee-value">{{ formatFee(displayFee) }}</p>
                       </div>
                     </div>
                     <p class="fee-desc">{{ getPaymentSourceLabel(payment.source) }}</p>
@@ -1708,19 +1708,19 @@
                   <div class="breakdown-rows">
                     <div class="breakdown-row">
                       <span>Consultation Fee</span>
-                      <span>{{ formatCurrency(displayFee) }}</span>
+                      <span>{{ formatFee(displayFee) }}</span>
                     </div>
                     <div class="breakdown-row">
                       <span>Platform Fee</span>
-                      <span>{{ formatCurrency(payment.platformFee) }}</span>
+                      <span>{{ formatFee(payment.platformFee) }}</span>
                     </div>
                     <div class="breakdown-row total">
                       <span>Total Amount</span>
-                      <span class="total-value">{{ formatCurrency(payment.totalAmount) }}</span>
+                      <span class="total-value">{{ formatFee(payment.totalAmount) }}</span>
                     </div>
                     <div class="breakdown-row earnings">
                       <span>Your Earnings</span>
-                      <span class="earnings-value">{{ formatCurrency(displayFee) }}</span>
+                      <span class="earnings-value">{{ formatFee(displayFee) }}</span>
                     </div>
                   </div>
                   <div v-if="paymentConsentGiven" class="payment-status success">
@@ -1900,7 +1900,7 @@
               <div class="mobile-confirm-section">
                 <div class="mobile-total-box">
                   <p class="total-label">Total Amount</p>
-                  <p class="total-value">{{ formatCurrency(payment.totalAmount) }}</p>
+                  <p class="total-value">{{ formatFee(payment.totalAmount) }}</p>
                 </div>
 
                 <!-- Submission Error Display (Mobile) -->
@@ -2107,15 +2107,15 @@
               <div class="payment-summary">
                 <div class="payment-summary-row">
                   <span class="label">Consultation Fee</span>
-                  <span class="value">{{ formatCurrency(displayFee) }}</span>
+                  <span class="value">{{ formatFee(displayFee) }}</span>
                 </div>
                 <div class="payment-summary-row">
                   <span class="label">Platform Fee</span>
-                  <span class="value">{{ formatCurrency(payment.platformFee) }}</span>
+                  <span class="value">{{ formatFee(payment.platformFee) }}</span>
                 </div>
                 <div class="payment-summary-row total">
                   <span class="label">Total</span>
-                  <span class="value">{{ formatCurrency(payment.totalAmount) }}</span>
+                  <span class="value">{{ formatFee(payment.totalAmount) }}</span>
                 </div>
 
                 <div class="payment-method-badge" v-if="payment.source">
@@ -2235,7 +2235,7 @@
 
               <div class="total-box">
                 <p class="total-label">Estimated Total</p>
-                <p class="total-value">{{ formatCurrency(payment.totalAmount) }}</p>
+                <p class="total-value">{{ formatFee(payment.totalAmount) }}</p>
                 <p class="total-desc">Patient payment amount</p>
               </div>
 
@@ -2516,7 +2516,17 @@ const router = useRouter();
 const route = useRoute();
 const store = useStore();
 const toast = useToast();
-const { format: formatCurrency, symbol, currencyCode } = useCurrency();
+const { format: formatCurrency, formatConverted, symbol, currencyCode } = useCurrency();
+
+// Format consultation fees - respects the rate card's source currency
+const feeCurrency = computed(() => {
+	return specialistProfile.value?.specialist_preferences?.rate_cards?.currency || 'NGN';
+});
+const formatFee = (amount) => {
+	if (feeCurrency.value === currencyCode.value) return formatCurrency(amount);
+	if (feeCurrency.value === 'NGN') return formatConverted(amount);
+	return formatCurrency(amount);
+};
 
 // Specialist Profile (logged-in user)
 const specialistProfile = computed(() => store.getters.userprofile);
@@ -3622,7 +3632,7 @@ const patientWalletError = computed(() => {
 
 const specialistWalletError = computed(() => {
   if (specialistWallet.isLoading) return '';
-  if (specialistWallet.available_balance < payment.totalAmount) return `Insufficient balance (${formatCurrency(specialistWallet.available_balance)})`;
+  if (specialistWallet.available_balance < payment.totalAmount) return `Insufficient balance (${formatConverted(specialistWallet.available_balance)})`;
   return '';
 });
 

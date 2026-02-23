@@ -245,7 +245,6 @@
           <div class="prescription-item__right">
             <span class="prescription-date">{{ formatDateTime(prescription.created_at) }}</span>
             <div class="prescription-amount">
-              <span class="currency">NGN</span>
               <span class="amount">{{ formatCurrency(prescription.total_amount) }}</span>
             </div>
             <v-icon name="hi-chevron-right" scale="0.9" class="chevron" />

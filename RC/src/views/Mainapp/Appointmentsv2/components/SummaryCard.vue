@@ -131,7 +131,7 @@ const formattedTime = computed(() => {
   return `${displayHours}:${String(minutes).padStart(2, '0')} ${period}`;
 });
 
-const { format: formatCurrency } = useCurrency();
+const { formatConverted: formatCurrency } = useCurrency();
 </script>
 
 <style scoped lang="scss">

@@ -83,7 +83,7 @@
                     Exp: {{ formatExpiryDate(drug.expiry_date) }}
                   </span>
                 </p>
-                <p class="drug-price">NGN {{ formatCurrency(drug.selling_price) }}</p>
+                <p class="drug-price">{{ formatCurrency(drug.selling_price) }}</p>
               </div>
               <span :class="['stock-badge', drug.quantity > 0 ? 'in-stock' : 'out-of-stock']">
                 {{ drug.quantity > 0 ? `${drug.quantity} in stock` : 'Out of stock' }}

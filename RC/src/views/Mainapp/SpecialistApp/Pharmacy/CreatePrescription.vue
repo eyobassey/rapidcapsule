@@ -885,7 +885,7 @@ async function handlePostCreationPayment(prescriptionId) {
       const payData = payResult.data?.data || payResult.data?.result;
 
       if (payData?.is_partial_payment) {
-        $toast.info(`NGN ${formatCurrency(payData.wallet_amount_paid)} charged from patient wallet. Remaining: NGN ${formatCurrency(payData.remaining_amount)}`);
+        $toast.info(`${formatCurrency(payData.wallet_amount_paid)} charged from patient wallet. Remaining: ${formatCurrency(payData.remaining_amount)}`);
       } else {
         $toast.success('Payment completed from patient wallet');
       }

@@ -84,10 +84,10 @@
           <label class="filter-label">Price Range</label>
           <select v-model="filters.priceRange" class="filter-select">
             <option value="">Any</option>
-            <option value="0-10000">Under NGN 10,000</option>
-            <option value="10000-20000">NGN 10,000 - 20,000</option>
-            <option value="20000-50000">NGN 20,000 - 50,000</option>
-            <option value="50000+">Above NGN 50,000</option>
+            <option value="0-10000">Under {{ formatPrice(10000) }}</option>
+            <option value="10000-20000">{{ formatPrice(10000) }} - {{ formatPrice(20000) }}</option>
+            <option value="20000-50000">{{ formatPrice(20000) }} - {{ formatPrice(50000) }}</option>
+            <option value="50000+">Above {{ formatPrice(50000) }}</option>
           </select>
         </div>
       </div>
@@ -166,6 +166,9 @@ import { format, parseISO } from 'date-fns';
 import DoctorCard from '../components/DoctorCard.vue';
 import Loader from '@/components/Loader/main-loader.vue';
 import apiFactory from '@/services/apiFactory';
+import { useCurrency } from '@/composables/useCurrency';
+
+const { formatConverted: formatPrice } = useCurrency();
 
 const $http = inject('$_HTTP');
 const booking = inject('bookingStateV2');

@@ -66,7 +66,7 @@
               <p class="hero__subtitle">{{ drug.generic_name }}</p>
               <div class="hero__stats">
                 <div class="hero-stat hero-stat--price">
-                  <span class="hero-stat__value">NGN {{ formatCurrency(drug.selling_price) }}</span>
+                  <span class="hero-stat__value">{{ formatCurrency(drug.selling_price) }}</span>
                   <span class="hero-stat__label">Per Unit</span>
                 </div>
                 <div class="hero-stat">

@@ -15,7 +15,7 @@
           @select="$emit('update:paymentMethod', 'specialist_wallet')"
         >
           <template #details>
-            <p class="wallet-balance">Balance: NGN {{ formatCurrency(walletBalance) }}</p>
+            <p class="wallet-balance">Balance: {{ formatCurrency(walletBalance) }}</p>
           </template>
         </PaymentMethodOption>
 
@@ -38,9 +38,9 @@
                 Patient has disabled wallet charges
               </p>
               <template v-else>
-                <p class="wallet-balance patient">Balance: NGN {{ formatCurrency(patientWalletBalance) }}</p>
+                <p class="wallet-balance patient">Balance: {{ formatCurrency(patientWalletBalance) }}</p>
                 <p v-if="patientWalletBalance < subtotal && patientWalletBalance > 0" class="warning-text amber">
-                  Partial payment - NGN {{ formatCurrency(subtotal - patientWalletBalance) }} remaining
+                  Partial payment - {{ formatCurrency(subtotal - patientWalletBalance) }} remaining
                 </p>
                 <p v-if="patientWalletBalance === 0" class="warning-text red">
                   Patient has no wallet balance

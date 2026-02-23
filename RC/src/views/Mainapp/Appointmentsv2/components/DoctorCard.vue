@@ -65,7 +65,7 @@
 import RcAvatar from '@/components/RCAvatar';
 import { useCurrency } from '@/composables/useCurrency';
 
-const { format: formatPrice } = useCurrency();
+const { formatConverted: formatPrice } = useCurrency();
 
 const props = defineProps({
   fullName: { type: String, required: true },

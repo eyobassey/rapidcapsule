@@ -1,9 +1,11 @@
 import { format, formatDistanceToNow, differenceInYears, parseISO, isValid } from 'date-fns';
-import { formatCurrency as formatCurrencyUtil } from '@/utilities/currency';
+import { useCurrency } from '@/composables/useCurrency';
 
 export function usePharmacy() {
+  const { formatConverted } = useCurrency();
+
   function formatCurrency(amount) {
-    return formatCurrencyUtil(amount);
+    return formatConverted(amount);
   }
 
   function formatDate(date, pattern = 'MMM d, yyyy') {

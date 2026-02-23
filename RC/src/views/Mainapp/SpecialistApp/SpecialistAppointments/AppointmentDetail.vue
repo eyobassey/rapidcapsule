@@ -1181,7 +1181,14 @@ const route = useRoute();
 const router = useRouter();
 const toast = useToast();
 const $http = inject('$_HTTP');
-const { format: formatCurrency } = useCurrency();
+const { format: formatAmount, formatConverted, currencyCode } = useCurrency();
+
+const formatCurrency = (amount) => {
+	const apptCurrency = appointmentData.value?.currency || 'NGN';
+	if (apptCurrency === currencyCode.value) return formatAmount(amount);
+	if (apptCurrency === 'NGN') return formatConverted(amount);
+	return formatAmount(amount);
+};
 
 // State
 const isLoading = ref(true);

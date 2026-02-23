@@ -120,7 +120,7 @@
                 </div>
 
                 <div class="plan-price">
-                  <span class="amount">{{ formatPrice(plan.price) }}</span>
+                  <span class="amount">{{ formatPlanPrice(plan) }}</span>
                 </div>
 
                 <ul class="plan-features">
@@ -244,7 +244,7 @@
           <div class="price-summary">
             <div class="summary-row">
               <span>Plan Price</span>
-              <span>{{ formatPrice(selectedPlan?.price || 0) }}</span>
+              <span>{{ formatPlanPrice(selectedPlan) }}</span>
             </div>
             <div class="summary-row">
               <span>Wallet Balance</span>
@@ -253,7 +253,7 @@
             <div class="summary-divider"></div>
             <div class="summary-row total" :class="{ insufficient: walletBalance < (selectedPlan?.price || 0) }">
               <span>After Purchase</span>
-              <span>{{ formatPrice(Math.max(0, walletBalance - (selectedPlan?.price || 0))) }}</span>
+              <span>{{ formatConverted(Math.max(0, walletBalance - (selectedPlan?.price || 0))) }}</span>
             </div>
           </div>
 
@@ -261,7 +261,7 @@
             <v-icon name="hi-exclamation-circle" scale="1" />
             <div>
               <strong>Insufficient Balance</strong>
-              <p>You need {{ formatPrice((selectedPlan?.price || 0) - walletBalance) }} more. Please top up your wallet first.</p>
+              <p>You need {{ formatConverted((selectedPlan?.price || 0) - walletBalance) }} more. Please top up your wallet first.</p>
             </div>
           </div>
         </div>
@@ -300,7 +300,7 @@ import { usePatientOnboardingState } from './composables/usePatientOnboardingSta
 const router = useRouter();
 const $api = inject('$http'); // apiFactory with named methods
 const { completeStep, saveProgress, goToStep } = usePatientOnboardingState();
-const { format: formatCurrencyAmount, symbol } = useCurrency();
+const { format: formatCurrencyAmount, formatConverted, symbol, currencyCode } = useCurrency();
 
 // State
 const walletBalance = ref(0);
@@ -351,6 +351,13 @@ const sortedPlans = computed(() => {
 
 // Methods
 const formatPrice = (price) => formatCurrencyAmount(price);
+
+const formatPlanPrice = (plan) => {
+  const code = currencyCode.value;
+  const multiPrice = plan?.prices?.[code]?.price ?? plan?.prices?.[code]?.amount;
+  if (multiPrice != null) return formatCurrencyAmount(multiPrice);
+  return formatConverted(plan?.price ?? plan?.amount ?? 0);
+};
 
 const getFeatures = (plan) => {
   if (plan.features && plan.features.length) {

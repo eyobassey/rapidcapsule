@@ -73,7 +73,7 @@ import RcIcon from "@/components/RCIcon";
 import RcButton from "@/components/buttons/button-primary.vue";
 import Loader from "@/components/Loader/main-loader.vue";
 import Avatar from "@/components/Avatars/avatar-fixed.vue";
-import { formatCurrency, getCurrencySymbol } from '@/utilities/currency';
+import { formatCurrency, convertFromNGN } from '@/utilities/currency';
 
 export default defineComponent({
 	setup(props) {
@@ -84,7 +84,18 @@ export default defineComponent({
 		const profile = ref({});
 		const currencyCode = computed(() => store.getters['currency/currencyCode']);
 		const format = (amount) => formatCurrency(amount, currencyCode.value);
-		const priceRange = computed(() => `${format(200)} - ${format(500)}/hour`);
+		const formatFee = (amount, feeCurrency) => {
+			if (!amount) return format(0);
+			const srcCurrency = feeCurrency || 'NGN';
+			if (srcCurrency === currencyCode.value) return format(amount);
+			if (srcCurrency === 'NGN') return formatCurrency(convertFromNGN(amount, currencyCode.value), currencyCode.value);
+			return format(amount);
+		};
+		const priceRange = computed(() => {
+			const fee = props.appointment?.consultation_fee;
+			if (fee) return formatFee(fee, props.appointment?.currency);
+			return '';
+		});
 
 		watchEffect(() => {
 			isLoading.value = true;

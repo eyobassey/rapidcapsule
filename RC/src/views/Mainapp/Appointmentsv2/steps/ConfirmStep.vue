@@ -558,7 +558,7 @@ const getInitials = (specialist) => {
   return (first + last).toUpperCase() || 'DR';
 };
 
-const { format: formatCurrency } = useCurrency();
+const { formatConverted: formatCurrency } = useCurrency();
 
 // Health Check Summary
 const formatAssessmentDate = computed(() => {

@@ -720,7 +720,7 @@ import apiFactory from '@/services/apiFactory';
 const route = useRoute();
 const router = useRouter();
 const toast = useToast();
-const { format: formatAmount, currencyCode } = useCurrency();
+const { formatConverted: formatAmount, currencyCode } = useCurrency();
 
 // State
 const isLoading = ref(true);

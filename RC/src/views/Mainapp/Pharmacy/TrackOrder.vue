@@ -170,7 +170,7 @@ export default {
   },
   emits: ["openSideNav"],
   setup() {
-    const { format: formatPrice } = useCurrency();
+    const { formatConverted: formatPrice } = useCurrency();
     const router = useRouter();
     const route = useRoute();
     let refreshInterval = null;

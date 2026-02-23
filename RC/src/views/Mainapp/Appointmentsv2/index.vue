@@ -642,7 +642,7 @@ const router = useRouter();
 const route = useRoute();
 const $http = inject('$_HTTP');
 const $toast = useToast();
-const { format: formatCurrency } = useCurrency();
+const { formatConverted: formatCurrency } = useCurrency();
 
 // Payment verification state
 const isVerifyingPayment = ref(false);

@@ -235,7 +235,6 @@
 
               <div class="drug-footer">
                 <div class="drug-price">
-                  <span class="currency">NGN</span>
                   <span class="amount">{{ formatCurrency(drug.selling_price) }}</span>
                 </div>
                 <PharmacyStatusBadge :status="getStockClass(drug)" :label="getStockLabel(drug)" size="sm" />

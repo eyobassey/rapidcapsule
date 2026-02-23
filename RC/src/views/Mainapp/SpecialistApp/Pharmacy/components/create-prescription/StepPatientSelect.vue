@@ -127,7 +127,7 @@
         <div class="drug-info">
           <p class="drug-name">{{ preSelectedDrug.name }}</p>
           <p class="drug-details">{{ preSelectedDrug.generic_name }} | {{ preSelectedDrug.strength }}</p>
-          <p class="drug-price">NGN {{ formatCurrency(preSelectedDrug.selling_price) }}</p>
+          <p class="drug-price">{{ formatCurrency(preSelectedDrug.selling_price) }}</p>
         </div>
       </div>
       <p class="drug-card__note">

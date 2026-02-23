@@ -30,7 +30,7 @@
         <div class="form-group">
           <label>Unit Price</label>
           <input
-            :value="`NGN ${formatCurrency(item.unit_price)}`"
+            :value="formatCurrency(item.unit_price)"
             type="text"
             disabled
           />
@@ -38,7 +38,7 @@
         <div class="form-group">
           <label>Subtotal</label>
           <input
-            :value="`NGN ${formatCurrency(item.quantity * item.unit_price)}`"
+            :value="formatCurrency(item.quantity * item.unit_price)"
             type="text"
             disabled
           />

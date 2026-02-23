@@ -79,7 +79,7 @@
                   <span class="hero-stat__label">Items</span>
                 </div>
                 <div class="hero-stat">
-                  <span class="hero-stat__value">NGN {{ formatCurrency(prescription.total_amount) }}</span>
+                  <span class="hero-stat__value">{{ formatCurrency(prescription.total_amount) }}</span>
                   <span class="hero-stat__label">Total</span>
                 </div>
               </div>
@@ -407,7 +407,7 @@
                     <span>{{ item.instructions || item.notes }}</span>
                   </div>
                   <div class="med-card__footer">
-                    <span class="med-card__price">NGN {{ formatCurrency(item.unit_price * item.quantity) }}</span>
+                    <span class="med-card__price">{{ formatCurrency(item.unit_price * item.quantity) }}</span>
                     <span class="med-card__unit">@ {{ formatCurrency(item.unit_price) }}/unit</span>
                   </div>
                 </div>
@@ -429,21 +429,20 @@
               </div>
               <div class="payment-summary">
                 <div class="payment-summary__total">
-                  <span class="payment-summary__currency">NGN</span>
                   <span class="payment-summary__amount">{{ formatCurrency(prescription.total_amount) }}</span>
                 </div>
                 <div class="payment-summary__breakdown">
                   <div class="breakdown-item">
                     <span>Subtotal</span>
-                    <span>NGN {{ formatCurrency(prescription.subtotal) }}</span>
+                    <span>{{ formatCurrency(prescription.subtotal) }}</span>
                   </div>
                   <div v-if="prescription.delivery_fee" class="breakdown-item">
                     <span>Delivery</span>
-                    <span>NGN {{ formatCurrency(prescription.delivery_fee) }}</span>
+                    <span>{{ formatCurrency(prescription.delivery_fee) }}</span>
                   </div>
                   <div v-if="prescription.discount" class="breakdown-item breakdown-item--discount">
                     <span>Discount</span>
-                    <span>-NGN {{ formatCurrency(prescription.discount) }}</span>
+                    <span>-{{ formatCurrency(prescription.discount) }}</span>
                   </div>
                 </div>
                 <div class="payment-summary__method">
@@ -1176,7 +1175,7 @@ function sharePrescriptionWhatsApp() {
   const itemsCount = prescription.value.items?.length || 0;
 
   // Build WhatsApp message
-  const message = `Hello ${patientName},\n\nYour prescription (${prescriptionNumber}) is ready.\n\n📋 ${itemsCount} medication${itemsCount > 1 ? 's' : ''} prescribed\n💰 Total: NGN ${totalAmount}\n\nPlease complete payment to proceed with your order.\n\n- Rapid Capsule Pharmacy`;
+  const message = `Hello ${patientName},\n\nYour prescription (${prescriptionNumber}) is ready.\n\n📋 ${itemsCount} medication${itemsCount > 1 ? 's' : ''} prescribed\n💰 Total: ${totalAmount}\n\nPlease complete payment to proceed with your order.\n\n- Rapid Capsule Pharmacy`;
 
   // Build WhatsApp URL
   let phoneNumber = patientPhone ? patientPhone.replace(/[^0-9]/g, '') : '';

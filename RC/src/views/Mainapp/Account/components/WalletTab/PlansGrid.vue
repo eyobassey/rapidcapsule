@@ -41,7 +41,7 @@
         </div>
 
         <div class="plan-price">
-          <span class="amount">{{ format(getPlanPrice(plan)) }}</span>
+          <span class="amount">{{ formatPlanPrice(plan) }}</span>
           <span v-if="plan.type === 'subscription'" class="period">/month</span>
         </div>
 
@@ -71,7 +71,7 @@
 
 <script>
 import Loader from "@/components/Loader/main-loader.vue";
-import { formatCurrency } from '@/utilities/currency';
+import { formatCurrency, convertFromNGN } from '@/utilities/currency';
 
 export default {
   name: "PlansGrid",
@@ -113,7 +113,12 @@ export default {
       return formatCurrency(amount, this.currencyCode);
     },
     getPlanPrice(plan) {
-      return plan?.prices?.[this.currencyCode]?.price ?? plan?.prices?.[this.currencyCode]?.amount ?? plan?.price ?? plan?.amount ?? 0;
+      return plan?.price ?? plan?.amount ?? 0;
+    },
+    formatPlanPrice(plan) {
+      const multiPrice = plan?.prices?.[this.currencyCode]?.price ?? plan?.prices?.[this.currencyCode]?.amount;
+      if (multiPrice != null) return this.format(multiPrice);
+      return formatCurrency(convertFromNGN(plan?.price ?? plan?.amount ?? 0, this.currencyCode), this.currencyCode);
     },
     getFeatures(plan) {
       if (plan.features && plan.features.length) {

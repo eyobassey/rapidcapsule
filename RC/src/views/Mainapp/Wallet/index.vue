@@ -290,7 +290,7 @@
                 <span class="credits-unit">{{ plan.is_unlimited ? 'for 30 days' : 'credits' }}</span>
               </div>
               <div class="plan-price">
-                <span class="price-value">{{ format(getPlanPrice(plan)) }}</span>
+                <span class="price-value">{{ formatPlanPrice(plan) }}</span>
               </div>
               <button
                 class="plan-btn"
@@ -544,7 +544,7 @@
             <div class="summary-divider"></div>
             <div class="summary-row total">
               <span>Total</span>
-              <span>{{ format(getPlanPrice(selectedPlan)) }}</span>
+              <span>{{ formatPlanPrice(selectedPlan) }}</span>
             </div>
           </div>
           <div class="payment-info">
@@ -568,7 +568,7 @@
             @click="purchasePlan"
             :disabled="purchasingPlan || walletBalance < getPlanPrice(selectedPlan)"
           >
-            {{ purchasingPlan ? 'Processing...' : 'Pay ' + format(getPlanPrice(selectedPlan)) }}
+            {{ purchasingPlan ? 'Processing...' : 'Pay ' + formatPlanPrice(selectedPlan) }}
           </button>
         </div>
       </div>
@@ -1499,7 +1499,13 @@ export default {
     },
 
     getPlanPrice(plan) {
-      return plan?.prices?.[this.currencyCode]?.price ?? plan?.prices?.[this.currencyCode]?.amount ?? plan?.price ?? plan?.amount ?? 0;
+      return plan?.price ?? plan?.amount ?? 0;
+    },
+
+    formatPlanPrice(plan) {
+      const multiPrice = plan?.prices?.[this.currencyCode]?.price ?? plan?.prices?.[this.currencyCode]?.amount;
+      if (multiPrice != null) return this.format(multiPrice);
+      return formatCurrency(convertFromNGN(plan?.price ?? plan?.amount ?? 0, this.currencyCode), this.currencyCode);
     },
 
     formatCompact(amount) {

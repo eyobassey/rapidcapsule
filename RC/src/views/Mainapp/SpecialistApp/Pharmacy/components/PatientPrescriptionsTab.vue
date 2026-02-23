@@ -80,7 +80,6 @@
 
           <div class="prescription-item__right">
             <div class="prescription-amount" v-if="prescription.total_amount">
-              <span class="currency">NGN</span>
               <span class="amount">{{ formatCurrency(prescription.total_amount) }}</span>
             </div>
             <v-icon name="hi-chevron-right" scale="0.9" class="chevron" />

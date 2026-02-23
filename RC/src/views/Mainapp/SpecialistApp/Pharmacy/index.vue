@@ -131,7 +131,6 @@
             </div>
             <div class="wallet-content">
               <div class="wallet-balance">
-                <span class="currency">NGN</span>
                 <span class="amount">{{ formatCurrency(stats.wallet_balance || 0) }}</span>
               </div>
               <div class="wallet-meta">
@@ -208,7 +207,6 @@
                 <div class="prescription-item__right">
                   <span class="prescription-date">{{ formatDate(prescription.created_at) }}</span>
                   <div class="prescription-amount" v-if="prescription.total_amount">
-                    <span class="currency">NGN</span>
                     <span class="amount">{{ formatCurrency(prescription.total_amount) }}</span>
                   </div>
                   <v-icon name="hi-chevron-right" scale="0.9" class="chevron" />

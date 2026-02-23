@@ -164,7 +164,7 @@
             @click="topUpAmount = amount"
             :class="{ active: topUpAmount === amount }"
           >
-            {{ format(amount) }}
+            {{ formatConverted(amount) }}
           </button>
         </div>
 
@@ -203,7 +203,7 @@
             </div>
             <div class="wallet-details">
               <span class="wallet-label">Your Wallet Balance</span>
-              <span class="wallet-amount">{{ format(walletBalance) }}</span>
+              <span class="wallet-amount">{{ formatConverted(walletBalance) }}</span>
             </div>
           </div>
 
@@ -228,15 +228,15 @@
             <div class="transaction-summary">
               <div class="summary-row">
                 <span class="label">Plan Price</span>
-                <span class="value">{{ format(selectedPlan.price) }}</span>
+                <span class="value">{{ formatPlanPrice(selectedPlan) }}</span>
               </div>
               <div class="summary-row">
                 <span class="label">Current Balance</span>
-                <span class="value">{{ format(walletBalance) }}</span>
+                <span class="value">{{ formatConverted(walletBalance) }}</span>
               </div>
               <div class="summary-row total" :class="{ insufficient: walletBalance < selectedPlan.price }">
                 <span class="label">Balance After Purchase</span>
-                <span class="value">{{ format(Math.max(0, walletBalance - selectedPlan.price)) }}</span>
+                <span class="value">{{ formatConverted(Math.max(0, walletBalance - selectedPlan.price)) }}</span>
               </div>
             </div>
 
@@ -245,7 +245,7 @@
               <v-icon name="hi-exclamation-circle" scale="1" />
               <div class="alert-content">
                 <strong>Insufficient Balance</strong>
-                <p>You need {{ format(selectedPlan.price - walletBalance) }} more. Please top up your wallet.</p>
+                <p>You need {{ formatConverted(selectedPlan.price - walletBalance) }} more. Please top up your wallet.</p>
               </div>
             </div>
           </div>
@@ -1123,7 +1123,7 @@ import axios from "axios";
 import http from "@/services/http";
 import { useFormatDateNumbers, useConvertToFile } from "@/Utility-functions";
 import { TWO_FAS, SECURITY_UPDATE_OPTIONS, OTP_VERIFICATION_CONTENT } from "@/utilities/constants";
-import { formatCurrency, getCurrencySymbol } from '@/utilities/currency';
+import { formatCurrency, getCurrencySymbol, convertFromNGN } from '@/utilities/currency';
 
 // Layout Components
 import TopBar from "@/components/Navigation/top-bar.vue";
@@ -1703,6 +1703,14 @@ export default {
     // Wallet methods
     format(amount) {
       return formatCurrency(amount, this.currencyCode);
+    },
+    formatConverted(amount) {
+      return formatCurrency(convertFromNGN(amount, this.currencyCode), this.currencyCode);
+    },
+    formatPlanPrice(plan) {
+      const multiPrice = plan?.prices?.[this.currencyCode]?.price ?? plan?.prices?.[this.currencyCode]?.amount;
+      if (multiPrice != null) return this.format(multiPrice);
+      return this.formatConverted(plan?.price ?? plan?.amount ?? 0);
     },
 
     async fetchWalletBalance() {

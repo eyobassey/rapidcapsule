@@ -100,7 +100,7 @@
             <div class="card-details">
               <span class="card-number">Wallet Balance</span>
               <span class="wallet-balance" :class="{ 'low-balance': walletBalance <= 0 }">
-                {{ formatCurrency(walletBalance) }}
+                {{ formatConverted(walletBalance) }}
               </span>
             </div>
           </div>
@@ -278,7 +278,7 @@ const formatChannel = (channel) => {
   return map[channel] || channel || '-';
 };
 
-const { format: formatCurrency } = useCurrency();
+const { format: formatCurrency, formatConverted } = useCurrency();
 
 onMounted(() => {
   if (booking.mode !== 'reschedule') {

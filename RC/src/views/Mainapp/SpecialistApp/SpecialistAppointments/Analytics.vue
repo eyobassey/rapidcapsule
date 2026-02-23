@@ -522,7 +522,7 @@ import { ref, reactive, computed, onMounted } from 'vue';
 import { useCurrency } from '@/composables/useCurrency';
 import apiFactory from '@/services/apiFactory';
 
-const { format: formatCurrency, formatCompact: formatCurrencyShort } = useCurrency();
+const { formatConverted: formatCurrency, formatConvertedCompact: formatCurrencyShort } = useCurrency();
 
 const selectedPeriod = ref('30d');
 const loading = ref(true);

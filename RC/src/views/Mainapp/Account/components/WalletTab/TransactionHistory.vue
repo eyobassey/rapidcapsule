@@ -71,7 +71,7 @@
 
 <script>
 import Loader from "@/components/Loader/main-loader.vue";
-import { formatCurrency } from '@/utilities/currency';
+import { formatCurrency, convertFromNGN } from '@/utilities/currency';
 
 export default {
   name: "TransactionHistory",
@@ -117,7 +117,7 @@ export default {
   },
   methods: {
     format(amount) {
-      return formatCurrency(amount, this.currencyCode);
+      return formatCurrency(convertFromNGN(amount, this.currencyCode), this.currencyCode);
     },
     formatDate(dateString) {
       if (!dateString) return "";

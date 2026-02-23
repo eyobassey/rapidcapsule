@@ -488,13 +488,22 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
+import { useStore } from 'vuex';
 import { useToast } from 'vue-toast-notification';
 import { useCurrency } from '@/composables/useCurrency';
 
 const router = useRouter();
 const route = useRoute();
 const toast = useToast();
-const { format: formatCurrency } = useCurrency();
+const store = useStore();
+const { format: formatAmount, formatConverted, currencyCode } = useCurrency();
+
+const formatCurrency = (amount) => {
+	const feeCurrency = store.getters.userprofile?.specialist_preferences?.rate_cards?.currency || 'NGN';
+	if (feeCurrency === currencyCode.value) return formatAmount(amount);
+	if (feeCurrency === 'NGN') return formatConverted(amount);
+	return formatAmount(amount);
+};
 
 // Get appointment data from route query/state
 const appointmentId = ref(route.query.id || 'APT-2026-0130');

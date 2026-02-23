@@ -122,9 +122,9 @@
 								<v-icon name="bi-wallet2" scale="1.3" />
 							</div>
 							<div class="stat-info">
-								<span class="stat-value">{{ formatCompact(dashboardStats.walletBalance) }}</span>
+								<span class="stat-value">{{ formatConvertedCompact(dashboardStats.walletBalance) }}</span>
 								<span class="stat-label">Wallet</span>
-								<span class="stat-sub">{{ formatCompact(dashboardStats.totalEarnings) }} total</span>
+								<span class="stat-sub">{{ formatConvertedCompact(dashboardStats.totalEarnings) }} total</span>
 							</div>
 						</div>
 					</div>
@@ -382,12 +382,12 @@
 							</div>
 							<div class="card-content earnings-content">
 								<div class="earnings-amount">
-									<span class="amount">{{ formatCompact(dashboardStats.totalEarnings) }}</span>
+									<span class="amount">{{ formatConvertedCompact(dashboardStats.totalEarnings) }}</span>
 								</div>
 								<p class="earnings-label">Total Earnings</p>
 								<div class="earnings-wallet-pill">
 									<v-icon name="hi-credit-card" scale="0.8" />
-									<span>Wallet: {{ formatCompact(dashboardStats.walletBalance) }}</span>
+									<span>Wallet: {{ formatConvertedCompact(dashboardStats.walletBalance) }}</span>
 								</div>
 								<div class="earnings-stats">
 									<div class="earnings-stat">
@@ -524,7 +524,7 @@ import { useAppointments } from './composables/useAppointments';
 
 const router = useRouter();
 const store = useStore();
-const { format: formatCurrency, formatCompact, symbol } = useCurrency();
+const { format: formatCurrency, formatCompact, formatConvertedCompact, symbol } = useCurrency();
 const { dashboardStats, isLoading, fetchDashboard } = useAppointments();
 
 const dismissedGreeting = ref(false);

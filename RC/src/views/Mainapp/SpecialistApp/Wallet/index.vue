@@ -273,7 +273,7 @@
 									<span class="credits-unit">{{ plan.type !== 'bundle' ? `for ${plan.duration_days} days` : 'credits' }}</span>
 								</div>
 								<div class="plan-price">
-									<span class="price-value">{{ format(plan.price) }}</span>
+									<span class="price-value">{{ formatPlanPrice(plan) }}</span>
 								</div>
 								<button
 									class="plan-btn"
@@ -785,7 +785,7 @@
 						<div class="summary-divider"></div>
 						<div class="summary-row total">
 							<span>Total</span>
-							<span>{{ format(selectedPlan?.price) }}</span>
+							<span>{{ formatPlanPrice(selectedPlan) }}</span>
 						</div>
 					</div>
 					<div class="payment-source">
@@ -805,7 +805,7 @@
 				<rc-button
 					v-if="!purchaseSuccess"
 					type="primary"
-					:label="'Pay ' + format(selectedPlan?.price)"
+					:label="'Pay ' + formatPlanPrice(selectedPlan)"
 					size="large"
 					@click="executePurchase"
 					:loading="purchasingPlan"
@@ -837,7 +837,14 @@ import CurrencyInput from "@/components/inputs/currency-input";
 
 const $http = inject("$http");
 const $toast = useToast();
-const { format, formatConverted, symbol } = useCurrency();
+const { format, formatConverted, symbol, currencyCode } = useCurrency();
+
+const formatPlanPrice = (plan) => {
+	const code = currencyCode.value;
+	const multiPrice = plan?.prices?.[code]?.price ?? plan?.prices?.[code]?.amount;
+	if (multiPrice != null) return format(multiPrice);
+	return formatConverted(plan?.price ?? plan?.amount ?? 0);
+};
 
 // Refs for scrolling
 const transactionsSection = ref(null);

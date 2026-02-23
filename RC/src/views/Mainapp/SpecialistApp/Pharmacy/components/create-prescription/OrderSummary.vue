@@ -17,7 +17,7 @@
       <!-- Items count -->
       <div class="summary-item">
         <span class="label">{{ isFinal ? 'Medications' : `Items (${itemCount})` }}</span>
-        <span class="value">{{ isFinal ? `${itemCount} items` : `NGN ${formatCurrency(total)}` }}</span>
+        <span class="value">{{ isFinal ? `${itemCount} items` : formatCurrency(total) }}</span>
       </div>
 
       <!-- Payment Method (final only) -->
@@ -49,7 +49,7 @@
       <!-- Total -->
       <div class="summary-item total">
         <span class="label">Total Amount</span>
-        <span class="value">NGN {{ formatCurrency(total) }}</span>
+        <span class="value">{{ formatCurrency(total) }}</span>
       </div>
     </div>
   </div>

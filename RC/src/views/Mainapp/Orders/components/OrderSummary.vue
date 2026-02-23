@@ -44,7 +44,7 @@
 
 <script>
 import { defineComponent } from "vue";
-import { formatCurrency } from "@/utilities/currency";
+import { formatCurrency, convertFromNGN } from "@/utilities/currency";
 
 export default defineComponent({
   name: "Order summary",
@@ -74,7 +74,7 @@ export default defineComponent({
   },
   methods: {
     format(amount) {
-      return formatCurrency(amount, this.currencyCode);
+      return formatCurrency(convertFromNGN(amount, this.currencyCode), this.currencyCode);
     },
   },
 });
