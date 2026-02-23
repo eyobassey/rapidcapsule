@@ -17,6 +17,7 @@ import CommunicationHistory from '@/components/PatientProfile/CommunicationHisto
 import NotesSection from '@/components/PatientProfile/NotesSection.vue'
 import AccountManagement from '@/components/PatientProfile/AccountManagement.vue'
 import ClaudeSummaryCredits from '@/components/PatientProfile/ClaudeSummaryCredits.vue'
+import ConnectedDevices from '@/components/PatientProfile/ConnectedDevices.vue'
 
 
 const patientStore = usePatientStore()
@@ -65,6 +66,9 @@ const tabs = [
   {
     // icon: 'mdi-brain',
     title: 'AI Credits',
+  },
+  {
+    title: 'Connected Devices',
   },
   {
     // icon: 'bx-cog',
@@ -281,6 +285,13 @@ watch(() => route.params.id, (newId, oldId) => {
 
             <VWindowItem>
               <ClaudeSummaryCredits
+                v-if="patient && patient.user"
+                :user-data="patient.user"
+              />
+            </VWindowItem>
+
+            <VWindowItem>
+              <ConnectedDevices
                 v-if="patient && patient.user"
                 :user-data="patient.user"
               />

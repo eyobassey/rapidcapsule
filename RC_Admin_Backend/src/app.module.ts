@@ -26,6 +26,7 @@ import { SpecialistCategoriesModule } from './modules/specialist-categories/spec
 import { ConsultationServicesModule } from './modules/consultation-services/consultation-services.module';
 import { RxGPTModule } from './modules/rxgpt/rxgpt.module';
 import { TrialAdminModule } from './modules/trial/trial-admin.module';
+import { HealthIntegrationsAdminModule } from './modules/health-integrations/health-integrations-admin.module';
 
 dotenv.config();
 @Module({
@@ -54,6 +55,7 @@ dotenv.config();
     ConsultationServicesModule,
     RxGPTModule,
     TrialAdminModule,
+    HealthIntegrationsAdminModule,
   ],
   controllers: [AppController],
   providers: [AppService],

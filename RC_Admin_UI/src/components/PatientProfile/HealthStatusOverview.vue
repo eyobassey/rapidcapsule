@@ -358,6 +358,191 @@
         </VCol>
       </VRow>
 
+      <!-- Activity & Wellness Metrics (from wearables) -->
+      <VRow v-if="vitals.spo2 || vitals.steps || vitals.sleep || vitals.calories_burned || vitals.distance || vitals.respiratory_rate || vitals.stress_level" class="mb-4">
+        <VCol cols="12">
+          <div class="text-subtitle-2 text-medium-emphasis mb-2">
+            <VIcon icon="bx-devices" size="16" class="mr-1" />
+            Activity & Wellness (from connected devices)
+          </div>
+        </VCol>
+
+        <VCol v-if="vitals.spo2" cols="6" md="3">
+          <VCard variant="outlined" class="metric-card">
+            <VCardText class="text-center pa-3">
+              <VIcon icon="bx-wind" size="24" class="text-teal mb-2" />
+              <div class="metric-value text-h6">{{ vitals.spo2 }}</div>
+              <div class="metric-label text-caption">Blood Oxygen</div>
+              <div class="metric-unit text-caption text-medium-emphasis">%</div>
+            </VCardText>
+          </VCard>
+        </VCol>
+
+        <VCol v-if="vitals.steps" cols="6" md="3">
+          <VCard variant="outlined" class="metric-card">
+            <VCardText class="text-center pa-3">
+              <VIcon icon="bx-walk" size="24" class="text-success mb-2" />
+              <div class="metric-value text-h6">{{ Number(vitals.steps).toLocaleString() }}</div>
+              <div class="metric-label text-caption">Steps</div>
+              <div class="metric-unit text-caption text-medium-emphasis">today</div>
+            </VCardText>
+          </VCard>
+        </VCol>
+
+        <VCol v-if="vitals.sleep" cols="6" md="3">
+          <VCard variant="outlined" class="metric-card">
+            <VCardText class="text-center pa-3">
+              <VIcon icon="bx-moon" size="24" class="text-indigo mb-2" />
+              <div class="metric-value text-h6">{{ vitals.sleep }}</div>
+              <div class="metric-label text-caption">Sleep</div>
+              <div class="metric-unit text-caption text-medium-emphasis">hours</div>
+            </VCardText>
+          </VCard>
+        </VCol>
+
+        <VCol v-if="vitals.calories_burned" cols="6" md="3">
+          <VCard variant="outlined" class="metric-card">
+            <VCardText class="text-center pa-3">
+              <VIcon icon="bx-flame" size="24" class="text-deep-orange mb-2" />
+              <div class="metric-value text-h6">{{ Number(vitals.calories_burned).toLocaleString() }}</div>
+              <div class="metric-label text-caption">Calories</div>
+              <div class="metric-unit text-caption text-medium-emphasis">kcal</div>
+            </VCardText>
+          </VCard>
+        </VCol>
+
+        <VCol v-if="vitals.distance" cols="6" md="3">
+          <VCard variant="outlined" class="metric-card">
+            <VCardText class="text-center pa-3">
+              <VIcon icon="bx-run" size="24" class="text-primary mb-2" />
+              <div class="metric-value text-h6">{{ vitals.distance }}</div>
+              <div class="metric-label text-caption">Distance</div>
+              <div class="metric-unit text-caption text-medium-emphasis">km</div>
+            </VCardText>
+          </VCard>
+        </VCol>
+
+        <VCol v-if="vitals.respiratory_rate" cols="6" md="3">
+          <VCard variant="outlined" class="metric-card">
+            <VCardText class="text-center pa-3">
+              <VIcon icon="bx-wind" size="24" class="text-cyan mb-2" />
+              <div class="metric-value text-h6">{{ vitals.respiratory_rate }}</div>
+              <div class="metric-label text-caption">Resp Rate</div>
+              <div class="metric-unit text-caption text-medium-emphasis">breaths/min</div>
+            </VCardText>
+          </VCard>
+        </VCol>
+
+        <VCol v-if="vitals.stress_level" cols="6" md="3">
+          <VCard variant="outlined" class="metric-card">
+            <VCardText class="text-center pa-3">
+              <VIcon icon="bx-pulse" size="24" class="text-pink mb-2" />
+              <div class="metric-value text-h6">{{ vitals.stress_level }}</div>
+              <div class="metric-label text-caption">Stress Level</div>
+              <div class="metric-unit text-caption text-medium-emphasis">score</div>
+            </VCardText>
+          </VCard>
+        </VCol>
+      </VRow>
+
+      <!-- Body Composition Metrics (from smart scales / wearables) -->
+      <VRow v-if="vitals.body_fat || vitals.active_minutes || vitals.hydration || vitals.muscle_mass || vitals.bone_mass || vitals.body_water || vitals.visceral_fat || vitals.bmr" class="mb-4">
+        <VCol cols="12">
+          <div class="text-subtitle-2 text-medium-emphasis mb-2">
+            <VIcon icon="bx-body" size="16" class="mr-1" />
+            Body Composition & Metabolism
+          </div>
+        </VCol>
+
+        <VCol v-if="vitals.body_fat" cols="6" md="3">
+          <VCard variant="outlined" class="metric-card">
+            <VCardText class="text-center pa-3">
+              <VIcon icon="bx-droplet" size="24" class="text-warning mb-2" />
+              <div class="metric-value text-h6">{{ vitals.body_fat }}</div>
+              <div class="metric-label text-caption">Body Fat</div>
+              <div class="metric-unit text-caption text-medium-emphasis">%</div>
+            </VCardText>
+          </VCard>
+        </VCol>
+
+        <VCol v-if="vitals.active_minutes" cols="6" md="3">
+          <VCard variant="outlined" class="metric-card">
+            <VCardText class="text-center pa-3">
+              <VIcon icon="bx-timer" size="24" class="text-success mb-2" />
+              <div class="metric-value text-h6">{{ vitals.active_minutes }}</div>
+              <div class="metric-label text-caption">Active Minutes</div>
+              <div class="metric-unit text-caption text-medium-emphasis">min</div>
+            </VCardText>
+          </VCard>
+        </VCol>
+
+        <VCol v-if="vitals.hydration" cols="6" md="3">
+          <VCard variant="outlined" class="metric-card">
+            <VCardText class="text-center pa-3">
+              <VIcon icon="bx-water" size="24" class="text-info mb-2" />
+              <div class="metric-value text-h6">{{ vitals.hydration }}</div>
+              <div class="metric-label text-caption">Hydration</div>
+              <div class="metric-unit text-caption text-medium-emphasis">L</div>
+            </VCardText>
+          </VCard>
+        </VCol>
+
+        <VCol v-if="vitals.muscle_mass" cols="6" md="3">
+          <VCard variant="outlined" class="metric-card">
+            <VCardText class="text-center pa-3">
+              <VIcon icon="bx-dumbbell" size="24" class="text-purple mb-2" />
+              <div class="metric-value text-h6">{{ vitals.muscle_mass }}</div>
+              <div class="metric-label text-caption">Muscle Mass</div>
+              <div class="metric-unit text-caption text-medium-emphasis">kg</div>
+            </VCardText>
+          </VCard>
+        </VCol>
+
+        <VCol v-if="vitals.bone_mass" cols="6" md="3">
+          <VCard variant="outlined" class="metric-card">
+            <VCardText class="text-center pa-3">
+              <VIcon icon="bx-bone" size="24" class="text-grey mb-2" />
+              <div class="metric-value text-h6">{{ vitals.bone_mass }}</div>
+              <div class="metric-label text-caption">Bone Mass</div>
+              <div class="metric-unit text-caption text-medium-emphasis">kg</div>
+            </VCardText>
+          </VCard>
+        </VCol>
+
+        <VCol v-if="vitals.body_water" cols="6" md="3">
+          <VCard variant="outlined" class="metric-card">
+            <VCardText class="text-center pa-3">
+              <VIcon icon="bx-water" size="24" class="text-cyan mb-2" />
+              <div class="metric-value text-h6">{{ vitals.body_water }}</div>
+              <div class="metric-label text-caption">Body Water</div>
+              <div class="metric-unit text-caption text-medium-emphasis">%</div>
+            </VCardText>
+          </VCard>
+        </VCol>
+
+        <VCol v-if="vitals.visceral_fat" cols="6" md="3">
+          <VCard variant="outlined" class="metric-card">
+            <VCardText class="text-center pa-3">
+              <VIcon icon="bx-bar-chart" size="24" class="text-deep-orange mb-2" />
+              <div class="metric-value text-h6">{{ vitals.visceral_fat }}</div>
+              <div class="metric-label text-caption">Visceral Fat</div>
+              <div class="metric-unit text-caption text-medium-emphasis">level</div>
+            </VCardText>
+          </VCard>
+        </VCol>
+
+        <VCol v-if="vitals.bmr" cols="6" md="3">
+          <VCard variant="outlined" class="metric-card">
+            <VCardText class="text-center pa-3">
+              <VIcon icon="bx-flame" size="24" class="text-red mb-2" />
+              <div class="metric-value text-h6">{{ Number(vitals.bmr).toLocaleString() }}</div>
+              <div class="metric-label text-caption">BMR</div>
+              <div class="metric-unit text-caption text-medium-emphasis">kcal</div>
+            </VCardText>
+          </VCard>
+        </VCol>
+      </VRow>
+
       <!-- Risk Factors & Health Alerts -->
       <VRow class="mb-4">
         <VCol cols="12" md="6">

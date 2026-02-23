@@ -701,7 +701,11 @@ export class DashboardService {
       // Get the most recent value for each vital type (same logic as patient backend)
       const recentVitals: any = {};
 
-      const vitalFields = ['body_temp', 'blood_pressure', 'blood_sugar_level', 'body_weight', 'pulse_rate'];
+      const vitalFields = [
+        'body_temp', 'blood_pressure', 'blood_sugar_level', 'body_weight', 'pulse_rate',
+        'spo2', 'steps', 'sleep', 'calories_burned', 'distance', 'respiratory_rate', 'stress_level',
+        'body_fat', 'active_minutes', 'hydration', 'muscle_mass', 'bone_mass', 'body_water', 'visceral_fat', 'bmr',
+      ];
 
       for (const field of vitalFields) {
         const values = vitalsDoc[field];
@@ -725,6 +729,21 @@ export class DashboardService {
         temperature_unit: recentVitals.body_temp?.unit || '°C',
         blood_sugar: recentVitals.blood_sugar_level?.value || null,
         weight: recentVitals.body_weight?.value || null,
+        spo2: recentVitals.spo2?.value || null,
+        steps: recentVitals.steps?.value || null,
+        sleep: recentVitals.sleep?.value || null,
+        calories_burned: recentVitals.calories_burned?.value || null,
+        distance: recentVitals.distance?.value || null,
+        respiratory_rate: recentVitals.respiratory_rate?.value || null,
+        stress_level: recentVitals.stress_level?.value || null,
+        body_fat: recentVitals.body_fat?.value || null,
+        active_minutes: recentVitals.active_minutes?.value || null,
+        hydration: recentVitals.hydration?.value || null,
+        muscle_mass: recentVitals.muscle_mass?.value || null,
+        bone_mass: recentVitals.bone_mass?.value || null,
+        body_water: recentVitals.body_water?.value || null,
+        visceral_fat: recentVitals.visceral_fat?.value || null,
+        bmr: recentVitals.bmr?.value || null,
         // Also include raw data for health score calculation
         body_temp: recentVitals.body_temp,
         blood_sugar_level: recentVitals.blood_sugar_level,
