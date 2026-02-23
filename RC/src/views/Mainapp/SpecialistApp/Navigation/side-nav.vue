@@ -395,8 +395,6 @@ export default {
 		background-color: #F8FAFC;
 		height: 100vh;
 		width: 260px;
-		position: sticky;
-		top: 0;
 		overflow-y: auto;
 
 		@include responsive(tab-landscape) {

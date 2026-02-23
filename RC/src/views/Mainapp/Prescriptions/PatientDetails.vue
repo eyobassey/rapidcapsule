@@ -838,7 +838,8 @@
 import Loader from "@/components/Loader/main-loader.vue";
 import apiFactory from "@/services/apiFactory";
 import moment from "moment";
-import { formatCurrency } from "@/utilities/currency";
+import { formatCurrency, convertFromNGN } from "@/utilities/currency";
+import { mapGetters } from "vuex";
 
 export default {
   name: "PatientPrescriptionDetails",
@@ -885,6 +886,7 @@ export default {
     };
   },
   computed: {
+    ...mapGetters("currency", { currencyCode: "currencyCode" }),
     prescriptionId() {
       return this.$route.params.id;
     },
@@ -1486,7 +1488,7 @@ export default {
       return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
     },
     formatCurrency(amount) {
-      return formatCurrency(amount);
+      return formatCurrency(convertFromNGN(amount, this.currencyCode), this.currencyCode);
     },
     formatDate(date) {
       if (!date) return "";

@@ -289,7 +289,8 @@
 import moment from "moment";
 import { debounce } from "lodash";
 import { mapGetters, mapActions } from "vuex";
-import { formatCurrency } from "@/utilities/currency";
+import { formatCurrency, convertFromNGN } from "@/utilities/currency";
+import { mapGetters as mapCurrencyGetters } from "vuex";
 
 export default {
   name: "PatientPrescriptions",
@@ -316,6 +317,7 @@ export default {
       loading: "getLoadingState",
       prescriptions: "getPrescriptions",
     }),
+    ...mapCurrencyGetters("currency", { currencyCode: "currencyCode" }),
     activeTabLabel() {
       const tab = this.statusTabs.find(t => t.value === this.activeTab);
       return tab ? `${tab.label} Prescriptions` : 'All Prescriptions';
@@ -605,7 +607,7 @@ export default {
       return moment(date).format("MMM D, YYYY");
     },
     formatCurrency(amount) {
-      return formatCurrency(amount);
+      return formatCurrency(convertFromNGN(amount, this.currencyCode), this.currencyCode);
     },
     formatStatus(prescription) {
       const status = prescription.status || prescription.verification_status || prescription.payment_status;

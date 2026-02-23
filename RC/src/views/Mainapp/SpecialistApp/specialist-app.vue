@@ -24,13 +24,13 @@ export default {
 	},
 
 	mounted() {
-		// Remove height/overflow locks from ancestors so pages use native browser scroll
-		document.documentElement.style.height = 'auto';
-		document.documentElement.style.overflow = 'visible';
-		document.body.style.height = 'auto';
-		document.body.style.overflow = 'visible';
+		// Lock ancestors to viewport so only .content scrolls (keeps sidebar fixed)
+		document.documentElement.style.height = '100%';
+		document.documentElement.style.overflow = 'hidden';
+		document.body.style.height = '100%';
+		document.body.style.overflow = 'hidden';
 		const app = document.getElementById('app');
-		if (app) app.style.height = 'auto';
+		if (app) app.style.height = '100%';
 	},
 
 	beforeUnmount() {
@@ -56,13 +56,14 @@ export default {
 	display: flex;
 	flex-direction: row;
 	width: 100%;
-	min-height: 100vh;
+	height: 100vh;
 	background-color: #F8FAFC;
 }
 
 .content {
 	flex: 1;
 	min-width: 0;
+	overflow-y: auto;
 	background-color: #F8FAFC;
 	border-right: $size-1 solid $color-g-85;
 

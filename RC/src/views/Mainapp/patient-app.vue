@@ -29,6 +29,26 @@ export default {
 		};
 	},
 
+	mounted() {
+		// Lock ancestors to viewport so only .content scrolls (keeps sidebar fixed)
+		document.documentElement.style.height = '100%';
+		document.documentElement.style.overflow = 'hidden';
+		document.body.style.height = '100%';
+		document.body.style.overflow = 'hidden';
+		const app = document.getElementById('app');
+		if (app) app.style.height = '100%';
+	},
+
+	beforeUnmount() {
+		// Restore defaults for non-patient pages
+		document.documentElement.style.height = '';
+		document.documentElement.style.overflow = '';
+		document.body.style.height = '';
+		document.body.style.overflow = '';
+		const app = document.getElementById('app');
+		if (app) app.style.height = '';
+	},
+
 	methods: {
 		setState(state) {
 			this.paneOpen = true;
@@ -40,7 +60,7 @@ export default {
 <style scoped lang="scss">
 .main-wrapper {
 	@include flexItem(horizontal) {
-		height: 100%;
+		height: 100vh;
 		overflow: hidden;
 		width: 100%;
 	}
