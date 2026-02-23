@@ -31,6 +31,7 @@
 		"node-sass": "^7.0.3",
 		"oh-vue-icons": "^1.0.0-rc3",
 		"payment-icons": "^1.2.1",
+		"pdfjs-dist": "^5.4.624",
 		"socket.io-client": "^4.6.1",
 		"svgstore-cli": "^2.0.1",
 		"v-calendar": "^3.0.3",

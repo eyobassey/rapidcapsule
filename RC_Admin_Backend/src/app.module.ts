@@ -27,6 +27,7 @@ import { ConsultationServicesModule } from './modules/consultation-services/cons
 import { RxGPTModule } from './modules/rxgpt/rxgpt.module';
 import { TrialAdminModule } from './modules/trial/trial-admin.module';
 import { HealthIntegrationsAdminModule } from './modules/health-integrations/health-integrations-admin.module';
+import { MessagingAdminModule } from './modules/messaging/messaging-admin.module';
 
 dotenv.config();
 @Module({
@@ -56,6 +57,7 @@ dotenv.config();
     RxGPTModule,
     TrialAdminModule,
     HealthIntegrationsAdminModule,
+    MessagingAdminModule,
   ],
   controllers: [AppController],
   providers: [AppService],

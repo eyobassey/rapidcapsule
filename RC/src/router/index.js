@@ -431,6 +431,17 @@ const routes = [
         name: "Eka",
         component: () => import("@/components/EkaChat/EkaChatPanel.vue"),
       },
+      // Messaging Routes
+      {
+        path: "messages",
+        name: "PatientMessages",
+        component: () => import("@/views/Mainapp/Messaging/MessagingPage.vue"),
+      },
+      {
+        path: "messages/:conversationId",
+        name: "PatientMessageConversation",
+        component: () => import("@/views/Mainapp/Messaging/MessagingPage.vue"),
+      },
     ],
   },
   {
@@ -715,6 +726,17 @@ const routes = [
         path: "patient/:patientId/health-records",
         name: "SpecialistPatientHealthRecords",
         component: () => import("@/views/Mainapp/SpecialistApp/PatientHealth/PatientHealthRecords.vue"),
+      },
+      // Specialist Messaging Routes
+      {
+        path: "messages",
+        name: "SpecialistMessages",
+        component: () => import("@/views/Mainapp/Messaging/MessagingPage.vue"),
+      },
+      {
+        path: "messages/:conversationId",
+        name: "SpecialistMessageConversation",
+        component: () => import("@/views/Mainapp/Messaging/MessagingPage.vue"),
       },
       // Specialist Onboarding Routes
       {

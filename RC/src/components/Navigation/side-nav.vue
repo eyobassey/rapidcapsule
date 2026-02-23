@@ -178,6 +178,13 @@ export default {
           iconColor: "#6F6F6F",
         },
         {
+          link: "/app/patient/messages",
+          label: "Messages",
+          children: [],
+          icon: "chat-bubble",
+          iconColor: "#4FC3F7",
+        },
+        {
           link: "/app/patient/eka",
           label: "EkaGPT",
           children: [],

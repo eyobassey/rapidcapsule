@@ -14,6 +14,7 @@ import notifications from "./modules/notifications";
 import currency from "./modules/currency";
 import eka from "./modules/eka";
 import healthIntegrations from "./modules/health-integrations";
+import messaging from "./modules/messaging";
 import axios from "../services/http";
 
 export default createStore({
@@ -286,5 +287,6 @@ export default createStore({
     currency,
     eka,
     healthIntegrations,
+    messaging,
   },
 });

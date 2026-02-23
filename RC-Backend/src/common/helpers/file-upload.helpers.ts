@@ -13,13 +13,17 @@ export class FileUploadHelper {
       signatureVersion: 'v4', // Use AWS Signature Version 4
     });
   }
-  async uploadToS3(fileBuffer: Buffer, filename: string) {
+  async uploadToS3(fileBuffer: Buffer, filename: string, contentType?: string) {
     try {
-      const location = await this.S3.upload({
+      const uploadParams: AWS.S3.PutObjectRequest = {
         Bucket: <string>process.env.AWS_BUCKET_NAME,
         Body: fileBuffer,
         Key: `${Date.now()}-${filename}`,
-      }).promise();
+      };
+      if (contentType) {
+        uploadParams.ContentType = contentType;
+      }
+      const location = await this.S3.upload(uploadParams).promise();
       return location.Location;
     } catch (e) {
       throw new InternalServerErrorException('Error uploading to S3', e);
@@ -48,7 +52,7 @@ export class FileUploadHelper {
    * @param expiresIn Expiration time in seconds (default: 1 hour)
    * @returns Presigned URL
    */
-  async getPresignedUrl(fileUrl: string, expiresIn: number = 3600): Promise<string> {
+  async getPresignedUrl(fileUrl: string, expiresIn: number = 3600, responseContentType?: string): Promise<string> {
     try {
       // Remove any existing query parameters (e.g., old signing params)
       const baseUrl = fileUrl.split('?')[0];
@@ -57,11 +61,16 @@ export class FileUploadHelper {
       const urlParts = baseUrl.split('/');
       const key = decodeURIComponent(urlParts.slice(3).join('/')); // Remove domain parts and decode
 
-      const params = {
+      const params: any = {
         Bucket: <string>process.env.AWS_BUCKET_NAME,
         Key: key,
         Expires: expiresIn,
       };
+
+      // Override response content type so browsers render inline instead of downloading
+      if (responseContentType) {
+        params.ResponseContentType = responseContentType;
+      }
 
       return this.S3.getSignedUrl('getObject', params);
     } catch (e) {

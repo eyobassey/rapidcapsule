@@ -208,6 +208,13 @@ export default {
 					icon: "stethoscope",
 					matchRoutes: ["/app/specialist/rxgpt"]
 				},
+				{
+					link: "/app/specialist/messages",
+					label: "Messages",
+					children: [],
+					icon: "chat-bubble",
+					matchRoutes: ["/app/specialist/messages"]
+				},
 			],
 			secondaryNav: [
 				{

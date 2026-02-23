@@ -78,6 +78,11 @@ export default [
     ],
   },
   {
+    title: 'Messaging',
+    to: { name: 'messaging' },
+    icon: { icon: 'bx-message-square-dots' },
+  },
+  {
     title: 'LifeGuards',
     to: { name: 'lifeguards' },
     icon: { icon: 'tabler:heartbeat' },
