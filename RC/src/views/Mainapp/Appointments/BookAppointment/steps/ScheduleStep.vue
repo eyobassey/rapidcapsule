@@ -56,12 +56,14 @@
 
 <script setup>
 import { ref, inject, computed, watch } from 'vue';
+import { useStore } from 'vuex';
 import { format } from 'date-fns';
 import RcCalendar from '@/components/RCCalendar/RCCalendar.vue';
 import Timezones from '../../../Appointments/helpers/timezones';
 import MeetingChannelPicker from '../components/MeetingChannelPicker.vue';
 import TimeSlotGrid from '../components/TimeSlotGrid.vue';
 
+const store = useStore();
 const $http = inject('$_HTTP');
 const booking = inject('bookingState');
 
@@ -100,7 +102,8 @@ const fetchAvailableSlots = async () => {
   try {
     const payload = {
       preferredDates: [{ date: booking.schedule.date }],
-      specialist: booking.specialist.id,
+      specialistId: booking.specialist.id,
+      patientId: store.state.userProfile?._id,
       timezone: booking.schedule.timezone,
     };
     const { data } = await $http.$_getAvailableTimes(payload);

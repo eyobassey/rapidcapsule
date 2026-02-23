@@ -245,6 +245,9 @@ import {
 	HiServer,
 	// Trial prescription icon
 	HiDocumentSearch,
+	// Vitals expansion icons
+	FaFireAlt,
+	FaWalking,
 } from "oh-vue-icons/icons";
 addIcons(
 	BiCreditCard2Back,
@@ -478,6 +481,9 @@ addIcons(
 	HiDeviceTablet,
 	// Trial prescription icon
 	HiDocumentSearch,
+	// Vitals expansion icons
+	FaFireAlt,
+	FaWalking,
 );
 
 require("@/store/subscriber");

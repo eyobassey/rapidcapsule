@@ -1175,6 +1175,22 @@
     <circle cx="12" cy="10.5" r="1.2" fill="white"/>
     <circle cx="16" cy="10.5" r="1.2" fill="white"/>
   </svg>
+
+  <!-- Plug / Devices & Apps -->
+  <svg
+    v-else-if="name === 'plug'"
+    class="icons"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="M16 9V4h-2v5h-4V4H8v5c0 1.86 1.28 3.41 3 3.86V21h2v-8.14c1.72-.45 3-2 3-3.86z"
+      :fill="fillColor || 'currentColor'"
+    />
+  </svg>
 </template>
 
 <script>

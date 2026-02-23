@@ -82,9 +82,10 @@ export default {
 			updatePassword: "psswordReset/updatepassword",
 		}),
 
-		handleSubmit() {
+		async handleSubmit() {
 			this.isLoading = true;
-			this.requestResetLink({ email: this.email });
+			await this.requestResetLink({ email: this.email });
+			this.isLoading = false;
 		},
 	},
 

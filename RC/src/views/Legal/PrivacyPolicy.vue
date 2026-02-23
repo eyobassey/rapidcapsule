@@ -271,10 +271,6 @@
           <p>If you have questions about this Privacy Policy or our privacy practices:</p>
           <div class="contact-info">
             <p><strong>Email:</strong> info@rapidcapsule.com</p>
-            <p><strong>Address:</strong> Rapid Capsule Ltd.<br>
-            No 8 New Creation Street, Lekki Phase 1<br>
-            Lagos, Nigeria</p>
-            <p><strong>Phone:</strong> +234-7052230000</p>
           </div>
           
           <p><strong>Data Protection Officer:</strong> info@rapidcapsule.com</p>

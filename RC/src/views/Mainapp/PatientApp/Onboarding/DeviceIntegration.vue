@@ -28,78 +28,30 @@
                 v-for="app in healthApps"
                 :key="app.id"
                 class="app-card"
-                :class="{ connected: isAppConnected(app.id) }"
-                @click="toggleApp(app.id)"
+                :class="{ connected: isAppConnected(app.id), connecting: connectingApp === app.id }"
+                @click="connectApp(app.id)"
               >
                 <div class="app-icon" :style="{ background: app.color }">
                   <v-icon :name="app.icon" scale="1.2" />
                 </div>
                 <div class="app-info">
                   <h4>{{ app.name }}</h4>
-                  <p>{{ app.description }}</p>
+                  <p>{{ isAppConnected(app.id) ? 'Connected' : app.description }}</p>
                 </div>
                 <div class="app-status">
                   <v-icon v-if="isAppConnected(app.id)" name="hi-check-circle" scale="1" />
+                  <span v-else-if="connectingApp === app.id" class="connecting-text">Connecting...</span>
                   <span v-else>Connect</span>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- Data Sharing -->
-          <div class="form-section">
-            <h2 class="section-title">Data Sharing Preferences</h2>
-            <p class="section-description">Choose what health data to sync automatically.</p>
-            <div class="toggle-list">
-              <label class="toggle-item">
-                <div class="toggle-info">
-                  <h4>Vitals Auto-Sync</h4>
-                  <p>Automatically update blood pressure, heart rate, etc.</p>
-                </div>
-                <input type="checkbox" v-model="deviceIntegration.data_sharing_consents.vitals_auto_sync" class="toggle-input" />
-              </label>
-              <label class="toggle-item">
-                <div class="toggle-info">
-                  <h4>Activity Tracking</h4>
-                  <p>Steps, exercise, and movement data</p>
-                </div>
-                <input type="checkbox" v-model="deviceIntegration.data_sharing_consents.activity_tracking" class="toggle-input" />
-              </label>
-              <label class="toggle-item">
-                <div class="toggle-info">
-                  <h4>Sleep Tracking</h4>
-                  <p>Sleep duration and quality data</p>
-                </div>
-                <input type="checkbox" v-model="deviceIntegration.data_sharing_consents.sleep_tracking" class="toggle-input" />
-              </label>
-            </div>
-          </div>
-
-          <!-- Notification Preferences -->
-          <div class="form-section">
-            <h2 class="section-title">Notification Preferences</h2>
-            <div class="toggle-list">
-              <label class="toggle-item">
-                <div class="toggle-info">
-                  <h4>Health Reminders</h4>
-                  <p>Reminders for checkups and health goals</p>
-                </div>
-                <input type="checkbox" v-model="deviceIntegration.notification_preferences.health_reminders" class="toggle-input" />
-              </label>
-              <label class="toggle-item">
-                <div class="toggle-info">
-                  <h4>Medication Reminders</h4>
-                  <p>Never miss a dose</p>
-                </div>
-                <input type="checkbox" v-model="deviceIntegration.notification_preferences.medication_reminders" class="toggle-input" />
-              </label>
-              <label class="toggle-item">
-                <div class="toggle-info">
-                  <h4>Wellness Tips</h4>
-                  <p>Personalized health tips and insights</p>
-                </div>
-                <input type="checkbox" v-model="deviceIntegration.notification_preferences.wellness_tips" class="toggle-input" />
-              </label>
+          <!-- Info Note -->
+          <div class="form-section" v-if="connectedProviders.length > 0">
+            <div class="info-note">
+              <v-icon name="hi-information-circle" scale="1" />
+              <p>Your health data will sync automatically. You can manage sync settings anytime from <a @click.prevent="$router.push('/app/patient/devices-and-apps')">Devices & Apps</a>.</p>
             </div>
           </div>
         </div>
@@ -124,7 +76,7 @@
 </template>
 
 <script setup>
-import { ref, inject } from 'vue';
+import { ref, computed, onMounted, inject } from 'vue';
 import { useRouter } from 'vue-router';
 import { useStore } from 'vuex';
 import { usePatientOnboardingState } from './composables/usePatientOnboardingState';
@@ -135,6 +87,7 @@ const $http = inject('$http');
 const { deviceIntegration, completeStep, saveProgress, goToStep } = usePatientOnboardingState();
 
 const isSaving = ref(false);
+const connectingApp = ref(null);
 
 const healthApps = [
   { id: 'apple_health', name: 'Apple Health', description: 'iOS health data', icon: 'fa-apple', color: '#FF3B30' },
@@ -143,25 +96,48 @@ const healthApps = [
   { id: 'samsung_health', name: 'Samsung Health', description: 'Samsung devices', icon: 'hi-device-mobile', color: '#1428A0' },
 ];
 
+// Real connected integrations from the store
+const connectedProviders = computed(() => {
+  const integrations = store.getters['healthIntegrations/connectedDevices'] || [];
+  return integrations.map(i => i.provider);
+});
+
 const goBack = () => goToStep(7);
 
 const isAppConnected = (appId) => {
-  return deviceIntegration.health_apps_connected.includes(appId);
+  return connectedProviders.value.includes(appId);
 };
 
-const toggleApp = (appId) => {
-  const index = deviceIntegration.health_apps_connected.indexOf(appId);
-  if (index > -1) {
-    deviceIntegration.health_apps_connected.splice(index, 1);
-  } else {
-    deviceIntegration.health_apps_connected.push(appId);
+// Initiate real OAuth connection
+const connectApp = async (appId) => {
+  if (isAppConnected(appId)) return; // Already connected
+  connectingApp.value = appId;
+
+  // Store return path so devices-and-apps page can redirect back
+  sessionStorage.setItem('onboarding_return', '/app/patient/onboarding/device-integration');
+
+  const result = await store.dispatch('healthIntegrations/connectProvider', {
+    provider: appId,
+    autoSync: true,
+  });
+
+  if (result?.redirected) {
+    // User is being redirected to OAuth provider — page will unload
+    return;
   }
+
+  if (result?.requiresNativeApp) {
+    connectingApp.value = null;
+    alert(`${appId} requires the mobile app. Please use the Rapid Capsule mobile app to connect.`);
+    return;
+  }
+
+  connectingApp.value = null;
 };
 
-// Save device integration preferences to backend
-const saveDeviceIntegrationToBackend = async () => {
-  const hasData =
-    deviceIntegration.health_apps_connected.length > 0 ||
+// Save preferences (consents & notifications) to user profile
+const savePreferencesToBackend = async () => {
+  const hasPrefs =
     deviceIntegration.data_sharing_consents.vitals_auto_sync ||
     deviceIntegration.data_sharing_consents.activity_tracking ||
     deviceIntegration.data_sharing_consents.sleep_tracking ||
@@ -169,23 +145,22 @@ const saveDeviceIntegrationToBackend = async () => {
     deviceIntegration.notification_preferences.medication_reminders ||
     deviceIntegration.notification_preferences.wellness_tips;
 
-  if (!hasData) return true;
+  if (!hasPrefs && connectedProviders.value.length === 0) return true;
 
   try {
     isSaving.value = true;
     await $http.$_updateUser({
       device_integration: {
-        health_apps_connected: deviceIntegration.health_apps_connected,
-        devices_connected: deviceIntegration.devices_connected || [],
+        health_apps_connected: connectedProviders.value,
+        devices_connected: [],
         data_sharing_consents: deviceIntegration.data_sharing_consents,
         notification_preferences: deviceIntegration.notification_preferences,
       },
     });
-    // Refresh user profile in store
     await store.dispatch('authenticate', localStorage.getItem('token') || sessionStorage.getItem('token'));
     return true;
   } catch (error) {
-    console.error('Failed to save device integration:', error);
+    console.error('Failed to save device integration preferences:', error);
     return false;
   } finally {
     isSaving.value = false;
@@ -198,21 +173,24 @@ const skipStep = () => {
 };
 
 const saveAndExit = async () => {
-  await saveDeviceIntegrationToBackend();
+  await savePreferencesToBackend();
   saveProgress();
   router.push({ name: 'Patient Dashboard' });
 };
 
 const saveAndContinue = async () => {
-  const hasData = deviceIntegration.health_apps_connected.length > 0;
-  const saved = await saveDeviceIntegrationToBackend();
-
-  if (hasData && saved) {
+  const saved = await savePreferencesToBackend();
+  if (connectedProviders.value.length > 0 && saved) {
     completeStep('deviceIntegration');
   }
   saveProgress();
   goToStep(9);
 };
+
+// On mount: load real integrations from backend
+onMounted(async () => {
+  await store.dispatch('healthIntegrations/fetchIntegrations');
+});
 </script>
 
 <style scoped lang="scss">
@@ -246,6 +224,12 @@ const saveAndContinue = async () => {
   &.connected {
     background: #E1F5FE;
     border-color: #4FC3F7;
+    cursor: default;
+  }
+
+  &.connecting {
+    opacity: 0.7;
+    pointer-events: none;
   }
 }
 
@@ -284,66 +268,37 @@ const saveAndContinue = async () => {
   .connected & {
     color: #10B981;
   }
+
+  .connecting-text {
+    color: #4285F4;
+    font-style: italic;
+  }
 }
 
-.toggle-list {
+.info-note {
   display: flex;
-  flex-direction: column;
+  align-items: flex-start;
   gap: 0.75rem;
-}
-
-.toggle-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   padding: 1rem;
-  background: #F8FAFC;
+  background: #E1F5FE;
   border-radius: 0.75rem;
-  cursor: pointer;
-}
+  color: #0288D1;
 
-.toggle-info {
-  h4 {
-    font-size: 0.9375rem;
-    font-weight: 600;
-    color: #1A365D;
-    margin: 0 0 0.25rem 0;
+  svg {
+    flex-shrink: 0;
+    margin-top: 2px;
   }
 
   p {
-    font-size: 0.8125rem;
-    color: #64748B;
+    font-size: 0.875rem;
     margin: 0;
-  }
-}
+    line-height: 1.5;
 
-.toggle-input {
-  width: 48px;
-  height: 24px;
-  appearance: none;
-  background: #CBD5E1;
-  border-radius: 12px;
-  position: relative;
-  cursor: pointer;
-  transition: all 0.2s;
-
-  &::before {
-    content: '';
-    position: absolute;
-    top: 2px;
-    left: 2px;
-    width: 20px;
-    height: 20px;
-    background: white;
-    border-radius: 50%;
-    transition: all 0.2s;
-  }
-
-  &:checked {
-    background: #4FC3F7;
-
-    &::before {
-      transform: translateX(24px);
+    a {
+      color: #0277BD;
+      font-weight: 600;
+      text-decoration: underline;
+      cursor: pointer;
     }
   }
 }
@@ -375,34 +330,5 @@ const saveAndContinue = async () => {
     font-size: 0.8125rem;
   }
 
-  .toggle-item {
-    padding: 0.875rem;
-    gap: 0.75rem;
-  }
-
-  .toggle-info {
-    h4 {
-      font-size: 0.875rem;
-    }
-
-    p {
-      font-size: 0.75rem;
-    }
-  }
-
-  .toggle-input {
-    width: 44px;
-    height: 22px;
-    flex-shrink: 0;
-
-    &::before {
-      width: 18px;
-      height: 18px;
-    }
-
-    &:checked::before {
-      transform: translateX(22px);
-    }
-  }
 }
 </style>

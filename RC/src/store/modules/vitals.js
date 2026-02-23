@@ -4,6 +4,29 @@ let saved_token = localStorage.getItem("token")
 	? localStorage.getItem("token")
 	: sessionStorage.getItem("token");
 
+const VITAL_FIELD_MAP = {
+	"Body Temperature": "body_temp",
+	"Body Weight": "body_weight",
+	"Pulse Rate": "pulse_rate",
+	"Blood Sugar Level": "blood_sugar_level",
+	"Blood Pressure": "blood_pressure",
+	"Blood Oxygen (SpO2)": "spo2",
+	"Steps": "steps",
+	"Sleep": "sleep",
+	"Calories Burned": "calories_burned",
+	"Distance": "distance",
+	"Respiratory Rate": "respiratory_rate",
+	"Stress Level": "stress_level",
+	"Body Fat": "body_fat",
+	"Active Minutes": "active_minutes",
+	"Hydration": "hydration",
+	"Muscle Mass": "muscle_mass",
+	"Bone Mass": "bone_mass",
+	"Body Water": "body_water",
+	"Visceral Fat": "visceral_fat",
+	"BMR": "bmr",
+};
+
 export default {
 	namespaced: true,
 
@@ -27,135 +50,38 @@ export default {
 
 	actions: {
 		async addVitals({ dispatch }, data) {
-			switch (data.name) {
-				case "Body Temperature":
-					await axios.post("vitals", {
-						body_temp: {
-							value: data.value,
-							unit: data.unit,
-						},
-					});
+			const field = VITAL_FIELD_MAP[data.name];
+			if (!field) return false;
 
-					await dispatch("authenticate", saved_token, { root: true });
+			await axios.post("vitals", {
+				[field]: {
+					value: data.value,
+					unit: data.unit,
+				},
+			});
 
-					return true;
+			await dispatch("authenticate", saved_token, { root: true });
 
-				case "Body Weight":
-					await axios.post("vitals", {
-						body_weight: {
-							value: data.value,
-							unit: data.unit,
-						},
-					});
-
-					await dispatch("authenticate", saved_token, { root: true });
-
-					return true;
-
-				case "Pulse Rate":
-					await axios.post("vitals", {
-						pulse_rate: {
-							value: data.value,
-							unit: data.unit,
-						},
-					});
-
-					await dispatch("authenticate", saved_token, { root: true });
-
-					return true;
-
-				case "Blood Sugar Level":
-					await axios.post("vitals", {
-						blood_sugar_level: {
-							value: data.value,
-							unit: data.unit,
-						},
-					});
-
-					await dispatch("authenticate", saved_token, { root: true });
-
-					return true;
-
-				case "Blood Pressure":
-					await axios.post("vitals", {
-						blood_pressure: {
-							value: data.value,
-							unit: data.unit,
-						},
-					});
-
-					dispatch("authenticate", saved_token, { root: true });
-
-					return true;
-			}
+			return true;
 		},
 
-		async updateVitals({ commit, rootGetters }, data) {
+		async updateVitals({ commit }, data) {
+			const field = VITAL_FIELD_MAP[data.name];
+			if (!field) return false;
+
 			let idRes = await axios.get("vitals");
 			let id = idRes.data.data._id;
-			let res = null;
 
-			switch (data.name) {
-				case "Body Temperature":
-					res = await axios.patch(`vitals/${id}`, {
-						body_temp: {
-							value: data.value,
-							unit: data.unit,
-						},
-					});
+			let res = await axios.patch(`vitals/${id}`, {
+				[field]: {
+					value: data.value,
+					unit: data.unit,
+				},
+			});
 
-					commit("SET_VITALS_RECENT", res.data.data, { root: true });
+			commit("SET_VITALS_RECENT", res.data.data, { root: true });
 
-					return true;
-
-				case "Body Weight":
-					res = await axios.patch(`vitals/${id}`, {
-						body_weight: {
-							value: data.value,
-							unit: data.unit,
-						},
-					});
-
-					commit("SET_VITALS_RECENT", res.data.data, { root: true });
-
-					return true;
-
-				case "Pulse Rate":
-					res = await axios.patch(`vitals/${id}`, {
-						pulse_rate: {
-							value: data.value,
-							unit: data.unit,
-						},
-					});
-
-					commit("SET_VITALS_RECENT", res.data.data, { root: true });
-
-					return true;
-
-				case "Blood Sugar Level":
-					res = await axios.patch(`vitals/${id}`, {
-						blood_sugar_level: {
-							value: data.value,
-							unit: data.unit,
-						},
-					});
-
-					commit("SET_VITALS_RECENT", res.data.data, { root: true });
-
-					return true;
-
-				case "Blood Pressure":
-					res = await axios.patch(`vitals/${id}`, {
-						blood_pressure: {
-							value: data.value,
-							unit: data.unit,
-						},
-					});
-
-					commit("SET_VITALS_RECENT", res.data.data, { root: true });
-
-					return true;
-			}
+			return true;
 		},
 
 		async getSelectedVitalRecords({ commit }, param) {

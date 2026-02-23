@@ -21,6 +21,7 @@
 						v-if="v$.password.$error"
 						:message="v$.password.$errors[0].$message"
 					/>
+					<MessageAlert v-else-if="errorMessage" :message="errorMessage" />
 					<MessageAlert v-else-if="message" :message="message" />
 				</div>
 				<Button
@@ -74,6 +75,7 @@ export default {
 	computed: {
 		...mapGetters({
 			isLoading: "passwordReset/isloading",
+			errorMessage: "passwordReset/errormessage",
 		}),
 
 		token() {
@@ -124,15 +126,16 @@ export default {
 			}
 		},
 
-		handleSubmit() {
-			this.updatePassword({
+		async handleSubmit() {
+			const success = await this.updatePassword({
 				password: this.password,
 				confirm_password: this.confirm_password,
 				token: this.token,
 				userId: this.id,
-			}).then(() => {
-				this.$router.push({ name: "Reset success" });
 			});
+			if (success) {
+				this.$router.push({ name: "Reset success" });
+			}
 		},
 	},
 };

@@ -461,6 +461,21 @@ export default {
         "Pulse Rate",
         "Blood Sugar Level",
         "Blood Pressure",
+        "Blood Oxygen (SpO2)",
+        "Steps",
+        "Sleep",
+        "Calories Burned",
+        "Distance",
+        "Respiratory Rate",
+        "Stress Level",
+        "Body Fat",
+        "Active Minutes",
+        "Hydration",
+        "Muscle Mass",
+        "Bone Mass",
+        "Body Water",
+        "Visceral Fat",
+        "BMR",
       ],
 
       selectedVital: null,
@@ -482,6 +497,67 @@ export default {
         "Pulse Rate": { min: 60, max: 100, unit: "bpm" },
         "Blood Sugar Level": { min: 70, max: 100, unit: "mg/dL" },
         "Blood Pressure": { systolic: { min: 90, max: 120 }, diastolic: { min: 60, max: 80 } },
+        "Blood Oxygen (SpO2)": { min: 95, max: 100, unit: "%" },
+        "Steps": { min: 0, max: 999999, unit: "steps" },
+        "Sleep": { min: 7, max: 9, unit: "hours" },
+        "Calories Burned": { min: 0, max: 999999, unit: "kcal" },
+        "Distance": { min: 0, max: 999999, unit: "km" },
+        "Respiratory Rate": { min: 12, max: 20, unit: "breaths/min" },
+        "Stress Level": { min: 0, max: 75, unit: "score" },
+        "Body Fat": { min: 10, max: 25, unit: "%" },
+        "Active Minutes": { min: 0, max: 999999, unit: "min" },
+        "Hydration": { min: 0, max: 999999, unit: "L" },
+        "Muscle Mass": { min: 20, max: 80, unit: "kg" },
+        "Bone Mass": { min: 1, max: 5, unit: "kg" },
+        "Body Water": { min: 45, max: 65, unit: "%" },
+        "Visceral Fat": { min: 1, max: 12, unit: "level" },
+        "BMR": { min: 1000, max: 2500, unit: "kcal" },
+      },
+
+      fieldToName: {
+        body_temp: "Body Temperature",
+        blood_pressure: "Blood Pressure",
+        blood_sugar_level: "Blood Sugar Level",
+        body_weight: "Body Weight",
+        pulse_rate: "Pulse Rate",
+        spo2: "Blood Oxygen (SpO2)",
+        steps: "Steps",
+        sleep: "Sleep",
+        calories_burned: "Calories Burned",
+        distance: "Distance",
+        respiratory_rate: "Respiratory Rate",
+        stress_level: "Stress Level",
+        body_fat: "Body Fat",
+        active_minutes: "Active Minutes",
+        hydration: "Hydration",
+        muscle_mass: "Muscle Mass",
+        bone_mass: "Bone Mass",
+        body_water: "Body Water",
+        visceral_fat: "Visceral Fat",
+        bmr: "BMR",
+      },
+
+      nameToField: {
+        "Body Temperature": "body_temp",
+        "Body Weight": "body_weight",
+        "Pulse Rate": "pulse_rate",
+        "Blood Sugar Level": "blood_sugar_level",
+        "Blood Pressure": "blood_pressure",
+        "Blood Oxygen (SpO2)": "spo2",
+        "Steps": "steps",
+        "Sleep": "sleep",
+        "Calories Burned": "calories_burned",
+        "Distance": "distance",
+        "Respiratory Rate": "respiratory_rate",
+        "Stress Level": "stress_level",
+        "Body Fat": "body_fat",
+        "Active Minutes": "active_minutes",
+        "Hydration": "hydration",
+        "Muscle Mass": "muscle_mass",
+        "Bone Mass": "bone_mass",
+        "Body Water": "body_water",
+        "Visceral Fat": "visceral_fat",
+        "BMR": "bmr",
       },
     };
   },
@@ -500,13 +576,8 @@ export default {
     vitalList() {
       const vitalArray = [];
       Object.keys(this.recentVitals).forEach((key) => {
-        switch (key) {
-          case "body_temp": vitalArray.push("Body Temperature"); break;
-          case "blood_pressure": vitalArray.push("Blood Pressure"); break;
-          case "blood_sugar_level": vitalArray.push("Blood Sugar Level"); break;
-          case "body_weight": vitalArray.push("Body Weight"); break;
-          case "pulse_rate": vitalArray.push("Pulse Rate"); break;
-        }
+        const name = this.fieldToName[key];
+        if (name) vitalArray.push(name);
       });
       return vitalArray;
     },
@@ -603,6 +674,21 @@ export default {
         "Blood Sugar Level": "bi-droplet-fill",
         "Blood Pressure": "fa-heartbeat",
         "BMI": "hi-scale",
+        "Blood Oxygen (SpO2)": "fa-lungs",
+        "Steps": "fa-walking",
+        "Sleep": "hi-moon",
+        "Calories Burned": "fa-fire-alt",
+        "Distance": "fa-running",
+        "Respiratory Rate": "fa-lungs",
+        "Stress Level": "hi-lightning-bolt",
+        "Body Fat": "bi-droplet-fill",
+        "Active Minutes": "fa-stopwatch",
+        "Hydration": "io-water-outline",
+        "Muscle Mass": "fa-weight",
+        "Bone Mass": "fa-bone",
+        "Body Water": "bi-droplet-fill",
+        "Visceral Fat": "hi-chart-bar",
+        "BMR": "fa-fire-alt",
       };
       return icons[name] || "hi-heart";
     },
@@ -628,6 +714,21 @@ export default {
         "Blood Sugar Level": "vital--sugar",
         "Blood Pressure": "vital--pressure",
         "BMI": "vital--bmi",
+        "Blood Oxygen (SpO2)": "vital--spo2",
+        "Steps": "vital--steps",
+        "Sleep": "vital--sleep",
+        "Calories Burned": "vital--calories",
+        "Distance": "vital--distance",
+        "Respiratory Rate": "vital--respiratory",
+        "Stress Level": "vital--stress",
+        "Body Fat": "vital--bodyfat",
+        "Active Minutes": "vital--activemins",
+        "Hydration": "vital--hydration",
+        "Muscle Mass": "vital--muscle",
+        "Bone Mass": "vital--bone",
+        "Body Water": "vital--bodywater",
+        "Visceral Fat": "vital--visceral",
+        "BMR": "vital--bmr",
       };
       return classes[name] || "";
     },
@@ -639,6 +740,21 @@ export default {
         "Pulse Rate": "Pulse",
         "Blood Sugar Level": "Sugar",
         "Blood Pressure": "BP",
+        "Blood Oxygen (SpO2)": "SpO2",
+        "Steps": "Steps",
+        "Sleep": "Sleep",
+        "Calories Burned": "Calories",
+        "Distance": "Distance",
+        "Respiratory Rate": "Resp",
+        "Stress Level": "Stress",
+        "Body Fat": "Fat %",
+        "Active Minutes": "Active",
+        "Hydration": "Water",
+        "Muscle Mass": "Muscle",
+        "Bone Mass": "Bone",
+        "Body Water": "H₂O %",
+        "Visceral Fat": "Visceral",
+        "BMR": "BMR",
       };
       return shorts[name] || name;
     },
@@ -650,6 +766,21 @@ export default {
         "Pulse Rate": "60-100 bpm",
         "Blood Sugar Level": "70-100 mg/dL",
         "Blood Pressure": "90-120/60-80 mmHg",
+        "Blood Oxygen (SpO2)": "95-100%",
+        "Steps": "7,000-10,000/day",
+        "Sleep": "7-9 hours",
+        "Calories Burned": "Varies by activity",
+        "Distance": "Varies by activity",
+        "Respiratory Rate": "12-20 breaths/min",
+        "Stress Level": "0-75 (low-moderate)",
+        "Body Fat": "10-25%",
+        "Active Minutes": "30+ min/day",
+        "Hydration": "2-3 L/day",
+        "Muscle Mass": "Varies by build",
+        "Bone Mass": "1-5 kg",
+        "Body Water": "45-65%",
+        "Visceral Fat": "1-12 (healthy)",
+        "BMR": "1,200-2,000 kcal",
       };
       return ranges[name] || "";
     },
@@ -660,6 +791,21 @@ export default {
         "Body Weight": "70",
         "Pulse Rate": "72",
         "Blood Sugar Level": "90",
+        "Blood Oxygen (SpO2)": "98",
+        "Steps": "8000",
+        "Sleep": "7.5",
+        "Calories Burned": "2000",
+        "Distance": "5.0",
+        "Respiratory Rate": "16",
+        "Stress Level": "40",
+        "Body Fat": "21",
+        "Active Minutes": "45",
+        "Hydration": "2.5",
+        "Muscle Mass": "59",
+        "Bone Mass": "3.1",
+        "Body Water": "57",
+        "Visceral Fat": "8",
+        "BMR": "1700",
       };
       return placeholders[name] || "";
     },
@@ -670,6 +816,21 @@ export default {
         "Body Weight": ["kg", "lb"],
         "Pulse Rate": ["bpm"],
         "Blood Sugar Level": ["mg/dL", "mmol/L"],
+        "Blood Oxygen (SpO2)": ["%"],
+        "Steps": ["steps"],
+        "Sleep": ["hours"],
+        "Calories Burned": ["kcal"],
+        "Distance": ["km", "mi"],
+        "Respiratory Rate": ["breaths/min"],
+        "Stress Level": ["score"],
+        "Body Fat": ["%"],
+        "Active Minutes": ["min"],
+        "Hydration": ["L", "mL"],
+        "Muscle Mass": ["kg", "lb"],
+        "Bone Mass": ["kg", "lb"],
+        "Body Water": ["%"],
+        "Visceral Fat": ["level"],
+        "BMR": ["kcal"],
       };
       return units[name] || [];
     },
@@ -680,6 +841,21 @@ export default {
         "Body Weight": "Track your weight to monitor health trends",
         "Pulse Rate": "Resting heart rate for adults is 60-100 bpm",
         "Blood Sugar Level": "Fasting blood sugar should be 70-100 mg/dL",
+        "Blood Oxygen (SpO2)": "Normal blood oxygen is 95-100%",
+        "Steps": "Aim for 7,000-10,000 steps per day",
+        "Sleep": "Adults need 7-9 hours of sleep per night",
+        "Calories Burned": "Average adult burns 1,800-2,400 kcal daily",
+        "Distance": "Track distance walked, run, or cycled",
+        "Respiratory Rate": "Normal breathing rate is 12-20 breaths/min",
+        "Stress Level": "Lower scores indicate less stress (0-100)",
+        "Body Fat": "Healthy body fat is 10-25% for men, 18-30% for women",
+        "Active Minutes": "Aim for 30+ minutes of activity daily",
+        "Hydration": "Adults should drink 2-3 liters of water daily",
+        "Muscle Mass": "Track skeletal muscle mass from your smart scale",
+        "Bone Mass": "Normal bone mass is 1-5 kg depending on frame",
+        "Body Water": "Healthy body water percentage is 45-65%",
+        "Visceral Fat": "Levels 1-12 are considered healthy",
+        "BMR": "Basal metabolic rate - calories burned at rest",
       };
       return hints[name] || "";
     },
@@ -790,7 +966,7 @@ export default {
       const today = now.toISOString().split('T')[0];
       const currentTime = now.toTimeString().slice(0, 5);
 
-      if (val.value.includes("/")) {
+      if (val.value && val.value.includes("/")) {
         const [sys, dia] = val.value.split("/");
         this.vital.input1.value = sys;
         this.vital.input2.value = dia;
@@ -852,18 +1028,12 @@ export default {
     getVitalArray(val) {
       const vitalArray = [];
       Object.keys(val).forEach((key) => {
-        let vitalName = null;
-        if (key === "body_temp") vitalName = "Body Temperature";
-        if (key === "body_weight") vitalName = "Body Weight";
-        if (key === "blood_pressure") vitalName = "Blood Pressure";
-        if (key === "pulse_rate") vitalName = "Pulse Rate";
-        if (key === "blood_sugar_level") vitalName = "Blood Sugar Level";
-
-        if (vitalName) {
+        const vitalName = this.fieldToName[key];
+        if (vitalName && val[key]?.value) {
           vitalArray.push({
             name: vitalName,
             value: val[key].value,
-            unit: val[key].unit,
+            unit: val[key].unit || '',
           });
         }
       });
@@ -876,30 +1046,13 @@ export default {
       }
 
       this.activeVitalChart = val;
-      let chartType = null;
+      const field = this.nameToField[val];
+      if (!field) return;
 
-      switch (val) {
-        case "Body Temperature":
-          this.query1 = "body_temp";
-          chartType = "bar";
-          break;
-        case "Body Weight":
-          this.query1 = "body_weight";
-          chartType = "line";
-          break;
-        case "Blood Pressure":
-          this.query1 = "blood_pressure";
-          chartType = "line";
-          break;
-        case "Blood Sugar Level":
-          this.query1 = "blood_sugar_level";
-          chartType = "bar";
-          break;
-        case "Pulse Rate":
-          this.query1 = "pulse_rate";
-          chartType = "bar";
-          break;
-      }
+      this.query1 = field;
+
+      const barChartVitals = ["Body Temperature", "Blood Sugar Level", "Steps", "Sleep", "Calories Burned", "Active Minutes", "Hydration"];
+      const chartType = barChartVitals.includes(val) ? "bar" : "line";
 
       await this.getSelectedVitalRecords(this.query1);
       this.cleanData(this.selectedVitalRecords, chartType);
@@ -1043,6 +1196,251 @@ export default {
           borderColor: "#8B5CF6",
           pointBackgroundColor: "#fff",
           pointBorderColor: "#7C3AED",
+          fill: true,
+        });
+      }
+      // SpO2 - Line chart with teal color
+      else if (this.query1 === "spo2") {
+        const spo2Data = chartdata.map((row) => {
+          const values = row.data.map((item) => parseFloat(item.value));
+          return Math.round(values.reduce((a, b) => a + b, 0) / values.length);
+        });
+        valueSet.push({
+          label: "SpO2",
+          data: spo2Data,
+          backgroundColor: "rgba(20, 184, 166, 0.15)",
+          borderColor: "#14B8A6",
+          pointBackgroundColor: "#fff",
+          pointBorderColor: "#0D9488",
+          fill: true,
+        });
+      }
+      // Steps - Bar chart with green color
+      else if (this.query1 === "steps") {
+        const stepsData = chartdata.map((row) => {
+          const values = row.data.map((item) => parseInt(item.value));
+          return values.reduce((a, b) => a + b, 0);
+        });
+        valueSet.push({
+          label: "Steps",
+          data: stepsData,
+          backgroundColor: "rgba(34, 197, 94, 0.75)",
+          borderColor: "#22C55E",
+          borderWidth: 0,
+          borderRadius: 6,
+          borderSkipped: false,
+          maxBarThickness: 24,
+        });
+      }
+      // Sleep - Bar chart with indigo color
+      else if (this.query1 === "sleep") {
+        const sleepData = chartdata.map((row) => {
+          const values = row.data.map((item) => parseFloat(item.value));
+          return (values.reduce((a, b) => a + b, 0) / values.length).toFixed(1);
+        });
+        valueSet.push({
+          label: "Sleep",
+          data: sleepData,
+          backgroundColor: "rgba(99, 102, 241, 0.75)",
+          borderColor: "#6366F1",
+          borderWidth: 0,
+          borderRadius: 6,
+          borderSkipped: false,
+          maxBarThickness: 24,
+        });
+      }
+      // Calories Burned - Bar chart with orange-red color
+      else if (this.query1 === "calories_burned") {
+        const calData = chartdata.map((row) => {
+          const values = row.data.map((item) => parseInt(item.value));
+          return values.reduce((a, b) => a + b, 0);
+        });
+        valueSet.push({
+          label: "Calories",
+          data: calData,
+          backgroundColor: "rgba(239, 68, 68, 0.75)",
+          borderColor: "#EF4444",
+          borderWidth: 0,
+          borderRadius: 6,
+          borderSkipped: false,
+          maxBarThickness: 24,
+        });
+      }
+      // Distance - Line chart with blue color
+      else if (this.query1 === "distance") {
+        const distData = chartdata.map((row) => {
+          const values = row.data.map((item) => parseFloat(item.value));
+          return (values.reduce((a, b) => a + b, 0) / values.length).toFixed(2);
+        });
+        valueSet.push({
+          label: "Distance",
+          data: distData,
+          backgroundColor: "rgba(59, 130, 246, 0.15)",
+          borderColor: "#3B82F6",
+          pointBackgroundColor: "#fff",
+          pointBorderColor: "#2563EB",
+          fill: true,
+        });
+      }
+      // Respiratory Rate - Line chart with cyan color
+      else if (this.query1 === "respiratory_rate") {
+        const respData = chartdata.map((row) => {
+          const values = row.data.map((item) => parseInt(item.value));
+          return Math.round(values.reduce((a, b) => a + b, 0) / values.length);
+        });
+        valueSet.push({
+          label: "Resp Rate",
+          data: respData,
+          backgroundColor: "rgba(6, 182, 212, 0.15)",
+          borderColor: "#06B6D4",
+          pointBackgroundColor: "#fff",
+          pointBorderColor: "#0891B2",
+          fill: true,
+        });
+      }
+      // Stress Level - Line chart with rose color
+      else if (this.query1 === "stress_level") {
+        const stressData = chartdata.map((row) => {
+          const values = row.data.map((item) => parseInt(item.value));
+          return Math.round(values.reduce((a, b) => a + b, 0) / values.length);
+        });
+        valueSet.push({
+          label: "Stress",
+          data: stressData,
+          backgroundColor: "rgba(244, 63, 94, 0.15)",
+          borderColor: "#F43F5E",
+          pointBackgroundColor: "#fff",
+          pointBorderColor: "#E11D48",
+          fill: true,
+        });
+      }
+      // Body Fat - Line chart with amber color
+      else if (this.query1 === "body_fat") {
+        const fatData = chartdata.map((row) => {
+          const values = row.data.map((item) => parseFloat(item.value));
+          return (values.reduce((a, b) => a + b, 0) / values.length).toFixed(1);
+        });
+        valueSet.push({
+          label: "Body Fat",
+          data: fatData,
+          backgroundColor: "rgba(245, 158, 11, 0.15)",
+          borderColor: "#F59E0B",
+          pointBackgroundColor: "#fff",
+          pointBorderColor: "#D97706",
+          fill: true,
+        });
+      }
+      // Active Minutes - Bar chart with emerald color
+      else if (this.query1 === "active_minutes") {
+        const activeData = chartdata.map((row) => {
+          const values = row.data.map((item) => parseInt(item.value));
+          return values.reduce((a, b) => a + b, 0);
+        });
+        valueSet.push({
+          label: "Active Min",
+          data: activeData,
+          backgroundColor: "rgba(16, 185, 129, 0.75)",
+          borderColor: "#10B981",
+          borderWidth: 0,
+          borderRadius: 6,
+          borderSkipped: false,
+          maxBarThickness: 24,
+        });
+      }
+      // Hydration - Bar chart with sky blue color
+      else if (this.query1 === "hydration") {
+        const hydData = chartdata.map((row) => {
+          const values = row.data.map((item) => parseFloat(item.value));
+          return (values.reduce((a, b) => a + b, 0)).toFixed(1);
+        });
+        valueSet.push({
+          label: "Hydration",
+          data: hydData,
+          backgroundColor: "rgba(56, 189, 248, 0.75)",
+          borderColor: "#38BDF8",
+          borderWidth: 0,
+          borderRadius: 6,
+          borderSkipped: false,
+          maxBarThickness: 24,
+        });
+      }
+      // Muscle Mass - Line chart with purple color
+      else if (this.query1 === "muscle_mass") {
+        const muscleData = chartdata.map((row) => {
+          const values = row.data.map((item) => parseFloat(item.value));
+          return (values.reduce((a, b) => a + b, 0) / values.length).toFixed(1);
+        });
+        valueSet.push({
+          label: "Muscle Mass",
+          data: muscleData,
+          backgroundColor: "rgba(168, 85, 247, 0.15)",
+          borderColor: "#A855F7",
+          pointBackgroundColor: "#fff",
+          pointBorderColor: "#9333EA",
+          fill: true,
+        });
+      }
+      // Bone Mass - Line chart with stone color
+      else if (this.query1 === "bone_mass") {
+        const boneData = chartdata.map((row) => {
+          const values = row.data.map((item) => parseFloat(item.value));
+          return (values.reduce((a, b) => a + b, 0) / values.length).toFixed(2);
+        });
+        valueSet.push({
+          label: "Bone Mass",
+          data: boneData,
+          backgroundColor: "rgba(120, 113, 108, 0.15)",
+          borderColor: "#78716C",
+          pointBackgroundColor: "#fff",
+          pointBorderColor: "#57534E",
+          fill: true,
+        });
+      }
+      // Body Water - Line chart with cyan color
+      else if (this.query1 === "body_water") {
+        const waterData = chartdata.map((row) => {
+          const values = row.data.map((item) => parseFloat(item.value));
+          return (values.reduce((a, b) => a + b, 0) / values.length).toFixed(1);
+        });
+        valueSet.push({
+          label: "Body Water",
+          data: waterData,
+          backgroundColor: "rgba(34, 211, 238, 0.15)",
+          borderColor: "#22D3EE",
+          pointBackgroundColor: "#fff",
+          pointBorderColor: "#06B6D4",
+          fill: true,
+        });
+      }
+      // Visceral Fat - Line chart with red-orange color
+      else if (this.query1 === "visceral_fat") {
+        const visceralData = chartdata.map((row) => {
+          const values = row.data.map((item) => parseInt(item.value));
+          return Math.round(values.reduce((a, b) => a + b, 0) / values.length);
+        });
+        valueSet.push({
+          label: "Visceral Fat",
+          data: visceralData,
+          backgroundColor: "rgba(251, 146, 60, 0.15)",
+          borderColor: "#FB923C",
+          pointBackgroundColor: "#fff",
+          pointBorderColor: "#EA580C",
+          fill: true,
+        });
+      }
+      // BMR - Line chart with warm red color
+      else if (this.query1 === "bmr") {
+        const bmrData = chartdata.map((row) => {
+          const values = row.data.map((item) => parseInt(item.value));
+          return Math.round(values.reduce((a, b) => a + b, 0) / values.length);
+        });
+        valueSet.push({
+          label: "BMR",
+          data: bmrData,
+          backgroundColor: "rgba(220, 38, 38, 0.15)",
+          borderColor: "#DC2626",
+          pointBackgroundColor: "#fff",
+          pointBorderColor: "#B91C1C",
           fill: true,
         });
       }
@@ -1936,6 +2334,21 @@ $violet-light: #EDE9FE;
   &.vital--pulse .vital-mini__icon { background: linear-gradient(135deg, $sky, $sky-dark); }
   &.vital--sugar .vital-mini__icon { background: linear-gradient(135deg, #0ea5e9, #0284c7); }
   &.vital--pressure .vital-mini__icon { background: linear-gradient(135deg, #ec4899, #db2777); }
+  &.vital--spo2 .vital-mini__icon { background: linear-gradient(135deg, #14b8a6, #0d9488); }
+  &.vital--steps .vital-mini__icon { background: linear-gradient(135deg, #22c55e, #16a34a); }
+  &.vital--sleep .vital-mini__icon { background: linear-gradient(135deg, #6366f1, #4f46e5); }
+  &.vital--calories .vital-mini__icon { background: linear-gradient(135deg, #ef4444, #dc2626); }
+  &.vital--distance .vital-mini__icon { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+  &.vital--respiratory .vital-mini__icon { background: linear-gradient(135deg, #06b6d4, #0891b2); }
+  &.vital--stress .vital-mini__icon { background: linear-gradient(135deg, #f43f5e, #e11d48); }
+  &.vital--bodyfat .vital-mini__icon { background: linear-gradient(135deg, #f59e0b, #d97706); }
+  &.vital--activemins .vital-mini__icon { background: linear-gradient(135deg, #10b981, #059669); }
+  &.vital--hydration .vital-mini__icon { background: linear-gradient(135deg, #38bdf8, #0284c7); }
+  &.vital--muscle .vital-mini__icon { background: linear-gradient(135deg, #a855f7, #9333ea); }
+  &.vital--bone .vital-mini__icon { background: linear-gradient(135deg, #78716c, #57534e); }
+  &.vital--bodywater .vital-mini__icon { background: linear-gradient(135deg, #22d3ee, #06b6d4); }
+  &.vital--visceral .vital-mini__icon { background: linear-gradient(135deg, #fb923c, #ea580c); }
+  &.vital--bmr .vital-mini__icon { background: linear-gradient(135deg, #dc2626, #b91c1c); }
 
   &--bmi {
     .vital-mini__icon {
@@ -1981,6 +2394,21 @@ $violet-light: #EDE9FE;
     &.vital--pulse { background: linear-gradient(135deg, $sky, $sky-dark); }
     &.vital--pressure { background: linear-gradient(135deg, #ec4899, #db2777); }
     &.vital--sugar { background: linear-gradient(135deg, #0ea5e9, #0284c7); }
+    &.vital--spo2 { background: linear-gradient(135deg, #14b8a6, #0d9488); }
+    &.vital--steps { background: linear-gradient(135deg, #22c55e, #16a34a); }
+    &.vital--sleep { background: linear-gradient(135deg, #6366f1, #4f46e5); }
+    &.vital--calories { background: linear-gradient(135deg, #ef4444, #dc2626); }
+    &.vital--distance { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+    &.vital--respiratory { background: linear-gradient(135deg, #06b6d4, #0891b2); }
+    &.vital--stress { background: linear-gradient(135deg, #f43f5e, #e11d48); }
+    &.vital--bodyfat { background: linear-gradient(135deg, #f59e0b, #d97706); }
+    &.vital--activemins { background: linear-gradient(135deg, #10b981, #059669); }
+    &.vital--hydration { background: linear-gradient(135deg, #38bdf8, #0284c7); }
+    &.vital--muscle { background: linear-gradient(135deg, #a855f7, #9333ea); }
+    &.vital--bone { background: linear-gradient(135deg, #78716c, #57534e); }
+    &.vital--bodywater { background: linear-gradient(135deg, #22d3ee, #06b6d4); }
+    &.vital--visceral { background: linear-gradient(135deg, #fb923c, #ea580c); }
+    &.vital--bmr { background: linear-gradient(135deg, #dc2626, #b91c1c); }
   }
 
   &__text {
@@ -2453,6 +2881,21 @@ $violet-light: #EDE9FE;
   &.vital--pulse .option-icon { background: linear-gradient(135deg, $sky, $sky-dark); }
   &.vital--sugar .option-icon { background: linear-gradient(135deg, #0ea5e9, #0284c7); }
   &.vital--pressure .option-icon { background: linear-gradient(135deg, #ec4899, #db2777); }
+  &.vital--spo2 .option-icon { background: linear-gradient(135deg, #14b8a6, #0d9488); }
+  &.vital--steps .option-icon { background: linear-gradient(135deg, #22c55e, #16a34a); }
+  &.vital--sleep .option-icon { background: linear-gradient(135deg, #6366f1, #4f46e5); }
+  &.vital--calories .option-icon { background: linear-gradient(135deg, #ef4444, #dc2626); }
+  &.vital--distance .option-icon { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+  &.vital--respiratory .option-icon { background: linear-gradient(135deg, #06b6d4, #0891b2); }
+  &.vital--stress .option-icon { background: linear-gradient(135deg, #f43f5e, #e11d48); }
+  &.vital--bodyfat .option-icon { background: linear-gradient(135deg, #f59e0b, #d97706); }
+  &.vital--activemins .option-icon { background: linear-gradient(135deg, #10b981, #059669); }
+  &.vital--hydration .option-icon { background: linear-gradient(135deg, #38bdf8, #0284c7); }
+  &.vital--muscle .option-icon { background: linear-gradient(135deg, #a855f7, #9333ea); }
+  &.vital--bone .option-icon { background: linear-gradient(135deg, #78716c, #57534e); }
+  &.vital--bodywater .option-icon { background: linear-gradient(135deg, #22d3ee, #06b6d4); }
+  &.vital--visceral .option-icon { background: linear-gradient(135deg, #fb923c, #ea580c); }
+  &.vital--bmr .option-icon { background: linear-gradient(135deg, #dc2626, #b91c1c); }
 }
 
 // Selected Vital
@@ -2497,6 +2940,21 @@ $violet-light: #EDE9FE;
     &.vital--pulse .selected-icon { background: linear-gradient(135deg, $sky, $sky-dark); }
     &.vital--sugar .selected-icon { background: linear-gradient(135deg, #0ea5e9, #0284c7); }
     &.vital--pressure .selected-icon { background: linear-gradient(135deg, #ec4899, #db2777); }
+    &.vital--spo2 .selected-icon { background: linear-gradient(135deg, #14b8a6, #0d9488); }
+    &.vital--steps .selected-icon { background: linear-gradient(135deg, #22c55e, #16a34a); }
+    &.vital--sleep .selected-icon { background: linear-gradient(135deg, #6366f1, #4f46e5); }
+    &.vital--calories .selected-icon { background: linear-gradient(135deg, #ef4444, #dc2626); }
+    &.vital--distance .selected-icon { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+    &.vital--respiratory .selected-icon { background: linear-gradient(135deg, #06b6d4, #0891b2); }
+    &.vital--stress .selected-icon { background: linear-gradient(135deg, #f43f5e, #e11d48); }
+    &.vital--bodyfat .selected-icon { background: linear-gradient(135deg, #f59e0b, #d97706); }
+    &.vital--activemins .selected-icon { background: linear-gradient(135deg, #10b981, #059669); }
+    &.vital--hydration .selected-icon { background: linear-gradient(135deg, #38bdf8, #0284c7); }
+    &.vital--muscle .selected-icon { background: linear-gradient(135deg, #a855f7, #9333ea); }
+    &.vital--bone .selected-icon { background: linear-gradient(135deg, #78716c, #57534e); }
+    &.vital--bodywater .selected-icon { background: linear-gradient(135deg, #22d3ee, #06b6d4); }
+    &.vital--visceral .selected-icon { background: linear-gradient(135deg, #fb923c, #ea580c); }
+    &.vital--bmr .selected-icon { background: linear-gradient(135deg, #dc2626, #b91c1c); }
   }
 }
 

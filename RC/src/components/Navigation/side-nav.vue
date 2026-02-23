@@ -128,6 +128,14 @@ export default {
           iconColor: "",
         },
         {
+          link: "/app/patient/devices-and-apps",
+          label: "Devices & Apps",
+          children: [],
+          icon: "plug",
+          isExpanded: false,
+          iconColor: "",
+        },
+        {
           link: "/app/patient/health-checkup",
           label: "Health Checkup",
           children: [],

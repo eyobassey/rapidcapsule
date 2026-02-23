@@ -10,8 +10,7 @@
 			<div class="text-content">
 				<h1 class="fs-40 lh-125 align-center fw-bold">Password saved</h1>
 				<p class="fs-20 lh-150 align-center fw-regular">
-					Lorem ipsum dolor sit amet, consectetur adipiscing elit. Proin aliquet bibendum
-					elit suspendisse at luctus. Volutpat elit lacinia morbi arcu morbi.
+					Your password has been reset successfully. You can now log in with your new password.
 				</p>
 			</div>
 			<Button label="Log in to app" type="tertiary" size="large" @click="handleClick" />

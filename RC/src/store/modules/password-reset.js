@@ -26,8 +26,8 @@ export default {
 	},
 
 	mutations: {
-		SET_SENT_STATUS(state) {
-			state.email_sent = true;
+		SET_SENT_STATUS(state, value) {
+			state.email_sent = value;
 		},
 
 		SET_ERRORMESSAGE(state, message) {
@@ -41,37 +41,34 @@ export default {
 
 	actions: {
 		async requestresetlink({ commit }, dataInput) {
+			commit("SET_ERRORMESSAGE", null);
+			commit("SET_SENT_STATUS", false);
 			try {
-				let response = await axios.post("auth/forgot-password", dataInput);
-
-				if (response.data.statusCode == 200) {
-					commit("SET_SENT_STATUS");
-					commit("SET_ERRORMESSAGE", null);
-				}
+				await axios.post("auth/forgot-password", dataInput);
+				commit("SET_SENT_STATUS", true);
 			} catch (error) {
-				if (error) {
-					if (error.response.data.statusCode == 404) {
-						let message =
-							"This email is not associated with any account. Please check your email and try again";
-						commit("SET_ERRORMESSAGE", message);
-					}
+				if (error?.response?.status == 404) {
+					commit("SET_ERRORMESSAGE",
+						"This email is not associated with any account. Please check your email and try again.");
+				} else {
+					commit("SET_ERRORMESSAGE",
+						error?.response?.data?.message || "Something went wrong. Please try again.");
 				}
 			}
 		},
 
 		async updatepassword({ commit }, dataInput) {
 			commit("SET_LOADINGSTATUS", true);
+			commit("SET_ERRORMESSAGE", null);
 			try {
-				let response = await axios.post("auth/reset-password", dataInput);
-
-				if (response.data.statusCode == 200) {
-					commit("SET_LOADINGSTATUS", false);
-					return true;
-				}
+				await axios.post("auth/reset-password", dataInput);
+				commit("SET_LOADINGSTATUS", false);
+				return true;
 			} catch (error) {
-				console.log(error.response.data);
-				// alert(error.response.data.message);
-				// commit("SET_LOADINGSTATUS", false);
+				commit("SET_LOADINGSTATUS", false);
+				const message = error?.response?.data?.message || "Failed to reset password. The link may have expired. Please request a new one.";
+				commit("SET_ERRORMESSAGE", message);
+				return false;
 			}
 		},
 	},

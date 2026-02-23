@@ -251,6 +251,488 @@ const getVitalConfig = (vitalName, data) => {
         };
       })(),
     },
+    "Blood Oxygen (SpO2)": {
+      type: "line",
+      options: (() => {
+        const values = data?.datasets?.[0]?.data || [];
+        const validValues = values.filter(v => typeof v === 'number' && !isNaN(v));
+        const minVal = validValues.length ? Math.min(...validValues) : 95;
+        const maxVal = validValues.length ? Math.max(...validValues) : 100;
+        return {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: "rgba(15, 23, 42, 0.9)",
+              callbacks: {
+                label: (context) => `SpO2: ${context.parsed.y}%`,
+              },
+            },
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { font: { size: 11 }, color: "#64748B" } },
+            y: {
+              min: Math.max(85, minVal - 2),
+              max: 100,
+              grid: { color: "rgba(0,0,0,0.06)" },
+              ticks: { font: { size: 11 }, color: "#64748B", callback: (v) => `${v}%` },
+            },
+          },
+          elements: {
+            line: { tension: 0.3, borderWidth: 3, fill: true },
+            point: { radius: 4, hoverRadius: 6, borderWidth: 2, backgroundColor: "#fff" },
+          },
+        };
+      })(),
+    },
+
+    "Steps": {
+      type: "bar",
+      options: (() => {
+        const values = data?.datasets?.[0]?.data || [];
+        const validValues = values.filter(v => typeof v === 'number' && !isNaN(v));
+        const maxVal = validValues.length ? Math.max(...validValues) : 10000;
+        return {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: "rgba(15, 23, 42, 0.9)",
+              callbacks: {
+                label: (context) => `Steps: ${context.parsed.y.toLocaleString()}`,
+              },
+            },
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { font: { size: 11 }, color: "#64748B" } },
+            y: {
+              min: 0,
+              max: Math.ceil(maxVal * 1.2 / 1000) * 1000,
+              grid: { color: "rgba(0,0,0,0.06)" },
+              ticks: { font: { size: 11 }, color: "#64748B", callback: (v) => v >= 1000 ? `${v/1000}k` : v },
+            },
+          },
+        };
+      })(),
+    },
+
+    "Sleep": {
+      type: "bar",
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: "rgba(15, 23, 42, 0.9)",
+            callbacks: {
+              label: (context) => `Sleep: ${context.parsed.y} hours`,
+            },
+          },
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { font: { size: 11 }, color: "#64748B" } },
+          y: {
+            min: 0,
+            max: 12,
+            grid: { color: "rgba(0,0,0,0.06)" },
+            ticks: { font: { size: 11 }, color: "#64748B", callback: (v) => `${v}h` },
+          },
+        },
+      },
+    },
+
+    "Calories Burned": {
+      type: "bar",
+      options: (() => {
+        const values = data?.datasets?.[0]?.data || [];
+        const validValues = values.filter(v => typeof v === 'number' && !isNaN(v));
+        const maxVal = validValues.length ? Math.max(...validValues) : 3000;
+        return {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: "rgba(15, 23, 42, 0.9)",
+              callbacks: {
+                label: (context) => `Calories: ${context.parsed.y.toLocaleString()} kcal`,
+              },
+            },
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { font: { size: 11 }, color: "#64748B" } },
+            y: {
+              min: 0,
+              max: Math.ceil(maxVal * 1.2 / 500) * 500,
+              grid: { color: "rgba(0,0,0,0.06)" },
+              ticks: { font: { size: 11 }, color: "#64748B" },
+            },
+          },
+        };
+      })(),
+    },
+
+    "Distance": {
+      type: "line",
+      options: (() => {
+        const values = data?.datasets?.[0]?.data || [];
+        const validValues = values.filter(v => typeof v === 'number' && !isNaN(v));
+        const maxVal = validValues.length ? Math.max(...validValues) : 10;
+        return {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: "rgba(15, 23, 42, 0.9)",
+              callbacks: {
+                label: (context) => `Distance: ${context.parsed.y} km`,
+              },
+            },
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { font: { size: 11 }, color: "#64748B" } },
+            y: {
+              min: 0,
+              max: Math.ceil(maxVal * 1.3),
+              grid: { color: "rgba(0,0,0,0.06)" },
+              ticks: { font: { size: 11 }, color: "#64748B", callback: (v) => `${v} km` },
+            },
+          },
+          elements: {
+            line: { tension: 0.3, borderWidth: 3, fill: true },
+            point: { radius: 4, hoverRadius: 6, borderWidth: 2, backgroundColor: "#fff" },
+          },
+        };
+      })(),
+    },
+
+    "Respiratory Rate": {
+      type: "line",
+      options: (() => {
+        const values = data?.datasets?.[0]?.data || [];
+        const validValues = values.filter(v => typeof v === 'number' && !isNaN(v));
+        const minVal = validValues.length ? Math.min(...validValues) : 12;
+        const maxVal = validValues.length ? Math.max(...validValues) : 20;
+        return {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: "rgba(15, 23, 42, 0.9)",
+              callbacks: {
+                label: (context) => `Resp Rate: ${context.parsed.y} breaths/min`,
+              },
+            },
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { font: { size: 11 }, color: "#64748B" } },
+            y: {
+              min: Math.max(5, minVal - 3),
+              max: Math.min(35, maxVal + 5),
+              grid: { color: "rgba(0,0,0,0.06)" },
+              ticks: { font: { size: 11 }, color: "#64748B" },
+            },
+          },
+          elements: {
+            line: { tension: 0.3, borderWidth: 3, fill: true },
+            point: { radius: 4, hoverRadius: 6, borderWidth: 2, backgroundColor: "#fff" },
+          },
+        };
+      })(),
+    },
+
+    "Stress Level": {
+      type: "line",
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: "rgba(15, 23, 42, 0.9)",
+            callbacks: {
+              label: (context) => `Stress: ${context.parsed.y}`,
+            },
+          },
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { font: { size: 11 }, color: "#64748B" } },
+          y: {
+            min: 0,
+            max: 100,
+            grid: { color: "rgba(0,0,0,0.06)" },
+            ticks: { font: { size: 11 }, color: "#64748B" },
+          },
+        },
+        elements: {
+          line: { tension: 0.3, borderWidth: 3, fill: true },
+          point: { radius: 4, hoverRadius: 6, borderWidth: 2, backgroundColor: "#fff" },
+        },
+      },
+    },
+
+    "Body Fat": {
+      type: "line",
+      options: (() => {
+        const values = data?.datasets?.[0]?.data || [];
+        const validValues = values.filter(v => typeof v === 'number' && !isNaN(v));
+        const minVal = validValues.length ? Math.min(...validValues) : 10;
+        const maxVal = validValues.length ? Math.max(...validValues) : 30;
+        return {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: "rgba(15, 23, 42, 0.9)",
+              callbacks: { label: (context) => `Body Fat: ${context.parsed.y}%` },
+            },
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { font: { size: 11 }, color: "#64748B" } },
+            y: {
+              min: Math.max(0, minVal - 5),
+              max: Math.min(60, maxVal + 5),
+              grid: { color: "rgba(0,0,0,0.06)" },
+              ticks: { font: { size: 11 }, color: "#64748B", callback: (v) => `${v}%` },
+            },
+          },
+          elements: {
+            line: { tension: 0.3, borderWidth: 3, fill: true },
+            point: { radius: 4, hoverRadius: 6, borderWidth: 2, backgroundColor: "#fff" },
+          },
+        };
+      })(),
+    },
+
+    "Active Minutes": {
+      type: "bar",
+      options: (() => {
+        const values = data?.datasets?.[0]?.data || [];
+        const validValues = values.filter(v => typeof v === 'number' && !isNaN(v));
+        const maxVal = validValues.length ? Math.max(...validValues) : 60;
+        return {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: "rgba(15, 23, 42, 0.9)",
+              callbacks: { label: (context) => `Active: ${context.parsed.y} min` },
+            },
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { font: { size: 11 }, color: "#64748B" } },
+            y: {
+              min: 0,
+              max: Math.ceil(maxVal * 1.3 / 10) * 10,
+              grid: { color: "rgba(0,0,0,0.06)" },
+              ticks: { font: { size: 11 }, color: "#64748B", callback: (v) => `${v} min` },
+            },
+          },
+        };
+      })(),
+    },
+
+    "Hydration": {
+      type: "bar",
+      options: (() => {
+        const values = data?.datasets?.[0]?.data || [];
+        const validValues = values.filter(v => typeof v === 'number' && !isNaN(v));
+        const maxVal = validValues.length ? Math.max(...validValues) : 3;
+        return {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: "rgba(15, 23, 42, 0.9)",
+              callbacks: { label: (context) => `Water: ${context.parsed.y} L` },
+            },
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { font: { size: 11 }, color: "#64748B" } },
+            y: {
+              min: 0,
+              max: Math.ceil(maxVal * 1.3),
+              grid: { color: "rgba(0,0,0,0.06)" },
+              ticks: { font: { size: 11 }, color: "#64748B", callback: (v) => `${v} L` },
+            },
+          },
+        };
+      })(),
+    },
+
+    "Muscle Mass": {
+      type: "line",
+      options: (() => {
+        const values = data?.datasets?.[0]?.data || [];
+        const validValues = values.filter(v => typeof v === 'number' && !isNaN(v));
+        const minVal = validValues.length ? Math.min(...validValues) : 40;
+        const maxVal = validValues.length ? Math.max(...validValues) : 70;
+        const padding = Math.max(3, (maxVal - minVal) * 0.2);
+        return {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: "rgba(15, 23, 42, 0.9)",
+              callbacks: { label: (context) => `Muscle: ${context.parsed.y} kg` },
+            },
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { font: { size: 11 }, color: "#64748B" } },
+            y: {
+              min: Math.max(0, minVal - padding),
+              max: maxVal + padding,
+              grid: { color: "rgba(0,0,0,0.06)" },
+              ticks: { font: { size: 11 }, color: "#64748B", callback: (v) => `${v} kg` },
+            },
+          },
+          elements: {
+            line: { tension: 0.3, borderWidth: 3, fill: true },
+            point: { radius: 4, hoverRadius: 6, borderWidth: 2, backgroundColor: "#fff" },
+          },
+        };
+      })(),
+    },
+
+    "Bone Mass": {
+      type: "line",
+      options: (() => {
+        const values = data?.datasets?.[0]?.data || [];
+        const validValues = values.filter(v => typeof v === 'number' && !isNaN(v));
+        const minVal = validValues.length ? Math.min(...validValues) : 2;
+        const maxVal = validValues.length ? Math.max(...validValues) : 4;
+        return {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: "rgba(15, 23, 42, 0.9)",
+              callbacks: { label: (context) => `Bone: ${context.parsed.y} kg` },
+            },
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { font: { size: 11 }, color: "#64748B" } },
+            y: {
+              min: Math.max(0, minVal - 1),
+              max: maxVal + 1,
+              grid: { color: "rgba(0,0,0,0.06)" },
+              ticks: { font: { size: 11 }, color: "#64748B", callback: (v) => `${v} kg` },
+            },
+          },
+          elements: {
+            line: { tension: 0.3, borderWidth: 3, fill: true },
+            point: { radius: 4, hoverRadius: 6, borderWidth: 2, backgroundColor: "#fff" },
+          },
+        };
+      })(),
+    },
+
+    "Body Water": {
+      type: "line",
+      options: (() => {
+        const values = data?.datasets?.[0]?.data || [];
+        const validValues = values.filter(v => typeof v === 'number' && !isNaN(v));
+        const minVal = validValues.length ? Math.min(...validValues) : 45;
+        const maxVal = validValues.length ? Math.max(...validValues) : 65;
+        return {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: "rgba(15, 23, 42, 0.9)",
+              callbacks: { label: (context) => `Body Water: ${context.parsed.y}%` },
+            },
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { font: { size: 11 }, color: "#64748B" } },
+            y: {
+              min: Math.max(30, minVal - 5),
+              max: Math.min(80, maxVal + 5),
+              grid: { color: "rgba(0,0,0,0.06)" },
+              ticks: { font: { size: 11 }, color: "#64748B", callback: (v) => `${v}%` },
+            },
+          },
+          elements: {
+            line: { tension: 0.3, borderWidth: 3, fill: true },
+            point: { radius: 4, hoverRadius: 6, borderWidth: 2, backgroundColor: "#fff" },
+          },
+        };
+      })(),
+    },
+
+    "Visceral Fat": {
+      type: "line",
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: "rgba(15, 23, 42, 0.9)",
+            callbacks: { label: (context) => `Visceral Fat: Level ${context.parsed.y}` },
+          },
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { font: { size: 11 }, color: "#64748B" } },
+          y: {
+            min: 0,
+            max: 20,
+            grid: { color: "rgba(0,0,0,0.06)" },
+            ticks: { font: { size: 11 }, color: "#64748B" },
+          },
+        },
+        elements: {
+          line: { tension: 0.3, borderWidth: 3, fill: true },
+          point: { radius: 4, hoverRadius: 6, borderWidth: 2, backgroundColor: "#fff" },
+        },
+      },
+    },
+
+    "BMR": {
+      type: "line",
+      options: (() => {
+        const values = data?.datasets?.[0]?.data || [];
+        const validValues = values.filter(v => typeof v === 'number' && !isNaN(v));
+        const minVal = validValues.length ? Math.min(...validValues) : 1200;
+        const maxVal = validValues.length ? Math.max(...validValues) : 2000;
+        const padding = Math.max(100, (maxVal - minVal) * 0.2);
+        return {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: "rgba(15, 23, 42, 0.9)",
+              callbacks: { label: (context) => `BMR: ${context.parsed.y} kcal` },
+            },
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { font: { size: 11 }, color: "#64748B" } },
+            y: {
+              min: Math.max(800, minVal - padding),
+              max: maxVal + padding,
+              grid: { color: "rgba(0,0,0,0.06)" },
+              ticks: { font: { size: 11 }, color: "#64748B", callback: (v) => `${v} kcal` },
+            },
+          },
+          elements: {
+            line: { tension: 0.3, borderWidth: 3, fill: true },
+            point: { radius: 4, hoverRadius: 6, borderWidth: 2, backgroundColor: "#fff" },
+          },
+        };
+      })(),
+    },
   };
 
   return configs[vitalName] || null;

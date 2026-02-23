@@ -151,6 +151,32 @@
               </Transition>
             </div>
 
+            <!-- Order Error Alert -->
+            <div v-if="orderError" ref="orderErrorRef" class="bento-card alert-card danger">
+              <div class="alert-header">
+                <div class="alert-icon">
+                  <v-icon name="hi-exclamation-circle" scale="1.2" />
+                </div>
+                <div class="alert-content">
+                  <h3>{{ orderError.title }}</h3>
+                  <p>{{ orderError.message }}</p>
+                </div>
+                <button class="alert-toggle" @click="orderError = null">
+                  <v-icon name="hi-x" scale="0.9" />
+                </button>
+              </div>
+              <div v-if="orderError.affectedItems.length" class="alert-details">
+                <div v-for="(drug, idx) in orderError.affectedItems" :key="idx" class="interaction-item moderate">
+                  <span class="severity-tag">Limit</span>
+                  <div class="interaction-drugs"><strong>{{ drug }}</strong></div>
+                </div>
+              </div>
+              <div class="interaction-disclaimer">
+                <v-icon name="hi-information-circle" scale="0.9" />
+                <p>{{ orderError.suggestion }}</p>
+              </div>
+            </div>
+
             <!-- Cart Items Card -->
             <div class="bento-card items-card">
               <div class="card-header">
@@ -1819,13 +1845,12 @@ export default {
 
     // Format order error messages for better user experience
     const formatOrderError = (message) => {
-      // Check if it's a purchase limit error
+      // Check if it's a monthly purchase limit error
       if (message.includes('purchased') && message.includes('Maximum allowed')) {
-        // Parse the drug names from the error
-        const drugMatches = message.match(/(\d+) units of ([A-Za-z]+)/g);
+        const drugMatches = message.match(/(\d+) units of ([A-Za-z\s]+?)(?=;|$)/g);
         const affectedDrugs = drugMatches ? drugMatches.map(m => {
-          const match = m.match(/(\d+) units of ([A-Za-z]+)/);
-          return match ? match[2] : null;
+          const match = m.match(/(\d+) units of (.+)/);
+          return match ? match[2].trim() : null;
         }).filter(Boolean) : [];
 
         return {
@@ -1834,6 +1859,24 @@ export default {
           message: 'You have reached the monthly purchase limit for some medications in your cart.',
           affectedItems: affectedDrugs,
           suggestion: 'Please remove the affected items to continue with your order, or wait until your monthly limit resets.',
+          rawMessage: message
+        };
+      }
+
+      // Check if it's a per-order quantity limit error
+      if (message.includes('Order validation failed') || (message.includes('Maximum') && message.includes('per order'))) {
+        const drugMatches = message.match(/Maximum \d+ units of ([A-Za-z\s]+?) per order/g);
+        const affectedDrugs = drugMatches ? drugMatches.map(m => {
+          const match = m.match(/Maximum (\d+) units of (.+?) per order/);
+          return match ? `${match[2].trim()} (max ${match[1]})` : null;
+        }).filter(Boolean) : [];
+
+        return {
+          type: 'order_limit',
+          title: 'Quantity Limit Exceeded',
+          message: 'Some items in your cart exceed the maximum allowed quantity per order.',
+          affectedItems: affectedDrugs,
+          suggestion: 'Please reduce the quantity of the affected items to proceed with your order.',
           rawMessage: message
         };
       }

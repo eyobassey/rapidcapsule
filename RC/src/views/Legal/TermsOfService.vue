@@ -118,10 +118,6 @@
           <h2>12. Contact Information</h2>
           <div class="contact-info">
             <p><strong>Email:</strong> info@rapidcapsule.com</p>
-            <p><strong>Address:</strong> Rapid Capsule Ltd.<br>
-            No 8 New Creation Street, Lekki Phase 1<br>
-            Lagos, Nigeria</p>
-            <p><strong>Phone:</strong> +234-7052230000</p>
           </div>
         </section>
       </div>

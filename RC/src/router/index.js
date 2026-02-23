@@ -119,6 +119,11 @@ const routes = [
         component: CycleTracker,
       },
       {
+        path: "devices-and-apps",
+        name: "DevicesAndApps",
+        component: () => import("@/views/Mainapp/PatientApp/DevicesAndApps/DevicesAndApps.vue"),
+      },
+      {
         path: "health-checkup",
         name: "HealthCheckup",
         component: () => import("@/views/Mainapp/HealthCheckup/HealthCheckup"),
