@@ -28,4 +28,21 @@ axiosIns.interceptors.request.use(config => {
   // Return modified config
   return config
 })
+
+// Redirect to login on 401, preserving the current path for post-login redirect
+axiosIns.interceptors.response.use(
+  response => response,
+  error => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('accessToken')
+      localStorage.removeItem('userData')
+      const currentPath = window.location.pathname + window.location.search
+      if (!currentPath.includes('/login')) {
+        window.location.href = `/admin/login?redirect=${encodeURIComponent(currentPath)}`
+      }
+    }
+    return Promise.reject(error)
+  },
+)
+
 export default axiosIns

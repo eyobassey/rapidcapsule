@@ -14,6 +14,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Conversation, ConversationDocument } from './entities/conversation.entity';
 import { Message, MessageDocument } from './entities/message.entity';
+import { User, UserDocument } from '../users/entities/user.entity';
 
 interface ConnectedUser {
   socketId: string;
@@ -44,6 +45,8 @@ export class MessagingGateway implements OnGatewayConnection, OnGatewayDisconnec
     private conversationModel: Model<ConversationDocument>,
     @InjectModel(Message.name)
     private messageModel: Model<MessageDocument>,
+    @InjectModel(User.name)
+    private userModel: Model<UserDocument>,
   ) {}
 
   async handleConnection(client: Socket) {
@@ -71,6 +74,28 @@ export class MessagingGateway implements OnGatewayConnection, OnGatewayDisconnec
       // Store userId on socket for later use
       (client as any).userId = userId;
       (client as any).userType = userType;
+
+      // Check messaging restrictions
+      const user = await this.userModel
+        .findById(userId)
+        .select('messaging_restrictions')
+        .lean();
+
+      if (user?.messaging_restrictions) {
+        const r = user.messaging_restrictions;
+        const now = new Date();
+        const isExpired = r.expires_at && new Date(r.expires_at) <= now;
+
+        if (r.status === 'blocked' && !isExpired) {
+          client.emit('restriction', { status: 'blocked', reason: r.reason });
+          client.disconnect();
+          return;
+        }
+
+        if (r.status === 'read_only' && !isExpired) {
+          (client as any).isReadOnly = true;
+        }
+      }
 
       // Join user-specific room
       client.join(`user:${userId}`);
@@ -173,6 +198,7 @@ export class MessagingGateway implements OnGatewayConnection, OnGatewayDisconnec
     @MessageBody() data: { conversationId: string },
     @ConnectedSocket() client: Socket,
   ) {
+    if ((client as any).isReadOnly) return;
     const userId = (client as any).userId;
     client.to(`conversation:${data.conversationId}`).emit('user_typing', {
       conversationId: data.conversationId,
@@ -186,6 +212,7 @@ export class MessagingGateway implements OnGatewayConnection, OnGatewayDisconnec
     @MessageBody() data: { conversationId: string },
     @ConnectedSocket() client: Socket,
   ) {
+    if ((client as any).isReadOnly) return;
     const userId = (client as any).userId;
     client.to(`conversation:${data.conversationId}`).emit('user_typing', {
       conversationId: data.conversationId,
@@ -237,6 +264,29 @@ export class MessagingGateway implements OnGatewayConnection, OnGatewayDisconnec
     client.emit('heartbeat_ack', { timestamp: new Date().toISOString() });
   }
 
+  @SubscribeMessage('admin_restriction_applied')
+  handleRestrictionApplied(
+    @MessageBody() data: { user_id: string; restriction: any },
+    @ConnectedSocket() client: Socket,
+  ) {
+    // Only admins can trigger this
+    if ((client as any).userType !== 'Admin') return;
+
+    this.server.to(`user:${data.user_id}`).emit('restriction_update', data.restriction);
+
+    // If blocked, force disconnect the user's sockets
+    if (data.restriction.status === 'blocked') {
+      const userConns = this.connectedUsers.get(data.user_id) || [];
+      userConns.forEach((conn) => {
+        const sock = this.server.sockets.sockets.get(conn.socketId);
+        if (sock) {
+          sock.emit('restriction', { status: 'blocked', reason: data.restriction.reason });
+          sock.disconnect();
+        }
+      });
+    }
+  }
+
   // ===================== PUBLIC METHODS (called from service) =====================
 
   /**
@@ -282,12 +332,29 @@ export class MessagingGateway implements OnGatewayConnection, OnGatewayDisconnec
   }
 
   /**
+   * Emit message updated event (e.g. link previews added)
+   */
+  emitMessageUpdated(conversationId: string, message: any) {
+    this.server.to(`conversation:${conversationId}`).emit('message_updated', {
+      message,
+      conversationId,
+    });
+  }
+
+  /**
    * Emit conversation updated event
    */
   emitConversationUpdated(conversationId: string, conversation: any) {
     this.server.to(`conversation:${conversationId}`).emit('conversation_updated', {
       conversation,
     });
+  }
+
+  /**
+   * Emit a restriction update to a specific user
+   */
+  emitRestrictionUpdate(userId: string, restriction: any) {
+    this.server.to(`user:${userId}`).emit('restriction_update', restriction);
   }
 
   /**

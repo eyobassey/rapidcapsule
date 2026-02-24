@@ -58,6 +58,31 @@ export class Message {
     thumbnail_s3_key?: string;
   }[];
 
+  @Prop(
+    raw([
+      {
+        url: { type: String, required: true },
+        title: { type: String },
+        description: { type: String },
+        image: { type: String },
+        domain: { type: String },
+        site_name: { type: String },
+        type: { type: String }, // 'website', 'video.other', 'article', etc.
+        video_embed_url: { type: String }, // YouTube/Vimeo embed URL
+      },
+    ]),
+  )
+  link_previews: {
+    url: string;
+    title?: string;
+    description?: string;
+    image?: string;
+    domain?: string;
+    site_name?: string;
+    type?: string;
+    video_embed_url?: string;
+  }[];
+
   @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Message' })
   reply_to: Types.ObjectId;
 

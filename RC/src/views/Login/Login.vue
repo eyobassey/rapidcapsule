@@ -66,6 +66,13 @@ export default {
 	watch: {
 		userProfile(value) {
 			if (value) {
+				// If there's a redirect query param from an email CTA, go there
+				const redirectPath = this.$route.query.redirect;
+				if (redirectPath) {
+					this.$router.push(redirectPath);
+					return;
+				}
+
 				if (this.userProfile.user_type === "Patient") {
 					const emergencyContacts = this.userProfile.emergency_contacts;
 					if (!emergencyContacts || emergencyContacts.length === 0) {

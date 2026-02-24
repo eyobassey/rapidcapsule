@@ -94,7 +94,7 @@ const routes = [
         }
       }
 
-      return { name: "Login" };
+      return { name: "Login", query: { redirect: to.fullPath } };
     },
     children: [
       {
@@ -487,7 +487,7 @@ const routes = [
         }
       }
 
-      return { name: "Login" };
+      return { name: "Login", query: { redirect: to.fullPath } };
     },
     children: [
       {
@@ -818,6 +818,10 @@ const routes = [
         let isAuthenticated = store.getters["authenticated"];
 
         if (isAuthenticated) {
+          // If there's a redirect query param, honour it
+          if (to.query.redirect) {
+            return to.query.redirect;
+          }
           const userProfile = store.state.userProfile;
           const emergencyContacts = userProfile.emergency_contacts;
           if (!emergencyContacts || emergencyContacts.length === 0) {

@@ -68,19 +68,28 @@ export class FileUploadHelper {
    * Generate a presigned URL for temporary access to an S3 file
    * @param fileUrl The S3 file URL
    * @param expiresIn Expiration time in seconds (default: 1 hour)
+   * @param responseContentType Optional MIME type override so browsers render inline instead of downloading
    * @returns Presigned URL
    */
-  async getPresignedUrl(fileUrl: string, expiresIn: number = 3600): Promise<string> {
+  async getPresignedUrl(fileUrl: string, expiresIn: number = 3600, responseContentType?: string): Promise<string> {
     try {
+      // Remove any existing query parameters (e.g., old signing params)
+      const baseUrl = fileUrl.split('?')[0];
+
       // Extract key from URL
-      const urlParts = fileUrl.split('/');
+      const urlParts = baseUrl.split('/');
       const key = decodeURIComponent(urlParts.slice(3).join('/')); // Remove domain parts and decode
 
-      const params = {
+      const params: any = {
         Bucket: <string>process.env.AWS_BUCKET_NAME,
         Key: key,
         Expires: expiresIn,
       };
+
+      // Override response content type so browsers render inline instead of downloading
+      if (responseContentType) {
+        params.ResponseContentType = responseContentType;
+      }
 
       return this.S3.getSignedUrl('getObject', params);
     } catch (e) {
@@ -93,7 +102,9 @@ export class FileUploadHelper {
    * Get S3 key from file URL
    */
   getKeyFromUrl(fileUrl: string): string {
-    const urlParts = fileUrl.split('/');
+    // Remove any existing query parameters
+    const baseUrl = fileUrl.split('?')[0];
+    const urlParts = baseUrl.split('/');
     return decodeURIComponent(urlParts.slice(3).join('/'));
   }
 }

@@ -43,8 +43,10 @@ const handleLogin = async () => {
     if (response.ok) {
       // Store the token in the expected format { access_token: "..." }
       localStorage.setItem('accessToken', JSON.stringify({ access_token: data.data }))
-      // Redirect to admin dashboard
-      window.location.href = '/admin/'
+      // Redirect to the original destination if provided, otherwise admin dashboard
+      const params = new URLSearchParams(window.location.search)
+      const redirectPath = params.get('redirect')
+      window.location.href = redirectPath || '/admin/'
     } else {
       errorMessage.value = data.message || 'Login failed'
     }

@@ -12,6 +12,13 @@ export enum AuditAction {
   CONVERSATION_CREATED = 'conversation_created',
   CONVERSATION_ARCHIVED = 'conversation_archived',
   CONSENT_GIVEN = 'consent_given',
+  USER_RESTRICTED = 'user_restricted',
+  USER_UNRESTRICTED = 'user_unrestricted',
+  USER_BLOCKED = 'user_blocked',
+  USER_UNBLOCKED = 'user_unblocked',
+  MESSAGE_CAP_SET = 'message_cap_set',
+  MESSAGE_CAP_REMOVED = 'message_cap_removed',
+  MESSAGE_CAP_REACHED = 'message_cap_reached',
 }
 
 @Schema({

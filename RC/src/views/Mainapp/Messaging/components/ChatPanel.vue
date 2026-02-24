@@ -47,6 +47,7 @@
 
 		<!-- Input Area -->
 		<ChatInput
+			:restriction="restriction"
 			@send="$emit('send-message', $event)"
 			@send-attachment="$emit('send-attachment', $event)"
 			@typing="$emit('typing')"
@@ -69,6 +70,7 @@ export default {
 		hasMore: { type: Boolean, default: false },
 		typingUsers: { type: Array, default: () => [] },
 		presenceMap: { type: Object, default: () => ({}) },
+		restriction: { type: Object, default: () => ({ status: "none" }) },
 	},
 
 	emits: ["send-message", "send-attachment", "load-more", "typing", "mark-read", "delete-message", "download", "back", "view-media"],

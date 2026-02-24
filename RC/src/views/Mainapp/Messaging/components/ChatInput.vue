@@ -51,19 +51,77 @@
 
 		<!-- Voice recording UI -->
 		<div v-if="isRecording" class="recording-ui">
-			<div class="recording-indicator">
+			<button class="btn-cancel-record" @click="cancelRecording" title="Cancel">
+				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+					<line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+				</svg>
+			</button>
+			<div class="recording-waveform-area">
 				<span class="rec-dot"></span>
-				<span>{{ recordingDuration }}</span>
+				<canvas ref="waveformCanvas" class="waveform-canvas" width="200" height="36"></canvas>
+				<span class="recording-time">{{ recordingDuration }}</span>
 			</div>
-			<button class="btn-cancel-record" @click="cancelRecording">Cancel</button>
-			<button class="btn-send-record" @click="stopRecording">
+			<button class="btn-stop-record" @click="stopRecording" title="Stop recording">
+				<div class="stop-icon"></div>
+			</button>
+		</div>
+
+		<!-- Voice note preview (after recording, before sending) -->
+		<div v-else-if="recordedAudio" class="voice-preview-ui">
+			<button class="btn-delete-recording" @click="discardRecording" title="Delete">
+				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+					<polyline points="3 6 5 6 21 6" />
+					<path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+				</svg>
+			</button>
+			<div class="preview-waveform-area">
+				<button class="btn-play-preview" @click="togglePreviewPlayback">
+					<svg v-if="!isPreviewPlaying" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+						<path d="M8 5v14l11-7z" />
+					</svg>
+					<svg v-else width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+						<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+					</svg>
+				</button>
+				<div class="preview-bars">
+					<div
+						v-for="(h, i) in recordedWaveform"
+						:key="i"
+						class="preview-bar"
+						:class="{ played: previewProgress > i / recordedWaveform.length }"
+						:style="{ height: h + '%' }"
+					></div>
+				</div>
+				<span class="preview-time">{{ isPreviewPlaying ? previewCurrentTime : recordingDuration }}</span>
+			</div>
+			<button class="btn-send-record" @click="sendRecording" title="Send">
 				<svg width="20" height="20" viewBox="0 0 24 24" fill="white">
 					<path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
 				</svg>
 			</button>
 		</div>
 
-		<!-- Input bar -->
+		<!-- Blocked banner -->
+		<div v-else-if="isBlocked" class="restriction-banner restriction-blocked">
+			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+				<circle cx="12" cy="12" r="10" /><line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
+			</svg>
+			<span>You have been blocked from messaging. Contact support for assistance.</span>
+		</div>
+
+		<!-- Read-only / Cap reached input bar -->
+		<div v-else-if="isReadOnly || isCapReached" class="input-bar input-bar-restricted">
+			<div class="text-input-wrapper">
+				<textarea
+					disabled
+					:placeholder="restrictionPlaceholder"
+					rows="1"
+				></textarea>
+			</div>
+			<div v-if="capDisplay" class="cap-counter">{{ capDisplay }}</div>
+		</div>
+
+		<!-- Normal input bar -->
 		<div v-else class="input-bar">
 			<button class="btn-attach" @click="$refs.fileInput.click()" title="Attach file">
 				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -96,6 +154,8 @@
 					<path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
 				</svg>
 			</button>
+
+			<div v-if="capDisplay" class="cap-counter">{{ capDisplay }}</div>
 		</div>
 
 		<input
@@ -130,7 +190,19 @@ const MIME_TYPE_MAP = {
 export default {
 	components: { PdfThumbnail },
 
+	props: {
+		restriction: {
+			type: Object,
+			default: () => ({ status: "none" }),
+		},
+	},
+
 	emits: ["send", "send-attachment", "typing"],
+
+	beforeUnmount() {
+		this.cancelRecording();
+		this.discardRecording();
+	},
 
 	data() {
 		return {
@@ -141,17 +213,60 @@ export default {
 			thumbnailBlob: null,
 			thumbnailPromise: null,
 			isSending: false,
+			// Recording state
 			isRecording: false,
 			mediaRecorder: null,
 			audioChunks: [],
 			recordingStart: null,
 			recordingTimer: null,
 			recordingDuration: "0:00",
+			audioContext: null,
+			analyser: null,
+			waveformRaf: null,
+			// Preview state (after recording, before send)
+			recordedAudio: null, // { blob, file, durationSeconds }
+			recordedWaveform: [], // Array of bar heights (0–100)
+			isPreviewPlaying: false,
+			previewPlayer: null,
+			previewProgress: 0,
+			previewCurrentTime: "0:00",
+			waveformSamples: [],
 		};
 	},
 
 	computed: {
+		isBlocked() {
+			return this.restriction?.status === "blocked";
+		},
+		isReadOnly() {
+			return this.restriction?.status === "read_only";
+		},
+		isCapReached() {
+			const cap = this.restriction?.message_cap;
+			if (!cap?.enabled || !cap.limit) return false;
+			return (cap.current_count || 0) >= cap.limit;
+		},
+		isRestricted() {
+			return this.isBlocked || this.isReadOnly || this.isCapReached;
+		},
+		restrictionPlaceholder() {
+			if (this.isBlocked) return "You have been blocked from messaging.";
+			if (this.isReadOnly) return "You are restricted from sending messages.";
+			if (this.isCapReached) {
+				const cap = this.restriction.message_cap;
+				const period = cap.period === "daily" ? "daily" : "monthly";
+				return `You have reached your ${period} message limit.`;
+			}
+			return "Type a message...";
+		},
+		capDisplay() {
+			const cap = this.restriction?.message_cap;
+			if (!cap?.enabled || !cap.limit) return null;
+			const period = cap.period === "daily" ? "today" : "this month";
+			return `${cap.current_count || 0}/${cap.limit} messages ${period}`;
+		},
 		canSend() {
+			if (this.isRestricted) return false;
 			return this.text.trim().length > 0 || this.pendingFile;
 		},
 		isImageFile() {
@@ -351,54 +466,136 @@ export default {
 		async startRecording() {
 			try {
 				const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+				// Set up Web Audio API analyser for waveform
+				this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+				const source = this.audioContext.createMediaStreamSource(stream);
+				this.analyser = this.audioContext.createAnalyser();
+				this.analyser.fftSize = 256;
+				source.connect(this.analyser);
+
 				this.mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
 				this.audioChunks = [];
+				this.waveformSamples = [];
 
 				this.mediaRecorder.ondataavailable = (e) => {
 					if (e.data.size > 0) this.audioChunks.push(e.data);
 				};
 
-				this.mediaRecorder.onstop = () => {
-					stream.getTracks().forEach((t) => t.stop());
-				};
-
-				this.mediaRecorder.start();
+				this.mediaRecorder.start(100); // collect data every 100ms
 				this.isRecording = true;
 				this.recordingStart = Date.now();
 
+				// Start timer
 				this.recordingTimer = setInterval(() => {
 					const elapsed = Math.floor((Date.now() - this.recordingStart) / 1000);
 					const mins = Math.floor(elapsed / 60);
 					const secs = elapsed % 60;
 					this.recordingDuration = `${mins}:${secs.toString().padStart(2, "0")}`;
-
-					// Max 5 minutes
 					if (elapsed >= 300) this.stopRecording();
 				}, 1000);
+
+				// Start waveform animation
+				this.$nextTick(() => this.drawWaveform());
 			} catch (err) {
 				console.error("Microphone access denied:", err);
 			}
 		},
 
+		drawWaveform() {
+			if (!this.isRecording || !this.analyser) return;
+
+			const canvas = this.$refs.waveformCanvas;
+			if (!canvas) { this.waveformRaf = requestAnimationFrame(() => this.drawWaveform()); return; }
+
+			const ctx = canvas.getContext("2d");
+			const bufferLength = this.analyser.frequencyBinCount;
+			const dataArray = new Uint8Array(bufferLength);
+			this.analyser.getByteFrequencyData(dataArray);
+
+			// Calculate average amplitude
+			let sum = 0;
+			for (let i = 0; i < bufferLength; i++) sum += dataArray[i];
+			const avg = sum / bufferLength;
+			this.waveformSamples.push(Math.min(100, (avg / 128) * 100));
+
+			const w = canvas.width;
+			const h = canvas.height;
+			ctx.clearRect(0, 0, w, h);
+
+			// Draw live waveform bars (scrolling right-to-left)
+			const barWidth = 3;
+			const gap = 2;
+			const totalBarWidth = barWidth + gap;
+			const maxBars = Math.floor(w / totalBarWidth);
+			const samples = this.waveformSamples.slice(-maxBars);
+
+			ctx.fillStyle = "#ef4444";
+			for (let i = 0; i < samples.length; i++) {
+				const barH = Math.max(3, (samples[i] / 100) * h * 0.85);
+				const x = i * totalBarWidth;
+				const y = (h - barH) / 2;
+				const r = Math.min(1.5, barWidth / 2, barH / 2);
+				if (ctx.roundRect) {
+					ctx.beginPath();
+					ctx.roundRect(x, y, barWidth, barH, r);
+					ctx.fill();
+				} else {
+					ctx.fillRect(x, y, barWidth, barH);
+				}
+			}
+
+			this.waveformRaf = requestAnimationFrame(() => this.drawWaveform());
+		},
+
 		stopRecording() {
-			if (!this.mediaRecorder) return;
+			if (!this.mediaRecorder || this.mediaRecorder.state === "inactive") return;
 
 			this.mediaRecorder.onstop = () => {
 				this.mediaRecorder.stream.getTracks().forEach((t) => t.stop());
+
 				const blob = new Blob(this.audioChunks, { type: "audio/webm" });
 				const file = new File([blob], `voice-note-${Date.now()}.webm`, { type: "audio/webm" });
 				const durationSeconds = Math.floor((Date.now() - this.recordingStart) / 1000);
 
-				this.$emit("send-attachment", {
-					file,
-					type: "voice_note",
-					durationSeconds,
-				});
+				// Build waveform from samples for preview
+				const maxBars = 40;
+				const samples = this.waveformSamples;
+				const waveform = [];
+				if (samples.length <= maxBars) {
+					for (const s of samples) waveform.push(Math.max(15, s));
+				} else {
+					const step = samples.length / maxBars;
+					for (let i = 0; i < maxBars; i++) {
+						const idx = Math.floor(i * step);
+						const end = Math.min(Math.floor((i + 1) * step), samples.length);
+						let sum = 0;
+						for (let j = idx; j < end; j++) sum += samples[j];
+						waveform.push(Math.max(15, sum / (end - idx)));
+					}
+				}
 
-				this.cleanupRecording();
+				this.recordedAudio = { blob, file, durationSeconds };
+				this.recordedWaveform = waveform;
+
+				// Cleanup recording state but keep preview
+				this.stopRecordingCleanup();
 			};
 
 			this.mediaRecorder.stop();
+		},
+
+		stopRecordingCleanup() {
+			cancelAnimationFrame(this.waveformRaf);
+			clearInterval(this.recordingTimer);
+			if (this.audioContext) {
+				this.audioContext.close().catch(() => {});
+				this.audioContext = null;
+			}
+			this.analyser = null;
+			this.isRecording = false;
+			this.mediaRecorder = null;
+			this.audioChunks = [];
 		},
 
 		cancelRecording() {
@@ -408,14 +605,77 @@ export default {
 				};
 				this.mediaRecorder.stop();
 			}
-			this.cleanupRecording();
-		},
-
-		cleanupRecording() {
+			cancelAnimationFrame(this.waveformRaf);
 			clearInterval(this.recordingTimer);
+			if (this.audioContext) {
+				this.audioContext.close().catch(() => {});
+				this.audioContext = null;
+			}
+			this.analyser = null;
 			this.isRecording = false;
 			this.mediaRecorder = null;
 			this.audioChunks = [];
+			this.waveformSamples = [];
+			this.recordingStart = null;
+			this.recordingDuration = "0:00";
+		},
+
+		togglePreviewPlayback() {
+			if (!this.recordedAudio) return;
+
+			if (this.isPreviewPlaying && this.previewPlayer) {
+				this.previewPlayer.pause();
+				this.isPreviewPlaying = false;
+				return;
+			}
+
+			if (!this.previewPlayer) {
+				this.previewPlayer = new Audio(URL.createObjectURL(this.recordedAudio.blob));
+				this.previewPlayer.addEventListener("ended", () => {
+					this.isPreviewPlaying = false;
+					this.previewProgress = 0;
+					this.previewCurrentTime = "0:00";
+				});
+				this.previewPlayer.addEventListener("timeupdate", () => {
+					if (this.previewPlayer.duration) {
+						this.previewProgress = this.previewPlayer.currentTime / this.previewPlayer.duration;
+						const secs = Math.floor(this.previewPlayer.currentTime);
+						const m = Math.floor(secs / 60);
+						const s = secs % 60;
+						this.previewCurrentTime = `${m}:${s.toString().padStart(2, "0")}`;
+					}
+				});
+			}
+
+			this.previewPlayer.play();
+			this.isPreviewPlaying = true;
+		},
+
+		sendRecording() {
+			if (!this.recordedAudio) return;
+
+			this.$emit("send-attachment", {
+				file: this.recordedAudio.file,
+				type: "voice_note",
+				durationSeconds: this.recordedAudio.durationSeconds,
+			});
+
+			this.discardRecording();
+		},
+
+		discardRecording() {
+			if (this.previewPlayer) {
+				this.previewPlayer.pause();
+				const src = this.previewPlayer.src;
+				this.previewPlayer = null;
+				if (src) URL.revokeObjectURL(src);
+			}
+			this.recordedAudio = null;
+			this.recordedWaveform = [];
+			this.isPreviewPlaying = false;
+			this.previewProgress = 0;
+			this.previewCurrentTime = "0:00";
+			this.waveformSamples = [];
 			this.recordingStart = null;
 			this.recordingDuration = "0:00";
 		},
@@ -665,6 +925,39 @@ export default {
 	}
 }
 
+// Restriction styles
+.restriction-banner {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 14px 16px;
+	font-size: 13px;
+	color: #64748b;
+
+	&.restriction-blocked {
+		background: #fef2f2;
+		border-top: 1px solid #fecaca;
+		color: #dc2626;
+	}
+}
+
+.input-bar-restricted {
+	opacity: 0.6;
+
+	textarea {
+		cursor: not-allowed;
+		background: #f8fafc;
+	}
+}
+
+.cap-counter {
+	font-size: 11px;
+	color: #94a3b8;
+	white-space: nowrap;
+	padding: 0 4px;
+	flex-shrink: 0;
+}
+
 .btn-send {
 	width: 36px;
 	height: 36px;
@@ -693,25 +986,41 @@ export default {
 .recording-ui {
 	display: flex;
 	align-items: center;
-	gap: 12px;
-	padding: 12px 16px;
+	gap: 10px;
+	padding: 10px 16px;
+	background: #fef2f2;
+	border-top: 1px solid #fecaca;
 }
 
-.recording-indicator {
+.recording-waveform-area {
+	flex: 1;
 	display: flex;
 	align-items: center;
 	gap: 8px;
+	min-width: 0;
+}
+
+.waveform-canvas {
 	flex: 1;
-	font-size: 14px;
+	height: 36px;
+	border-radius: 4px;
+}
+
+.recording-time {
+	font-size: 13px;
+	font-weight: 600;
 	color: #ef4444;
-	font-weight: 500;
+	font-variant-numeric: tabular-nums;
+	min-width: 36px;
+	text-align: right;
 }
 
 .rec-dot {
-	width: 10px;
-	height: 10px;
+	width: 8px;
+	height: 8px;
 	border-radius: 50%;
 	background: #ef4444;
+	flex-shrink: 0;
 	animation: pulse 1s infinite;
 }
 
@@ -721,11 +1030,138 @@ export default {
 }
 
 .btn-cancel-record {
-	background: none;
+	width: 34px;
+	height: 34px;
+	border-radius: 50%;
 	border: none;
-	color: #94a3b8;
-	font-size: 14px;
+	background: #fee2e2;
+	color: #ef4444;
+	display: flex;
+	align-items: center;
+	justify-content: center;
 	cursor: pointer;
+	flex-shrink: 0;
+	transition: background 0.15s;
+
+	&:hover {
+		background: #fecaca;
+	}
+}
+
+.btn-stop-record {
+	width: 38px;
+	height: 38px;
+	border-radius: 50%;
+	border: none;
+	background: #ef4444;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	flex-shrink: 0;
+	transition: transform 0.15s;
+
+	&:hover {
+		transform: scale(1.05);
+	}
+
+	.stop-icon {
+		width: 14px;
+		height: 14px;
+		border-radius: 3px;
+		background: white;
+	}
+}
+
+// Voice preview UI
+.voice-preview-ui {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 10px 16px;
+	background: #f0f9ff;
+	border-top: 1px solid #bae6fd;
+}
+
+.btn-delete-recording {
+	width: 34px;
+	height: 34px;
+	border-radius: 50%;
+	border: none;
+	background: #fee2e2;
+	color: #ef4444;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	flex-shrink: 0;
+	transition: background 0.15s;
+
+	&:hover {
+		background: #fecaca;
+	}
+}
+
+.preview-waveform-area {
+	flex: 1;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	background: white;
+	border-radius: 20px;
+	padding: 6px 12px;
+	border: 1px solid #e0f2fe;
+	min-width: 0;
+}
+
+.btn-play-preview {
+	width: 30px;
+	height: 30px;
+	border-radius: 50%;
+	border: none;
+	background: linear-gradient(135deg, #4FC3F7, #29B6F6);
+	color: white;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	flex-shrink: 0;
+	transition: transform 0.15s;
+
+	&:hover {
+		transform: scale(1.05);
+	}
+}
+
+.preview-bars {
+	flex: 1;
+	display: flex;
+	align-items: center;
+	gap: 2px;
+	height: 28px;
+	min-width: 0;
+}
+
+.preview-bar {
+	flex: 1;
+	min-width: 2px;
+	max-width: 4px;
+	border-radius: 2px;
+	background: #cbd5e1;
+	transition: background 0.15s;
+
+	&.played {
+		background: #4FC3F7;
+	}
+}
+
+.preview-time {
+	font-size: 12px;
+	font-weight: 500;
+	color: #64748b;
+	font-variant-numeric: tabular-nums;
+	min-width: 32px;
+	text-align: right;
 }
 
 .btn-send-record {
@@ -739,5 +1175,11 @@ export default {
 	align-items: center;
 	justify-content: center;
 	cursor: pointer;
+	flex-shrink: 0;
+	transition: transform 0.15s;
+
+	&:hover {
+		transform: scale(1.05);
+	}
 }
 </style>

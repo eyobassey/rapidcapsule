@@ -27,6 +27,7 @@
 					:has-more="hasMoreMessages"
 					:typing-users="typingUsers"
 					:presence-map="$store.state.messaging.presenceMap"
+					:restriction="$store.getters['messaging/messagingRestriction']"
 					@send-message="handleSendMessage"
 					@send-attachment="handleSendAttachment"
 					@load-more="loadMoreMessages"
@@ -157,6 +158,7 @@ export default {
 
 		async init() {
 			await this.fetchConversations();
+			this.$store.dispatch("messaging/fetchMyRestrictions");
 			this.connectSocket();
 		},
 

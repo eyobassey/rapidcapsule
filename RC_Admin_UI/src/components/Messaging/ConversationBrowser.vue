@@ -11,17 +11,10 @@ const loading = ref(false)
 const totalItems = ref(0)
 const currentPage = ref(1)
 const itemsPerPage = ref(20)
+const totalPages = ref(1)
 const typeFilter = ref('')
 const searchQuery = ref('')
-
-const headers = [
-  { title: 'Participants', key: 'participants', sortable: false },
-  { title: 'Type', key: 'type', width: '150px' },
-  { title: 'Last Message', key: 'last_message', sortable: false },
-  { title: 'Messages', key: 'message_count', width: '100px' },
-  { title: 'Created', key: 'created_at', width: '140px' },
-  { title: 'Actions', key: 'actions', width: '100px', sortable: false },
-]
+const activeSearch = ref('')
 
 const typeOptions = [
   { title: 'All Types', value: '' },
@@ -37,12 +30,15 @@ const fetchConversations = async () => {
     params.append('page', currentPage.value)
     params.append('limit', itemsPerPage.value)
     if (typeFilter.value) params.append('type', typeFilter.value)
-    if (searchQuery.value) params.append('userId', searchQuery.value)
+    if (searchQuery.value) params.append('search', searchQuery.value)
 
     const { data } = await axios.get(`${apiBaseUrl}/messaging/conversations?${params}`)
+    activeSearch.value = searchQuery.value || ''
     if (data?.data) {
-      conversations.value = data.data.data
+      const items = data.data.data || data.data
+      conversations.value = Array.isArray(items) ? items : []
       totalItems.value = data.data.pagination?.total || 0
+      totalPages.value = data.data.pagination?.pages || Math.ceil(totalItems.value / itemsPerPage.value)
     }
   } catch (error) {
     console.error('Failed to fetch conversations:', error)
@@ -79,6 +75,13 @@ const formatType = (type) => {
   return (type || '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
+const clearSearch = () => {
+  searchQuery.value = ''
+  activeSearch.value = ''
+  currentPage.value = 1
+  fetchConversations()
+}
+
 onMounted(() => fetchConversations())
 </script>
 
@@ -93,65 +96,87 @@ onMounted(() => fetchConversations())
           label="Filter by type"
           variant="outlined"
           density="compact"
-          @update:model-value="fetchConversations"
+          @update:model-value="currentPage = 1; fetchConversations()"
         />
       </VCol>
       <VCol cols="12" md="4">
         <VTextField
           v-model="searchQuery"
-          label="Search by user ID"
+          label="Search by email or name"
+          placeholder="e.g. john@example.com or John"
           variant="outlined"
           density="compact"
           clearable
-          @keyup.enter="fetchConversations"
-          @click:clear="searchQuery = ''; fetchConversations()"
+          @keyup.enter="currentPage = 1; fetchConversations()"
+          @click:clear="clearSearch"
         />
+      </VCol>
+      <VCol cols="12" md="2" class="d-flex align-center">
+        <VBtn variant="outlined" density="compact" prepend-icon="bx-search" @click="currentPage = 1; fetchConversations()">
+          Search
+        </VBtn>
       </VCol>
     </VRow>
 
+    <!-- Active search indicator -->
+    <VAlert v-if="activeSearch" type="info" density="compact" variant="tonal" class="mb-3" closable @click:close="clearSearch">
+      Showing {{ conversations.length }} result(s) for "{{ activeSearch }}"
+    </VAlert>
+
+    <!-- Loading -->
+    <div v-if="loading" class="text-center py-8">
+      <VProgressCircular indeterminate color="primary" />
+    </div>
+
     <!-- Table -->
-    <VDataTable
-      :headers="headers"
-      :items="conversations"
-      :loading="loading"
-      :items-per-page="itemsPerPage"
-      item-value="_id"
-      class="elevation-0"
-    >
-      <template #item.participants="{ item }">
-        <span class="font-weight-medium">{{ getParticipantNames(item) }}</span>
-      </template>
+    <VTable v-else-if="conversations.length > 0">
+      <thead>
+        <tr>
+          <th>Participants</th>
+          <th style="width: 150px;">Type</th>
+          <th>Last Message</th>
+          <th style="width: 140px;">Created</th>
+          <th style="width: 100px;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="conversation in conversations" :key="conversation._id">
+          <td>
+            <span class="font-weight-medium">{{ getParticipantNames(conversation) }}</span>
+          </td>
+          <td>
+            <VChip :color="getTypeColor(conversation.type)" size="small" variant="tonal">
+              {{ formatType(conversation.type) }}
+            </VChip>
+          </td>
+          <td>
+            <span class="text-truncate d-inline-block" style="max-width: 250px;">
+              {{ conversation.last_message?.content || 'No messages' }}
+            </span>
+          </td>
+          <td>{{ formatDate(conversation.created_at) }}</td>
+          <td>
+            <VBtn icon size="small" variant="text" color="primary" @click="emit('view', conversation)">
+              <VIcon icon="bx-show" />
+            </VBtn>
+          </td>
+        </tr>
+      </tbody>
+    </VTable>
 
-      <template #item.type="{ item }">
-        <VChip :color="getTypeColor(item.type)" size="small" variant="tonal">
-          {{ formatType(item.type) }}
-        </VChip>
-      </template>
+    <!-- Empty state -->
+    <VAlert v-else type="info" variant="tonal">
+      {{ activeSearch ? 'No conversations found matching your search' : 'No conversations found' }}
+    </VAlert>
 
-      <template #item.last_message="{ item }">
-        <span class="text-truncate d-inline-block" style="max-width: 250px;">
-          {{ item.last_message?.content || 'No messages' }}
-        </span>
-      </template>
-
-      <template #item.created_at="{ item }">
-        {{ formatDate(item.created_at) }}
-      </template>
-
-      <template #item.actions="{ item }">
-        <VBtn icon size="small" variant="text" color="primary" @click="emit('view', item)">
-          <VIcon icon="bx-show" />
-        </VBtn>
-      </template>
-
-      <template #bottom>
-        <VPagination
-          v-model="currentPage"
-          :length="Math.ceil(totalItems / itemsPerPage)"
-          @update:model-value="fetchConversations"
-          class="mt-4"
-        />
-      </template>
-    </VDataTable>
+    <!-- Pagination -->
+    <div class="d-flex justify-center mt-4" v-if="totalPages > 1">
+      <VPagination
+        v-model="currentPage"
+        :length="totalPages"
+        :total-visible="7"
+        @update:model-value="fetchConversations"
+      />
+    </div>
   </div>
 </template>

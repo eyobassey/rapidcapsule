@@ -9,19 +9,11 @@ const loading = ref(false)
 const totalItems = ref(0)
 const currentPage = ref(1)
 const itemsPerPage = ref(20)
+const totalPages = ref(1)
 const actionFilter = ref('')
 const userSearch = ref('')
 const dateFrom = ref('')
 const dateTo = ref('')
-
-const headers = [
-  { title: 'Action', key: 'action', width: '180px' },
-  { title: 'Actor', key: 'actor', sortable: false },
-  { title: 'Actor Type', key: 'actor_type', width: '120px' },
-  { title: 'Conversation', key: 'conversation', width: '140px', sortable: false },
-  { title: 'Details', key: 'metadata', sortable: false },
-  { title: 'Timestamp', key: 'created_at', width: '180px' },
-]
 
 const actionOptions = [
   { title: 'All Actions', value: '' },
@@ -48,8 +40,10 @@ const fetchLogs = async () => {
 
     const { data } = await axios.get(`${apiBaseUrl}/messaging/audit-logs?${params}`)
     if (data?.data) {
-      logs.value = data.data.data
+      const items = data.data.data || data.data
+      logs.value = Array.isArray(items) ? items : []
       totalItems.value = data.data.pagination?.total || 0
+      totalPages.value = data.data.pagination?.pages || Math.ceil(totalItems.value / itemsPerPage.value)
     }
   } catch (error) {
     console.error('Failed to fetch audit logs:', error)
@@ -115,7 +109,10 @@ const getMetadataSummary = (metadata) => {
   const parts = []
   if (metadata.ip_address) parts.push(`IP: ${metadata.ip_address}`)
   if (metadata.file_name) parts.push(`File: ${metadata.file_name}`)
-  if (metadata.message_type) parts.push(`Type: ${metadata.message_type}`)
+  if (metadata.attachment_name) parts.push(`Attachment: ${metadata.attachment_name}`)
+  if (metadata.attachment_type) parts.push(`Type: ${metadata.attachment_type}`)
+  else if (metadata.message_type) parts.push(`Type: ${metadata.message_type}`)
+  if (metadata.attachment_size) parts.push(`Size: ${metadata.attachment_size}`)
   return parts.length > 0 ? parts.join(' | ') : '-'
 }
 
@@ -209,60 +206,71 @@ onMounted(() => fetchLogs())
       </VCol>
     </VRow>
 
+    <!-- Loading -->
+    <div v-if="loading" class="text-center py-8">
+      <VProgressCircular indeterminate color="primary" />
+    </div>
+
     <!-- Table -->
-    <VDataTable
-      :headers="headers"
-      :items="logs"
-      :loading="loading"
-      :items-per-page="itemsPerPage"
-      item-value="_id"
-      class="elevation-0"
-    >
-      <template #item.action="{ item }">
-        <div class="d-flex align-center gap-2">
-          <VIcon :icon="getActionIcon(item.action)" size="18" :color="getActionColor(item.action)" />
-          <VChip :color="getActionColor(item.action)" size="small" variant="tonal">
-            {{ formatAction(item.action) }}
-          </VChip>
-        </div>
-      </template>
+    <VTable v-else-if="logs.length > 0">
+      <thead>
+        <tr>
+          <th style="width: 180px;">Action</th>
+          <th>Actor</th>
+          <th style="width: 120px;">Actor Type</th>
+          <th style="width: 140px;">Conversation</th>
+          <th>Details</th>
+          <th style="width: 180px;">Timestamp</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="log in logs" :key="log._id">
+          <td>
+            <div class="d-flex align-center gap-2">
+              <VIcon :icon="getActionIcon(log.action)" size="18" :color="getActionColor(log.action)" />
+              <VChip :color="getActionColor(log.action)" size="small" variant="tonal">
+                {{ formatAction(log.action) }}
+              </VChip>
+            </div>
+          </td>
+          <td>
+            <span class="font-weight-medium">{{ getActorName(log) }}</span>
+          </td>
+          <td>
+            <VChip v-if="log.actor_type" size="x-small" variant="outlined">
+              {{ log.actor_type }}
+            </VChip>
+            <span v-else class="text-medium-emphasis">-</span>
+          </td>
+          <td>
+            <span v-if="log.conversation" class="text-caption font-weight-medium" style="font-family: monospace;">
+              {{ (log.conversation._id || log.conversation).toString().slice(-8) }}
+            </span>
+            <span v-else class="text-medium-emphasis">-</span>
+          </td>
+          <td>
+            <span class="text-caption text-truncate d-inline-block" style="max-width: 200px;">
+              {{ getMetadataSummary(log.metadata) }}
+            </span>
+          </td>
+          <td>{{ formatDateTime(log.created_at) }}</td>
+        </tr>
+      </tbody>
+    </VTable>
 
-      <template #item.actor="{ item }">
-        <span class="font-weight-medium">{{ getActorName(item) }}</span>
-      </template>
+    <!-- Empty state -->
+    <VAlert v-else type="info" variant="tonal">
+      No audit logs found matching your criteria
+    </VAlert>
 
-      <template #item.actor_type="{ item }">
-        <VChip v-if="item.actor_type" size="x-small" variant="outlined">
-          {{ item.actor_type }}
-        </VChip>
-        <span v-else class="text-medium-emphasis">-</span>
-      </template>
-
-      <template #item.conversation="{ item }">
-        <span v-if="item.conversation" class="text-caption font-weight-medium" style="font-family: monospace;">
-          {{ (item.conversation._id || item.conversation).toString().slice(-8) }}
-        </span>
-        <span v-else class="text-medium-emphasis">-</span>
-      </template>
-
-      <template #item.metadata="{ item }">
-        <span class="text-caption text-truncate d-inline-block" style="max-width: 200px;">
-          {{ getMetadataSummary(item.metadata) }}
-        </span>
-      </template>
-
-      <template #item.created_at="{ item }">
-        {{ formatDateTime(item.created_at) }}
-      </template>
-
-      <template #bottom>
-        <VPagination
-          v-model="currentPage"
-          :length="Math.ceil(totalItems / itemsPerPage)"
-          @update:model-value="fetchLogs"
-          class="mt-4"
-        />
-      </template>
-    </VDataTable>
+    <!-- Pagination -->
+    <div class="d-flex justify-center mt-4" v-if="totalPages > 1">
+      <VPagination
+        v-model="currentPage"
+        :length="totalPages"
+        :total-visible="7"
+        @update:model-value="fetchLogs"
+      />
+    </div>
   </div>
 </template>

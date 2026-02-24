@@ -16,6 +16,7 @@ const state = () => ({
 	hasMoreMessages: false,
 	messageCursor: null,
 	hasConsent: null,
+	messagingRestriction: { status: "none", message_cap: { enabled: false } },
 });
 
 const getters = {
@@ -65,6 +66,9 @@ const getters = {
 	hasConsent(state) {
 		return state.hasConsent;
 	},
+	messagingRestriction(state) {
+		return state.messagingRestriction;
+	},
 };
 
 const mutations = {
@@ -110,6 +114,12 @@ const mutations = {
 	},
 	REMOVE_MESSAGE(state, messageId) {
 		state.messages = state.messages.filter((m) => m._id !== messageId);
+	},
+	UPDATE_MESSAGE(state, updatedMessage) {
+		const idx = state.messages.findIndex((m) => m._id === updatedMessage._id);
+		if (idx !== -1) {
+			state.messages.splice(idx, 1, { ...state.messages[idx], ...updatedMessage });
+		}
 	},
 	SET_TYPING(state, { conversationId, userId, isTyping }) {
 		const key = `${conversationId}:${userId}`;
@@ -158,6 +168,9 @@ const mutations = {
 	},
 	SET_CONSENT(state, hasConsent) {
 		state.hasConsent = hasConsent;
+	},
+	SET_MESSAGING_RESTRICTION(state, restriction) {
+		state.messagingRestriction = restriction || { status: "none", message_cap: { enabled: false } };
 	},
 };
 
@@ -341,6 +354,17 @@ const actions = {
 		}
 	},
 
+	async fetchMyRestrictions({ commit }) {
+		try {
+			const { data } = await axios.get("messaging/my-restrictions");
+			commit("SET_MESSAGING_RESTRICTION", data.data);
+			return data.data;
+		} catch (error) {
+			console.error("Failed to fetch messaging restrictions:", error);
+			return { status: "none" };
+		}
+	},
+
 	async recordConsent({ commit }) {
 		try {
 			await axios.post("messaging/consent");
@@ -445,9 +469,32 @@ const actions = {
 			commit("REMOVE_MESSAGE", messageId);
 		});
 
+		// Message updated (e.g. link previews added)
+		socket.on("message_updated", ({ message }) => {
+			if (message) {
+				commit("UPDATE_MESSAGE", message);
+			}
+		});
+
 		// Conversation updated
 		socket.on("conversation_updated", ({ conversation }) => {
 			commit("UPDATE_CONVERSATION", conversation);
+		});
+
+		// Restriction update from admin
+		socket.on("restriction_update", (restriction) => {
+			commit("SET_MESSAGING_RESTRICTION", restriction);
+			// If blocked, disconnect
+			if (restriction.status === "blocked") {
+				dispatch("disconnectSocket");
+			}
+		});
+
+		// Blocked on connect
+		socket.on("restriction", ({ status, reason }) => {
+			if (status === "blocked") {
+				commit("SET_MESSAGING_RESTRICTION", { status: "blocked", reason });
+			}
 		});
 
 		// Heartbeat

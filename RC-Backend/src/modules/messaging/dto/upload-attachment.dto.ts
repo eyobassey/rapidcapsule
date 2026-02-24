@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { MessageType } from '../entities/message.entity';
 
 export class UploadAttachmentDto {
@@ -15,6 +16,7 @@ export class UploadAttachmentDto {
 
   @ApiPropertyOptional({ description: 'Duration in seconds for voice/video' })
   @IsOptional()
+  @Transform(({ value }) => value != null ? Number(value) : undefined)
   @IsNumber()
   duration_seconds?: number;
 

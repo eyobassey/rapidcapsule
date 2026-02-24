@@ -13,7 +13,40 @@
 
 			<!-- Text message -->
 			<template v-else-if="message.type === 'text'">
-				<p class="message-text">{{ message.is_deleted ? 'This message was deleted' : message.content }}</p>
+				<p class="message-text" v-html="message.is_deleted ? 'This message was deleted' : linkifyContent(message.content)"></p>
+
+				<!-- Link previews -->
+				<div v-if="message.link_previews?.length" class="link-previews">
+					<div
+						v-for="(preview, i) in message.link_previews"
+						:key="i"
+						class="link-preview-card"
+						@click="openLink(preview)"
+					>
+						<!-- YouTube / video embed -->
+						<div v-if="preview.video_embed_url && youtubeEmbedActive === i" class="video-embed">
+							<iframe
+								:src="preview.video_embed_url + '?autoplay=1'"
+								frameborder="0"
+								allow="autoplay; encrypted-media"
+								allowfullscreen
+							></iframe>
+						</div>
+						<div v-else-if="preview.image" class="preview-image-wrapper" @click.stop="preview.video_embed_url ? youtubeEmbedActive = i : openLink(preview)">
+							<img :src="preview.image" class="preview-image" loading="lazy" @error="$event.target.style.display='none'" />
+							<div v-if="preview.video_embed_url" class="preview-play-btn">
+								<svg width="36" height="36" viewBox="0 0 24 24" fill="white" filter="drop-shadow(0 1px 3px rgba(0,0,0,0.4))">
+									<path d="M8 5v14l11-7z" />
+								</svg>
+							</div>
+						</div>
+						<div class="preview-body">
+							<span v-if="preview.domain" class="preview-domain">{{ preview.domain }}</span>
+							<span v-if="preview.title" class="preview-title">{{ preview.title }}</span>
+							<span v-if="preview.description" class="preview-description">{{ preview.description }}</span>
+						</div>
+					</div>
+				</div>
 			</template>
 
 			<!-- Image -->
@@ -64,9 +97,20 @@
 						</svg>
 					</button>
 					<div class="waveform">
-						<div v-for="n in 20" :key="n" class="bar" :style="{ height: `${Math.random() * 70 + 30}%` }"></div>
+						<div
+							v-for="(h, i) in voiceWaveformBars"
+							:key="i"
+							class="bar"
+							:class="{ 'bar-played': audioProgress > (i / voiceWaveformBars.length) }"
+							:style="{ height: h + '%' }"
+						></div>
 					</div>
-					<span class="duration">{{ formatDuration(message.attachments[0]?.duration_seconds) }}</span>
+					<span class="duration">{{ isPlaying ? audioCurrentTime : formatDuration(message.attachments[0]?.duration_seconds) }}</span>
+					<button class="voice-download-btn" @click.stop="$emit('download', { conversationId: message.conversation_id, messageId: message._id, attachment: message.attachments[0] })" title="Download">
+						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+							<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
+						</svg>
+					</button>
 				</div>
 			</template>
 
@@ -170,6 +214,10 @@ export default {
 		return {
 			isPlaying: false,
 			audio: null,
+			audioProgress: 0,
+			audioCurrentTime: "0:00",
+			voiceWaveformBars: this.generateWaveformBars(),
+			youtubeEmbedActive: null,
 		};
 	},
 
@@ -201,6 +249,20 @@ export default {
 	},
 
 	methods: {
+		linkifyContent(text) {
+			if (!text) return "";
+			// Escape HTML first, then convert URLs to links
+			const escaped = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+			return escaped.replace(
+				/(https?:\/\/[^\s<>"{}|\\^`[\]]+)/g,
+				'<a href="$1" target="_blank" rel="noopener" class="msg-link" @click.stop>$1</a>'
+			);
+		},
+		openLink(preview) {
+			if (preview?.url) {
+				window.open(preview.url, "_blank", "noopener");
+			}
+		},
 		formatTime(dateStr) {
 			if (!dateStr) return "";
 			return new Date(dateStr).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -220,6 +282,16 @@ export default {
 		viewMedia(attachment) {
 			this.$emit("view-media", { ...attachment, _messageId: this.message._id });
 		},
+		generateWaveformBars() {
+			// Generate deterministic-looking waveform based on message id
+			const bars = [];
+			const seed = (this.message?._id || '').split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+			for (let i = 0; i < 28; i++) {
+				const pseudo = Math.sin(seed * (i + 1) * 0.3) * 0.5 + 0.5;
+				bars.push(Math.max(20, pseudo * 90));
+			}
+			return bars;
+		},
 		toggleAudio() {
 			const url = this.message.attachments?.[0]?.url;
 			if (!url) return;
@@ -228,9 +300,29 @@ export default {
 				this.audio?.pause();
 				this.isPlaying = false;
 			} else {
+				// Destroy old audio if it ended (WebM can't seek on presigned URLs)
+				if (this.audio && this.audio.ended) {
+					this.audio.pause();
+					this.audio.src = "";
+					this.audio = null;
+				}
 				if (!this.audio) {
+					this.audioProgress = 0;
+					this.audioCurrentTime = "0:00";
 					this.audio = new Audio(url);
-					this.audio.onended = () => { this.isPlaying = false; };
+					this.audio.addEventListener("ended", () => {
+						this.isPlaying = false;
+						this.audioProgress = 1;
+					});
+					this.audio.addEventListener("timeupdate", () => {
+						if (this.audio && this.audio.duration) {
+							this.audioProgress = this.audio.currentTime / this.audio.duration;
+							const secs = Math.floor(this.audio.currentTime);
+							const m = Math.floor(secs / 60);
+							const s = secs % 60;
+							this.audioCurrentTime = `${m}:${s.toString().padStart(2, "0")}`;
+						}
+					});
 				}
 				this.audio.play();
 				this.isPlaying = true;
@@ -297,6 +389,131 @@ export default {
 	&.caption {
 		margin-top: 6px;
 	}
+
+	:deep(.msg-link) {
+		color: inherit;
+		text-decoration: underline;
+		text-underline-offset: 2px;
+		word-break: break-all;
+
+		.mine & { color: rgba(255,255,255,0.9); }
+		.theirs & { color: #0284c7; }
+	}
+}
+
+// Link previews
+.link-previews {
+	margin-top: 8px;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.link-preview-card {
+	border-radius: 8px;
+	overflow: hidden;
+	cursor: pointer;
+	transition: opacity 0.15s;
+	max-width: 320px;
+
+	.mine & {
+		background: rgba(255,255,255,0.15);
+	}
+	.theirs & {
+		background: #f1f5f9;
+		border: 1px solid #e2e8f0;
+	}
+
+	&:hover { opacity: 0.9; }
+}
+
+.preview-image-wrapper {
+	position: relative;
+	width: 100%;
+	max-height: 180px;
+	overflow: hidden;
+
+	.preview-image {
+		width: 100%;
+		height: auto;
+		max-height: 180px;
+		object-fit: cover;
+		display: block;
+	}
+}
+
+.preview-play-btn {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	width: 52px;
+	height: 52px;
+	border-radius: 50%;
+	background: rgba(255,0,0,0.85);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: transform 0.15s;
+
+	&:hover { transform: translate(-50%, -50%) scale(1.1); }
+}
+
+.video-embed {
+	position: relative;
+	width: 100%;
+	padding-top: 56.25%; // 16:9 aspect ratio
+
+	iframe {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		border: none;
+	}
+}
+
+.preview-body {
+	padding: 8px 10px;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.preview-domain {
+	font-size: 11px;
+	font-weight: 500;
+	text-transform: uppercase;
+	letter-spacing: 0.3px;
+
+	.mine & { color: rgba(255,255,255,0.6); }
+	.theirs & { color: #94a3b8; }
+}
+
+.preview-title {
+	font-size: 13px;
+	font-weight: 600;
+	line-height: 1.3;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+
+	.mine & { color: white; }
+	.theirs & { color: #1e293b; }
+}
+
+.preview-description {
+	font-size: 12px;
+	line-height: 1.4;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+
+	.mine & { color: rgba(255,255,255,0.7); }
+	.theirs & { color: #64748b; }
 }
 
 .reply-preview {
@@ -545,22 +762,32 @@ export default {
 .voice-note {
 	display: flex;
 	align-items: center;
-	gap: 10px;
-	min-width: 200px;
+	gap: 8px;
+	min-width: 220px;
 }
 
 .play-btn {
-	width: 36px;
-	height: 36px;
+	width: 34px;
+	height: 34px;
 	border-radius: 50%;
 	border: none;
-	background: rgba(255, 255, 255, 0.2);
+	background: rgba(255, 255, 255, 0.25);
 	color: inherit;
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	cursor: pointer;
 	flex-shrink: 0;
+	transition: background 0.15s;
+
+	&:hover {
+		background: rgba(255, 255, 255, 0.35);
+	}
+
+	.theirs & {
+		background: rgba(0, 0, 0, 0.08);
+		&:hover { background: rgba(0, 0, 0, 0.12); }
+	}
 }
 
 .waveform {
@@ -574,14 +801,48 @@ export default {
 .bar {
 	width: 3px;
 	background: currentColor;
-	opacity: 0.6;
+	opacity: 0.4;
 	border-radius: 2px;
+	transition: opacity 0.15s;
+
+	&.bar-played {
+		opacity: 1;
+	}
 }
 
 .duration {
 	font-size: 11px;
 	opacity: 0.8;
 	flex-shrink: 0;
+	font-variant-numeric: tabular-nums;
+	min-width: 28px;
+	text-align: right;
+}
+
+.voice-download-btn {
+	width: 26px;
+	height: 26px;
+	border-radius: 50%;
+	border: none;
+	background: rgba(255, 255, 255, 0.2);
+	color: inherit;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	flex-shrink: 0;
+	opacity: 0.6;
+	transition: opacity 0.15s, background 0.15s;
+
+	&:hover {
+		opacity: 1;
+		background: rgba(255, 255, 255, 0.3);
+	}
+
+	.theirs & {
+		background: rgba(0, 0, 0, 0.06);
+		&:hover { background: rgba(0, 0, 0, 0.1); }
+	}
 }
 
 .attachment-file {

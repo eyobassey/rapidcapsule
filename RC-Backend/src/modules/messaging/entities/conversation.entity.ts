@@ -63,6 +63,10 @@ export class Conversation {
   @Prop({ type: Map, of: Number, default: {} })
   unread_counts: Map<string, number>;
 
+  /** Tracks when the last unread-notification email was sent per user (for cooldown) */
+  @Prop({ type: Map, of: Date, default: {} })
+  last_unread_email_at: Map<string, Date>;
+
   @Prop({ type: Boolean, default: true })
   is_active: boolean;
 

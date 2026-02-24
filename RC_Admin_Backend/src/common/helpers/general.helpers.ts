@@ -119,7 +119,8 @@ export class GeneralHelpers {
         } else {
           transport.sendMail(message, (error, info) => {
             if (error) {
-              logger.error(`Error: ${error}`);
+              logger.error(`Email send error to ${email}: ${error}`);
+              return;
             }
             logger.log(`Email sent to ${email}!`);
           });
