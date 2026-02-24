@@ -137,7 +137,30 @@ export class NotificationOrchestratorService {
           whatsapp: false,
           push: false,
         },
+        message_notifications: {
+          in_app: true,
+          email: true,
+          sms: false,
+          whatsapp: false,
+          push: true,
+        },
       };
+
+      // Merge saved notification preferences over defaults
+      const savedPrefs = defaults.notification_preferences || {};
+      for (const category of Object.keys(savedPrefs)) {
+        if (prefs[category]) {
+          Object.assign(prefs[category], savedPrefs[category]);
+        }
+      }
+
+      // Include quiet_hours and messaging_timing if saved
+      if (savedPrefs.quiet_hours) {
+        prefs.quiet_hours = savedPrefs.quiet_hours;
+      }
+      if (savedPrefs.messaging_timing) {
+        (prefs as any).messaging_timing = savedPrefs.messaging_timing;
+      }
 
       return prefs;
     } catch (error) {
@@ -151,6 +174,7 @@ export class NotificationOrchestratorService {
         vitals_alerts: { in_app: true, email: true, sms: true, whatsapp: false, push: true },
         prescription_updates: { in_app: true, email: true, sms: false, whatsapp: false, push: true },
         promotional: { in_app: true, email: false, sms: false, whatsapp: false, push: false },
+        message_notifications: { in_app: true, email: true, sms: false, whatsapp: false, push: true },
       };
     }
   }
@@ -193,7 +217,8 @@ export class NotificationOrchestratorService {
       [NotificationType.PROMOTIONAL]: 'promotional',
       [NotificationType.WELCOME]: 'appointment_updates',
       [NotificationType.NEW_PATIENT_ASSIGNED]: 'appointment_updates',
-      [NotificationType.PATIENT_MESSAGE]: 'appointment_updates',
+      [NotificationType.PATIENT_MESSAGE]: 'message_notifications',
+      [NotificationType.UNREAD_MESSAGES_REMINDER]: 'message_notifications',
       [NotificationType.REVIEW_RECEIVED]: 'appointment_updates',
       [NotificationType.NEW_USER_REGISTERED]: 'appointment_updates',
       [NotificationType.SPECIALIST_VERIFICATION_PENDING]: 'appointment_updates',

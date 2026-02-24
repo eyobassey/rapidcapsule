@@ -4,13 +4,19 @@ import { JwtModule } from '@nestjs/jwt';
 import { Conversation, ConversationSchema } from './entities/conversation.entity';
 import { Message, MessageSchema } from './entities/message.entity';
 import { MessageAuditLog, MessageAuditLogSchema } from './entities/message-audit-log.entity';
+import { User, UserSchema } from '../users/entities/user.entity';
+import { UserSetting, UserSettingSchema } from '../user-settings/entities/user-setting.entity';
 import { MessagingController } from './messaging.controller';
 import { MessagingService } from './messaging.service';
 import { MessagingGateway } from './messaging.gateway';
 import { MessagingAuditService } from './messaging-audit.service';
 import { MessagingUploadService } from './messaging-upload.service';
+import { MessagingNotificationScheduler } from './messaging-notification.scheduler';
+import { MessagingLinkPreviewService } from './messaging-link-preview.service';
 import { ConversationParticipantGuard } from './guards/conversation-participant.guard';
+import { MessagingRestrictionGuard } from './guards/messaging-restriction.guard';
 import { FileUploadHelper } from '../../common/helpers/file-upload.helpers';
+import { GeneralHelpers } from '../../common/helpers/general.helpers';
 
 @Module({
   imports: [
@@ -18,6 +24,8 @@ import { FileUploadHelper } from '../../common/helpers/file-upload.helpers';
       { name: Conversation.name, schema: ConversationSchema },
       { name: Message.name, schema: MessageSchema },
       { name: MessageAuditLog.name, schema: MessageAuditLogSchema },
+      { name: User.name, schema: UserSchema },
+      { name: UserSetting.name, schema: UserSettingSchema },
     ]),
     JwtModule.register({
       secret: process.env.JWTKEY,
@@ -29,8 +37,12 @@ import { FileUploadHelper } from '../../common/helpers/file-upload.helpers';
     MessagingGateway,
     MessagingAuditService,
     MessagingUploadService,
+    MessagingNotificationScheduler,
+    MessagingLinkPreviewService,
     ConversationParticipantGuard,
+    MessagingRestrictionGuard,
     FileUploadHelper,
+    GeneralHelpers,
   ],
   exports: [MessagingService, MessagingGateway],
 })

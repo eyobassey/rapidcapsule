@@ -120,6 +120,9 @@
 					>
 						<div class="nav__item--icon-main"><Icons :name="item.icon" /></div>
 						<p>{{ item.label }}</p>
+						<span v-if="item.label === 'Messages' && unreadCount > 0" class="unread-badge">
+							{{ unreadCount > 99 ? '99+' : unreadCount }}
+						</span>
 					</router-link>
 
 					<div
@@ -261,9 +264,14 @@ export default {
 
 	computed: {
 		...mapGetters(["userprofile"]),
+		...mapGetters("messaging", ["totalUnread"]),
 
 		getRoute() {
 			return this.$route.path;
+		},
+
+		unreadCount() {
+			return this.totalUnread || 0;
 		},
 
 		isOnboardingRoute() {
@@ -303,6 +311,15 @@ export default {
 
 	mounted() {
 		this.loadOnboardingProgress();
+		this.$store.dispatch("messaging/fetchConversations").catch(() => {});
+		this.$store.dispatch("messaging/connectSocket").catch(() => {});
+		this._unreadPoll = setInterval(() => {
+			this.$store.dispatch("messaging/fetchConversations").catch(() => {});
+		}, 30000);
+	},
+
+	beforeUnmount() {
+		if (this._unreadPoll) clearInterval(this._unreadPoll);
 	},
 
 	emits: ["closeSideNav"],
@@ -693,5 +710,21 @@ export default {
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
+}
+
+.unread-badge {
+	margin-left: auto;
+	background-color: #EF4444;
+	color: #fff;
+	font-size: 0.6875rem;
+	font-weight: 600;
+	min-width: 20px;
+	height: 20px;
+	padding: 0 6px;
+	border-radius: 10px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	line-height: 1;
 }
 </style>

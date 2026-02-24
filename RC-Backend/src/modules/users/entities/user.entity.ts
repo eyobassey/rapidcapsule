@@ -24,6 +24,7 @@ export type UserDocument = HydratedDocument<User>;
 export enum UserType {
   PATIENT = 'Patient',
   SPECIALIST = 'Specialist',
+  ADMIN = 'Admin',
 }
 
 export enum RegMedium {
@@ -168,7 +169,7 @@ export class User {
     type: String,
     default: UserType.PATIENT,
     enum: {
-      values: [UserType.PATIENT, UserType.SPECIALIST],
+      values: [UserType.PATIENT, UserType.SPECIALIST, UserType.ADMIN],
       message: '{VALUE} is not supported',
     },
   })
@@ -698,6 +699,45 @@ export class User {
     breakdown: any;
     updated_at: Date;
   };
+
+  // Messaging restrictions (admin-managed)
+  @Prop(
+    raw({
+      status: {
+        type: String,
+        enum: ['none', 'read_only', 'blocked'],
+        default: 'none',
+      },
+      reason: { type: String },
+      restricted_by: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+      restricted_at: { type: Date },
+      expires_at: { type: Date, default: null },
+      message_cap: {
+        enabled: { type: Boolean, default: false },
+        limit: { type: Number },
+        period: { type: String, enum: ['daily', 'monthly'] },
+        current_count: { type: Number, default: 0 },
+        period_start: { type: Date },
+      },
+    }),
+  )
+  messaging_restrictions?: {
+    status: 'none' | 'read_only' | 'blocked';
+    reason?: string;
+    restricted_by?: mongoose.Types.ObjectId;
+    restricted_at?: Date;
+    expires_at?: Date | null;
+    message_cap?: {
+      enabled: boolean;
+      limit?: number;
+      period?: 'daily' | 'monthly';
+      current_count?: number;
+      period_start?: Date;
+    };
+  };
+
+  @Prop({ type: Boolean, default: false })
+  welcome_message_sent: boolean;
 
   // Identity verification for specialists
   @Prop(

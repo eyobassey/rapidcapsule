@@ -22,6 +22,8 @@ import { SendMessageDto } from './dto/send-message.dto';
 import { QueryMessagesDto, QueryConversationsDto } from './dto/query-messages.dto';
 import { UploadAttachmentDto } from './dto/upload-attachment.dto';
 import { FileUploadHelper } from '../../common/helpers/file-upload.helpers';
+import { MessagingLinkPreviewService } from './messaging-link-preview.service';
+import { User, UserDocument } from '../users/entities/user.entity';
 
 @Injectable()
 export class MessagingService {
@@ -32,9 +34,12 @@ export class MessagingService {
     private conversationModel: Model<ConversationDocument>,
     @InjectModel(Message.name)
     private messageModel: Model<MessageDocument>,
+    @InjectModel(User.name)
+    private userModel: Model<UserDocument>,
     private readonly auditService: MessagingAuditService,
     private readonly uploadService: MessagingUploadService,
     private readonly fileUploadHelper: FileUploadHelper,
+    private readonly linkPreviewService: MessagingLinkPreviewService,
   ) {}
 
   /**
@@ -534,6 +539,75 @@ export class MessagingService {
     return !!conversation;
   }
 
+  // ===================== RESTRICTIONS =====================
+
+  /**
+   * Get the user's current messaging restrictions, auto-clearing expired ones
+   */
+  async getUserRestrictions(userId: string) {
+    const user = await this.userModel
+      .findById(userId)
+      .select('messaging_restrictions')
+      .lean();
+
+    if (!user?.messaging_restrictions) {
+      return { status: 'none', message_cap: { enabled: false } };
+    }
+
+    const r = user.messaging_restrictions;
+    const now = new Date();
+
+    // Auto-clear expired restriction
+    if (r.status !== 'none' && r.expires_at && new Date(r.expires_at) <= now) {
+      await this.userModel.updateOne(
+        { _id: userId },
+        {
+          $set: {
+            'messaging_restrictions.status': 'none',
+            'messaging_restrictions.reason': null,
+            'messaging_restrictions.restricted_by': null,
+            'messaging_restrictions.restricted_at': null,
+            'messaging_restrictions.expires_at': null,
+          },
+        },
+      );
+      return {
+        status: 'none',
+        message_cap: r.message_cap || { enabled: false },
+      };
+    }
+
+    // Reset message cap if period expired
+    if (r.message_cap?.enabled && r.message_cap.period_start) {
+      let needsReset = false;
+      const periodStart = new Date(r.message_cap.period_start);
+
+      if (r.message_cap.period === 'daily') {
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        needsReset = periodStart < startOfToday;
+      } else if (r.message_cap.period === 'monthly') {
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        needsReset = periodStart < startOfMonth;
+      }
+
+      if (needsReset) {
+        await this.userModel.updateOne(
+          { _id: userId },
+          {
+            $set: {
+              'messaging_restrictions.message_cap.current_count': 0,
+              'messaging_restrictions.message_cap.period_start': now,
+            },
+          },
+        );
+        r.message_cap.current_count = 0;
+        r.message_cap.period_start = now;
+      }
+    }
+
+    return r;
+  }
+
   // ===================== PRESENCE =====================
 
   /**
@@ -681,6 +755,116 @@ export class MessagingService {
     return results;
   }
 
+  // ===================== WELCOME MESSAGE =====================
+
+  /**
+   * Send a welcome message from Admin if the user hasn't received one yet.
+   * Called lazily on first GET /conversations request.
+   */
+  async sendWelcomeMessageIfNeeded(userId: string, userType: string): Promise<void> {
+    const adminUserId = process.env.WELCOME_ADMIN_USER_ID;
+    if (!adminUserId) return;
+
+    // Only for Patients and Specialists
+    if (!['Patient', 'Specialist'].includes(userType)) return;
+
+    // Quick check: already welcomed?
+    const user = await this.userModel
+      .findById(userId)
+      .select('welcome_message_sent profile.first_name profile.last_name')
+      .lean();
+
+    if (!user || user.welcome_message_sent) return;
+
+    try {
+      // Check if conversation with admin already exists
+      const existingConv = await this.conversationModel.findOne({
+        'participants.user': {
+          $all: [new Types.ObjectId(userId), new Types.ObjectId(adminUserId)],
+        },
+        is_active: true,
+      });
+
+      if (existingConv) {
+        // Already has a conversation with admin — just set the flag
+        await this.userModel.updateOne(
+          { _id: new Types.ObjectId(userId) },
+          { $set: { welcome_message_sent: true } },
+        );
+        return;
+      }
+
+      // Create conversation between user and admin
+      const myRole = this.mapUserTypeToRole(userType);
+      const convType =
+        userType === 'Specialist'
+          ? ConversationType.SPECIALIST_ADMIN
+          : ConversationType.PATIENT_ADMIN;
+
+      const conversation = await this.conversationModel.create({
+        participants: [
+          { user: new Types.ObjectId(adminUserId), role: ParticipantRole.ADMIN },
+          { user: new Types.ObjectId(userId), role: myRole },
+        ],
+        type: convType,
+        unread_counts: new Map([
+          [adminUserId, 0],
+          [userId, 1],
+        ]),
+        consent_given: [],
+      });
+
+      // Build personalized welcome message
+      const firstName = user.profile?.first_name || 'there';
+      const lastName = user.profile?.last_name || '';
+      const content = this.buildWelcomeMessage(userType, firstName, lastName);
+
+      // Send welcome message from admin
+      const message = await this.messageModel.create({
+        conversation: conversation._id,
+        sender: new Types.ObjectId(adminUserId),
+        type: MessageType.TEXT,
+        content,
+        status: { sent_at: new Date() },
+      });
+
+      // Update conversation's last_message
+      await this.conversationModel.findByIdAndUpdate(conversation._id, {
+        last_message: {
+          content: content.substring(0, 100) + '...',
+          sender: new Types.ObjectId(adminUserId),
+          sent_at: new Date(),
+          type: 'text',
+        },
+      });
+
+      // Mark user as welcomed
+      await this.userModel.updateOne(
+        { _id: new Types.ObjectId(userId) },
+        { $set: { welcome_message_sent: true } },
+      );
+
+      this.logger.log(
+        `Welcome message sent to ${userType} ${userId} (conv: ${conversation._id})`,
+      );
+    } catch (err) {
+      // Don't let welcome message failure break the conversations endpoint
+      this.logger.error(`Failed to send welcome message to ${userId}: ${err.message}`);
+    }
+  }
+
+  private buildWelcomeMessage(
+    userType: string,
+    firstName: string,
+    lastName: string,
+  ): string {
+    if (userType === 'Specialist') {
+      return `Welcome to Rapid Capsule Messaging!\n\nHi Dr. ${lastName}, welcome to the platform! I'm your Admin support contact — feel free to reach out anytime for assistance with your practice, patient communications, or platform features.\n\nA few guidelines for messaging:\n\n• Keep all conversations respectful and professional\n• Avoid sharing sensitive details like passwords or payment information\n• For urgent medical emergencies, always direct patients to call emergency services\n• We typically respond within 24 hours on business days\n• You can share images, documents, and files for seamless collaboration\n\nWe're excited to have you as part of the Rapid Capsule network. Don't hesitate to reach out!\n\n— Rapid Capsule Support`;
+    }
+
+    return `Welcome to Rapid Capsule Messaging!\n\nHi ${firstName}, we're glad to have you here! I'm your dedicated support contact — feel free to reach out anytime with questions, feedback, or if you need help navigating the platform.\n\nA few guidelines for messaging:\n\n• Keep all conversations respectful and professional\n• Avoid sharing sensitive details like passwords or payment information\n• For urgent medical emergencies, always call your local emergency services first\n• We typically respond within 24 hours on business days\n• You can share images, documents, and files to help us assist you better\n\nWe're here to make your healthcare journey as smooth as possible. Don't hesitate to send a message!\n\n— Rapid Capsule Support`;
+  }
+
   // ===================== HELPERS =====================
 
   /**
@@ -755,6 +939,27 @@ export class MessagingService {
       .findById(conversation._id)
       .populate('participants.user', 'profile.first_name profile.last_name profile.profile_photo email user_type');
     return this.resolveProfilePhotosForConversation(populated);
+  }
+
+  /**
+   * Fetch OG link previews for a message. Returns the updated message if previews were found.
+   */
+  async processLinkPreviews(messageId: string): Promise<any | null> {
+    try {
+      const previews = await this.linkPreviewService.processMessageLinks(messageId);
+      if (previews.length > 0) {
+        const updatedMessage = await this.messageModel
+          .findById(messageId)
+          .populate('sender', 'profile.first_name profile.last_name profile.profile_photo user_type')
+          .populate('reply_to', 'content type sender');
+        await this.resolveMessageUrls(updatedMessage);
+        return updatedMessage;
+      }
+      return null;
+    } catch (err) {
+      this.logger.error(`Link preview processing error: ${err.message}`);
+      return null;
+    }
   }
 
   private getAttachmentPreview(type: MessageType): string {

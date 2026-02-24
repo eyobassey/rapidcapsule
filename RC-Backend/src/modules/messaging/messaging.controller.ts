@@ -18,6 +18,7 @@ import { FileInterceptor, FileFieldsInterceptor } from '@nestjs/platform-express
 import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ConversationParticipantGuard } from './guards/conversation-participant.guard';
+import { MessagingRestrictionGuard } from './guards/messaging-restriction.guard';
 import { MessagingService } from './messaging.service';
 import { MessagingGateway } from './messaging.gateway';
 import { CreateConversationDto } from './dto/create-conversation.dto';
@@ -40,6 +41,7 @@ export class MessagingController {
   // ===================== CONVERSATIONS =====================
 
   @Post('conversations')
+  @UseGuards(MessagingRestrictionGuard)
   @ApiOperation({ summary: 'Create or find a conversation with another user' })
   async createConversation(@Body() dto: CreateConversationDto, @Request() req) {
     const result = await this.messagingService.createOrFindConversation(
@@ -62,6 +64,8 @@ export class MessagingController {
   @Get('conversations')
   @ApiOperation({ summary: 'List all conversations for the authenticated user' })
   async getConversations(@Query() query: QueryConversationsDto, @Request() req) {
+    // Send welcome message on first visit (no-op if already sent)
+    await this.messagingService.sendWelcomeMessageIfNeeded(req.user.sub, req.user.user_type);
     const result = await this.messagingService.getConversations(req.user.sub, query);
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
@@ -97,7 +101,7 @@ export class MessagingController {
   }
 
   @Post('conversations/:id/messages')
-  @UseGuards(ConversationParticipantGuard)
+  @UseGuards(ConversationParticipantGuard, MessagingRestrictionGuard)
   @ApiOperation({ summary: 'Send a text message in a conversation' })
   async sendMessage(
     @Param('id') id: string,
@@ -115,11 +119,21 @@ export class MessagingController {
     const updatedConv = await this.messagingService.getConversation(id);
     this.messagingGateway.emitNewMessage(id, result, updatedConv);
 
+    // Process link previews asynchronously (don't block the response)
+    const messageId = result?._id?.toString();
+    if (messageId && dto.content && dto.content.match(/https?:\/\//)) {
+      this.messagingService.processLinkPreviews(messageId).then((updated) => {
+        if (updated) {
+          this.messagingGateway.emitMessageUpdated(id, updated);
+        }
+      }).catch(() => {});
+    }
+
     return sendSuccessResponse(Messages.CREATED, result);
   }
 
   @Post('conversations/:id/messages/attachment')
-  @UseGuards(ConversationParticipantGuard)
+  @UseGuards(ConversationParticipantGuard, MessagingRestrictionGuard)
   @UseInterceptors(FileFieldsInterceptor([
     { name: 'file', maxCount: 1 },
     { name: 'thumbnail', maxCount: 1 },
@@ -222,6 +236,15 @@ export class MessagingController {
   async getMyContacts(@Request() req) {
     const result = await this.messagingService.getMyContacts(req.user.sub, req.user.user_type);
     return sendSuccessResponse(Messages.RETRIEVED, result);
+  }
+
+  // ===================== RESTRICTIONS =====================
+
+  @Get('my-restrictions')
+  @ApiOperation({ summary: 'Get current user messaging restrictions' })
+  async getMyRestrictions(@Request() req) {
+    const user = await this.messagingService.getUserRestrictions(req.user.sub);
+    return sendSuccessResponse(Messages.RETRIEVED, user);
   }
 
   // ===================== CONSENT =====================

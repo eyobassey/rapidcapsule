@@ -203,21 +203,79 @@
             </div>
           </div>
 
-          <!-- Coming Soon Cards -->
-          <div class="bento-card coming-soon-card">
-            <div class="coming-soon-icon quiet">
-              <v-icon name="hi-moon" scale="1.2" />
+          <!-- Messaging Timing Card -->
+          <div class="bento-card timing-card">
+            <div class="card-header">
+              <div class="card-header-left">
+                <div class="timing-header-icon">
+                  <v-icon name="hi-clock" scale="1" />
+                </div>
+                <h3>Message Email Timing</h3>
+              </div>
+              <span v-if="savingTiming" class="saving-indicator">
+                <div class="mini-spinner"></div>
+                Saving...
+              </span>
             </div>
-            <div class="coming-soon-content">
-              <h4>Quiet Hours</h4>
-              <p>Pause non-urgent notifications during specific times</p>
-            </div>
-            <div class="coming-soon-badge">
-              <v-icon name="hi-clock" scale="0.7" />
-              <span>Coming Soon</span>
+            <p class="timing-description">Control how quickly and how often you receive email notifications about unread messages.</p>
+            <div class="timing-controls">
+              <div class="timing-control">
+                <label>Email me after messages are unread for</label>
+                <select v-model="messagingTiming.unread_threshold_minutes" @change="updateMessagingTiming" :disabled="savingTiming">
+                  <option :value="5">5 minutes</option>
+                  <option :value="10">10 minutes</option>
+                  <option :value="20">20 minutes</option>
+                  <option :value="30">30 minutes</option>
+                  <option :value="60">1 hour</option>
+                </select>
+              </div>
+              <div class="timing-control">
+                <label>Don't repeat more often than every</label>
+                <select v-model="messagingTiming.cooldown_hours" @change="updateMessagingTiming" :disabled="savingTiming">
+                  <option :value="1">1 hour</option>
+                  <option :value="2">2 hours</option>
+                  <option :value="3">3 hours</option>
+                  <option :value="6">6 hours</option>
+                  <option :value="12">12 hours</option>
+                </select>
+              </div>
             </div>
           </div>
 
+          <!-- Quiet Hours Card -->
+          <div class="bento-card quiet-hours-card">
+            <div class="card-header">
+              <div class="card-header-left">
+                <div class="quiet-hours-icon">
+                  <v-icon name="hi-moon" scale="1" />
+                </div>
+                <h3>Quiet Hours</h3>
+              </div>
+              <label class="pill-toggle" :class="{ active: quietHours.enabled }">
+                <input type="checkbox" v-model="quietHours.enabled" @change="updateQuietHours" />
+                <span class="pill-track">
+                  <span class="pill-thumb"></span>
+                </span>
+              </label>
+            </div>
+            <p class="timing-description">Pause non-urgent notifications during specific times. Critical alerts will still come through.</p>
+            <div class="timing-controls" v-if="quietHours.enabled">
+              <div class="timing-control">
+                <label>Start time</label>
+                <input type="time" v-model="quietHours.start" @change="updateQuietHours" />
+              </div>
+              <div class="timing-control">
+                <label>End time</label>
+                <input type="time" v-model="quietHours.end" @change="updateQuietHours" />
+              </div>
+            </div>
+            <div v-if="quietHours.enabled" class="quiet-hours-summary">
+              <v-icon name="hi-information-circle" scale="0.8" />
+              <span>Notifications paused from {{ formatTime(quietHours.start) }} to {{ formatTime(quietHours.end) }} ({{ quietHoursTimezone }})</span>
+            </div>
+          </div>
+
+          <!-- Notification Sound Coming Soon -->
           <div class="bento-card coming-soon-card">
             <div class="coming-soon-icon sound">
               <v-icon name="hi-volume-up" scale="1.2" />
@@ -247,9 +305,20 @@ export default {
     return {
       loading: true,
       saving: false,
+      savingTiming: false,
       savingKey: null,
       error: null,
       preferences: null,
+      quietHours: {
+        enabled: false,
+        start: "22:00",
+        end: "07:00",
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      },
+      messagingTiming: {
+        unread_threshold_minutes: 20,
+        cooldown_hours: 3,
+      },
 
       channels: [
         { id: "in_app", label: "In-App", description: "Notifications in the app", icon: "hi-device-mobile", colorClass: "violet" },
@@ -309,6 +378,14 @@ export default {
           bgColor: "rgba(14, 165, 233, 0.1)",
         },
         {
+          id: "message_notifications",
+          title: "Message Notifications",
+          description: "Email notifications for unread patient messages",
+          icon: "hi-chat-alt-2",
+          color: "#4FC3F7",
+          bgColor: "rgba(79, 195, 247, 0.1)",
+        },
+        {
           id: "promotional",
           title: "Promotional",
           description: "Special offers, platform updates, and tips",
@@ -334,6 +411,9 @@ export default {
       });
       return count;
     },
+    quietHoursTimezone() {
+      return this.quietHours.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+    },
   },
 
   mounted() {
@@ -347,7 +427,26 @@ export default {
 
       try {
         const response = await axios.get("/notifications/preferences");
-        this.preferences = response.data.data || this.getDefaultPreferences();
+        const data = response.data.data || this.getDefaultPreferences();
+        this.preferences = data;
+
+        // Load quiet hours if saved
+        if (data.quiet_hours) {
+          this.quietHours = {
+            enabled: data.quiet_hours.enabled || false,
+            start: data.quiet_hours.start || "22:00",
+            end: data.quiet_hours.end || "07:00",
+            timezone: data.quiet_hours.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
+          };
+        }
+
+        // Load messaging timing if saved
+        if (data.messaging_timing) {
+          this.messagingTiming = {
+            unread_threshold_minutes: data.messaging_timing.unread_threshold_minutes || 20,
+            cooldown_hours: data.messaging_timing.cooldown_hours || 3,
+          };
+        }
       } catch (err) {
         console.error("Failed to fetch notification preferences:", err);
         this.error = "Failed to load preferences. Please try again.";
@@ -426,6 +525,48 @@ export default {
       } finally {
         this.saving = false;
       }
+    },
+
+    async updateQuietHours() {
+      this.savingTiming = true;
+      try {
+        await axios.patch("/notifications/preferences", {
+          quiet_hours: this.quietHours,
+        });
+      } catch (err) {
+        console.error("Failed to update quiet hours:", err);
+        this.$toast?.error?.("Failed to update quiet hours") ||
+          alert("Failed to update quiet hours");
+      } finally {
+        this.savingTiming = false;
+      }
+    },
+
+    async updateMessagingTiming() {
+      this.savingTiming = true;
+      try {
+        await axios.patch("/notifications/preferences", {
+          messaging_timing: {
+            unread_threshold_minutes: Number(this.messagingTiming.unread_threshold_minutes),
+            cooldown_hours: Number(this.messagingTiming.cooldown_hours),
+          },
+        });
+      } catch (err) {
+        console.error("Failed to update messaging timing:", err);
+        this.$toast?.error?.("Failed to update messaging timing") ||
+          alert("Failed to update messaging timing");
+      } finally {
+        this.savingTiming = false;
+      }
+    },
+
+    formatTime(time) {
+      if (!time) return "";
+      const [h, m] = time.split(":");
+      const hour = parseInt(h);
+      const ampm = hour >= 12 ? "PM" : "AM";
+      const hour12 = hour % 12 || 12;
+      return `${hour12}:${m} ${ampm}`;
     },
   },
 };
@@ -1202,6 +1343,167 @@ $violet-light: #EDE9FE;
       &:hover {
         background: $sky-dark;
       }
+    }
+  }
+}
+
+// Timing Card & Quiet Hours Card
+.timing-card,
+.quiet-hours-card {
+  grid-column: span 6;
+
+  @media (max-width: 1024px) {
+    grid-column: span 3;
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+
+  .card-header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .timing-header-icon,
+  .quiet-hours-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .timing-header-icon {
+    background: rgba($sky, 0.1);
+    color: $sky-dark;
+  }
+
+  .quiet-hours-icon {
+    background: $violet-light;
+    color: $violet;
+  }
+
+  .timing-description {
+    font-size: 13px;
+    color: $gray;
+    margin: 0 0 16px;
+    line-height: 1.5;
+  }
+}
+
+.timing-controls {
+  display: flex;
+  gap: 16px;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+  }
+}
+
+.timing-control {
+  flex: 1;
+
+  label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: $slate;
+    margin-bottom: 6px;
+  }
+
+  select,
+  input[type="time"] {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+    font-size: 14px;
+    color: $navy;
+    background: $bg;
+    cursor: pointer;
+    transition: border-color 0.2s;
+
+    &:focus {
+      outline: none;
+      border-color: $sky;
+      box-shadow: 0 0 0 3px rgba($sky, 0.1);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+}
+
+.quiet-hours-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: rgba($violet, 0.05);
+  border-radius: 10px;
+  border: 1px solid rgba($violet, 0.1);
+
+  svg {
+    color: $violet;
+    flex-shrink: 0;
+  }
+
+  span {
+    font-size: 13px;
+    color: $gray;
+  }
+}
+
+// Pill Toggle (for Quiet Hours)
+.pill-toggle {
+  position: relative;
+  display: inline-flex;
+  cursor: pointer;
+
+  input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .pill-track {
+    width: 48px;
+    height: 26px;
+    border-radius: 13px;
+    background: #CBD5E1;
+    position: relative;
+    transition: background 0.25s;
+  }
+
+  .pill-thumb {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: white;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+    transition: transform 0.25s;
+  }
+
+  &.active {
+    .pill-track {
+      background: linear-gradient(135deg, $sky, $sky-dark);
+    }
+
+    .pill-thumb {
+      transform: translateX(22px);
     }
   }
 }

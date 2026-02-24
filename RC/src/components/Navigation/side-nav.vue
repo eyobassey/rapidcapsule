@@ -40,6 +40,9 @@
               <Icons :name="item.icon" :fillColor="item.iconColor" />
             </div>
             <p>{{ item.label }}</p>
+            <span v-if="item.label === 'Messages' && unreadCount > 0" class="unread-badge">
+              {{ unreadCount > 99 ? '99+' : unreadCount }}
+            </span>
           </router-link>
 
           <div
@@ -98,6 +101,7 @@
 import Icons from "../icons.vue";
 import Logos from "../logos.vue";
 import CurrencySelector from "./CurrencySelector.vue";
+import { mapGetters } from "vuex";
 
 export default {
   data() {
@@ -218,9 +222,25 @@ export default {
     };
   },
   computed: {
+    ...mapGetters("messaging", ["totalUnread"]),
     getRoute() {
       return this.$route.path;
     },
+    unreadCount() {
+      return this.totalUnread || 0;
+    },
+  },
+
+  mounted() {
+    this.$store.dispatch("messaging/fetchConversations").catch(() => {});
+    this.$store.dispatch("messaging/connectSocket").catch(() => {});
+    this._unreadPoll = setInterval(() => {
+      this.$store.dispatch("messaging/fetchConversations").catch(() => {});
+    }, 30000);
+  },
+
+  beforeUnmount() {
+    if (this._unreadPoll) clearInterval(this._unreadPoll);
   },
 
   emits: ["closeSideNav"],
@@ -235,6 +255,7 @@ export default {
     },
 
     logOut() {
+      if (this._unreadPoll) clearInterval(this._unreadPoll);
       localStorage.clear();
       sessionStorage.clear();
       window.location = "/logged-out";
@@ -393,5 +414,21 @@ export default {
 
 .active__child {
   background-color: $color-g-90;
+}
+
+.unread-badge {
+  margin-left: auto;
+  background-color: #EF4444;
+  color: #fff;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
 }
 </style>

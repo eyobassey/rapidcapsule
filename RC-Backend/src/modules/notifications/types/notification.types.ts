@@ -48,6 +48,7 @@ export enum NotificationType {
   // Specialist-specific
   NEW_PATIENT_ASSIGNED = 'new_patient_assigned',
   PATIENT_MESSAGE = 'patient_message',
+  UNREAD_MESSAGES_REMINDER = 'unread_messages_reminder',
   REVIEW_RECEIVED = 'review_received',
 
   // Admin-specific
@@ -144,6 +145,15 @@ export interface NotificationPreferences {
     push?: boolean;
   };
 
+  // Messaging notifications
+  message_notifications?: {
+    in_app?: boolean;
+    email?: boolean;
+    sms?: boolean;
+    whatsapp?: boolean;
+    push?: boolean;
+  };
+
   // Marketing
   promotional?: {
     in_app?: boolean;
@@ -159,6 +169,12 @@ export interface NotificationPreferences {
     start?: string; // e.g., "22:00"
     end?: string; // e.g., "07:00"
     timezone?: string;
+  };
+
+  // Messaging timing preferences
+  messaging_timing?: {
+    unread_threshold_minutes?: number; // default 20
+    cooldown_hours?: number; // default 3
   };
 }
 
