@@ -37,7 +37,7 @@ import { ProcessAppointmentPaymentDto } from './dto/process-appointment-payment.
 import { AdminOrJwtGuard } from './guards/admin-or-jwt.guard';
 import { FileUploadHelper } from '../../common/helpers/file-upload.helpers';
 import { Types } from 'mongoose';
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
 @ApiTags('Appointments')
 @ApiBearerAuth('JWT-auth')
@@ -48,6 +48,11 @@ export class AppointmentsController {
     private readonly appointmentsService: AppointmentsService,
     private readonly fileUploadHelper: FileUploadHelper,
   ) {}
+
+  @ApiOperation({ summary: 'Book appointment (patient)', description: 'Patient books an appointment with a specialist. Requires a saved card on file.' })
+  @ApiResponse({ status: 201, description: 'Appointment created and Zoom meeting link generated' })
+  @ApiResponse({ status: 400, description: 'Validation error or no saved card' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   @UseGuards(DoesUserHaveCard)
   @Post()
   async create(
@@ -61,6 +66,9 @@ export class AppointmentsController {
     return sendSuccessResponse(Messages.CREATED, result);
   }
 
+  @ApiOperation({ summary: 'Create appointment (specialist)', description: 'Specialist creates an appointment for a patient. Admin can pass X-Specialist-Id header to act on behalf of a specialist.' })
+  @ApiResponse({ status: 201, description: 'Appointment created by specialist' })
+  @ApiResponse({ status: 400, description: 'Specialist ID required or validation error' })
   @Post('specialist/create')
   async createBySpecialist(
     @Body() createSpecialistAppointmentDto: CreateSpecialistAppointmentDto,
@@ -85,6 +93,9 @@ export class AppointmentsController {
    * Process appointment payment (debit wallet)
    * Called during Step 4 of appointment creation wizard
    */
+  @ApiOperation({ summary: 'Process appointment payment', description: 'Debit wallet for an appointment payment. Called during Step 4 of the appointment creation wizard.' })
+  @ApiResponse({ status: 201, description: 'Payment processed successfully' })
+  @ApiResponse({ status: 400, description: 'Insufficient balance or validation error' })
   @Post('specialist/process-payment')
   async processAppointmentPayment(
     @Body() processPaymentDto: ProcessAppointmentPaymentDto,
@@ -110,6 +121,9 @@ export class AppointmentsController {
     return sendSuccessResponse('Payment processed successfully', result);
   }
 
+  @ApiOperation({ summary: 'Verify appointment payment', description: 'Verify a Paystack payment transaction reference for an appointment.' })
+  @ApiResponse({ status: 200, description: 'Transaction verified successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid or failed transaction reference' })
   @HttpCode(HttpStatus.OK)
   @Post('transactions/verify')
   async verifyTransaction(
@@ -120,6 +134,8 @@ export class AppointmentsController {
     return sendSuccessResponse(Messages.TRANSACTION_VERIFIED, result);
   }
 
+  @ApiOperation({ summary: 'Get patient appointments', description: 'Retrieve appointments for the authenticated patient, filtered by status. Specialist profile photos are pre-signed.' })
+  @ApiResponse({ status: 200, description: 'Patient appointments retrieved' })
   @Get('patient')
   async getPatientAppointment(
     @Request() req,
@@ -151,6 +167,8 @@ export class AppointmentsController {
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
+  @ApiOperation({ summary: 'Get specialist appointments', description: 'Retrieve appointments for the authenticated specialist, filtered by status.' })
+  @ApiResponse({ status: 200, description: 'Specialist appointments retrieved' })
   @Get('specialist')
   async getSpecialistAppointment(
     @Request() req,
@@ -163,6 +181,8 @@ export class AppointmentsController {
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
+  @ApiOperation({ summary: 'Get specialist referrals', description: 'Retrieve referrals received by the authenticated specialist from other specialists.' })
+  @ApiResponse({ status: 200, description: 'Referrals retrieved' })
   @Get('specialist-referrals')
   async getSpecialistReferrals(@Request() req) {
     const result = await this.appointmentsService.getSpecialistReferrals(
@@ -171,6 +191,8 @@ export class AppointmentsController {
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
+  @ApiOperation({ summary: 'Find available specialists', description: 'Search for available specialists by category, gender, rating, language, and preferred dates/times.' })
+  @ApiResponse({ status: 200, description: 'Available specialists list returned' })
   @HttpCode(HttpStatus.OK)
   @Post('available-specialists')
   async getAvailableSpecialists(
@@ -182,6 +204,8 @@ export class AppointmentsController {
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
+  @ApiOperation({ summary: 'Get available time slots', description: 'Check available appointment time slots for given dates. Optionally filter by specialist and check for patient double-booking.' })
+  @ApiResponse({ status: 200, description: 'Available time slots returned' })
   @HttpCode(HttpStatus.OK)
   @Post('available-times')
   async getAvailableTimes(@Body() availableTimesDto: AvailableTimesDto) {
@@ -191,24 +215,34 @@ export class AppointmentsController {
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
+  @ApiOperation({ summary: 'Get appointment filter options', description: 'Retrieve available filter options (statuses, meeting types, categories) for the appointment list UI.' })
+  @ApiResponse({ status: 200, description: 'Filter options retrieved' })
   @Get('filter-options')
   async getFilterOptions() {
     const result = await this.appointmentsService.getFilterOptions();
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
+  @ApiOperation({ summary: 'List all appointments', description: 'Retrieve all appointments with pagination (admin/specialist view).' })
+  @ApiResponse({ status: 200, description: 'Paginated appointment list' })
   @Get()
   async getAppointments(@Request() req, @Query() queryDto: QueryDto) {
     const result = await this.appointmentsService.getAllAppointments(queryDto);
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
+  @ApiOperation({ summary: 'Get appointment by ID', description: 'Retrieve full details of a single appointment.' })
+  @ApiResponse({ status: 200, description: 'Appointment details returned' })
+  @ApiResponse({ status: 404, description: 'Appointment not found' })
   @Get(':id')
   async getOneAppointment(@Param('id') id: string) {
     const result = await this.appointmentsService.getOneAppointment(id);
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
+  @ApiOperation({ summary: 'Cancel appointment (body)', description: 'Cancel an appointment by passing the appointment ID in the request body.' })
+  @ApiResponse({ status: 200, description: 'Appointment cancelled' })
+  @ApiResponse({ status: 404, description: 'Appointment not found' })
   @Patch('cancel')
   async cancelAppointment(@Body() cancelAppointmentDto: CancelAppointmentDto) {
     const result = await this.appointmentsService.cancelAppointment(
@@ -217,6 +251,9 @@ export class AppointmentsController {
     return sendSuccessResponse(Messages.APPOINTMENT_CANCELLED, result);
   }
 
+  @ApiOperation({ summary: 'Cancel appointment (param)', description: 'Cancel an appointment by passing the appointment ID as a URL parameter.' })
+  @ApiResponse({ status: 200, description: 'Appointment cancelled' })
+  @ApiResponse({ status: 404, description: 'Appointment not found' })
   @Patch(':id/cancel')
   async cancelAppointmentById(
     @Param('id') id: string,
@@ -229,6 +266,10 @@ export class AppointmentsController {
     return sendSuccessResponse(Messages.APPOINTMENT_CANCELLED, result);
   }
 
+  @ApiOperation({ summary: 'Reschedule appointment', description: 'Reschedule an appointment to a new date and time. Optionally notify the patient.' })
+  @ApiResponse({ status: 200, description: 'Appointment rescheduled' })
+  @ApiResponse({ status: 400, description: 'New time slot not available' })
+  @ApiResponse({ status: 404, description: 'Appointment not found' })
   @Patch('reschedule')
   async rescheduleAppointment(
     @Body() rescheduleAppointmentDto: RescheduleAppointmentDto,
@@ -239,6 +280,9 @@ export class AppointmentsController {
     return sendSuccessResponse(Messages.APPOINTMENT_RESCHEDULE, result);
   }
 
+  @ApiOperation({ summary: 'Refer patient to specialist', description: 'Specialist refers a patient to one or more other specialists with a referral note.' })
+  @ApiResponse({ status: 201, description: 'Referral created and notification sent' })
+  @ApiResponse({ status: 400, description: 'Validation error' })
   @Post('refer-specialist')
   async referPatientToSpecialist(
     @Body() referSpecialistDto: ReferSpecialistDto,
@@ -251,6 +295,8 @@ export class AppointmentsController {
     return sendSuccessResponse(Messages.CREATED, result);
   }
 
+  @ApiOperation({ summary: 'End video meeting', description: 'End the Zoom/video meeting for an appointment and update status to completed.' })
+  @ApiResponse({ status: 200, description: 'Meeting ended' })
   @Patch('end-meeting')
   async endZoomMeeting(@Body() endZoomMeetingDto: EndZoomMeetingDto) {
     const result = await this.appointmentsService.endAppointment(
@@ -259,6 +305,8 @@ export class AppointmentsController {
     return sendSuccessResponse(Messages.CREATED, result);
   }
 
+  @ApiOperation({ summary: 'Add meeting notes', description: 'Add clinical notes from the consultation to an appointment record.' })
+  @ApiResponse({ status: 200, description: 'Meeting notes saved' })
   @Patch('meeting-notes')
   async addMeetingNotes(@Body() meetingNotesDto: MeetingNotesDto) {
     const result = await this.appointmentsService.addMeetingNotes(
@@ -267,6 +315,8 @@ export class AppointmentsController {
     return sendSuccessResponse(Messages.UPDATED, result);
   }
 
+  @ApiOperation({ summary: 'Update private notes', description: 'Update specialist-only private notes for an appointment (not visible to patient).' })
+  @ApiResponse({ status: 200, description: 'Private notes updated' })
   @Patch(':id/private-notes')
   async updatePrivateNotes(
     @Param('id') id: string,
@@ -281,6 +331,9 @@ export class AppointmentsController {
     return sendSuccessResponse(Messages.UPDATED, result);
   }
 
+  @ApiOperation({ summary: 'Rate appointment', description: 'Patient rates a completed appointment (1-5 stars) with optional text review.' })
+  @ApiResponse({ status: 200, description: 'Rating submitted' })
+  @ApiResponse({ status: 400, description: 'Rating must be between 1 and 5' })
   @Post(':id/rate')
   async rateAppointment(
     @Param('id') id: string,
@@ -300,6 +353,9 @@ export class AppointmentsController {
     return sendSuccessResponse(Messages.UPDATED, result);
   }
 
+  @ApiOperation({ summary: 'Upload appointment document', description: 'Upload a file (lab results, prescriptions, images) to an appointment. Stored in S3.' })
+  @ApiResponse({ status: 201, description: 'Document uploaded' })
+  @ApiResponse({ status: 400, description: 'File is required' })
   @Post(':id/documents')
   @UseInterceptors(FileInterceptor('file'))
   async uploadDocument(
@@ -318,18 +374,24 @@ export class AppointmentsController {
     return sendSuccessResponse(Messages.CREATED, result);
   }
 
+  @ApiOperation({ summary: 'Get appointment documents', description: 'Retrieve all uploaded documents for an appointment.' })
+  @ApiResponse({ status: 200, description: 'Documents list returned' })
   @Get(':id/documents')
   async getDocuments(@Param('id') id: string) {
     const result = await this.appointmentsService.getDocuments(id);
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
+  @ApiOperation({ summary: 'Get appointment statistics', description: 'Retrieve aggregate appointment stats (total, completed, cancelled, upcoming).' })
+  @ApiResponse({ status: 200, description: 'Stats returned' })
   @Get('stats')
   async getAppointmentStats() {
     const result = await this.appointmentsService.getAppointmentStats();
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
+  @ApiOperation({ summary: 'Get patient health profile', description: 'Retrieve a patient\'s health profile summary for the specialist appointment view.' })
+  @ApiResponse({ status: 200, description: 'Health profile returned' })
   @Get('patient/:patientId/health-profile')
   async getPatientHealthProfile(@Param('patientId') patientId: string) {
     const result = await this.appointmentsService.getPatientHealthProfile(
@@ -338,10 +400,8 @@ export class AppointmentsController {
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
-  /**
-   * Get comprehensive patient health records for specialist view
-   * Includes all health checkups, advanced scores, vitals, and appointment history
-   */
+  @ApiOperation({ summary: 'Get patient full health records', description: 'Comprehensive patient records for specialist view: health checkups, scores, vitals, and appointment history with pagination.' })
+  @ApiResponse({ status: 200, description: 'Full health records returned' })
   @Get('patient/:patientId/full-health-records')
   async getPatientFullHealthRecords(
     @Param('patientId') patientId: string,
@@ -366,6 +426,8 @@ export class AppointmentsController {
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
+  @ApiOperation({ summary: 'Get patient health scores', description: 'Retrieve health scores for a specific patient (specialist view).' })
+  @ApiResponse({ status: 200, description: 'Health scores returned' })
   @Get('patient/:patientId/health-scores')
   async getPatientHealthScores(@Param('patientId') patientId: string) {
     const result = await this.appointmentsService.getPatientHealthScores(
@@ -374,6 +436,8 @@ export class AppointmentsController {
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
+  @ApiOperation({ summary: 'Get my health scores', description: 'Retrieve health scores for the authenticated patient.' })
+  @ApiResponse({ status: 200, description: 'Health scores returned' })
   @Get('health-scores')
   async getMyHealthScores(@Request() req) {
     const result = await this.appointmentsService.getPatientHealthScores(
@@ -382,9 +446,8 @@ export class AppointmentsController {
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
-  /**
-   * Get patient prescriptions for specialist view
-   */
+  @ApiOperation({ summary: 'Get patient prescriptions', description: 'Retrieve paginated prescriptions for a patient (specialist view).' })
+  @ApiResponse({ status: 200, description: 'Prescriptions returned' })
   @Get('patient/:patientId/prescriptions')
   async getPatientPrescriptions(
     @Param('patientId') patientId: string,
@@ -399,9 +462,8 @@ export class AppointmentsController {
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
-  /**
-   * Get patient's uploaded prescriptions (external prescriptions)
-   */
+  @ApiOperation({ summary: 'Get patient uploaded prescriptions', description: 'Retrieve paginated external/uploaded prescriptions for a patient.' })
+  @ApiResponse({ status: 200, description: 'Uploaded prescriptions returned' })
   @Get('patient/:patientId/uploaded-prescriptions')
   async getPatientUploadedPrescriptions(
     @Param('patientId') patientId: string,
@@ -416,9 +478,8 @@ export class AppointmentsController {
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
-  /**
-   * Get patient's pharmacy orders (medication purchases)
-   */
+  @ApiOperation({ summary: 'Get patient pharmacy orders', description: 'Retrieve paginated pharmacy/medication orders for a patient.' })
+  @ApiResponse({ status: 200, description: 'Pharmacy orders returned' })
   @Get('patient/:patientId/pharmacy-orders')
   async getPatientPharmacyOrders(
     @Param('patientId') patientId: string,
@@ -433,6 +494,9 @@ export class AppointmentsController {
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
+  @ApiOperation({ summary: 'Get appointment details for specialist', description: 'Retrieve comprehensive appointment details including patient info, for the specialist dashboard.' })
+  @ApiResponse({ status: 200, description: 'Appointment details returned' })
+  @ApiResponse({ status: 404, description: 'Appointment not found' })
   @Get(':appointmentId/specialist-details')
   async getAppointmentDetailsForSpecialist(
     @Param('appointmentId') appointmentId: string,

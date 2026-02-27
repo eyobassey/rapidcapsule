@@ -1,4 +1,5 @@
 import { IsEnum, IsNotEmpty, IsString } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
 
 export enum SharePlatform {
   WHATSAPP = 'whatsapp',
@@ -11,6 +12,7 @@ export enum SharePlatform {
 }
 
 export class TrackShareDto {
+  @ApiProperty({ description: 'Platform where the referral link was shared', enum: SharePlatform, example: SharePlatform.WHATSAPP })
   @IsNotEmpty()
   @IsEnum(SharePlatform)
   platform: SharePlatform;

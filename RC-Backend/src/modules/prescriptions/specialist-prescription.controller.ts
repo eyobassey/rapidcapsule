@@ -32,9 +32,10 @@ import {
 } from './dto/specialist-prescription.dto';
 import { PrescriptionPaymentMethod } from './entities/specialist-prescription.entity';
 import { RefillService } from './services/refill.service';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
 @ApiTags('Specialist Prescriptions')
+@ApiBearerAuth('JWT-auth')
 @Controller('specialist/prescriptions')
 export class SpecialistPrescriptionController {
   constructor(
@@ -43,10 +44,9 @@ export class SpecialistPrescriptionController {
 
   // ============ PRESCRIPTION CRUD ============
 
-  /**
-   * POST /api/specialist/prescriptions
-   * Create a new prescription
-   */
+  @ApiOperation({ summary: 'Create specialist prescription', description: 'Create a new prescription for a patient with medication items, delivery address, and payment method' })
+  @ApiResponse({ status: 201, description: 'Prescription created with stock reservation details' })
+  @ApiResponse({ status: 400, description: 'Invalid prescription data or insufficient stock' })
   @UseGuards(JwtAuthGuard)
   @Post()
   async createPrescription(
@@ -60,10 +60,8 @@ export class SpecialistPrescriptionController {
     return sendSuccessResponse(Messages.CREATED, result);
   }
 
-  /**
-   * GET /api/specialist/prescriptions
-   * List prescriptions for the logged-in specialist
-   */
+  @ApiOperation({ summary: 'List specialist prescriptions', description: 'List all prescriptions created by the authenticated specialist with filtering and pagination' })
+  @ApiResponse({ status: 200, description: 'Paginated list of prescriptions' })
   @UseGuards(JwtAuthGuard)
   @Get()
   async getPrescriptions(
@@ -77,10 +75,8 @@ export class SpecialistPrescriptionController {
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
-  /**
-   * GET /api/specialist/prescriptions/stats
-   * Get prescription statistics for the specialist
-   */
+  @ApiOperation({ summary: 'Get prescription statistics', description: 'Get prescription statistics for the authenticated specialist (counts by status, revenue, etc.)' })
+  @ApiResponse({ status: 200, description: 'Prescription statistics returned' })
   @UseGuards(JwtAuthGuard)
   @Get('stats')
   async getStats(@Request() req) {
@@ -90,10 +86,9 @@ export class SpecialistPrescriptionController {
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
-  /**
-   * GET /api/specialist/prescriptions/patient/:patientId/wallet-balance
-   * Get patient's wallet balance for prescription payment
-   */
+  @ApiOperation({ summary: 'Get patient wallet balance', description: 'Check a patient\'s wallet balance before initiating wallet payment for a prescription' })
+  @ApiResponse({ status: 200, description: 'Patient wallet balance returned' })
+  @ApiResponse({ status: 404, description: 'Patient not found' })
   @UseGuards(JwtAuthGuard)
   @Get('patient/:patientId/wallet-balance')
   async getPatientWalletBalance(@Param('patientId') patientId: string) {
@@ -103,10 +98,8 @@ export class SpecialistPrescriptionController {
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
-  /**
-   * GET /api/specialist/prescriptions/linkable-appointments/:patientId
-   * Get completed appointments for a specialist-patient pair (for linking UI)
-   */
+  @ApiOperation({ summary: 'Get linkable appointments', description: 'Get completed appointments between this specialist and a patient, for linking to prescriptions' })
+  @ApiResponse({ status: 200, description: 'List of completed appointments returned' })
   @UseGuards(JwtAuthGuard)
   @Get('linkable-appointments/:patientId')
   async getLinkableAppointments(
@@ -120,10 +113,8 @@ export class SpecialistPrescriptionController {
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
-  /**
-   * GET /api/specialist/prescriptions/for-appointment/:appointmentId
-   * Get prescriptions linked to a specific appointment (reverse-lookup)
-   */
+  @ApiOperation({ summary: 'Get prescriptions for appointment', description: 'Get all prescriptions linked to a specific appointment (reverse-lookup)' })
+  @ApiResponse({ status: 200, description: 'Prescriptions for the appointment returned' })
   @UseGuards(JwtAuthGuard)
   @Get('for-appointment/:appointmentId')
   async getPrescriptionsForAppointment(
@@ -137,10 +128,8 @@ export class SpecialistPrescriptionController {
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
-  /**
-   * POST /api/specialist/prescriptions/for-appointments
-   * Get prescriptions linked to multiple appointments (batch reverse-lookup)
-   */
+  @ApiOperation({ summary: 'Batch get prescriptions for appointments', description: 'Get prescriptions linked to multiple appointments in a single request' })
+  @ApiResponse({ status: 200, description: 'Prescriptions grouped by appointment returned' })
   @UseGuards(JwtAuthGuard)
   @Post('for-appointments')
   async getPrescriptionsForAppointments(
@@ -155,10 +144,9 @@ export class SpecialistPrescriptionController {
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
-  /**
-   * GET /api/specialist/prescriptions/:id
-   * Get single prescription details
-   */
+  @ApiOperation({ summary: 'Get single prescription', description: 'Get detailed information for a specific prescription' })
+  @ApiResponse({ status: 200, description: 'Prescription details returned' })
+  @ApiResponse({ status: 404, description: 'Prescription not found' })
   @UseGuards(JwtAuthGuard)
   @Get(':id')
   async getPrescription(@Request() req, @Param('id') id: string) {
@@ -169,10 +157,9 @@ export class SpecialistPrescriptionController {
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
-  /**
-   * PATCH /api/specialist/prescriptions/:id
-   * Update a draft prescription
-   */
+  @ApiOperation({ summary: 'Update draft prescription', description: 'Update items, delivery address, or notes on a draft prescription' })
+  @ApiResponse({ status: 200, description: 'Prescription updated successfully' })
+  @ApiResponse({ status: 400, description: 'Prescription is not in draft status' })
   @UseGuards(JwtAuthGuard)
   @Patch(':id')
   async updatePrescription(
@@ -188,10 +175,9 @@ export class SpecialistPrescriptionController {
     return sendSuccessResponse(Messages.UPDATED, result);
   }
 
-  /**
-   * DELETE /api/specialist/prescriptions/:id
-   * Cancel a prescription (legacy)
-   */
+  @ApiOperation({ summary: 'Cancel prescription (DELETE)', description: 'Cancel a prescription using DELETE method (legacy endpoint)' })
+  @ApiResponse({ status: 200, description: 'Prescription cancelled' })
+  @ApiResponse({ status: 400, description: 'Prescription cannot be cancelled in current status' })
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
   async cancelPrescriptionDelete(
@@ -207,10 +193,9 @@ export class SpecialistPrescriptionController {
     return sendSuccessResponse(Messages.DELETED, result);
   }
 
-  /**
-   * POST /api/specialist/prescriptions/:id/cancel
-   * Cancel a prescription
-   */
+  @ApiOperation({ summary: 'Cancel prescription', description: 'Cancel a prescription with a reason' })
+  @ApiResponse({ status: 200, description: 'Prescription cancelled' })
+  @ApiResponse({ status: 400, description: 'Prescription cannot be cancelled in current status' })
   @UseGuards(JwtAuthGuard)
   @Post(':id/cancel')
   async cancelPrescription(
@@ -228,10 +213,9 @@ export class SpecialistPrescriptionController {
 
   // ============ SUBMISSION ============
 
-  /**
-   * POST /api/specialist/prescriptions/:id/submit
-   * Submit prescription for payment
-   */
+  @ApiOperation({ summary: 'Submit for payment', description: 'Submit a draft prescription for payment processing with the selected payment method' })
+  @ApiResponse({ status: 200, description: 'Prescription submitted for payment' })
+  @ApiResponse({ status: 400, description: 'Invalid payment method or prescription not in draft status' })
   @UseGuards(JwtAuthGuard)
   @Post(':id/submit')
   async submitForPayment(
@@ -249,10 +233,9 @@ export class SpecialistPrescriptionController {
 
   // ============ PAYMENT ============
 
-  /**
-   * POST /api/specialist/prescriptions/:id/pay/wallet
-   * Pay from specialist wallet
-   */
+  @ApiOperation({ summary: 'Pay from specialist wallet', description: 'Pay for the prescription from the specialist\'s wallet balance' })
+  @ApiResponse({ status: 200, description: 'Payment processed from wallet' })
+  @ApiResponse({ status: 400, description: 'Insufficient wallet balance' })
   @UseGuards(JwtAuthGuard)
   @Post(':id/pay/wallet')
   async payFromWallet(
@@ -268,11 +251,9 @@ export class SpecialistPrescriptionController {
     return sendSuccessResponse(Messages.TRANSACTION_VERIFIED, result);
   }
 
-  /**
-   * POST /api/specialist/prescriptions/:id/pay/patient-wallet
-   * Charge patient's wallet directly (specialist initiates)
-   * Supports full and partial payments
-   */
+  @ApiOperation({ summary: 'Pay from patient wallet', description: 'Charge the patient\'s wallet directly. Supports full and partial payments.' })
+  @ApiResponse({ status: 200, description: 'Payment processed from patient wallet' })
+  @ApiResponse({ status: 400, description: 'Insufficient balance (if partial not allowed)' })
   @UseGuards(JwtAuthGuard)
   @Post(':id/pay/patient-wallet')
   async payFromPatientWallet(
@@ -288,10 +269,8 @@ export class SpecialistPrescriptionController {
     return sendSuccessResponse(Messages.TRANSACTION_VERIFIED, result);
   }
 
-  /**
-   * POST /api/specialist/prescriptions/:id/pay/send-link
-   * Send payment link to patient
-   */
+  @ApiOperation({ summary: 'Send payment link to patient', description: 'Send an email to the patient with a Paystack payment link for the prescription' })
+  @ApiResponse({ status: 200, description: 'Payment link sent to patient' })
   @UseGuards(JwtAuthGuard)
   @Post(':id/pay/send-link')
   async sendPaymentLink(
@@ -307,10 +286,8 @@ export class SpecialistPrescriptionController {
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
-  /**
-   * POST /api/specialist/prescriptions/:id/pay/cash
-   * Mark prescription for cash payment on delivery
-   */
+  @ApiOperation({ summary: 'Mark as cash payment', description: 'Mark the prescription for cash payment on delivery' })
+  @ApiResponse({ status: 200, description: 'Prescription marked for cash payment' })
   @UseGuards(JwtAuthGuard)
   @Post(':id/pay/cash')
   async markAsCashPayment(@Request() req, @Param('id') id: string) {
@@ -323,11 +300,9 @@ export class SpecialistPrescriptionController {
 
   // ============ SEND TO PATIENT ============
 
-  /**
-   * POST /api/specialist/prescriptions/:id/send-to-patient
-   * Send prescription to patient for review and self-payment
-   * Generates PDF and sets 48-hour acceptance window
-   */
+  @ApiOperation({ summary: 'Send prescription to patient', description: 'Send prescription to patient for review and self-payment. Generates PDF and sets 48-hour acceptance window.' })
+  @ApiResponse({ status: 200, description: 'Prescription sent to patient with PDF generated' })
+  @ApiResponse({ status: 400, description: 'Prescription not in valid state for sending' })
   @UseGuards(JwtAuthGuard)
   @Post(':id/send-to-patient')
   async sendToPatient(@Request() req, @Param('id') id: string) {
@@ -340,10 +315,8 @@ export class SpecialistPrescriptionController {
 
   // ============ FULFILLMENT ============
 
-  /**
-   * POST /api/specialist/prescriptions/:id/dispense
-   * Mark prescription as dispensed
-   */
+  @ApiOperation({ summary: 'Mark as dispensed', description: 'Mark the prescription as dispensed by the pharmacy' })
+  @ApiResponse({ status: 200, description: 'Prescription marked as dispensed' })
   @UseGuards(JwtAuthGuard)
   @Post(':id/dispense')
   async markAsDispensed(
@@ -359,10 +332,8 @@ export class SpecialistPrescriptionController {
     return sendSuccessResponse(Messages.UPDATED, result);
   }
 
-  /**
-   * POST /api/specialist/prescriptions/:id/ship
-   * Add shipping information
-   */
+  @ApiOperation({ summary: 'Mark as shipped', description: 'Add shipping information and mark the prescription as shipped' })
+  @ApiResponse({ status: 200, description: 'Prescription marked as shipped with tracking info' })
   @UseGuards(JwtAuthGuard)
   @Post(':id/ship')
   async markAsShipped(
@@ -378,10 +349,8 @@ export class SpecialistPrescriptionController {
     return sendSuccessResponse(Messages.UPDATED, result);
   }
 
-  /**
-   * POST /api/specialist/prescriptions/:id/deliver
-   * Mark prescription as delivered
-   */
+  @ApiOperation({ summary: 'Mark as delivered', description: 'Mark the prescription as delivered to the patient' })
+  @ApiResponse({ status: 200, description: 'Prescription marked as delivered' })
   @UseGuards(JwtAuthGuard)
   @Post(':id/deliver')
   async markAsDelivered(
@@ -399,10 +368,8 @@ export class SpecialistPrescriptionController {
 
   // ============ LINKED RECORDS ============
 
-  /**
-   * POST /api/specialist/prescriptions/:id/link-records
-   * Link appointments and/or clinical notes to a prescription
-   */
+  @ApiOperation({ summary: 'Link records to prescription', description: 'Link appointments, health checkups, and/or clinical notes to a prescription' })
+  @ApiResponse({ status: 200, description: 'Records linked successfully' })
   @UseGuards(JwtAuthGuard)
   @Post(':id/link-records')
   async linkRecords(
@@ -418,10 +385,8 @@ export class SpecialistPrescriptionController {
     return sendSuccessResponse(Messages.UPDATED, result);
   }
 
-  /**
-   * POST /api/specialist/prescriptions/:id/unlink-records
-   * Unlink appointments and/or clinical notes from a prescription
-   */
+  @ApiOperation({ summary: 'Unlink records from prescription', description: 'Remove linked appointments, health checkups, and/or clinical notes from a prescription' })
+  @ApiResponse({ status: 200, description: 'Records unlinked successfully' })
   @UseGuards(JwtAuthGuard)
   @Post(':id/unlink-records')
   async unlinkRecords(
@@ -439,10 +404,9 @@ export class SpecialistPrescriptionController {
 
   // ============ PDF & SHARING ============
 
-  /**
-   * GET /api/specialist/prescriptions/:id/pdf
-   * Get PDF for a prescription (specialist access)
-   */
+  @ApiOperation({ summary: 'Get prescription PDF', description: 'Get the PDF download URL for a prescription (specialist access)' })
+  @ApiResponse({ status: 200, description: 'PDF URL returned' })
+  @ApiResponse({ status: 404, description: 'Prescription not found' })
   @UseGuards(JwtAuthGuard)
   @Get(':id/pdf')
   async getPrescriptionPdf(@Request() req, @Param('id') id: string) {
@@ -453,10 +417,8 @@ export class SpecialistPrescriptionController {
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
-  /**
-   * POST /api/specialist/prescriptions/:id/share/email
-   * Share prescription via email to patient
-   */
+  @ApiOperation({ summary: 'Share prescription via email', description: 'Send the prescription to the patient\'s email with optional PDF attachment' })
+  @ApiResponse({ status: 200, description: 'Prescription shared via email' })
   @UseGuards(JwtAuthGuard)
   @Post(':id/share/email')
   async sharePrescriptionEmail(
@@ -475,10 +437,8 @@ export class SpecialistPrescriptionController {
 
   // ============ PRESCRIPTION COUNTS ============
 
-  /**
-   * POST /api/specialist/prescriptions/checkup-counts
-   * Get prescription counts for multiple health checkups
-   */
+  @ApiOperation({ summary: 'Get prescription counts for checkups', description: 'Get prescription counts for multiple health checkups in a single request' })
+  @ApiResponse({ status: 200, description: 'Prescription counts per checkup returned' })
   @UseGuards(JwtAuthGuard)
   @Post('checkup-counts')
   async getPrescriptionCountsForCheckups(
@@ -492,10 +452,8 @@ export class SpecialistPrescriptionController {
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
-  /**
-   * POST /api/specialist/prescriptions/appointment-counts
-   * Get prescription counts for multiple appointments
-   */
+  @ApiOperation({ summary: 'Get prescription counts for appointments', description: 'Get prescription counts for multiple appointments in a single request' })
+  @ApiResponse({ status: 200, description: 'Prescription counts per appointment returned' })
   @UseGuards(JwtAuthGuard)
   @Post('appointment-counts')
   async getPrescriptionCountsForAppointments(
@@ -509,10 +467,8 @@ export class SpecialistPrescriptionController {
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
-  /**
-   * GET /api/specialist/prescriptions/by-checkup/:checkupId
-   * Get prescriptions linked to a specific health checkup
-   */
+  @ApiOperation({ summary: 'Get prescriptions by health checkup', description: 'Get all prescriptions linked to a specific health checkup' })
+  @ApiResponse({ status: 200, description: 'Prescriptions for the checkup returned' })
   @UseGuards(JwtAuthGuard)
   @Get('by-checkup/:checkupId')
   async getPrescriptionsByCheckup(
@@ -529,7 +485,8 @@ export class SpecialistPrescriptionController {
 
 // ============ PATIENT ENDPOINTS ============
 
-@ApiTags('Specialist Prescriptions')
+@ApiTags('Patient Prescriptions')
+@ApiBearerAuth('JWT-auth')
 @Controller('patient/prescriptions')
 export class PatientPrescriptionController {
   constructor(
@@ -537,10 +494,8 @@ export class PatientPrescriptionController {
     private readonly refillService: RefillService,
   ) {}
 
-  /**
-   * GET /api/patient/prescriptions
-   * Get prescriptions created by specialists for this patient
-   */
+  @ApiOperation({ summary: 'Get my prescriptions', description: 'Get paginated list of prescriptions created by specialists for the authenticated patient' })
+  @ApiResponse({ status: 200, description: 'Paginated prescriptions returned' })
   @UseGuards(JwtAuthGuard)
   @Get()
   async getMyPrescriptions(
@@ -556,10 +511,8 @@ export class PatientPrescriptionController {
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
-  /**
-   * GET /api/patient/prescriptions/wallet-balance
-   * Get patient's wallet balance for self-payment (static route - must come before :id)
-   */
+  @ApiOperation({ summary: 'Get my wallet balance', description: 'Get the authenticated patient\'s wallet balance for prescription self-payment' })
+  @ApiResponse({ status: 200, description: 'Wallet balance returned' })
   @UseGuards(JwtAuthGuard)
   @Get('wallet-balance')
   async getMyWalletBalance(@Request() req) {
@@ -569,11 +522,8 @@ export class PatientPrescriptionController {
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
-  /**
-   * GET /api/patient/prescriptions/for-pharmacy
-   * Get specialist prescriptions that can be used for pharmacy orders
-   * Returns prescriptions with paid/accepted status that have drug_id references
-   */
+  @ApiOperation({ summary: 'Get prescriptions for pharmacy order', description: 'Get specialist prescriptions that can be used for pharmacy orders. Returns paid/accepted prescriptions with drug_id references.' })
+  @ApiResponse({ status: 200, description: 'Eligible prescriptions returned' })
   @UseGuards(JwtAuthGuard)
   @Get('for-pharmacy')
   async getPrescriptionsForPharmacy(
@@ -592,10 +542,8 @@ export class PatientPrescriptionController {
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
-  /**
-   * GET /api/patient/prescriptions/for-appointment/:appointmentId
-   * Get prescriptions linked to a specific appointment for this patient
-   */
+  @ApiOperation({ summary: 'Get prescriptions for appointment', description: 'Get prescriptions linked to a specific appointment for the authenticated patient' })
+  @ApiResponse({ status: 200, description: 'Prescriptions for the appointment returned' })
   @UseGuards(JwtAuthGuard)
   @Get('for-appointment/:appointmentId')
   async getPrescriptionsForAppointment(
@@ -609,11 +557,8 @@ export class PatientPrescriptionController {
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
-  /**
-   * POST /api/patient/prescriptions/:id/accept-for-pharmacy
-   * Implicitly accept a prescription when patient selects it for pharmacy order
-   * This updates prescriptions in pending_acceptance status to accepted
-   */
+  @ApiOperation({ summary: 'Accept prescription for pharmacy use', description: 'Implicitly accept a prescription when selecting it for a pharmacy order' })
+  @ApiResponse({ status: 200, description: 'Prescription accepted for pharmacy use' })
   @UseGuards(JwtAuthGuard)
   @Post(':id/accept-for-pharmacy')
   async acceptPrescriptionForPharmacy(
@@ -627,10 +572,9 @@ export class PatientPrescriptionController {
     return sendSuccessResponse('Prescription accepted for pharmacy use', result);
   }
 
-  /**
-   * GET /api/patient/prescriptions/by-number/:prescriptionNumber
-   * Get a prescription by its prescription number (static route - must come before :id)
-   */
+  @ApiOperation({ summary: 'Get prescription by number', description: 'Look up a prescription by its prescription number (e.g., RX-20251217-0001)' })
+  @ApiResponse({ status: 200, description: 'Prescription details returned' })
+  @ApiResponse({ status: 404, description: 'Prescription not found' })
   @UseGuards(JwtAuthGuard)
   @Get('by-number/:prescriptionNumber')
   async getPrescriptionByNumber(
@@ -644,10 +588,9 @@ export class PatientPrescriptionController {
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
-  /**
-   * GET /api/patient/prescriptions/:id
-   * Get a specific prescription details for this patient
-   */
+  @ApiOperation({ summary: 'Get prescription details', description: 'Get detailed information for a specific prescription belonging to the patient' })
+  @ApiResponse({ status: 200, description: 'Prescription details returned' })
+  @ApiResponse({ status: 404, description: 'Prescription not found' })
   @UseGuards(JwtAuthGuard)
   @Get(':id')
   async getPrescriptionDetails(@Request() req, @Param('id') id: string) {
@@ -658,10 +601,9 @@ export class PatientPrescriptionController {
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
-  /**
-   * GET /api/patient/prescriptions/:id/pdf
-   * Get PDF download URL for prescription
-   */
+  @ApiOperation({ summary: 'Get prescription PDF', description: 'Get the PDF download URL for a prescription' })
+  @ApiResponse({ status: 200, description: 'PDF URL returned' })
+  @ApiResponse({ status: 404, description: 'Prescription not found' })
   @UseGuards(JwtAuthGuard)
   @Get(':id/pdf')
   async getPrescriptionPdf(@Request() req, @Param('id') id: string) {
@@ -672,10 +614,9 @@ export class PatientPrescriptionController {
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
-  /**
-   * POST /api/patient/prescriptions/:id/accept
-   * Accept prescription (full or partial)
-   */
+  @ApiOperation({ summary: 'Accept prescription', description: 'Accept a prescription fully or partially by specifying accepted item IDs' })
+  @ApiResponse({ status: 200, description: 'Prescription accepted' })
+  @ApiResponse({ status: 400, description: 'Prescription not in pending_acceptance status' })
   @UseGuards(JwtAuthGuard)
   @Post(':id/accept')
   async acceptPrescription(
@@ -691,10 +632,9 @@ export class PatientPrescriptionController {
     return sendSuccessResponse(Messages.UPDATED, result);
   }
 
-  /**
-   * POST /api/patient/prescriptions/:id/decline
-   * Decline prescription
-   */
+  @ApiOperation({ summary: 'Decline prescription', description: 'Decline a prescription with a reason, optionally declining specific items' })
+  @ApiResponse({ status: 200, description: 'Prescription declined' })
+  @ApiResponse({ status: 400, description: 'Prescription not in pending_acceptance status' })
   @UseGuards(JwtAuthGuard)
   @Post(':id/decline')
   async declinePrescription(
@@ -712,10 +652,9 @@ export class PatientPrescriptionController {
     return sendSuccessResponse(Messages.UPDATED, result);
   }
 
-  /**
-   * POST /api/patient/prescriptions/:id/pay/wallet
-   * Pay prescription from patient's wallet
-   */
+  @ApiOperation({ summary: 'Pay with wallet', description: 'Pay for a prescription from the patient\'s wallet balance' })
+  @ApiResponse({ status: 200, description: 'Payment processed from wallet' })
+  @ApiResponse({ status: 400, description: 'Insufficient wallet balance' })
   @UseGuards(JwtAuthGuard)
   @Post(':id/pay/wallet')
   async payWithWallet(@Request() req, @Param('id') id: string) {
@@ -726,10 +665,8 @@ export class PatientPrescriptionController {
     return sendSuccessResponse(Messages.TRANSACTION_VERIFIED, result);
   }
 
-  /**
-   * POST /api/patient/prescriptions/:id/pay/card/initialize
-   * Initialize card payment for prescription
-   */
+  @ApiOperation({ summary: 'Initialize card payment', description: 'Initialize a Paystack card payment transaction for the prescription' })
+  @ApiResponse({ status: 200, description: 'Payment initialized with authorization URL' })
   @UseGuards(JwtAuthGuard)
   @Post(':id/pay/card/initialize')
   async initializeCardPayment(@Request() req, @Param('id') id: string) {
@@ -740,10 +677,9 @@ export class PatientPrescriptionController {
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
-  /**
-   * POST /api/patient/prescriptions/:id/pay/card/verify
-   * Verify card payment for prescription
-   */
+  @ApiOperation({ summary: 'Verify card payment', description: 'Verify a Paystack card payment reference for the prescription' })
+  @ApiResponse({ status: 200, description: 'Payment verified and prescription updated' })
+  @ApiResponse({ status: 400, description: 'Invalid or failed payment reference' })
   @UseGuards(JwtAuthGuard)
   @Post(':id/pay/card/verify')
   async verifyCardPayment(
@@ -759,10 +695,8 @@ export class PatientPrescriptionController {
     return sendSuccessResponse(Messages.TRANSACTION_VERIFIED, result);
   }
 
-  /**
-   * GET /api/patient/prescriptions/:id/wallet-balance
-   * Get patient's wallet balance for self-payment
-   */
+  @ApiOperation({ summary: 'Get wallet balance for prescription', description: 'Get the patient\'s wallet balance for self-payment on a specific prescription' })
+  @ApiResponse({ status: 200, description: 'Wallet balance returned' })
   @UseGuards(JwtAuthGuard)
   @Get(':id/wallet-balance')
   async getWalletBalance(@Request() req) {
@@ -774,10 +708,8 @@ export class PatientPrescriptionController {
 
   // ============ REFILL MANAGEMENT ============
 
-  /**
-   * GET /api/patient/prescriptions/:id/refill/eligibility
-   * Check if prescription is eligible for refill
-   */
+  @ApiOperation({ summary: 'Check refill eligibility', description: 'Check if a prescription is eligible for refill based on refill count and expiry' })
+  @ApiResponse({ status: 200, description: 'Refill eligibility status returned' })
   @UseGuards(JwtAuthGuard)
   @Get(':id/refill/eligibility')
   async checkRefillEligibility(@Request() req, @Param('id') id: string) {
@@ -785,10 +717,9 @@ export class PatientPrescriptionController {
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
-  /**
-   * POST /api/patient/prescriptions/:id/refill
-   * Request a refill for prescription
-   */
+  @ApiOperation({ summary: 'Request prescription refill', description: 'Request a refill for an eligible prescription with optional delivery address' })
+  @ApiResponse({ status: 200, description: 'Refill requested successfully' })
+  @ApiResponse({ status: 400, description: 'Prescription not eligible for refill' })
   @UseGuards(JwtAuthGuard)
   @Post(':id/refill')
   async requestRefill(
@@ -804,10 +735,8 @@ export class PatientPrescriptionController {
     return sendSuccessResponse('Refill requested successfully', result);
   }
 
-  /**
-   * GET /api/patient/prescriptions/:id/refill/history
-   * Get refill history for a prescription
-   */
+  @ApiOperation({ summary: 'Get refill history', description: 'Get the refill history for a prescription' })
+  @ApiResponse({ status: 200, description: 'Refill history returned' })
   @UseGuards(JwtAuthGuard)
   @Get(':id/refill/history')
   async getRefillHistory(@Request() req, @Param('id') id: string) {
@@ -817,10 +746,9 @@ export class PatientPrescriptionController {
 
   // ============ PHARMACY RATING ============
 
-  /**
-   * POST /api/patient/prescriptions/:id/rate
-   * Rate the pharmacy experience for a delivered prescription
-   */
+  @ApiOperation({ summary: 'Rate prescription experience', description: 'Rate the pharmacy experience for a delivered prescription (1-5 stars)' })
+  @ApiResponse({ status: 200, description: 'Rating submitted successfully' })
+  @ApiResponse({ status: 400, description: 'Prescription not in delivered status' })
   @UseGuards(JwtAuthGuard)
   @Post(':id/rate')
   async ratePrescription(
@@ -841,18 +769,16 @@ export class PatientPrescriptionController {
 
 // ============ PUBLIC ENDPOINTS FOR PATIENT PAYMENT ============
 
-@ApiTags('Specialist Prescriptions')
+@ApiTags('Prescription Payments')
 @Controller('prescriptions')
 export class PrescriptionPaymentController {
   constructor(
     private readonly prescriptionService: SpecialistPrescriptionService,
   ) {}
 
-  /**
-   * POST /api/prescriptions/:id/pay/patient
-   * Process patient online payment (verify Paystack payment)
-   * Public endpoint - no auth required as patient clicks payment link
-   */
+  @ApiOperation({ summary: 'Process patient online payment', description: 'Verify a Paystack payment reference for a prescription. Public endpoint — no authentication required (patient clicks payment link).' })
+  @ApiResponse({ status: 200, description: 'Payment verified and prescription updated' })
+  @ApiResponse({ status: 400, description: 'Invalid or failed payment reference' })
   @Post(':id/pay/patient')
   async processPatientPayment(
     @Param('id') id: string,
@@ -865,10 +791,8 @@ export class PrescriptionPaymentController {
     return sendSuccessResponse(Messages.TRANSACTION_VERIFIED, result);
   }
 
-  /**
-   * GET /api/prescriptions/:id/pay/verify
-   * Verify payment status (for frontend to check payment)
-   */
+  @ApiOperation({ summary: 'Check payment status', description: 'Check the current payment and prescription status (for frontend polling after payment)' })
+  @ApiResponse({ status: 200, description: 'Payment status returned' })
   @Get(':id/pay/verify')
   async verifyPaymentStatus(@Param('id') id: string) {
     const prescription = await this.prescriptionService.getPrescription(
@@ -881,10 +805,9 @@ export class PrescriptionPaymentController {
     });
   }
 
-  /**
-   * GET /api/prescriptions/:id/public
-   * Get prescription details for payment page (limited info)
-   */
+  @ApiOperation({ summary: 'Get public prescription details', description: 'Get limited prescription details for the payment page. No authentication required.' })
+  @ApiResponse({ status: 200, description: 'Public prescription details returned (items, totals, payment status)' })
+  @ApiResponse({ status: 404, description: 'Prescription not found' })
   @Get(':id/public')
   async getPublicPrescription(@Param('id') id: string) {
     const prescription = await this.prescriptionService.getPrescription(
@@ -910,11 +833,9 @@ export class PrescriptionPaymentController {
 
   // ============ PICKUP CENTER ENDPOINTS ============
 
-  /**
-   * PATCH /api/prescriptions/:id/pickup-center
-   * Set or update pickup center for a prescription
-   * Patient can select where to pick up their order
-   */
+  @ApiOperation({ summary: 'Set pickup center', description: 'Set or update the pickup center pharmacy for a prescription' })
+  @ApiResponse({ status: 200, description: 'Pickup center set successfully' })
+  @ApiBearerAuth('JWT-auth')
   @UseGuards(JwtAuthGuard)
   @Patch(':id/pickup-center')
   async setPickupCenter(
@@ -930,11 +851,9 @@ export class PrescriptionPaymentController {
     return sendSuccessResponse('Pickup center set successfully', result);
   }
 
-  /**
-   * PATCH /api/prescriptions/:id/ready-for-pickup
-   * Mark prescription as ready for pickup
-   * Called by pickup center staff when order arrives
-   */
+  @ApiOperation({ summary: 'Mark ready for pickup', description: 'Mark a prescription as ready for pickup. Called by pickup center staff when the order arrives.' })
+  @ApiResponse({ status: 200, description: 'Order marked ready for pickup' })
+  @ApiBearerAuth('JWT-auth')
   @UseGuards(JwtAuthGuard)
   @Patch(':id/ready-for-pickup')
   async markReadyForPickup(
@@ -950,11 +869,10 @@ export class PrescriptionPaymentController {
     return sendSuccessResponse('Order marked ready for pickup', result);
   }
 
-  /**
-   * POST /api/prescriptions/:id/confirm-pickup
-   * Confirm patient pickup
-   * Called by pickup center staff when patient collects order
-   */
+  @ApiOperation({ summary: 'Confirm patient pickup', description: 'Confirm that the patient has collected their order. Called by pickup center staff.' })
+  @ApiResponse({ status: 200, description: 'Pickup confirmed successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid pickup code' })
+  @ApiBearerAuth('JWT-auth')
   @UseGuards(JwtAuthGuard)
   @Post(':id/confirm-pickup')
   async confirmPickup(
@@ -972,10 +890,9 @@ export class PrescriptionPaymentController {
     return sendSuccessResponse('Pickup confirmed successfully', result);
   }
 
-  /**
-   * GET /api/prescriptions/pickup-orders/:pharmacyId
-   * Get all pickup orders for a specific pharmacy
-   */
+  @ApiOperation({ summary: 'Get pickup orders for pharmacy', description: 'Get all pickup orders for a specific pharmacy with optional status filter and pagination' })
+  @ApiResponse({ status: 200, description: 'Pickup orders retrieved' })
+  @ApiBearerAuth('JWT-auth')
   @UseGuards(JwtAuthGuard)
   @Get('pickup-orders/:pharmacyId')
   async getPickupOrdersForPharmacy(

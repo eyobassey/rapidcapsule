@@ -1,5 +1,5 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { SpecialistPrescriptionService } from './specialist-prescription.service';
 import { sendSuccessResponse } from '../../core/responses/success.responses';
 
@@ -14,12 +14,11 @@ export class PrescriptionVerifyController {
     private readonly prescriptionService: SpecialistPrescriptionService,
   ) {}
 
-  /**
-   * GET /api/prescriptions/verify/:prescriptionNumber
-   * Verify a prescription by its prescription number
-   * @param prescriptionNumber The prescription number (e.g., RX-20251217-0001)
-   * @param h Optional hash to validate (from QR code)
-   */
+  @ApiOperation({ summary: 'Verify prescription by number', description: 'Public endpoint to verify a prescription by its prescription number. Used for QR code scanning — no authentication required.' })
+  @ApiParam({ name: 'prescriptionNumber', description: 'The prescription number to verify', example: 'RX-20251217-0001' })
+  @ApiQuery({ name: 'h', required: false, description: 'Optional verification hash from QR code', example: 'a1b2c3d4e5f6' })
+  @ApiResponse({ status: 200, description: 'Prescription verified successfully with prescription details' })
+  @ApiResponse({ status: 404, description: 'Prescription not found or invalid' })
   @Get(':prescriptionNumber')
   async verifyPrescription(
     @Param('prescriptionNumber') prescriptionNumber: string,

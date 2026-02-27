@@ -11,7 +11,7 @@ import {
   Logger,
   UnauthorizedException,
 } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Request, Response } from 'express';
 import { ZoomWebhookService } from '../services/zoom-webhook.service';
 import { Zoom } from '../../../common/external/zoom/zoom';
@@ -31,6 +31,9 @@ export class ZoomWebhookController {
     }
   }
 
+  @ApiOperation({ summary: 'Handle Zoom webhook', description: 'Receive and process Zoom meeting webhook events including URL validation, meeting start/end, and participant events' })
+  @ApiResponse({ status: 200, description: 'Webhook processed or URL validation responded' })
+  @ApiResponse({ status: 401, description: 'Invalid webhook signature' })
   @Post()
   @HttpCode(HttpStatus.OK)
   async handleZoomWebhook(

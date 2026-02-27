@@ -33,7 +33,7 @@ import { Model } from 'mongoose';
 import { User, UserDocument } from '../users/entities/user.entity';
 import { BasicHealthScoreService } from '../basic-health-score/basic-health-score.service';
 import { ScoreChangeTrigger } from '../basic-health-score/entities/basic-health-score-history.entity';
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
 @ApiTags('Health Checkup')
 @ApiBearerAuth('JWT-auth')
@@ -49,6 +49,9 @@ export class HealthCheckupController {
     private readonly basicHealthScoreService: BasicHealthScoreService,
   ) {}
 
+  @ApiOperation({ summary: 'Begin health checkup', description: 'Start a new AI-powered health checkup session for self, dependant, or someone else. Creates an Infermedica interview.' })
+  @ApiResponse({ status: 201, description: 'Health checkup session started with interview token' })
+  @ApiResponse({ status: 400, description: 'Validation error or invalid owner ID' })
   @Post()
   async beginCheckup(@Body() beginCheckupDto: BeginCheckupDto, @Request() req) {
     const result = await this.healthCheckupService.beginCheckup(
@@ -58,6 +61,8 @@ export class HealthCheckupController {
     return sendSuccessResponse(Messages.CREATED, result);
   }
 
+  @ApiOperation({ summary: 'Parse free text symptoms', description: 'Parse patient free-text symptom description into structured Infermedica evidence using NLP.' })
+  @ApiResponse({ status: 200, description: 'Parsed symptoms with evidence IDs returned' })
   @HttpCode(HttpStatus.OK)
   @Post('parse')
   async parseFreeText(@Body() parseTextDto: ParseTextDto) {
@@ -68,6 +73,8 @@ export class HealthCheckupController {
     return sendSuccessResponse(Messages.RETRIEVED, result?.data);
   }
 
+  @ApiOperation({ summary: 'Parse free text (enhanced NLP)', description: 'Enhanced text parsing with typo tolerance, fuzzy matching, and up to 15 suggestions per parse.' })
+  @ApiResponse({ status: 200, description: 'Enhanced parsed results returned' })
   @HttpCode(HttpStatus.OK)
   @Post('parse-enhanced')
   async parseFreeTextEnhanced(@Body() parseTextDto: ParseTextDto) {
@@ -91,6 +98,8 @@ export class HealthCheckupController {
     return sendSuccessResponse(Messages.RETRIEVED, result?.data);
   }
 
+  @ApiOperation({ summary: 'Get risk factors', description: 'Retrieve age-appropriate health risk factors from Infermedica for the symptom interview.' })
+  @ApiResponse({ status: 200, description: 'Risk factors list returned' })
   @HttpCode(HttpStatus.OK)
   @Post('risk-factors')
   async getRiskFactors(@Body() riskFactorsDto: RiskFactorsDto) {
@@ -101,6 +110,8 @@ export class HealthCheckupController {
     return sendSuccessResponse(Messages.RETRIEVED, result?.data);
   }
 
+  @ApiOperation({ summary: 'Get suggested symptoms', description: 'Get symptom suggestions based on current evidence to guide the interview process.' })
+  @ApiResponse({ status: 200, description: 'Suggested symptoms returned' })
   @HttpCode(HttpStatus.OK)
   @Post('symptoms')
   async getSuggestedSymptoms(
@@ -113,6 +124,8 @@ export class HealthCheckupController {
     return sendSuccessResponse(Messages.RETRIEVED, result?.data);
   }
 
+  @ApiOperation({ summary: 'Check diagnosis', description: 'Submit evidence for diagnosis. Returns follow-up questions or final triage with conditions. Updates health score on completion.' })
+  @ApiResponse({ status: 200, description: 'Diagnosis question or triage result returned' })
   @HttpCode(HttpStatus.OK)
   @Post('diagnosis')
   async checkDiagnosis(
@@ -135,6 +148,8 @@ export class HealthCheckupController {
     return sendSuccessResponse(Messages.RETRIEVED, result?.data);
   }
 
+  @ApiOperation({ summary: 'Check diagnosis (with duration)', description: 'Enhanced diagnosis supporting symptom duration questions. Same as /diagnosis but with enable_symptom_duration enabled.' })
+  @ApiResponse({ status: 200, description: 'Diagnosis with duration support returned' })
   @HttpCode(HttpStatus.OK)
   @Post('diagnosis-enhanced')
   async checkDiagnosisWithDuration(
@@ -162,6 +177,8 @@ export class HealthCheckupController {
     return sendSuccessResponse(Messages.RETRIEVED, result?.data);
   }
 
+  @ApiOperation({ summary: 'Explain condition', description: 'Get a plain-language explanation of a diagnosed condition, including supporting and opposing evidence.' })
+  @ApiResponse({ status: 200, description: 'Condition explanation returned' })
   @HttpCode(HttpStatus.OK)
   @Post('explain-condition')
   async explainCondition(@Body() explainConditionDto: ExplainConditionDto) {
@@ -172,6 +189,8 @@ export class HealthCheckupController {
     return sendSuccessResponse(Messages.RETRIEVED, result?.data);
   }
 
+  @ApiOperation({ summary: 'Search symptoms/conditions', description: 'Search Infermedica database for symptoms and conditions by keyword phrase.' })
+  @ApiResponse({ status: 200, description: 'Search results returned' })
   @Get('search')
   async search(@Query() searchQueryDto: SearchQueryDto) {
     const result = await this.healthCheckupService.search(
@@ -181,6 +200,8 @@ export class HealthCheckupController {
     return sendSuccessResponse(Messages.RETRIEVED, result?.data);
   }
 
+  @ApiOperation({ summary: 'Search symptoms (enhanced)', description: 'Enhanced search with typo tolerance, fuzzy matching, synonyms, and relaxed matching. Lower confidence threshold (0.4).' })
+  @ApiResponse({ status: 200, description: 'Enhanced search results returned' })
   @Get('search-enhanced')
   async searchEnhanced(@Query() searchQueryDto: SearchQueryDto) {
     // Enhanced search with NLP improvements enabled by default
@@ -203,12 +224,16 @@ export class HealthCheckupController {
     return sendSuccessResponse(Messages.RETRIEVED, result?.data);
   }
 
+  @ApiOperation({ summary: 'Get checkup results by user', description: 'Retrieve all health checkup results for a specific user.' })
+  @ApiResponse({ status: 200, description: 'Checkup results returned' })
   @Get('results/:id')
   async getHealthCheckupResults(@Param('id') userId: string) {
     const result = await this.healthCheckupService.getHealthCheckupResults(userId);
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
+  @ApiOperation({ summary: 'Get checkup history', description: 'Retrieve paginated health checkup history for the authenticated user with sorting options.' })
+  @ApiResponse({ status: 200, description: 'Checkup history returned with pagination' })
   @Get('history')
   async getHealthCheckupHistory(
     @Query() historyQueryDto: HistoryQueryDto,
@@ -224,6 +249,9 @@ export class HealthCheckupController {
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
+  @ApiOperation({ summary: 'Get checkup by ID', description: 'Retrieve full details of a specific health checkup including symptoms, evidence, and diagnosis results.' })
+  @ApiResponse({ status: 200, description: 'Health checkup details returned' })
+  @ApiResponse({ status: 404, description: 'Checkup not found' })
   @Get(':checkupId')
   async getHealthCheckupById(
     @Param('checkupId') checkupId: string,
@@ -233,6 +261,10 @@ export class HealthCheckupController {
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
+  @ApiOperation({ summary: 'Delete health checkup', description: 'Permanently delete a health checkup record. Only the owner can delete their own checkups.' })
+  @ApiResponse({ status: 200, description: 'Checkup deleted' })
+  @ApiResponse({ status: 403, description: 'Not authorized to delete this checkup' })
+  @ApiResponse({ status: 404, description: 'Checkup not found' })
   @Delete(':checkupId')
   async deleteHealthCheckup(
     @Param('checkupId') checkupId: string,
@@ -245,6 +277,8 @@ export class HealthCheckupController {
     return sendSuccessResponse('Health checkup deleted successfully', result);
   }
 
+  @ApiOperation({ summary: 'Get extended diagnosis', description: 'Retrieve an extended list of possible conditions with probability scores. Useful for detailed analysis after the main diagnosis.' })
+  @ApiResponse({ status: 200, description: 'Extended diagnosis with probability scores' })
   @HttpCode(HttpStatus.OK)
   @Post('extended-diagnosis')
   async getExtendedDiagnosis(
@@ -258,6 +292,8 @@ export class HealthCheckupController {
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
+  @ApiOperation({ summary: 'Test Infermedica settings', description: 'Debug endpoint to verify Infermedica API configuration. Not for production use.' })
+  @ApiResponse({ status: 200, description: 'Infermedica settings returned' })
   @HttpCode(HttpStatus.OK)
   @Get('settings/test')
   async testInfermedicaSettings() {
@@ -270,10 +306,8 @@ export class HealthCheckupController {
     };
   }
 
-  /**
-   * Check if Claude Health Summary is available for the current user
-   * IMPORTANT: This must be defined BEFORE :checkupId routes to avoid route conflicts
-   */
+  @ApiOperation({ summary: 'Get Claude summary status', description: 'Check if AI Health Summary is available and view credit balance (free, gifted, purchased credits).' })
+  @ApiResponse({ status: 200, description: 'Summary availability status and credit balance returned' })
   @Get('claude-summary/status')
   async getClaudeSummaryStatus(@Request() req) {
     // Get credit status for the user
@@ -290,10 +324,9 @@ export class HealthCheckupController {
     });
   }
 
-  /**
-   * Get Claude AI summary for a health checkup
-   * Returns stored summary from DB along with credit status
-   */
+  @ApiOperation({ summary: 'Get Claude AI summary', description: 'Retrieve a stored AI-generated health summary for a checkup, along with credit status.' })
+  @ApiResponse({ status: 200, description: 'Claude summary and credit status returned' })
+  @ApiResponse({ status: 404, description: 'Checkup not found' })
   @Get(':checkupId/claude-summary')
   async getClaudeSummary(
     @Param('checkupId') checkupId: string,
@@ -315,10 +348,9 @@ export class HealthCheckupController {
     });
   }
 
-  /**
-   * Generate and store Claude AI summary for a health checkup
-   * Requires available credits (free/gifted/purchased/unlimited)
-   */
+  @ApiOperation({ summary: 'Generate Claude AI summary', description: 'Generate a new AI health summary for a checkup. Consumes one credit. Returns existing summary if already generated.' })
+  @ApiResponse({ status: 200, description: 'Summary generated (or already exists), credit consumed' })
+  @ApiResponse({ status: 402, description: 'No credits available — purchase required' })
   @HttpCode(HttpStatus.OK)
   @Post(':checkupId/generate-claude-summary')
   async generateClaudeSummary(

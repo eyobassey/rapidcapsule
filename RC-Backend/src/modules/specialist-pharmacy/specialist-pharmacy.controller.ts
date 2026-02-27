@@ -10,7 +10,7 @@ import {
   Request,
   UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { Types } from 'mongoose';
 import { SpecialistPharmacyService } from './specialist-pharmacy.service';
 import { sendSuccessResponse } from '../../core/responses/success.responses';
@@ -39,6 +39,9 @@ export class SpecialistPharmacyController {
    * GET /api/specialist/pharmacy/dashboard
    * Get dashboard statistics
    */
+  @ApiOperation({ summary: 'Get pharmacy dashboard statistics' })
+  @ApiResponse({ status: 200, description: 'Dashboard statistics retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - invalid or missing JWT token' })
   @Get('dashboard')
   async getDashboard(@Request() req) {
     const result = await this.pharmacyService.getDashboardStats(
@@ -53,6 +56,9 @@ export class SpecialistPharmacyController {
    * GET /api/specialist/pharmacy/patients
    * Search patients
    */
+  @ApiOperation({ summary: 'Search and list patients' })
+  @ApiResponse({ status: 200, description: 'Patient list retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - invalid or missing JWT token' })
   @Get('patients')
   async searchPatients(
     @Request() req,
@@ -69,6 +75,11 @@ export class SpecialistPharmacyController {
    * GET /api/specialist/pharmacy/patients/:id
    * Get patient details
    */
+  @ApiOperation({ summary: 'Get patient details by ID' })
+  @ApiParam({ name: 'id', description: 'Patient ID', example: '507f1f77bcf86cd799439011' })
+  @ApiResponse({ status: 200, description: 'Patient details retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - invalid or missing JWT token' })
+  @ApiResponse({ status: 404, description: 'Patient not found' })
   @Get('patients/:id')
   async getPatientDetails(
     @Request() req,
@@ -85,6 +96,11 @@ export class SpecialistPharmacyController {
    * GET /api/specialist/pharmacy/patients/:id/medical-history
    * Get patient medical history
    */
+  @ApiOperation({ summary: 'Get patient medical history' })
+  @ApiParam({ name: 'id', description: 'Patient ID', example: '507f1f77bcf86cd799439011' })
+  @ApiResponse({ status: 200, description: 'Medical history retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - invalid or missing JWT token' })
+  @ApiResponse({ status: 404, description: 'Patient not found' })
   @Get('patients/:id/medical-history')
   async getPatientMedicalHistory(@Param('id') id: string) {
     const result = await this.pharmacyService.getPatientMedicalHistory(
@@ -97,6 +113,13 @@ export class SpecialistPharmacyController {
    * GET /api/specialist/pharmacy/patients/:id/prescriptions
    * Get patient prescription history from this specialist
    */
+  @ApiOperation({ summary: 'Get patient prescription history' })
+  @ApiParam({ name: 'id', description: 'Patient ID', example: '507f1f77bcf86cd799439011' })
+  @ApiQuery({ name: 'page', required: false, description: 'Page number', example: 1 })
+  @ApiQuery({ name: 'limit', required: false, description: 'Results per page', example: 20 })
+  @ApiResponse({ status: 200, description: 'Prescription history retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - invalid or missing JWT token' })
+  @ApiResponse({ status: 404, description: 'Patient not found' })
   @Get('patients/:id/prescriptions')
   async getPatientPrescriptions(
     @Request() req,
@@ -117,6 +140,11 @@ export class SpecialistPharmacyController {
    * GET /api/specialist/pharmacy/patients/:id/vitals
    * Get patient vital signs
    */
+  @ApiOperation({ summary: 'Get patient vital signs' })
+  @ApiParam({ name: 'id', description: 'Patient ID', example: '507f1f77bcf86cd799439011' })
+  @ApiResponse({ status: 200, description: 'Vital signs retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - invalid or missing JWT token' })
+  @ApiResponse({ status: 404, description: 'Patient not found' })
   @Get('patients/:id/vitals')
   async getPatientVitals(@Param('id') id: string) {
     const result = await this.pharmacyService.getPatientVitals(
@@ -129,6 +157,13 @@ export class SpecialistPharmacyController {
    * GET /api/specialist/pharmacy/patients/:id/health-checkups
    * Get patient health checkup history with pagination
    */
+  @ApiOperation({ summary: 'Get patient health checkup history' })
+  @ApiParam({ name: 'id', description: 'Patient ID', example: '507f1f77bcf86cd799439011' })
+  @ApiQuery({ name: 'page', required: false, description: 'Page number', example: 1 })
+  @ApiQuery({ name: 'limit', required: false, description: 'Results per page', example: 10 })
+  @ApiResponse({ status: 200, description: 'Health checkup history retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - invalid or missing JWT token' })
+  @ApiResponse({ status: 404, description: 'Patient not found' })
   @Get('patients/:id/health-checkups')
   async getPatientHealthCheckups(
     @Param('id') id: string,
@@ -147,6 +182,11 @@ export class SpecialistPharmacyController {
    * GET /api/specialist/pharmacy/health-checkups/:id
    * Get detailed health checkup by ID with full AI assessment
    */
+  @ApiOperation({ summary: 'Get health checkup details with full AI assessment' })
+  @ApiParam({ name: 'id', description: 'Health checkup ID', example: '507f1f77bcf86cd799439011' })
+  @ApiResponse({ status: 200, description: 'Health checkup details retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - invalid or missing JWT token' })
+  @ApiResponse({ status: 404, description: 'Health checkup not found' })
   @Get('health-checkups/:id')
   async getHealthCheckupDetails(@Param('id') id: string) {
     const result = await this.pharmacyService.getHealthCheckupDetails(
@@ -160,6 +200,15 @@ export class SpecialistPharmacyController {
    * Get patient appointment history (all specialists)
    * Query params: page, limit, status, sort
    */
+  @ApiOperation({ summary: 'Get patient appointment history' })
+  @ApiParam({ name: 'id', description: 'Patient ID', example: '507f1f77bcf86cd799439011' })
+  @ApiQuery({ name: 'page', required: false, description: 'Page number', example: 1 })
+  @ApiQuery({ name: 'limit', required: false, description: 'Results per page', example: 10 })
+  @ApiQuery({ name: 'status', required: false, description: 'Filter by appointment status', example: 'completed' })
+  @ApiQuery({ name: 'sort', required: false, description: 'Sort order by date', enum: ['asc', 'desc'], example: 'desc' })
+  @ApiResponse({ status: 200, description: 'Appointment history retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - invalid or missing JWT token' })
+  @ApiResponse({ status: 404, description: 'Patient not found' })
   @Get('patients/:id/appointments')
   async getPatientAppointments(
     @Request() req,
@@ -184,6 +233,11 @@ export class SpecialistPharmacyController {
    * GET /api/specialist/pharmacy/patients/:id/health-scores
    * Get patient health scores (basic and advanced)
    */
+  @ApiOperation({ summary: 'Get patient health scores' })
+  @ApiParam({ name: 'id', description: 'Patient ID', example: '507f1f77bcf86cd799439011' })
+  @ApiResponse({ status: 200, description: 'Health scores retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - invalid or missing JWT token' })
+  @ApiResponse({ status: 404, description: 'Patient not found' })
   @Get('patients/:id/health-scores')
   async getPatientHealthScores(@Param('id') id: string) {
     const result = await this.pharmacyService.getPatientHealthScores(
@@ -196,6 +250,13 @@ export class SpecialistPharmacyController {
    * GET /api/specialist/pharmacy/patients/:id/vitals/:type
    * Get patient vitals history for a specific vital type
    */
+  @ApiOperation({ summary: 'Get patient vital history by type' })
+  @ApiParam({ name: 'id', description: 'Patient ID', example: '507f1f77bcf86cd799439011' })
+  @ApiParam({ name: 'type', description: 'Vital sign type (e.g., blood_pressure, heart_rate, temperature)', example: 'blood_pressure' })
+  @ApiQuery({ name: 'limit', required: false, description: 'Number of records to return', example: 30 })
+  @ApiResponse({ status: 200, description: 'Vital history retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - invalid or missing JWT token' })
+  @ApiResponse({ status: 404, description: 'Patient not found' })
   @Get('patients/:id/vitals/:type')
   async getPatientVitalsHistory(
     @Param('id') id: string,
@@ -216,6 +277,9 @@ export class SpecialistPharmacyController {
    * GET /api/specialist/pharmacy/drugs
    * Search drug catalog
    */
+  @ApiOperation({ summary: 'Search and browse the drug catalog' })
+  @ApiResponse({ status: 200, description: 'Drug catalog results retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - invalid or missing JWT token' })
   @Get('drugs')
   async searchDrugs(@Query() query: DrugCatalogQueryDto) {
     const result = await this.pharmacyService.searchDrugs(query);
@@ -226,6 +290,9 @@ export class SpecialistPharmacyController {
    * GET /api/specialist/pharmacy/drugs/categories
    * Get drug categories
    */
+  @ApiOperation({ summary: 'Get all drug categories' })
+  @ApiResponse({ status: 200, description: 'Drug categories retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - invalid or missing JWT token' })
   @Get('drugs/categories')
   async getDrugCategories() {
     const result = await this.pharmacyService.getDrugCategories();
@@ -236,6 +303,9 @@ export class SpecialistPharmacyController {
    * GET /api/specialist/pharmacy/drugs/manufacturers
    * Get manufacturers
    */
+  @ApiOperation({ summary: 'Get all drug manufacturers' })
+  @ApiResponse({ status: 200, description: 'Manufacturer list retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - invalid or missing JWT token' })
   @Get('drugs/manufacturers')
   async getManufacturers() {
     const result = await this.pharmacyService.getManufacturers();
@@ -247,6 +317,12 @@ export class SpecialistPharmacyController {
    * Get drug details with availability
    * Optional query param: batch_id to show specific batch data
    */
+  @ApiOperation({ summary: 'Get drug details with availability info' })
+  @ApiParam({ name: 'id', description: 'Drug ID', example: '507f1f77bcf86cd799439011' })
+  @ApiQuery({ name: 'batch_id', required: false, description: 'Specific batch ID to include batch-level data', example: '507f1f77bcf86cd799439012' })
+  @ApiResponse({ status: 200, description: 'Drug details retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - invalid or missing JWT token' })
+  @ApiResponse({ status: 404, description: 'Drug not found' })
   @Get('drugs/:id')
   async getDrugDetails(
     @Param('id') id: string,
@@ -263,6 +339,11 @@ export class SpecialistPharmacyController {
    * GET /api/specialist/pharmacy/drugs/:id/batches
    * Get available batches for a drug
    */
+  @ApiOperation({ summary: 'Get available stock batches for a drug' })
+  @ApiParam({ name: 'id', description: 'Drug ID', example: '507f1f77bcf86cd799439011' })
+  @ApiResponse({ status: 200, description: 'Drug batches retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - invalid or missing JWT token' })
+  @ApiResponse({ status: 404, description: 'Drug not found' })
   @Get('drugs/:id/batches')
   async getDrugBatches(
     @Param('id') id: string,
@@ -281,6 +362,11 @@ export class SpecialistPharmacyController {
    * GET /api/specialist/pharmacy/patients/:id/addresses
    * Get all delivery addresses for a patient
    */
+  @ApiOperation({ summary: 'Get all delivery addresses for a patient' })
+  @ApiParam({ name: 'id', description: 'Patient ID', example: '507f1f77bcf86cd799439011' })
+  @ApiResponse({ status: 200, description: 'Delivery addresses retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - invalid or missing JWT token' })
+  @ApiResponse({ status: 404, description: 'Patient not found' })
   @Get('patients/:id/addresses')
   async getPatientAddresses(@Param('id') id: string) {
     const result = await this.pharmacyService.getPatientDeliveryAddresses(
@@ -293,6 +379,12 @@ export class SpecialistPharmacyController {
    * POST /api/specialist/pharmacy/patients/:id/addresses
    * Add a new delivery address for a patient
    */
+  @ApiOperation({ summary: 'Add a new delivery address for a patient' })
+  @ApiParam({ name: 'id', description: 'Patient ID', example: '507f1f77bcf86cd799439011' })
+  @ApiResponse({ status: 201, description: 'Delivery address added successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid address data' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - invalid or missing JWT token' })
+  @ApiResponse({ status: 404, description: 'Patient not found' })
   @Post('patients/:id/addresses')
   async addPatientAddress(
     @Param('id') id: string,
@@ -309,6 +401,13 @@ export class SpecialistPharmacyController {
    * PATCH /api/specialist/pharmacy/patients/:id/addresses/:addressId
    * Update a delivery address
    */
+  @ApiOperation({ summary: 'Update a delivery address' })
+  @ApiParam({ name: 'id', description: 'Patient ID', example: '507f1f77bcf86cd799439011' })
+  @ApiParam({ name: 'addressId', description: 'Address ID to update', example: '507f1f77bcf86cd799439012' })
+  @ApiResponse({ status: 200, description: 'Delivery address updated successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid address data' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - invalid or missing JWT token' })
+  @ApiResponse({ status: 404, description: 'Address or patient not found' })
   @Patch('patients/:id/addresses/:addressId')
   async updatePatientAddress(
     @Param('id') id: string,
@@ -327,6 +426,12 @@ export class SpecialistPharmacyController {
    * DELETE /api/specialist/pharmacy/patients/:id/addresses/:addressId
    * Delete a delivery address
    */
+  @ApiOperation({ summary: 'Delete a delivery address' })
+  @ApiParam({ name: 'id', description: 'Patient ID', example: '507f1f77bcf86cd799439011' })
+  @ApiParam({ name: 'addressId', description: 'Address ID to delete', example: '507f1f77bcf86cd799439012' })
+  @ApiResponse({ status: 200, description: 'Delivery address deleted successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - invalid or missing JWT token' })
+  @ApiResponse({ status: 404, description: 'Address or patient not found' })
   @Delete('patients/:id/addresses/:addressId')
   async deletePatientAddress(
     @Param('id') id: string,
@@ -343,6 +448,12 @@ export class SpecialistPharmacyController {
    * PATCH /api/specialist/pharmacy/patients/:id/addresses/:addressId/default
    * Set an address as default
    */
+  @ApiOperation({ summary: 'Set an address as the default delivery address' })
+  @ApiParam({ name: 'id', description: 'Patient ID', example: '507f1f77bcf86cd799439011' })
+  @ApiParam({ name: 'addressId', description: 'Address ID to set as default', example: '507f1f77bcf86cd799439012' })
+  @ApiResponse({ status: 200, description: 'Default address set successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - invalid or missing JWT token' })
+  @ApiResponse({ status: 404, description: 'Address or patient not found' })
   @Patch('patients/:id/addresses/:addressId/default')
   async setDefaultAddress(
     @Param('id') id: string,

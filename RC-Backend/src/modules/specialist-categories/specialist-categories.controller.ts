@@ -1,5 +1,5 @@
 import { Controller, Get, Query } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { SpecialistCategoriesService } from './specialist-categories.service';
 
 @ApiTags('Specialist Categories')
@@ -9,6 +9,9 @@ export class SpecialistCategoriesController {
     private readonly categoriesService: SpecialistCategoriesService,
   ) {}
 
+  @ApiOperation({ summary: 'Get specialist categories', description: 'Retrieve all active specialist categories, optionally filtered by professional category. Returns popular and other categories separately.' })
+  @ApiResponse({ status: 200, description: 'Specialist categories returned with popular/other grouping' })
+  @ApiQuery({ name: 'professional_category', required: false, description: 'Filter by professional category', example: 'Doctor' })
   @Get()
   async findAll(@Query('professional_category') professionalCategory?: string) {
     let categories;
@@ -35,6 +38,8 @@ export class SpecialistCategoriesController {
     };
   }
 
+  @ApiOperation({ summary: 'Get popular specialist categories', description: 'Retrieve specialist categories marked as popular for prominent display' })
+  @ApiResponse({ status: 200, description: 'Popular specialist categories returned' })
   @Get('popular')
   async findPopular() {
     const result = await this.categoriesService.findPopular();

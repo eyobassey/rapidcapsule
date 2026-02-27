@@ -7,7 +7,7 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiHeader } from '@nestjs/swagger';
 import { InjectModel, InjectConnection } from '@nestjs/mongoose';
 import { Model, Connection, Types } from 'mongoose';
 import * as crypto from 'crypto';
@@ -48,6 +48,12 @@ export class WhatsAppPaymentWebhookController {
    * Handle Paystack webhook events
    * Paystack sends POST requests to this endpoint when payment events occur
    */
+  @ApiOperation({
+    summary: 'Receive Paystack payment webhook events',
+    description: 'Handles Paystack webhook events for WhatsApp pharmacy orders. Verifies the HMAC-SHA512 signature, then processes charge.success and charge.failed events. On successful payment, updates the order to CONFIRMED/PAID and sends a WhatsApp confirmation. Non-WhatsApp payments are forwarded to the general webhook handler.',
+  })
+  @ApiHeader({ name: 'x-paystack-signature', description: 'HMAC-SHA512 signature for verifying the webhook payload', required: true })
+  @ApiResponse({ status: 200, description: 'Webhook processed successfully' })
   @Post()
   @HttpCode(HttpStatus.OK)
   async handlePaystackWebhook(

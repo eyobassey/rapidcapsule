@@ -14,7 +14,14 @@ import {
   HttpStatus,
   BadRequestException,
 } from '@nestjs/common';
-import { ApiTags, ApiSecurity } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiSecurity,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiConsumes,
+} from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { TrialService } from './trial.service';
 import { TrialGuard } from './trial.guard';
@@ -45,12 +52,32 @@ export class TrialController {
 
   @Post('request')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Request trial access',
+    description:
+      'Submits a trial access request. Sends a verification email with a unique trial token to the provided address. If a valid trial already exists for the email, it returns the existing session.',
+  })
+  @ApiResponse({ status: 200, description: 'Trial request processed successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid input or email format' })
+  @ApiResponse({ status: 429, description: 'Too many trial requests' })
   async requestTrial(@Body() dto: RequestTrialDto, @Request() req: any) {
     const result = await this.trialService.requestTrial(dto, req);
     return sendSuccessResponse(result.message, { success: true });
   }
 
   @Get('verify/:token')
+  @ApiOperation({
+    summary: 'Verify trial token',
+    description:
+      'Verifies a trial token received via email. Returns session details and remaining usage limits if the token is valid and has not expired.',
+  })
+  @ApiParam({
+    name: 'token',
+    description: 'Trial verification token from the email link',
+    example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+  })
+  @ApiResponse({ status: 200, description: 'Trial token verified successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid or expired trial token' })
   async verifyToken(@Param('token') token: string) {
     const result = await this.trialService.verifyToken(token);
     return sendSuccessResponse('Trial verified successfully', result);
@@ -61,6 +88,13 @@ export class TrialController {
   @ApiSecurity('Trial-token')
   @UseGuards(TrialGuard)
   @Get('session')
+  @ApiOperation({
+    summary: 'Get trial session status',
+    description:
+      'Returns the current trial session details including remaining usage counts for symptom checker, RxGPT, prescription verification, and Eka AI features.',
+  })
+  @ApiResponse({ status: 200, description: 'Session status retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Invalid or missing trial token' })
   async getSession(@Request() req: any) {
     const token = req.headers['x-trial-token'];
     const result = await this.trialService.getSessionStatus(token);
@@ -73,6 +107,14 @@ export class TrialController {
   @UseGuards(TrialGuard)
   @Post('symptom-checker/begin')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Begin symptom checker checkup',
+    description:
+      'Initializes a new Infermedica symptom checker session for the trial user. Optionally accepts age and gender to pre-populate patient info. Returns an interview token for subsequent API calls.',
+  })
+  @ApiResponse({ status: 200, description: 'Checkup session started successfully' })
+  @ApiResponse({ status: 401, description: 'Invalid or missing trial token' })
+  @ApiResponse({ status: 429, description: 'Symptom checker usage limit reached' })
   async beginCheckup(@Body() dto: TrialBeginCheckupDto, @Request() req: any) {
     const token = req.headers['x-trial-token'];
     const result = await this.trialService.trialBeginCheckup(token, dto);
@@ -83,6 +125,13 @@ export class TrialController {
   @UseGuards(TrialGuard)
   @Post('symptom-checker/parse')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Parse free text symptoms',
+    description:
+      'Uses Infermedica NLP to parse free-text symptom descriptions into structured evidence. The parsed symptoms can then be used in subsequent diagnosis calls.',
+  })
+  @ApiResponse({ status: 200, description: 'Free text parsed into structured symptoms' })
+  @ApiResponse({ status: 401, description: 'Invalid or missing trial token' })
   async parseFreeText(@Body() dto: TrialParseTextDto, @Request() req: any) {
     const token = req.headers['x-trial-token'];
     const result = await this.trialService.trialParseFreeText(token, dto);
@@ -93,6 +142,14 @@ export class TrialController {
   @UseGuards(TrialGuard)
   @Post('symptom-checker/diagnosis')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Check diagnosis',
+    description:
+      'Sends the current evidence to the Infermedica diagnosis engine. Returns the next interview question, possible conditions with probabilities, and triage information.',
+  })
+  @ApiResponse({ status: 200, description: 'Diagnosis results returned' })
+  @ApiResponse({ status: 400, description: 'Malformed evidence or invalid parameters' })
+  @ApiResponse({ status: 401, description: 'Invalid or missing trial token' })
   async checkDiagnosis(@Body() dto: TrialDiagnosisDto, @Request() req: any) {
     const token = req.headers['x-trial-token'];
     const result = await this.trialService.trialDiagnosis(token, dto);
@@ -102,6 +159,13 @@ export class TrialController {
   @ApiSecurity('Trial-token')
   @UseGuards(TrialGuard)
   @Get('symptom-checker/search')
+  @ApiOperation({
+    summary: 'Search symptoms',
+    description:
+      'Searches the Infermedica symptom database by keyword phrase. Results can be filtered by sex and age. Returns matching symptoms with their IDs for use as evidence.',
+  })
+  @ApiResponse({ status: 200, description: 'Search results returned' })
+  @ApiResponse({ status: 401, description: 'Invalid or missing trial token' })
   async searchSymptoms(@Query() dto: TrialSearchDto, @Request() req: any) {
     const token = req.headers['x-trial-token'];
     const result = await this.trialService.trialSearch(token, dto);
@@ -112,6 +176,13 @@ export class TrialController {
   @UseGuards(TrialGuard)
   @Post('symptom-checker/risk-factors')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get risk factors',
+    description:
+      'Retrieves age-appropriate risk factors from Infermedica that can be added as evidence to improve diagnosis accuracy.',
+  })
+  @ApiResponse({ status: 200, description: 'Risk factors retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Invalid or missing trial token' })
   async getRiskFactors(@Body() dto: TrialRiskFactorsDto, @Request() req: any) {
     const token = req.headers['x-trial-token'];
     const result = await this.trialService.trialGetRiskFactors(token, dto);
@@ -122,6 +193,13 @@ export class TrialController {
   @UseGuards(TrialGuard)
   @Post('symptom-checker/symptoms')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get suggested symptoms',
+    description:
+      'Returns additional symptoms that Infermedica suggests based on the current evidence. These help guide the user through the interview process for more accurate results.',
+  })
+  @ApiResponse({ status: 200, description: 'Suggested symptoms retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Invalid or missing trial token' })
   async getSuggestedSymptoms(
     @Body() dto: TrialSuggestedSymptomsDto,
     @Request() req: any,
@@ -137,6 +215,13 @@ export class TrialController {
   @UseGuards(TrialGuard)
   @Post('symptom-checker/ai-summary')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Generate AI health summary',
+    description:
+      'Generates an AI-powered summary of the symptom checker results, including condition explanations, recommended next steps, and specialist referral suggestions based on the diagnosis data.',
+  })
+  @ApiResponse({ status: 200, description: 'AI summary generated successfully' })
+  @ApiResponse({ status: 401, description: 'Invalid or missing trial token' })
   async generateAISummary(@Body() dto: TrialAISummaryDto, @Request() req: any) {
     const token = req.headers['x-trial-token'];
     const result = await this.trialService.trialGenerateAISummary(token, dto);
@@ -149,6 +234,14 @@ export class TrialController {
   @UseGuards(TrialGuard)
   @Post('rxgpt/analyze')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Analyze with RxGPT',
+    description:
+      'Submits a diagnosis to the RxGPT AI engine for pharmacological analysis. Returns evidence-based drug recommendations, dosage guidelines, contraindication checks, and interaction warnings tailored to the patient context.',
+  })
+  @ApiResponse({ status: 200, description: 'RxGPT analysis completed successfully' })
+  @ApiResponse({ status: 401, description: 'Invalid or missing trial token' })
+  @ApiResponse({ status: 429, description: 'RxGPT usage limit reached' })
   async analyzeRxGPT(@Body() dto: TrialRxGPTDto, @Request() req: any) {
     const token = req.headers['x-trial-token'];
     const result = await this.trialService.trialRxGPTAnalyze(token, dto);
@@ -161,6 +254,16 @@ export class TrialController {
   @UseGuards(TrialGuard)
   @Post('prescription/upload')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Upload prescription for verification',
+    description:
+      'Uploads a prescription image or PDF for AI-powered verification. Supported formats: JPEG, PNG, WebP, GIF, PDF. Maximum file size is 10 MB. The verification process runs asynchronously; use the status endpoint to poll for results.',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiResponse({ status: 200, description: 'Prescription uploaded and verification started' })
+  @ApiResponse({ status: 400, description: 'Invalid file type or missing file' })
+  @ApiResponse({ status: 401, description: 'Invalid or missing trial token' })
+  @ApiResponse({ status: 429, description: 'Prescription verification usage limit reached' })
   @UseInterceptors(
     FileInterceptor('prescription', {
       limits: { fileSize: 10 * 1024 * 1024 },
@@ -195,6 +298,19 @@ export class TrialController {
   @ApiSecurity('Trial-token')
   @UseGuards(TrialGuard)
   @Get('prescription/:uploadId/status')
+  @ApiOperation({
+    summary: 'Get prescription verification status',
+    description:
+      'Polls the status of a previously uploaded prescription verification. Returns the current processing state and, when complete, the verification results including extracted drug information.',
+  })
+  @ApiParam({
+    name: 'uploadId',
+    description: 'Upload ID returned from the prescription upload endpoint',
+    example: '507f1f77bcf86cd799439011',
+  })
+  @ApiResponse({ status: 200, description: 'Verification status retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Invalid or missing trial token' })
+  @ApiResponse({ status: 404, description: 'Upload ID not found' })
   async getPrescriptionStatus(
     @Param('uploadId') uploadId: string,
     @Request() req: any,
@@ -210,6 +326,14 @@ export class TrialController {
   @UseGuards(TrialGuard)
   @Post('eka/chat')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Chat with Eka AI (SSE streaming)',
+    description:
+      'Sends a message to the Eka AI assistant and returns a Server-Sent Events (SSE) stream. Each event contains a JSON chunk with type and content fields. The stream ends with a [DONE] sentinel. Supports optional language parameter for multilingual responses.',
+  })
+  @ApiResponse({ status: 200, description: 'SSE stream of Eka AI chat response chunks' })
+  @ApiResponse({ status: 401, description: 'Invalid or missing trial token' })
+  @ApiResponse({ status: 429, description: 'Eka AI usage limit reached' })
   async ekaChat(@Body() body: { message: string; language?: string }, @Request() req: any, @Res() res: any) {
     const token = req.headers['x-trial-token'];
 
@@ -234,6 +358,13 @@ export class TrialController {
   @ApiSecurity('Trial-token')
   @UseGuards(TrialGuard)
   @Get('eka/status')
+  @ApiOperation({
+    summary: 'Get Eka AI status',
+    description:
+      'Returns the current status of the Eka AI assistant for the trial session, including conversation history availability and remaining message count.',
+  })
+  @ApiResponse({ status: 200, description: 'Eka status retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Invalid or missing trial token' })
   async getEkaStatus(@Request() req: any) {
     const token = req.headers['x-trial-token'];
     const result = await this.trialService.getEkaStatus(token);
@@ -243,6 +374,12 @@ export class TrialController {
   // ---- Trial Analytics (public for admin use) ----
 
   @Get('analytics')
+  @ApiOperation({
+    summary: 'Get trial analytics',
+    description:
+      'Returns aggregate trial analytics including total requests, active sessions, feature usage counts, and conversion metrics. This endpoint is public and intended for admin dashboard consumption.',
+  })
+  @ApiResponse({ status: 200, description: 'Trial analytics retrieved successfully' })
   async getTrialAnalytics() {
     const result = await this.trialService.getTrialAnalytics();
     return sendSuccessResponse('Trial analytics retrieved', result);

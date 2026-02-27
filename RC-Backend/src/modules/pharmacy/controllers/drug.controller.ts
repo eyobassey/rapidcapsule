@@ -10,7 +10,7 @@ import {
   Request,
   UseGuards,
 } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Types } from 'mongoose';
 import { DrugService } from '../services/drug.service';
 import { OpenFDAService } from '../services/openfda.service';
@@ -33,18 +33,16 @@ export class DrugController {
 
   // ============ PUBLIC ENDPOINTS ============
 
-  /**
-   * Search drugs - publicly accessible
-   */
+  @ApiOperation({ summary: 'Search drugs', description: 'Search drugs by name, category, manufacturer, price range, etc. Publicly accessible.' })
+  @ApiResponse({ status: 200, description: 'Paginated drug search results' })
   @Get('search')
   async search(@Query() searchDto: SearchDrugsDto) {
     const result = await this.drugService.search(searchDto);
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
-  /**
-   * Get OTC drugs for direct purchase
-   */
+  @ApiOperation({ summary: 'Get OTC drugs', description: 'Get over-the-counter drugs available for direct purchase without prescription' })
+  @ApiResponse({ status: 200, description: 'Paginated list of OTC drugs' })
   @Get('otc')
   async getOTCDrugs(
     @Query('page') page?: number,
@@ -54,9 +52,8 @@ export class DrugController {
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
-  /**
-   * Get drugs by category with filtering support
-   */
+  @ApiOperation({ summary: 'Get drugs by category', description: 'Get drugs filtered by category with additional filtering and sorting options' })
+  @ApiResponse({ status: 200, description: 'Paginated drugs in the specified category' })
   @Get('category/:category')
   async getByCategory(
     @Param('category') category: string,
@@ -87,36 +84,32 @@ export class DrugController {
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
-  /**
-   * Get featured drugs
-   */
+  @ApiOperation({ summary: 'Get featured drugs', description: 'Get drugs marked as featured for homepage or promotional display' })
+  @ApiResponse({ status: 200, description: 'List of featured drugs' })
   @Get('featured')
   async getFeaturedDrugs(@Query('limit') limit?: number) {
     const result = await this.drugService.getFeaturedDrugs(limit);
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
-  /**
-   * Get all drug categories
-   */
+  @ApiOperation({ summary: 'Get drug categories', description: 'Get all available drug categories with counts' })
+  @ApiResponse({ status: 200, description: 'List of drug categories' })
   @Get('categories')
   async getCategories() {
     const result = await this.drugService.getCategories();
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
-  /**
-   * Get all manufacturers
-   */
+  @ApiOperation({ summary: 'Get manufacturers', description: 'Get all drug manufacturers in the system' })
+  @ApiResponse({ status: 200, description: 'List of manufacturers' })
   @Get('manufacturers')
   async getManufacturers() {
     const result = await this.drugService.getManufacturers();
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
-  /**
-   * Search drugs by symptoms
-   */
+  @ApiOperation({ summary: 'Search drugs by symptoms', description: 'Find drugs that treat specific symptoms (comma-separated list)' })
+  @ApiResponse({ status: 200, description: 'Drugs matching the symptoms' })
   @Get('symptoms')
   async searchBySymptoms(
     @Query('symptoms') symptoms: string,
@@ -134,11 +127,9 @@ export class DrugController {
 
   // ============ AUTHENTICATED ENDPOINTS ============
 
-  /**
-   * Check drug interactions using configured data sources
-   * @param drugIds Array of drug IDs to check
-   * @param data_sources Optional array of data sources to use ('claude_ai', 'openfda', 'rxnav')
-   */
+  @ApiOperation({ summary: 'Check drug interactions', description: 'Check for potential drug interactions between multiple drugs using AI and FDA data sources' })
+  @ApiResponse({ status: 200, description: 'Drug interaction analysis results' })
+  @ApiBearerAuth('JWT-auth')
   @UseGuards(JwtAuthGuard)
   @Post('check-interactions')
   async checkInteractions(
@@ -153,10 +144,9 @@ export class DrugController {
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
-  /**
-   * Get drug interaction settings for patients
-   * Returns configuration for how drug interactions should be checked
-   */
+  @ApiOperation({ summary: 'Get interaction settings', description: 'Get drug interaction check configuration for the patient UI' })
+  @ApiResponse({ status: 200, description: 'Interaction settings returned' })
+  @ApiBearerAuth('JWT-auth')
   @UseGuards(JwtAuthGuard)
   @Get('interaction-settings')
   async getInteractionSettings() {
@@ -172,9 +162,10 @@ export class DrugController {
 
   // ============ ADMIN ENDPOINTS ============
 
-  /**
-   * Create a new drug (Admin only)
-   */
+  @ApiOperation({ summary: 'Create drug', description: 'Create a new drug in the pharmacy catalog (Admin only)' })
+  @ApiResponse({ status: 201, description: 'Drug created successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid drug data or duplicate drug' })
+  @ApiBearerAuth('JWT-auth')
   @UseGuards(JwtAuthGuard)
   @Post()
   async create(@Body() createDrugDto: CreateDrugDto, @Request() req) {
@@ -182,9 +173,9 @@ export class DrugController {
     return sendSuccessResponse(Messages.CREATED, result);
   }
 
-  /**
-   * Get all drugs (Admin)
-   */
+  @ApiOperation({ summary: 'Get all drugs', description: 'Get all drugs in the catalog (Admin)' })
+  @ApiResponse({ status: 200, description: 'List of all drugs' })
+  @ApiBearerAuth('JWT-auth')
   @UseGuards(JwtAuthGuard)
   @Get()
   async findAll() {
@@ -192,9 +183,9 @@ export class DrugController {
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
-  /**
-   * Get drug statistics (Admin)
-   */
+  @ApiOperation({ summary: 'Get drug statistics', description: 'Get drug catalog statistics — counts by category, status, etc. (Admin)' })
+  @ApiResponse({ status: 200, description: 'Drug statistics returned' })
+  @ApiBearerAuth('JWT-auth')
   @UseGuards(JwtAuthGuard)
   @Get('admin/statistics')
   async getStatistics() {
@@ -202,18 +193,19 @@ export class DrugController {
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
-  /**
-   * Get a single drug by ID (must be after all static GET routes to avoid catching them)
-   */
+  @ApiOperation({ summary: 'Get drug by ID', description: 'Get a single drug with full details' })
+  @ApiResponse({ status: 200, description: 'Drug details returned' })
+  @ApiResponse({ status: 404, description: 'Drug not found' })
   @Get(':id')
   async findOne(@Param('id') id: string) {
     const result = await this.drugService.findById(id);
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
-  /**
-   * Update a drug (Admin only)
-   */
+  @ApiOperation({ summary: 'Update drug', description: 'Update an existing drug in the catalog (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Drug updated successfully' })
+  @ApiResponse({ status: 404, description: 'Drug not found' })
+  @ApiBearerAuth('JWT-auth')
   @UseGuards(JwtAuthGuard)
   @Patch(':id')
   async update(
@@ -229,9 +221,10 @@ export class DrugController {
     return sendSuccessResponse(Messages.UPDATED, result);
   }
 
-  /**
-   * Soft delete a drug (Admin only)
-   */
+  @ApiOperation({ summary: 'Soft delete drug', description: 'Soft delete a drug — marks as inactive but preserves data (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Drug soft deleted' })
+  @ApiResponse({ status: 404, description: 'Drug not found' })
+  @ApiBearerAuth('JWT-auth')
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
   async remove(@Param('id') id: string, @Request() req) {
@@ -239,9 +232,10 @@ export class DrugController {
     return sendSuccessResponse(Messages.DELETED, result);
   }
 
-  /**
-   * Hard delete a drug (Admin only - use with caution)
-   */
+  @ApiOperation({ summary: 'Permanently delete drug', description: 'Hard delete a drug — permanently removes from database. Use with caution. (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Drug permanently deleted' })
+  @ApiResponse({ status: 404, description: 'Drug not found' })
+  @ApiBearerAuth('JWT-auth')
   @UseGuards(JwtAuthGuard)
   @Delete(':id/permanent')
   async permanentRemove(@Param('id') id: string) {
@@ -251,20 +245,18 @@ export class DrugController {
 
   // ============ DRUG SAFETY INFORMATION ENDPOINTS ============
 
-  /**
-   * Get drug safety info for patient display
-   * Public endpoint - returns AI summary (if available) + full info
-   */
+  @ApiOperation({ summary: 'Get drug safety info', description: 'Get drug safety information for patient display — includes FDA data and AI summary if available' })
+  @ApiResponse({ status: 200, description: 'Drug safety information returned' })
+  @ApiResponse({ status: 404, description: 'Drug not found' })
   @Get(':id/safety')
   async getDrugSafetyInfo(@Param('id') id: string) {
     const result = await this.openFDAService.getSafetyInfoForPatientWithAI(id);
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
-  /**
-   * Get full drug safety info (Admin only)
-   * Returns all data including admin customizations and sync metadata
-   */
+  @ApiOperation({ summary: 'Get drug safety info (admin)', description: 'Get full drug safety info including admin customizations and sync metadata (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Full drug safety information with admin data' })
+  @ApiBearerAuth('JWT-auth')
   @UseGuards(JwtAuthGuard)
   @Get(':id/safety/admin')
   async getDrugSafetyInfoAdmin(@Param('id') id: string) {
@@ -272,10 +264,9 @@ export class DrugController {
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
-  /**
-   * Initialize/Sync safety info for a drug from FDA (Admin only)
-   * Triggers immediate sync with OpenFDA API
-   */
+  @ApiOperation({ summary: 'Sync drug safety info from FDA', description: 'Trigger immediate sync of drug safety data from OpenFDA API (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Safety information synced successfully' })
+  @ApiBearerAuth('JWT-auth')
   @UseGuards(JwtAuthGuard)
   @Post(':id/safety/sync')
   async syncDrugSafetyInfo(@Param('id') id: string) {
@@ -283,10 +274,9 @@ export class DrugController {
     return sendSuccessResponse('Safety information synced successfully', result);
   }
 
-  /**
-   * Generate AI summary for drug safety info (Admin only)
-   * Uses Claude AI to create patient-friendly bullet points
-   */
+  @ApiOperation({ summary: 'Generate AI safety summary', description: 'Use AI to generate patient-friendly bullet-point safety summary (Admin only)' })
+  @ApiResponse({ status: 200, description: 'AI summary generated successfully' })
+  @ApiBearerAuth('JWT-auth')
   @UseGuards(JwtAuthGuard)
   @Post(':id/safety/ai-summary')
   async generateAISummary(@Param('id') id: string) {
@@ -296,10 +286,8 @@ export class DrugController {
 
   // ============ SIMILAR DRUGS ENDPOINTS ============
 
-  /**
-   * Get similar drugs for patient display
-   * Returns drugs matching by: generic name, category, and manual links
-   */
+  @ApiOperation({ summary: 'Get similar drugs', description: 'Get drugs similar to this one — matched by generic name, category, and manual links' })
+  @ApiResponse({ status: 200, description: 'List of similar drugs' })
   @Get(':id/similar')
   async getSimilarDrugs(
     @Param('id') id: string,
@@ -309,10 +297,9 @@ export class DrugController {
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
-  /**
-   * Get detailed similar drugs breakdown (Admin only)
-   * Returns categorized results: generic_matches, category_matches, manually_linked
-   */
+  @ApiOperation({ summary: 'Get similar drugs breakdown (admin)', description: 'Get categorized similar drugs: generic_matches, category_matches, manually_linked (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Detailed similar drugs breakdown' })
+  @ApiBearerAuth('JWT-auth')
   @UseGuards(JwtAuthGuard)
   @Get(':id/similar/admin')
   async getSimilarDrugsAdmin(
@@ -323,9 +310,9 @@ export class DrugController {
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
-  /**
-   * Manually link a drug as similar (Admin only)
-   */
+  @ApiOperation({ summary: 'Link similar drug', description: 'Manually link a drug as similar to this one (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Drug linked successfully' })
+  @ApiBearerAuth('JWT-auth')
   @UseGuards(JwtAuthGuard)
   @Post(':id/similar/link')
   async linkSimilarDrug(
@@ -336,10 +323,9 @@ export class DrugController {
     return sendSuccessResponse('Drug linked successfully', result);
   }
 
-  /**
-   * Unlink a drug from similar (Admin only)
-   * This removes from manually_linked_drugs
-   */
+  @ApiOperation({ summary: 'Unlink similar drug', description: 'Remove a manually linked similar drug (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Drug unlinked successfully' })
+  @ApiBearerAuth('JWT-auth')
   @UseGuards(JwtAuthGuard)
   @Delete(':id/similar/unlink/:targetId')
   async unlinkSimilarDrug(
@@ -350,10 +336,9 @@ export class DrugController {
     return sendSuccessResponse('Drug unlinked successfully', result);
   }
 
-  /**
-   * Exclude a drug from auto-matching (Admin only)
-   * This adds to excluded_similar_drugs - removes from auto-match results
-   */
+  @ApiOperation({ summary: 'Exclude from auto-matching', description: 'Exclude a drug from auto-similar matching results (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Drug excluded from similar' })
+  @ApiBearerAuth('JWT-auth')
   @UseGuards(JwtAuthGuard)
   @Post(':id/similar/exclude')
   async excludeSimilarDrug(
@@ -364,10 +349,9 @@ export class DrugController {
     return sendSuccessResponse('Drug excluded from similar', result);
   }
 
-  /**
-   * Remove a drug from exclusion list (Admin only)
-   * This allows the drug to appear in auto-match results again
-   */
+  @ApiOperation({ summary: 'Remove exclusion', description: 'Remove a drug from the exclusion list so it can appear in auto-match results again (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Exclusion removed' })
+  @ApiBearerAuth('JWT-auth')
   @UseGuards(JwtAuthGuard)
   @Delete(':id/similar/exclude/:targetId')
   async removeExclusion(
@@ -378,9 +362,9 @@ export class DrugController {
     return sendSuccessResponse('Exclusion removed', result);
   }
 
-  /**
-   * Check if AI summarization is available
-   */
+  @ApiOperation({ summary: 'Check AI availability', description: 'Check if AI summarization is available for drug safety info (Admin only)' })
+  @ApiResponse({ status: 200, description: 'AI availability status' })
+  @ApiBearerAuth('JWT-auth')
   @UseGuards(JwtAuthGuard)
   @Get('admin/ai-status')
   async getAIStatus() {
@@ -388,10 +372,9 @@ export class DrugController {
     return sendSuccessResponse(Messages.RETRIEVED, { ai_available: isAvailable });
   }
 
-  /**
-   * Update drug safety customizations (Admin only)
-   * Update custom warnings, side effects, display settings
-   */
+  @ApiOperation({ summary: 'Update drug safety customizations', description: 'Update custom warnings, side effects, and display settings for drug safety info (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Safety customizations updated' })
+  @ApiBearerAuth('JWT-auth')
   @UseGuards(JwtAuthGuard)
   @Patch(':id/safety')
   async updateDrugSafetyInfo(
@@ -431,9 +414,9 @@ export class DrugController {
     return sendSuccessResponse(Messages.UPDATED, result);
   }
 
-  /**
-   * Get FDA sync statistics (Admin only)
-   */
+  @ApiOperation({ summary: 'Get FDA sync statistics', description: 'Get statistics about drug safety data synchronization with OpenFDA (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Sync statistics returned' })
+  @ApiBearerAuth('JWT-auth')
   @UseGuards(JwtAuthGuard)
   @Get('admin/safety-stats')
   async getSafetyStats() {
@@ -441,9 +424,9 @@ export class DrugController {
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 
-  /**
-   * Trigger batch sync for drugs due for update (Admin only)
-   */
+  @ApiOperation({ summary: 'Trigger batch safety sync', description: 'Trigger batch sync for drugs due for OpenFDA safety data update (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Batch sync completed' })
+  @ApiBearerAuth('JWT-auth')
   @UseGuards(JwtAuthGuard)
   @Post('admin/safety-sync-batch')
   async triggerBatchSync(@Query('batch_size') batchSize?: number) {

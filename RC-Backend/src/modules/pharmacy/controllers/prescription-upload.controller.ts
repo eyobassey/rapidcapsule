@@ -14,7 +14,18 @@ import {
   BadRequestException,
   NotFoundException,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiQuery,
+  ApiParam,
+  ApiConsumes,
+  ApiBody,
+  ApiProperty,
+  ApiPropertyOptional,
+} from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { InjectModel } from '@nestjs/mongoose';
@@ -49,6 +60,11 @@ import { PrescriptionNumberHelper } from '../../../common/helpers/prescription-n
  * DTO for prescription upload
  */
 class UploadPrescriptionDto {
+  @ApiPropertyOptional({
+    description: 'Source of the prescription upload',
+    enum: UploadSource,
+    example: UploadSource.FILE_UPLOAD,
+  })
   uploadSource?: UploadSource;
 }
 
@@ -56,9 +72,29 @@ class UploadPrescriptionDto {
  * DTO for pharmacist review submission
  */
 class SubmitReviewDto {
+  @ApiProperty({
+    description: 'Pharmacist review decision for the prescription',
+    enum: ['APPROVED', 'REJECTED', 'NEEDS_CLARIFICATION'],
+    example: 'APPROVED',
+  })
   decision: 'APPROVED' | 'REJECTED' | 'NEEDS_CLARIFICATION';
+
+  @ApiProperty({
+    description: 'Pharmacist notes explaining the review decision',
+    example: 'Prescription verified against prescriber database. All medications and dosages are valid.',
+  })
   notes: string;
+
+  @ApiPropertyOptional({
+    description: 'Reason for rejection, required when decision is REJECTED',
+    example: 'Prescription appears to be expired (issued over 6 months ago)',
+  })
   rejectionReason?: string;
+
+  @ApiPropertyOptional({
+    description: 'Information requested from the patient, required when decision is NEEDS_CLARIFICATION',
+    example: 'Please provide a clearer image of the prescriber signature and stamp',
+  })
   clarificationRequest?: string;
 }
 
@@ -94,6 +130,49 @@ export class PrescriptionUploadController {
   /**
    * Upload a new prescription image
    */
+  @ApiOperation({
+    summary: 'Upload prescription image',
+    description:
+      'Upload a prescription image or document for automated verification. ' +
+      'Supports JPEG, PNG, WebP, GIF, PDF, DOCX, and DOC formats (max 10 MB). ' +
+      'The file is stored in S3 and a multi-tier verification pipeline is triggered asynchronously.',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    description: 'Prescription file and optional metadata',
+    schema: {
+      type: 'object',
+      required: ['prescription'],
+      properties: {
+        prescription: {
+          type: 'string',
+          format: 'binary',
+          description: 'Prescription image or document file',
+        },
+        uploadSource: {
+          type: 'string',
+          enum: Object.values(UploadSource),
+          description: 'Source of the upload (defaults to FILE_UPLOAD)',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Prescription uploaded successfully and verification pipeline started',
+    schema: {
+      example: {
+        message: 'Prescription uploaded successfully. Verification in progress.',
+        result: {
+          uploadId: '665a1b2c3d4e5f6a7b8c9d0e',
+          prescriptionNumber: 'RX-20260227-0001',
+          status: 'PENDING',
+          processingStatus: 'PENDING',
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Invalid file type, missing file, or upload failure' })
   @Post('upload')
   @UseInterceptors(
     FileInterceptor('prescription', {
@@ -188,6 +267,33 @@ export class PrescriptionUploadController {
   /**
    * Get all prescription uploads for the current patient
    */
+  @ApiOperation({
+    summary: 'Get my prescription uploads',
+    description:
+      'Retrieve a paginated list of all prescription uploads for the authenticated patient. ' +
+      'Results can be filtered by verification status and are sorted by most recent first.',
+  })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number (default: 1)', example: 1 })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Items per page (default: 10)', example: 10 })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    enum: VerificationStatus,
+    description: 'Filter by verification status',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Paginated list of patient prescription uploads',
+    schema: {
+      example: {
+        message: 'Success',
+        result: {
+          uploads: [],
+          pagination: { total: 5, page: 1, totalPages: 1, hasMore: false },
+        },
+      },
+    },
+  })
   @Get('my-uploads')
   async getMyUploads(
     @Request() req,
@@ -236,6 +342,30 @@ export class PrescriptionUploadController {
   /**
    * Get approved prescriptions available for use in orders
    */
+  @ApiOperation({
+    summary: 'Get approved prescriptions',
+    description:
+      'Retrieve all verified and approved prescriptions that are eligible for use in pharmacy orders. ' +
+      'By default, excludes prescriptions already used in paid orders. ' +
+      'Set includeUsed=true to also return previously used prescriptions.',
+  })
+  @ApiQuery({
+    name: 'includeUsed',
+    required: false,
+    type: String,
+    description: 'Include prescriptions already used in paid orders (default: false)',
+    example: 'false',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'List of approved prescriptions available for ordering',
+    schema: {
+      example: {
+        message: 'Success',
+        result: [],
+      },
+    },
+  })
   @Get('approved')
   async getApprovedPrescriptions(
     @Request() req,
@@ -296,6 +426,19 @@ export class PrescriptionUploadController {
   /**
    * Get single upload details
    */
+  @ApiOperation({
+    summary: 'Get prescription upload details',
+    description:
+      'Retrieve full details of a single prescription upload, including a time-limited presigned S3 URL ' +
+      'for viewing the document, enriched medication data with drug pricing and manufacturer info, ' +
+      'and linked order history. For internal Rapid Capsules prescriptions, original specialist prescription data is merged.',
+  })
+  @ApiParam({ name: 'uploadId', description: 'Prescription upload ID', example: '665a1b2c3d4e5f6a7b8c9d0e' })
+  @ApiResponse({
+    status: 200,
+    description: 'Full prescription upload details with presigned URL and enriched medication data',
+  })
+  @ApiResponse({ status: 404, description: 'Prescription upload not found or does not belong to the authenticated patient' })
   @Get(':uploadId')
   async getUploadDetails(@Param('uploadId') uploadId: string, @Request() req) {
     const patientId = new Types.ObjectId(req.user.sub || req.user._id);
@@ -558,6 +701,37 @@ export class PrescriptionUploadController {
   /**
    * Get verification status for an upload
    */
+  @ApiOperation({
+    summary: 'Get verification status',
+    description:
+      'Retrieve the current verification status of a prescription upload including tier-1 and tier-2 check results, ' +
+      'fraud detection scores, failure reasons, and a patient-friendly summary. ' +
+      'Use this endpoint to poll for verification completion after uploading a prescription.',
+  })
+  @ApiParam({ name: 'uploadId', description: 'Prescription upload ID', example: '665a1b2c3d4e5f6a7b8c9d0e' })
+  @ApiResponse({
+    status: 200,
+    description: 'Verification status with tier results, fraud detection scores, and failure reasons',
+    schema: {
+      example: {
+        message: 'Success',
+        result: {
+          status: 'APPROVED',
+          processingStatus: 'COMPLETED',
+          verifiedMedications: [],
+          failureReasons: null,
+          patientSummary: 'Your prescription has been verified and approved.',
+          verification: {
+            overallResult: 'PASS',
+            overallScore: 92,
+            confidenceScore: 0.95,
+            currentTier: 'TIER2',
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 404, description: 'Prescription upload not found' })
   @Get(':uploadId/verification')
   async getVerificationStatus(
     @Param('uploadId') uploadId: string,
@@ -681,6 +855,19 @@ export class PrescriptionUploadController {
   /**
    * Get detailed verification checks (for debugging/review)
    */
+  @ApiOperation({
+    summary: 'Get detailed verification checks',
+    description:
+      'Retrieve the complete verification record including all individual tier-1 and tier-2 checks, ' +
+      'AI analysis details, fraud detection flags, and processing timestamps. ' +
+      'Primarily used for debugging and pharmacist review workflows.',
+  })
+  @ApiParam({ name: 'uploadId', description: 'Prescription upload ID', example: '665a1b2c3d4e5f6a7b8c9d0e' })
+  @ApiResponse({
+    status: 200,
+    description: 'Complete verification record with all check details',
+  })
+  @ApiResponse({ status: 404, description: 'Prescription upload or verification record not found' })
   @Get(':uploadId/verification/details')
   async getVerificationDetails(
     @Param('uploadId') uploadId: string,
@@ -714,6 +901,16 @@ export class PrescriptionUploadController {
   /**
    * Delete (soft delete) a prescription upload
    */
+  @ApiOperation({
+    summary: 'Delete prescription upload',
+    description:
+      'Soft-delete a prescription upload. The record is marked as deleted but retained in the database. ' +
+      'Prescriptions that have already been used in pharmacy orders cannot be deleted.',
+  })
+  @ApiParam({ name: 'uploadId', description: 'Prescription upload ID', example: '665a1b2c3d4e5f6a7b8c9d0e' })
+  @ApiResponse({ status: 200, description: 'Prescription deleted successfully' })
+  @ApiResponse({ status: 404, description: 'Prescription upload not found' })
+  @ApiResponse({ status: 400, description: 'Cannot delete a prescription that has been used in orders' })
   @Delete(':uploadId')
   async deleteUpload(@Param('uploadId') uploadId: string, @Request() req) {
     const patientId = new Types.ObjectId(req.user.sub || req.user._id);
@@ -748,6 +945,17 @@ export class PrescriptionUploadController {
   /**
    * Retry verification for a failed upload
    */
+  @ApiOperation({
+    summary: 'Retry prescription verification',
+    description:
+      'Re-trigger the multi-tier verification pipeline for a prescription that previously failed or is still pending. ' +
+      'Only uploads with status PENDING, TIER1_FAILED, TIER2_FAILED, or REJECTED can be retried. ' +
+      'The retry count is incremented on the verification record for audit purposes.',
+  })
+  @ApiParam({ name: 'uploadId', description: 'Prescription upload ID', example: '665a1b2c3d4e5f6a7b8c9d0e' })
+  @ApiResponse({ status: 200, description: 'Verification retry started' })
+  @ApiResponse({ status: 404, description: 'Prescription upload not found' })
+  @ApiResponse({ status: 400, description: 'Verification can only be retried for failed or pending uploads' })
   @Post(':uploadId/retry-verification')
   async retryVerification(@Param('uploadId') uploadId: string, @Request() req) {
     const patientId = new Types.ObjectId(req.user.sub || req.user._id);
@@ -809,6 +1017,19 @@ export class PrescriptionUploadController {
   /**
    * Get prescriptions pending pharmacist review (for pharmacist users)
    */
+  @ApiOperation({
+    summary: 'Get pending pharmacist reviews',
+    description:
+      'Retrieve a paginated list of prescriptions that are awaiting manual pharmacist review. ' +
+      'These are uploads that passed automated checks but require human verification before approval. ' +
+      'Intended for pharmacist-role users.',
+  })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number (default: 1)', example: 1 })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Items per page (default: 10)', example: 10 })
+  @ApiResponse({
+    status: 200,
+    description: 'Paginated list of prescriptions pending pharmacist review',
+  })
   @Get('review/pending')
   async getPendingReviews(
     @Query('page') page: string = '1',
@@ -833,6 +1054,17 @@ export class PrescriptionUploadController {
   /**
    * Submit pharmacist review decision
    */
+  @ApiOperation({
+    summary: 'Submit pharmacist review',
+    description:
+      'Submit a pharmacist review decision for a prescription currently in PHARMACIST_REVIEW status. ' +
+      'The pharmacist can approve, reject, or request clarification from the patient. ' +
+      'A rejection requires a rejectionReason; a clarification request requires a clarificationRequest message.',
+  })
+  @ApiParam({ name: 'uploadId', description: 'Prescription upload ID', example: '665a1b2c3d4e5f6a7b8c9d0e' })
+  @ApiResponse({ status: 200, description: 'Review submitted successfully' })
+  @ApiResponse({ status: 404, description: 'Prescription upload or verification record not found' })
+  @ApiResponse({ status: 400, description: 'Prescription is not pending pharmacist review' })
   @Patch(':uploadId/review')
   async submitReview(
     @Param('uploadId') uploadId: string,
@@ -880,6 +1112,38 @@ export class PrescriptionUploadController {
   /**
    * Get clarification request details for an upload
    */
+  @ApiOperation({
+    summary: 'Get clarification details',
+    description:
+      'Retrieve the clarification request details for a prescription that needs additional information from the patient. ' +
+      'Returns the pharmacist request message, required information list, response deadline, ' +
+      'and any previously submitted patient response.',
+  })
+  @ApiParam({ name: 'uploadId', description: 'Prescription upload ID', example: '665a1b2c3d4e5f6a7b8c9d0e' })
+  @ApiResponse({
+    status: 200,
+    description: 'Clarification request details or indication that no clarification is pending',
+    schema: {
+      example: {
+        message: 'Success',
+        result: {
+          prescription_id: '665a1b2c3d4e5f6a7b8c9d0e',
+          prescription_number: 'RX-20260227-0001',
+          status: 'CLARIFICATION_NEEDED',
+          clarification: {
+            request_message: 'Please provide a clearer image of the prescriber stamp.',
+            required_information: ['prescriber_stamp', 'prescriber_license_number'],
+            requested_at: '2026-02-27T10:00:00.000Z',
+            response_deadline: '2026-03-02T10:00:00.000Z',
+            has_responded: false,
+            response_message: null,
+            responded_at: null,
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 404, description: 'Prescription upload not found' })
   @Get(':uploadId/clarification')
   async getClarificationDetails(
     @Param('uploadId') uploadId: string,
@@ -938,6 +1202,52 @@ export class PrescriptionUploadController {
   /**
    * Submit clarification response from patient
    */
+  @ApiOperation({
+    summary: 'Submit clarification response',
+    description:
+      'Submit a patient response to a pharmacist clarification request. ' +
+      'The patient can provide a text message, an additional document (image or PDF), or both. ' +
+      'The prescription status changes to CLARIFICATION_RECEIVED and awaits pharmacist re-review. ' +
+      'Responses cannot be submitted after the deadline or if a response was already provided.',
+  })
+  @ApiParam({ name: 'uploadId', description: 'Prescription upload ID', example: '665a1b2c3d4e5f6a7b8c9d0e' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    description: 'Clarification response with optional supporting document',
+    schema: {
+      type: 'object',
+      properties: {
+        response_message: {
+          type: 'string',
+          description: 'Patient text response to the clarification request',
+          example: 'Here is a clearer photo of the prescriber stamp and license number.',
+        },
+        document: {
+          type: 'string',
+          format: 'binary',
+          description: 'Optional supporting document (JPEG, PNG, WebP, GIF, PDF, DOCX, DOC)',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Clarification response submitted successfully',
+    schema: {
+      example: {
+        message: 'Clarification response submitted successfully',
+        result: {
+          prescription_id: '665a1b2c3d4e5f6a7b8c9d0e',
+          prescription_number: 'RX-20260227-0001',
+          status: 'CLARIFICATION_RECEIVED',
+          responded_at: '2026-02-27T14:30:00.000Z',
+          document_uploaded: true,
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 404, description: 'Prescription upload not found' })
+  @ApiResponse({ status: 400, description: 'No clarification pending, already responded, deadline passed, or missing response content' })
   @Post(':uploadId/clarification/respond')
   @UseInterceptors(
     FileInterceptor('document', {
@@ -1099,6 +1409,39 @@ export class PrescriptionUploadController {
   /**
    * Get prescriptions needing clarification response
    */
+  @ApiOperation({
+    summary: 'Get pending clarifications',
+    description:
+      'Retrieve all prescriptions for the authenticated patient that have outstanding clarification requests. ' +
+      'Results are sorted by response deadline (earliest first) and include overdue indicators.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'List of prescriptions awaiting patient clarification',
+    schema: {
+      example: {
+        message: 'Success',
+        result: {
+          pending_count: 1,
+          prescriptions: [
+            {
+              _id: '665a1b2c3d4e5f6a7b8c9d0e',
+              prescription_number: 'RX-20260227-0001',
+              original_filename: 'prescription.pdf',
+              clarification: {
+                request_message: 'Please confirm the medication dosage.',
+                required_information: ['dosage_confirmation'],
+                requested_at: '2026-02-27T10:00:00.000Z',
+                response_deadline: '2026-03-02T10:00:00.000Z',
+                is_overdue: false,
+              },
+              created_at: '2026-02-26T15:00:00.000Z',
+            },
+          ],
+        },
+      },
+    },
+  })
   @Get('clarifications/pending')
   async getPendingClarifications(@Request() req) {
     const patientId = new Types.ObjectId(req.user.sub || req.user._id);
@@ -1148,6 +1491,35 @@ export class PrescriptionUploadController {
   /**
    * Get upload statistics for the current patient
    */
+  @ApiOperation({
+    summary: 'Get prescription upload statistics',
+    description:
+      'Retrieve aggregated statistics for the authenticated patient\'s prescription uploads, ' +
+      'broken down by verification status. Includes counts for total, approved, pending, rejected, ' +
+      'and prescriptions needing pharmacist review.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Prescription upload statistics summary',
+    schema: {
+      example: {
+        message: 'Success',
+        result: {
+          total: 12,
+          byStatus: {
+            APPROVED: 8,
+            PENDING: 2,
+            REJECTED: 1,
+            PHARMACIST_REVIEW: 1,
+          },
+          approved: 8,
+          pending: 2,
+          rejected: 1,
+          needsReview: 1,
+        },
+      },
+    },
+  })
   @Get('stats/summary')
   async getUploadStats(@Request() req) {
     const patientId = new Types.ObjectId(req.user.sub || req.user._id);

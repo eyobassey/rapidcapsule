@@ -9,7 +9,7 @@ import {
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
@@ -52,7 +52,10 @@ export class HealthIntegrationsWebhookController {
 
   @Post('open-wearables')
   @Throttle({ default: { ttl: 60000, limit: 60 } })
-  @ApiOperation({ summary: 'Receive webhook data from Open Wearables sidecar' })
+  @ApiOperation({ summary: 'Receive Open Wearables webhook', description: 'Receive and process health data webhook from Open Wearables sidecar, validates signature, maps data types, and syncs to vitals' })
+  @ApiResponse({ status: 200, description: 'Webhook data processed' })
+  @ApiResponse({ status: 401, description: 'Invalid webhook signature' })
+  @ApiResponse({ status: 400, description: 'Invalid payload structure' })
   async handleOWWebhook(
     @Body() payload: any,
     @Headers('x-ow-signature') signature: string,

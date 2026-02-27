@@ -8,7 +8,7 @@ import {
   Request,
   UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { SpecialistPatientsService } from './specialist-patients.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { sendSuccessResponse } from '../../core/responses/success.responses';
@@ -29,6 +29,8 @@ export class SpecialistPatientsController {
   /**
    * Get paginated list of patients for the specialist
    */
+  @ApiOperation({ summary: 'Get patients', description: 'Retrieve paginated list of patients for the specialist with search, filter, and sort options' })
+  @ApiResponse({ status: 200, description: 'Patient list returned' })
   @Get()
   async getPatients(@Request() req, @Query() query: GetPatientsQueryDto) {
     const result = await this.specialistPatientsService.getPatients(
@@ -41,6 +43,8 @@ export class SpecialistPatientsController {
   /**
    * Get patient statistics for the specialist
    */
+  @ApiOperation({ summary: 'Get patient statistics', description: 'Retrieve aggregate patient statistics including total patients, recent visits, and starred counts' })
+  @ApiResponse({ status: 200, description: 'Patient statistics returned' })
   @Get('stats')
   async getPatientStats(@Request() req) {
     const result = await this.specialistPatientsService.getPatientStats(
@@ -52,6 +56,8 @@ export class SpecialistPatientsController {
   /**
    * Get starred patients
    */
+  @ApiOperation({ summary: 'Get starred patients', description: 'Retrieve patients that the specialist has starred for quick access' })
+  @ApiResponse({ status: 200, description: 'Starred patients returned' })
   @Get('starred')
   async getStarredPatients(@Request() req) {
     const query: GetPatientsQueryDto = { filter: 'starred' as any };
@@ -65,6 +71,10 @@ export class SpecialistPatientsController {
   /**
    * Get detailed patient information
    */
+  @ApiOperation({ summary: 'Get patient details', description: 'Retrieve detailed patient profile, medical history, and relationship data. Logs access for non-related patients.' })
+  @ApiResponse({ status: 200, description: 'Patient details returned' })
+  @ApiResponse({ status: 404, description: 'Patient not found' })
+  @ApiParam({ name: 'patientId', description: 'Patient user ID', example: '507f1f77bcf86cd799439011' })
   @Get(':patientId')
   async getPatientDetails(
     @Param('patientId') patientId: string,
@@ -97,6 +107,9 @@ export class SpecialistPatientsController {
   /**
    * Get patient overview for dashboard
    */
+  @ApiOperation({ summary: 'Get patient overview', description: 'Retrieve a compact patient overview for the specialist dashboard including recent activity and key health metrics' })
+  @ApiResponse({ status: 200, description: 'Patient overview returned' })
+  @ApiParam({ name: 'patientId', description: 'Patient user ID', example: '507f1f77bcf86cd799439011' })
   @Get(':patientId/overview')
   async getPatientOverview(
     @Param('patientId') patientId: string,
@@ -112,6 +125,11 @@ export class SpecialistPatientsController {
   /**
    * Get patient health records
    */
+  @ApiOperation({ summary: 'Get patient health records', description: 'Retrieve paginated health checkup records for a patient. Logs access for audit.' })
+  @ApiResponse({ status: 200, description: 'Health records returned' })
+  @ApiParam({ name: 'patientId', description: 'Patient user ID', example: '507f1f77bcf86cd799439011' })
+  @ApiQuery({ name: 'page', required: false, example: '1' })
+  @ApiQuery({ name: 'limit', required: false, example: '10' })
   @Get(':patientId/health-records')
   async getPatientHealthRecords(
     @Param('patientId') patientId: string,
@@ -147,6 +165,12 @@ export class SpecialistPatientsController {
   /**
    * Get patient prescriptions
    */
+  @ApiOperation({ summary: 'Get patient prescriptions', description: 'Retrieve patient prescriptions filtered by type (all, written by specialist, or uploaded)' })
+  @ApiResponse({ status: 200, description: 'Prescriptions returned' })
+  @ApiParam({ name: 'patientId', description: 'Patient user ID', example: '507f1f77bcf86cd799439011' })
+  @ApiQuery({ name: 'type', required: false, enum: ['all', 'written', 'uploaded'], example: 'all' })
+  @ApiQuery({ name: 'page', required: false, example: '1' })
+  @ApiQuery({ name: 'limit', required: false, example: '10' })
   @Get(':patientId/prescriptions')
   async getPatientPrescriptions(
     @Param('patientId') patientId: string,
@@ -168,6 +192,12 @@ export class SpecialistPatientsController {
   /**
    * Get patient appointments with this specialist
    */
+  @ApiOperation({ summary: 'Get patient appointments', description: 'Retrieve appointment history between the specialist and patient with status filtering' })
+  @ApiResponse({ status: 200, description: 'Appointments returned' })
+  @ApiParam({ name: 'patientId', description: 'Patient user ID', example: '507f1f77bcf86cd799439011' })
+  @ApiQuery({ name: 'status', required: false, description: 'Filter by appointment status', example: 'completed' })
+  @ApiQuery({ name: 'page', required: false, example: '1' })
+  @ApiQuery({ name: 'limit', required: false, example: '10' })
   @Get(':patientId/appointments')
   async getPatientAppointments(
     @Param('patientId') patientId: string,
@@ -189,6 +219,11 @@ export class SpecialistPatientsController {
   /**
    * Get patient pharmacy orders/purchases
    */
+  @ApiOperation({ summary: 'Get patient purchases', description: 'Retrieve pharmacy orders and purchases for a patient' })
+  @ApiResponse({ status: 200, description: 'Purchases returned' })
+  @ApiParam({ name: 'patientId', description: 'Patient user ID', example: '507f1f77bcf86cd799439011' })
+  @ApiQuery({ name: 'page', required: false, example: '1' })
+  @ApiQuery({ name: 'limit', required: false, example: '10' })
   @Get(':patientId/purchases')
   async getPatientPurchases(
     @Param('patientId') patientId: string,
@@ -206,6 +241,11 @@ export class SpecialistPatientsController {
   /**
    * Get patient activity timeline
    */
+  @ApiOperation({ summary: 'Get patient timeline', description: 'Retrieve chronological activity timeline for a patient including appointments, prescriptions, and health events' })
+  @ApiResponse({ status: 200, description: 'Timeline returned' })
+  @ApiParam({ name: 'patientId', description: 'Patient user ID', example: '507f1f77bcf86cd799439011' })
+  @ApiQuery({ name: 'page', required: false, example: '1' })
+  @ApiQuery({ name: 'limit', required: false, example: '20' })
   @Get(':patientId/timeline')
   async getPatientTimeline(
     @Param('patientId') patientId: string,
@@ -225,6 +265,9 @@ export class SpecialistPatientsController {
   /**
    * Get patient dependents
    */
+  @ApiOperation({ summary: 'Get patient dependents', description: 'Retrieve family members or dependents registered under the patient account' })
+  @ApiResponse({ status: 200, description: 'Dependents returned' })
+  @ApiParam({ name: 'patientId', description: 'Patient user ID', example: '507f1f77bcf86cd799439011' })
   @Get(':patientId/dependents')
   async getPatientDependents(@Param('patientId') patientId: string) {
     const result =
@@ -235,6 +278,9 @@ export class SpecialistPatientsController {
   /**
    * Star or unstar a patient
    */
+  @ApiOperation({ summary: 'Toggle star patient', description: 'Star or unstar a patient for quick access, optionally adding notes and categories' })
+  @ApiResponse({ status: 200, description: 'Patient star status updated' })
+  @ApiParam({ name: 'patientId', description: 'Patient user ID', example: '507f1f77bcf86cd799439011' })
   @Post(':patientId/star')
   async toggleStarPatient(
     @Param('patientId') patientId: string,

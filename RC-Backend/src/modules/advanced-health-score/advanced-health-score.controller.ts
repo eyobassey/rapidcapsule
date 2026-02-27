@@ -11,7 +11,7 @@ import {
   UploadedFile,
   Header,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiConsumes } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { AdvancedHealthScoreService } from './advanced-health-score.service';
 import { sendSuccessResponse } from '../../core/responses/success.responses';
@@ -31,6 +31,8 @@ export class AdvancedHealthScoreController {
    * Check if user can start an assessment
    * GET /advanced-health-score/can-start
    */
+  @ApiOperation({ summary: 'Check assessment eligibility', description: 'Check if the user meets requirements to start an advanced health score assessment' })
+  @ApiResponse({ status: 200, description: 'Assessment eligibility status returned' })
   @Get('can-start')
   @Header('Cache-Control', 'no-store, no-cache, must-revalidate')
   @Header('Pragma', 'no-cache')
@@ -46,6 +48,8 @@ export class AdvancedHealthScoreController {
    * Returns checkups with suggested include/exclude status based on settings
    * GET /advanced-health-score/relevant-checkups
    */
+  @ApiOperation({ summary: 'Get relevant health checkups', description: 'Retrieve health checkups relevant to the assessment with suggested include/exclude status' })
+  @ApiResponse({ status: 200, description: 'Relevant health checkups returned' })
   @Get('relevant-checkups')
   async getRelevantCheckups(@Request() req) {
     const result = await this.advancedHealthScoreService.getRelevantHealthCheckups(
@@ -58,6 +62,8 @@ export class AdvancedHealthScoreController {
    * Get all active questions grouped by domain
    * GET /advanced-health-score/questions
    */
+  @ApiOperation({ summary: 'Get assessment questions', description: 'Retrieve all active assessment questions grouped by health domain' })
+  @ApiResponse({ status: 200, description: 'Questions grouped by domain returned' })
   @Get('questions')
   async getQuestions() {
     const questions =
@@ -69,6 +75,10 @@ export class AdvancedHealthScoreController {
    * Upload a supporting document
    * POST /advanced-health-score/upload-document
    */
+  @ApiOperation({ summary: 'Upload supporting document', description: 'Upload a supporting document (lab results, medical records) for the health assessment' })
+  @ApiConsumes('multipart/form-data')
+  @ApiResponse({ status: 200, description: 'Document uploaded successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid file or upload error' })
   @Post('upload-document')
   @UseInterceptors(FileInterceptor('file'))
   async uploadDocument(
@@ -90,6 +100,9 @@ export class AdvancedHealthScoreController {
    * Submit assessment answers and generate report
    * POST /advanced-health-score/submit
    */
+  @ApiOperation({ summary: 'Submit assessment', description: 'Submit assessment answers and optional documents to generate the advanced health score report' })
+  @ApiResponse({ status: 200, description: 'Assessment submitted and report generated' })
+  @ApiResponse({ status: 400, description: 'Invalid assessment data' })
   @Post('submit')
   async submitAssessment(
     @Request() req,
@@ -108,6 +121,10 @@ export class AdvancedHealthScoreController {
    * Get user's assessment history
    * GET /advanced-health-score/history
    */
+  @ApiOperation({ summary: 'Get assessment history', description: 'Retrieve paginated assessment history for the authenticated user' })
+  @ApiResponse({ status: 200, description: 'Assessment history returned' })
+  @ApiQuery({ name: 'page', required: false, description: 'Page number', example: '1' })
+  @ApiQuery({ name: 'limit', required: false, description: 'Results per page', example: '10' })
   @Get('history')
   async getHistory(
     @Request() req,
@@ -126,6 +143,10 @@ export class AdvancedHealthScoreController {
    * Get a specific assessment report (for specialists viewing patient data)
    * GET /advanced-health-score/view/:id
    */
+  @ApiOperation({ summary: 'Get assessment for specialist', description: 'Retrieve a specific assessment report for specialist viewing' })
+  @ApiResponse({ status: 200, description: 'Assessment report returned' })
+  @ApiResponse({ status: 404, description: 'Assessment not found' })
+  @ApiParam({ name: 'id', description: 'Assessment ID', example: '507f1f77bcf86cd799439011' })
   @Get('view/:id')
   async getAssessmentForSpecialist(@Param('id') id: string) {
     const result = await this.advancedHealthScoreService.getAssessmentByIdForSpecialist(id);
@@ -136,6 +157,10 @@ export class AdvancedHealthScoreController {
    * Get a specific assessment report
    * GET /advanced-health-score/:id
    */
+  @ApiOperation({ summary: 'Get assessment by ID', description: 'Retrieve a specific assessment report for the authenticated user' })
+  @ApiResponse({ status: 200, description: 'Assessment report returned' })
+  @ApiResponse({ status: 404, description: 'Assessment not found' })
+  @ApiParam({ name: 'id', description: 'Assessment ID', example: '507f1f77bcf86cd799439011' })
   @Get(':id')
   async getAssessment(@Request() req, @Param('id') id: string) {
     const result = await this.advancedHealthScoreService.getAssessmentById(

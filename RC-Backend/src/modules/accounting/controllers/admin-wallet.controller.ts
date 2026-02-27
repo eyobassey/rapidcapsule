@@ -15,7 +15,7 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiQuery, ApiParam } from '@nestjs/swagger';
 import { Types } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -60,6 +60,13 @@ export class AdminWalletController {
   /**
    * List all wallets with pagination
    */
+  @ApiOperation({ summary: 'List all wallets', description: 'Returns a paginated list of all wallets on the platform. Supports filtering by owner type and wallet status.' })
+  @ApiResponse({ status: 200, description: 'Wallets retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - invalid or missing JWT token' })
+  @ApiQuery({ name: 'page', required: false, description: 'Page number', example: '1' })
+  @ApiQuery({ name: 'limit', required: false, description: 'Items per page', example: '20' })
+  @ApiQuery({ name: 'owner_type', required: false, description: 'Filter by owner type', enum: WalletOwnerType })
+  @ApiQuery({ name: 'status', required: false, description: 'Filter by wallet status', enum: WalletStatus })
   @Get()
   async listWallets(
     @Query('page') page = '1',
@@ -97,6 +104,11 @@ export class AdminWalletController {
   /**
    * Get wallet details by ID
    */
+  @ApiOperation({ summary: 'Get wallet details', description: 'Retrieves detailed information about a specific wallet including owner details and current balance.' })
+  @ApiResponse({ status: 200, description: 'Wallet details retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - invalid or missing JWT token' })
+  @ApiResponse({ status: 404, description: 'Wallet not found' })
+  @ApiParam({ name: 'id', description: 'Wallet ID', example: 'WAL-PAT-507f1f77bcf86cd799439011' })
   @Get(':id')
   async getWallet(@Param('id') id: string) {
     const wallet = await this.walletModel
@@ -114,6 +126,10 @@ export class AdminWalletController {
   /**
    * Get wallet transactions
    */
+  @ApiOperation({ summary: 'Get wallet transactions', description: 'Retrieves paginated transaction history for a specific wallet. Supports filtering by category and date range.' })
+  @ApiResponse({ status: 200, description: 'Transaction history retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - invalid or missing JWT token' })
+  @ApiParam({ name: 'id', description: 'Wallet ID', example: 'WAL-PAT-507f1f77bcf86cd799439011' })
   @Get(':id/transactions')
   async getWalletTransactions(
     @Param('id') id: string,
@@ -125,6 +141,11 @@ export class AdminWalletController {
   /**
    * Admin credit wallet
    */
+  @ApiOperation({ summary: 'Credit a wallet', description: 'Adds funds (NGN) to a wallet as an administrative adjustment. Records the admin ID and reason for audit.' })
+  @ApiResponse({ status: 200, description: 'Wallet credited successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - invalid or missing JWT token' })
+  @ApiResponse({ status: 404, description: 'Wallet not found' })
+  @ApiParam({ name: 'id', description: 'Wallet ID to credit', example: 'WAL-PAT-507f1f77bcf86cd799439011' })
   @Post(':id/credit')
   @HttpCode(HttpStatus.OK)
   async creditWallet(
@@ -152,6 +173,12 @@ export class AdminWalletController {
   /**
    * Admin debit wallet
    */
+  @ApiOperation({ summary: 'Debit a wallet', description: 'Removes funds (NGN) from a wallet as an administrative adjustment. Records the admin ID and reason for audit.' })
+  @ApiResponse({ status: 200, description: 'Wallet debited successfully' })
+  @ApiResponse({ status: 400, description: 'Insufficient balance' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - invalid or missing JWT token' })
+  @ApiResponse({ status: 404, description: 'Wallet not found' })
+  @ApiParam({ name: 'id', description: 'Wallet ID to debit', example: 'WAL-PAT-507f1f77bcf86cd799439011' })
   @Post(':id/debit')
   @HttpCode(HttpStatus.OK)
   async debitWallet(
@@ -179,6 +206,11 @@ export class AdminWalletController {
   /**
    * Freeze wallet
    */
+  @ApiOperation({ summary: 'Freeze a wallet', description: 'Freezes a wallet to block all operations. Requires a reason for audit purposes.' })
+  @ApiResponse({ status: 200, description: 'Wallet frozen successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - invalid or missing JWT token' })
+  @ApiResponse({ status: 404, description: 'Wallet not found' })
+  @ApiParam({ name: 'id', description: 'Wallet ID to freeze', example: 'WAL-PAT-507f1f77bcf86cd799439011' })
   @Post(':id/freeze')
   @HttpCode(HttpStatus.OK)
   async freezeWallet(
@@ -197,6 +229,11 @@ export class AdminWalletController {
   /**
    * Unfreeze wallet
    */
+  @ApiOperation({ summary: 'Unfreeze a wallet', description: 'Removes the freeze on a wallet, restoring it to active status and re-enabling all operations.' })
+  @ApiResponse({ status: 200, description: 'Wallet unfrozen successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - invalid or missing JWT token' })
+  @ApiResponse({ status: 404, description: 'Wallet not found' })
+  @ApiParam({ name: 'id', description: 'Wallet ID to unfreeze', example: 'WAL-PAT-507f1f77bcf86cd799439011' })
   @Post(':id/unfreeze')
   @HttpCode(HttpStatus.OK)
   async unfreezeWallet(
@@ -214,6 +251,11 @@ export class AdminWalletController {
   /**
    * Suspend wallet
    */
+  @ApiOperation({ summary: 'Suspend a wallet', description: 'Suspends a wallet, disabling transactions until reactivated. Requires a reason for audit purposes.' })
+  @ApiResponse({ status: 200, description: 'Wallet suspended successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - invalid or missing JWT token' })
+  @ApiResponse({ status: 404, description: 'Wallet not found' })
+  @ApiParam({ name: 'id', description: 'Wallet ID to suspend', example: 'WAL-PAT-507f1f77bcf86cd799439011' })
   @Post(':id/suspend')
   @HttpCode(HttpStatus.OK)
   async suspendWallet(
@@ -232,6 +274,9 @@ export class AdminWalletController {
   /**
    * Get chart of accounts
    */
+  @ApiOperation({ summary: 'Get chart of accounts', description: 'Returns the full chart of accounts hierarchy used by the double-entry accounting system.' })
+  @ApiResponse({ status: 200, description: 'Chart of accounts retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - invalid or missing JWT token' })
   @Get('/system/accounts')
   async getChartOfAccounts() {
     return this.chartOfAccountsService.getAccountHierarchy();
@@ -240,6 +285,11 @@ export class AdminWalletController {
   /**
    * Get account balance by code
    */
+  @ApiOperation({ summary: 'Get account balance', description: 'Returns the current balance for a specific account in the chart of accounts, identified by its account code.' })
+  @ApiResponse({ status: 200, description: 'Account balance retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - invalid or missing JWT token' })
+  @ApiResponse({ status: 404, description: 'Account not found' })
+  @ApiParam({ name: 'code', description: 'Account code from the chart of accounts', example: '1100' })
   @Get('/system/accounts/:code/balance')
   async getAccountBalance(@Param('code') code: string) {
     const balance = await this.accountingService.getAccountBalance(code);
@@ -253,6 +303,9 @@ export class AdminWalletController {
   /**
    * Run migration (one-time)
    */
+  @ApiOperation({ summary: 'Run wallet migration', description: 'Executes the one-time migration to move legacy wallet data into the unified accounting system. Should only be run once.' })
+  @ApiResponse({ status: 200, description: 'Migration completed successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - invalid or missing JWT token' })
   @Post('/system/migrate')
   @HttpCode(HttpStatus.OK)
   async runMigration(@Req() req: AdminAuthenticatedRequest) {
@@ -263,6 +316,9 @@ export class AdminWalletController {
   /**
    * Verify migration
    */
+  @ApiOperation({ summary: 'Verify migration integrity', description: 'Validates the integrity of the migration by comparing legacy and unified wallet data to detect any discrepancies.' })
+  @ApiResponse({ status: 200, description: 'Migration verification results returned' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - invalid or missing JWT token' })
   @Get('/system/migration/verify')
   async verifyMigration() {
     return this.migrationService.verifyMigration();
@@ -271,6 +327,9 @@ export class AdminWalletController {
   /**
    * Check if migration is complete
    */
+  @ApiOperation({ summary: 'Get migration status', description: 'Returns whether the wallet migration from the legacy system has been completed.' })
+  @ApiResponse({ status: 200, description: 'Migration status returned' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - invalid or missing JWT token' })
   @Get('/system/migration/status')
   async getMigrationStatus() {
     const isComplete = await this.migrationService.isMigrationComplete();
@@ -282,6 +341,9 @@ export class AdminWalletController {
   /**
    * Get wallet stats summary
    */
+  @ApiOperation({ summary: 'Get wallet stats summary', description: 'Returns aggregate statistics for all wallets grouped by owner type (patient vs specialist), including total balances, credits, and debits in NGN.' })
+  @ApiResponse({ status: 200, description: 'Wallet statistics returned successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - invalid or missing JWT token' })
   @Get('/system/stats')
   async getWalletStats() {
     const [patientStats, specialistStats] = await Promise.all([
