@@ -50,6 +50,18 @@ export default {
       } else {
         state.messages.push({ role: 'user', content: payload.text, attachment: payload.attachment || null, created_at: new Date() })
       }
+      // Auto-mark next exercise step when user responds during an active exercise
+      if (state.artifact && state.artifact.type === 'coping_exercise' && state.artifact.data && !state.artifact.data.completed) {
+        const steps = state.artifact.data.completed_steps || []
+        const total = state.artifact.data.steps ? state.artifact.data.steps.length : 0
+        const next = steps.length + 1
+        if (next <= total) {
+          state.artifact = {
+            ...state.artifact,
+            data: { ...state.artifact.data, completed_steps: [...steps, next] },
+          }
+        }
+      }
     },
     APPEND_ASSISTANT_MESSAGE(state) {
       state.messages.push({ role: 'assistant', content: '', created_at: new Date() })
@@ -92,6 +104,37 @@ export default {
       state.artifact = null
       state.artifactOpen = false
       state.checkupSession = null
+    },
+    UPDATE_EXERCISE_STEP(state, stepNumber) {
+      if (state.artifact && state.artifact.type === 'coping_exercise' && state.artifact.data) {
+        const steps = state.artifact.data.completed_steps || []
+        if (!steps.includes(stepNumber)) {
+          steps.push(stepNumber)
+        }
+        state.artifact = {
+          ...state.artifact,
+          data: { ...state.artifact.data, completed_steps: [...steps] },
+        }
+      }
+    },
+    COMPLETE_EXERCISE(state, data) {
+      if (state.artifact && state.artifact.type === 'coping_exercise' && state.artifact.data) {
+        // Include conversation messages as responses for the PDF
+        const responses = state.messages
+          .filter((m) => m.content && m.content.trim())
+          .map((m) => ({ role: m.role, content: m.content }))
+        state.artifact = {
+          ...state.artifact,
+          data: {
+            ...state.artifact.data,
+            completed_steps: data.completed_steps || [],
+            completed: true,
+            outcome: data.outcome,
+            completed_at: data.completed_at,
+            responses,
+          },
+        }
+      }
     },
     TOGGLE_ARTIFACT(state) {
       state.artifactOpen = !state.artifactOpen
@@ -192,10 +235,21 @@ export default {
       }
     },
 
+    async fetchConversationsByTag(_, tag) {
+      try {
+        const res = await http.get('/eka/conversations', { params: { tag } })
+        return res.data?.result || res.data?.data || []
+      } catch (e) {
+        console.error('Failed to load Eka conversations by tag:', e)
+        return []
+      }
+    },
+
     async sendMessage({ commit, state }, payload) {
-      // payload can be a string or { text, attachment }
+      // payload can be a string, { text, attachment }, or { text, tags }
       const messageText = typeof payload === 'string' ? payload : payload.text
       const attachment = typeof payload === 'object' ? payload.attachment : null
+      const tags = typeof payload === 'object' ? payload.tags : undefined
 
       commit('CLEAR_CHECKUP_QUESTION') // Clear answer buttons when user sends
       commit('CLEAR_SUGGESTIONS') // Clear follow-up suggestions when user sends
@@ -209,17 +263,23 @@ export default {
         const token = localStorage.getItem('token') || sessionStorage.getItem('token') || ''
         const baseURL = process.env.VUE_APP_API_GATEWAY || ''
 
+        const bodyPayload = {
+          message: messageText,
+          conversation_id: state.conversationId || undefined,
+          language: state.language || 'English',
+        }
+        // Only include tags on the first message of a new conversation
+        if (!state.conversationId && tags && tags.length > 0) {
+          bodyPayload.tags = tags
+        }
+
         const response = await fetch(`${baseURL}/api/eka/chat`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({
-            message: messageText,
-            conversation_id: state.conversationId || undefined,
-            language: state.language || 'English',
-          }),
+          body: JSON.stringify(bodyPayload),
         })
 
         const reader = response.body.getReader()
@@ -262,6 +322,18 @@ export default {
                   commit('SET_ARTIFACT', { type: 'drug_interaction_report', data: chunk.data })
                 } else if (chunk.artifact_type === 'prescription_analysis') {
                   commit('SET_ARTIFACT', { type: 'prescription_analysis', data: chunk.data })
+                } else if (chunk.artifact_type === 'recovery_dashboard') {
+                  commit('SET_ARTIFACT', { type: 'recovery_dashboard', data: chunk.data })
+                } else if (chunk.artifact_type === 'screening_report') {
+                  commit('SET_ARTIFACT', { type: 'screening_report', data: chunk.data })
+                } else if (chunk.artifact_type === 'coping_exercise') {
+                  commit('SET_ARTIFACT', { type: 'coping_exercise', data: chunk.data })
+                } else if (chunk.artifact_type === 'exercise_step_update') {
+                  commit('UPDATE_EXERCISE_STEP', chunk.data.step)
+                } else if (chunk.artifact_type === 'exercise_complete') {
+                  commit('COMPLETE_EXERCISE', chunk.data)
+                } else if (chunk.artifact_type === 'safety_plan') {
+                  commit('SET_ARTIFACT', { type: 'safety_plan', data: chunk.data })
                 }
               } else if (chunk.type === 'clear_loading') {
                 commit('CLEAR_LAST_MESSAGE')

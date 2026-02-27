@@ -11,6 +11,9 @@ const TRIAL_ALLOWED_TOOL_NAMES = [
   'submit_checkup_symptoms',
   'run_checkup_interview',
   'generate_checkup_report',
+  'start_screening',
+  'submit_screening',
+  'run_coping_exercise',
 ];
 
 /**
@@ -56,6 +59,27 @@ export const EKA_TRIAL_TOOLS: Anthropic.Tool[] = EKA_TOOLS
           'Generate the AI health summary report for a completed checkup. FREE in trial mode. Call this after the interview is complete. Returns a detailed health report displayed in the side panel.',
       };
     }
+    if (tool.name === 'start_screening') {
+      return {
+        ...tool,
+        description:
+          'Start an addiction screening assessment. Available instruments: AUDIT (alcohol), DAST-10 (drugs), CAGE (alcohol, quick), ASSIST (all substances). FREE in trial mode. Returns the full set of questions for conversational administration.',
+      };
+    }
+    if (tool.name === 'submit_screening') {
+      return {
+        ...tool,
+        description:
+          'Score a completed screening assessment. FREE in trial mode. Returns risk level, subscale scores, and AI interpretation. Note: results are not saved in trial mode — sign up to track screening history over time. A screening report will appear in the side panel.',
+      };
+    }
+    if (tool.name === 'run_coping_exercise') {
+      return {
+        ...tool,
+        description:
+          'Guide the patient through an evidence-based coping exercise. Available: urge_surfing, grounding_5_4_3_2_1, box_breathing, thought_record, pros_cons_analysis, halt_check, safety_plan. FREE in trial mode. An interactive exercise will appear in the side panel.',
+      };
+    }
     return tool;
   });
 
@@ -90,6 +114,7 @@ TRIAL CAPABILITIES — what you CAN do:
 - Check drug-drug interactions (free during trial)
 - Run a full AI health checkup with Infermedica (you'll need to ask for their age and gender first)
 - Answer general health questions conversationally
+- Addiction recovery support: run screening assessments (AUDIT, DAST-10, CAGE, ASSIST), guide through evidence-based coping exercises (urge surfing, box breathing, grounding, etc.), and provide crisis resources
 
 TRIAL LIMITATIONS — what you CANNOT do:
 - You do NOT have access to any personal health records (no vitals, prescriptions, appointments, orders, wallet, profile, or health score)
@@ -162,5 +187,30 @@ PHARMACY SEARCH:
 When a patient asks about a medication, ALWAYS use search_pharmacy first.
 - Show drug name, strength, dosage form, and prices in ALL currencies (NGN, USD, GBP, EUR).
 - For prescription-only drugs, note they need a valid prescription.
-- If no results found, suggest trying a different name or spelling.${lowMessageWarning}${langInstruction}`;
+- If no results found, suggest trying a different name or spelling.
+
+ADDICTION RECOVERY SUPPORT:
+You can help anyone struggling with addiction, even in trial mode. Be trauma-informed, non-judgmental, and compassionate.
+
+Screening assessments:
+- If someone mentions alcohol concerns → suggest AUDIT (10 questions, 5 min)
+- If someone mentions drug concerns → suggest DAST-10 (10 questions, 5 min)
+- For a quick alcohol screen → CAGE (4 questions, 1 min)
+- For multiple substances → ASSIST (comprehensive)
+- Administer questions ONE AT A TIME conversationally. Do NOT dump all questions at once.
+- After collecting all answers, call submit_screening to score and show results.
+
+Coping exercises:
+- If someone reports cravings → suggest urge_surfing
+- If someone is anxious or overwhelmed → suggest grounding_5_4_3_2_1 or box_breathing
+- If someone needs to examine their thinking → suggest thought_record
+- If someone is weighing a decision about using → suggest pros_cons_analysis
+- If someone feels off but can't identify why → suggest halt_check
+- If someone is in crisis → suggest safety_plan AND provide crisis resources
+
+Crisis protocol:
+- If someone expresses suicidal thoughts, self-harm, or crisis → respond with empathy, provide crisis resources (Samaritans 116 123 UK, 988 Lifeline US, Crisis Text Line: text HOME to 741741), and guide them through the safety plan exercise.
+- NEVER dismiss or minimise someone's pain.
+
+Note: Screening results are NOT saved in trial mode. Encourage sign-up to track progress over time.${lowMessageWarning}${langInstruction}`;
 }

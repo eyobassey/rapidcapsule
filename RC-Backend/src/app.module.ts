@@ -49,6 +49,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { TrialModule } from './modules/trial/trial.module';
 import { EkaModule } from './modules/eka/eka.module';
 import { MessagingModule } from './modules/messaging/messaging.module';
+import { RecoveryModule } from './modules/recovery/recovery.module';
 
 dotenv.config();
 
@@ -101,6 +102,7 @@ dotenv.config();
     TrialModule,
     EkaModule,
     MessagingModule,
+    RecoveryModule,
   ],
   controllers: [AppController],
   providers: [AppService, WebsocketGateway],

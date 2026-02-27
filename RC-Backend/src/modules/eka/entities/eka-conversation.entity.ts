@@ -35,6 +35,9 @@ export class EkaConversation {
   @Prop({ type: Boolean, default: true })
   is_active: boolean;
 
+  @Prop({ type: [String], default: [] })
+  tags: string[];
+
   created_at: Date;
   updated_at: Date;
 }
@@ -42,3 +45,4 @@ export class EkaConversation {
 export const EkaConversationSchema = SchemaFactory.createForClass(EkaConversation);
 
 EkaConversationSchema.index({ user: 1, is_active: 1, updated_at: -1 });
+EkaConversationSchema.index({ user: 1, is_active: 1, tags: 1, updated_at: -1 });

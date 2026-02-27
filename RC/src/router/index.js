@@ -431,6 +431,12 @@ const routes = [
         name: "Eka",
         component: () => import("@/components/EkaChat/EkaChatPanel.vue"),
       },
+      // Recovery Routes
+      {
+        path: "recovery",
+        name: "Recovery",
+        component: () => import("@/views/Mainapp/Recovery/index.vue"),
+      },
       // Messaging Routes
       {
         path: "messages",

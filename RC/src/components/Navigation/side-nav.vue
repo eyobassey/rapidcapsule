@@ -182,6 +182,13 @@ export default {
           iconColor: "#6F6F6F",
         },
         {
+          link: "/app/patient/recovery",
+          label: "Recovery",
+          children: [],
+          icon: "recovery",
+          iconColor: "#0288D1",
+        },
+        {
           link: "/app/patient/messages",
           label: "Messages",
           children: [],

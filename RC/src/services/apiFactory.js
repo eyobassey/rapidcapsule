@@ -1407,5 +1407,101 @@ const apiFactory = {
       headers: { 'x-trial-token': trialToken },
     });
   },
+
+  // ─── Recovery Module ──────────────────────────────────────────────
+  $_getRecoveryDashboard() {
+    return http.get("/recovery/profile/dashboard");
+  },
+  $_getRecoveryProfile() {
+    return http.get("/recovery/profile");
+  },
+  $_createRecoveryProfile(payload) {
+    return http.post("/recovery/profile", payload);
+  },
+  $_updateRecoveryConsent(payload) {
+    return http.patch("/recovery/profile/consent", payload);
+  },
+
+  // Screening
+  $_beginScreening(payload) {
+    return http.post("/recovery/screening", payload);
+  },
+  $_submitScreening({ instrument, payload }) {
+    return http.post(`/recovery/screening/${instrument}/submit`, payload);
+  },
+  $_getScreeningAIInterpretation(screeningId) {
+    return http.post(`/recovery/screening/${screeningId}/ai-interpretation`);
+  },
+  $_getRecommendedScreening() {
+    return http.get("/recovery/screening/recommended");
+  },
+  $_getScreeningHistory(params) {
+    return http.get("/recovery/screening/history", { params });
+  },
+  $_getScreeningProgress(instrument) {
+    return http.get(`/recovery/screening/progress/${instrument}`);
+  },
+  $_getScreeningById(id) {
+    return http.get(`/recovery/screening/${id}`);
+  },
+
+  // Coping Exercises
+  $_getExerciseHistory(params) {
+    return http.get("/recovery/exercises/history", { params });
+  },
+  $_getExerciseStats() {
+    return http.get("/recovery/exercises/stats");
+  },
+  $_getExerciseById(id) {
+    return http.get(`/recovery/exercises/${id}`);
+  },
+
+  // Programme Management
+  $_addRecoverySubstances(payload) {
+    return http.patch("/recovery/profile/substances", payload);
+  },
+  $_archiveAndReenrol(payload) {
+    return http.post("/recovery/profile/archive-and-reenrol", payload);
+  },
+  $_getPastProgrammes() {
+    return http.get("/recovery/profile/past-programmes");
+  },
+
+  // Sobriety Tracker
+  $_logSobriety(payload) {
+    return http.post("/recovery/sobriety/log", payload);
+  },
+  $_getSobrietyLogs(params) {
+    return http.get("/recovery/sobriety/logs", { params });
+  },
+  $_getSobrietyChart(params) {
+    return http.get("/recovery/sobriety/chart", { params });
+  },
+  $_getSobrietyStats() {
+    return http.get("/recovery/sobriety/stats");
+  },
+  $_getMilestones() {
+    return http.get("/recovery/sobriety/milestones");
+  },
+  $_celebrateMilestone(id) {
+    return http.patch(`/recovery/sobriety/milestones/${id}/celebrate`);
+  },
+
+  // AI Companion
+  $_startCompanion(payload) {
+    return http.post("/recovery/companion/start", payload || {});
+  },
+  $_sendCompanionMessage({ sessionId, payload }) {
+    return http.post(`/recovery/companion/${sessionId}/message`, payload);
+  },
+  $_endCompanionSession(sessionId) {
+    return http.post(`/recovery/companion/${sessionId}/end`);
+  },
+  $_getCompanionSession(sessionId) {
+    return http.get(`/recovery/companion/${sessionId}`);
+  },
+  $_getCompanionSessions(params) {
+    return http.get("/recovery/companion", { params });
+  },
 };
 export default apiFactory;

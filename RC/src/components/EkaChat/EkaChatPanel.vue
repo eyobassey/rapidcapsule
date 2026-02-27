@@ -314,6 +314,26 @@
                 v-else-if="artifactMode === 'prescription' && artifact.data"
                 :data="artifact.data"
               />
+              <EkaRecoveryDashboard
+                v-else-if="artifactMode === 'recovery_dashboard' && artifact.data"
+                :data="artifact.data"
+                :patient="patientInfo"
+              />
+              <EkaScreeningReport
+                v-else-if="artifactMode === 'screening_report' && artifact.data"
+                :data="artifact.data"
+                :patient="patientInfo"
+              />
+              <EkaCopingExercise
+                v-else-if="artifactMode === 'coping_exercise' && artifact.data"
+                :data="artifact.data"
+                :patient="patientInfo"
+                @breathing-complete="handleBreathingComplete"
+              />
+              <EkaSafetyPlan
+                v-else-if="artifactMode === 'safety_plan' && artifact.data"
+                :data="artifact.data"
+              />
             </div>
           </div>
         </transition>
@@ -329,11 +349,15 @@ import EkaCheckupReport from './EkaCheckupReport.vue'
 import EkaBodyAvatar from './EkaBodyAvatar.vue'
 import EkaInteractionReport from './EkaInteractionReport.vue'
 import EkaPrescriptionAnalysis from './EkaPrescriptionAnalysis.vue'
+import EkaRecoveryDashboard from './EkaRecoveryDashboard.vue'
+import EkaScreeningReport from './EkaScreeningReport.vue'
+import EkaCopingExercise from './EkaCopingExercise.vue'
+import EkaSafetyPlan from './EkaSafetyPlan.vue'
 import http from '@/services/http'
 
 export default {
   name: 'EkaChatPanel',
-  components: { EkaMessage, EkaCheckupReport, EkaBodyAvatar, EkaInteractionReport, EkaPrescriptionAnalysis },
+  components: { EkaMessage, EkaCheckupReport, EkaBodyAvatar, EkaInteractionReport, EkaPrescriptionAnalysis, EkaRecoveryDashboard, EkaScreeningReport, EkaCopingExercise, EkaSafetyPlan },
 
   data() {
     return {
@@ -359,6 +383,10 @@ export default {
         { label: 'Appointments', message: 'Show my appointments', icon: 'ri-calendar-check-line' },
         { label: 'Wallet & Credits', message: 'Show my wallet and credits', icon: 'bi-wallet2' },
         { label: 'Upload Prescription', message: null, icon: 'hi-upload', action: 'upload_prescription' },
+        { label: 'Recovery Dashboard', message: 'Show my recovery dashboard', icon: 'hi-heart' },
+        { label: 'Daily Check-in', message: 'I want to do my daily check-in', icon: 'hi-clipboard-check' },
+        { label: 'Coping Exercise', message: 'I need a coping exercise', icon: 'ri-heart-pulse-line' },
+        { label: 'Screening Assessment', message: 'I want to take a screening assessment', icon: 'hi-clipboard' },
       ],
       suggestions: [
         { label: 'How are my vitals?', icon: 'hi-heart' },
@@ -367,7 +395,8 @@ export default {
         { label: 'Track my orders', icon: 'hi-shopping-bag' },
         { label: 'Start a health checkup', icon: 'fa-stethoscope' },
         { label: 'Check drug interactions', icon: 'hi-beaker' },
-        { label: 'Summarize my last appointment', icon: 'ri-calendar-check-line' },
+        { label: 'Recovery check-in', icon: 'hi-clipboard-check' },
+        { label: 'I need help with cravings', icon: 'ri-heart-pulse-line' },
       ],
       quickChips: [
         { label: 'My vitals' },
@@ -375,7 +404,7 @@ export default {
         { label: 'Health checkup' },
         { label: 'My prescriptions' },
         { label: 'Drug interactions' },
-        { label: 'Wallet balance' },
+        { label: 'Recovery dashboard' },
       ],
       languages: [
         { code: 'en', label: 'English', flag: '🇬🇧' },
@@ -392,6 +421,7 @@ export default {
   },
 
   computed: {
+    ...mapGetters(['userprofile']),
     ...mapGetters('eka', {
       messages: 'getMessages',
       conversationId: 'getConversationId',
@@ -404,6 +434,15 @@ export default {
       checkupQuestion: 'getCheckupQuestion',
       contextualSuggestions: 'getSuggestions',
     }),
+    patientInfo() {
+      const p = this.userprofile?.profile
+      if (!p) return null
+      const name = [p.first_name, p.last_name].filter(Boolean).join(' ')
+      const dob = p.date_of_birth
+        ? new Date(p.date_of_birth).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+        : null
+      return (name || dob) ? { name: name || null, dob } : null
+    },
     displayChips() {
       if (this.contextualSuggestions.length > 0) {
         return this.contextualSuggestions
@@ -415,14 +454,36 @@ export default {
       if (this.artifact.type === 'health_checkup_report') return 'report'
       if (this.artifact.type === 'drug_interaction_report') return 'interactions'
       if (this.artifact.type === 'prescription_analysis') return 'prescription'
+      if (this.artifact.type === 'recovery_dashboard') return 'recovery_dashboard'
+      if (this.artifact.type === 'screening_report') return 'screening_report'
+      if (this.artifact.type === 'coping_exercise') return 'coping_exercise'
+      if (this.artifact.type === 'safety_plan') return 'safety_plan'
       return 'avatar'
     },
     artifactIcon() {
-      const icons = { report: 'hi-document-text', interactions: 'ri-capsule-line', prescription: 'hi-clipboard-list', avatar: 'hi-user' }
+      const icons = {
+        report: 'hi-document-text',
+        interactions: 'ri-capsule-line',
+        prescription: 'hi-clipboard-list',
+        avatar: 'hi-user',
+        recovery_dashboard: 'hi-heart',
+        screening_report: 'hi-clipboard-check',
+        coping_exercise: 'ri-heart-pulse-line',
+        safety_plan: 'hi-shield-check',
+      }
       return icons[this.artifactMode] || 'hi-document-text'
     },
     artifactTitle() {
-      const titles = { report: 'Health Report', interactions: 'Interaction Report', prescription: 'Prescription Analysis', avatar: 'Body Diagram' }
+      const titles = {
+        report: 'Health Report',
+        interactions: 'Interaction Report',
+        prescription: 'Prescription Analysis',
+        avatar: 'Body Diagram',
+        recovery_dashboard: 'Recovery Dashboard',
+        screening_report: 'Screening Report',
+        coping_exercise: 'Coping Exercise',
+        safety_plan: 'Safety Plan',
+      }
       return titles[this.artifactMode] || 'Report'
     },
 
@@ -466,9 +527,9 @@ export default {
 
   mounted() {
     this.$store.dispatch('eka/fetchConversations')
-    this.$nextTick(() => this.$refs.inputField?.focus())
     this.checkMobile()
     window.addEventListener('resize', this.checkMobile)
+    this.handleDeepLink()
   },
 
   beforeUnmount() {
@@ -476,6 +537,39 @@ export default {
   },
 
   methods: {
+    handleDeepLink() {
+      const query = this.$route?.query
+      if (!query) {
+        this.$nextTick(() => this.$refs.inputField?.focus())
+        return
+      }
+
+      const prompt = query.prompt
+      const conversationId = query.conversation
+      const tags = query.tags
+
+      // Clean the URL to prevent re-triggering
+      if (prompt || conversationId || tags) {
+        this.$router.replace({ query: {} })
+      }
+
+      if (conversationId) {
+        this.$store.dispatch('eka/loadConversation', conversationId)
+      } else if (prompt) {
+        this.$store.dispatch('eka/startNewChat')
+        this.$nextTick(() => {
+          const tagsArray = tags ? String(tags).split(',') : []
+          if (tagsArray.length > 0) {
+            this.$store.dispatch('eka/sendMessage', { text: prompt, tags: tagsArray })
+          } else {
+            this.$store.dispatch('eka/sendMessage', prompt)
+          }
+        })
+      } else {
+        this.$nextTick(() => this.$refs.inputField?.focus())
+      }
+    },
+
     async sendMessage() {
       const text = this.inputText.trim()
       const hasFile = !!this.attachedFile
@@ -637,6 +731,11 @@ export default {
     submitMultiSelect() {
       const answer = this.multiSelectChoices.join(', ')
       this.sendCheckupAnswer(answer)
+    },
+
+    handleBreathingComplete() {
+      this.inputText = "I've completed 4 cycles of box breathing using the interactive breathing tool in the side panel. It felt good."
+      this.sendMessage()
     },
 
     onAvatarContinue(symptomNames) {

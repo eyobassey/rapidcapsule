@@ -4,7 +4,10 @@ import { Model, Types } from 'mongoose';
 import Anthropic from '@anthropic-ai/sdk';
 import { EkaConversation, EkaConversationDocument } from './entities/eka-conversation.entity';
 import { EkaChatDto } from './dto/eka.dto';
-import { EKA_TOOLS, buildSystemPrompt } from './eka-tools';
+import { EKA_TOOLS, buildSystemPrompt, RecoveryContext } from './eka-tools';
+import { THERAPEUTIC_EXERCISES, getExercise } from './eka-recovery-knowledge';
+import { AUDIT, DAST10, CAGE, ASSIST } from '../recovery/constants/screening-instruments';
+import { SOBRIETY_MILESTONES, getNextSobrietyMilestone } from '../recovery/constants/milestone-definitions';
 import { EKA_TRIAL_TOOLS, buildTrialSystemPrompt } from './eka-trial-tools';
 import { Infermedica } from '../../common/external/infermedica/infermedica';
 import { ClaudeHealthSummaryService } from '../health-checkup/services/claude-health-summary.service';
@@ -41,6 +44,14 @@ export class EkaService {
     @InjectModel('AdvancedHealthScore') private advancedScoreModel: Model<any>,
     @InjectModel('ClaudeSummaryCredit') private creditModel: Model<any>,
     @InjectModel('ClaudeSummaryPlan') private summaryPlanModel: Model<any>,
+    @InjectModel('RecoveryProfile') private recoveryProfileModel: Model<any>,
+    @InjectModel('AddictionScreening') private addictionScreeningModel: Model<any>,
+    @InjectModel('SobrietyLog') private sobrietyLogModel: Model<any>,
+    @InjectModel('RecoveryMilestone') private recoveryMilestoneModel: Model<any>,
+    @InjectModel('RecoveryJournal') private recoveryJournalModel: Model<any>,
+    @InjectModel('CrisisEvent') private crisisEventModel: Model<any>,
+    @InjectModel('RecoveryPlan') private recoveryPlanModel: Model<any>,
+    @InjectModel('CopingExerciseSession') private copingExerciseSessionModel: Model<any>,
     private readonly claudeHealthSummaryService: ClaudeHealthSummaryService,
     private readonly claudeSummaryCreditsService: ClaudeSummaryCreditsService,
     private readonly claudeAIService: ClaudeAIService,
@@ -90,6 +101,7 @@ export class EkaService {
         user: new Types.ObjectId(userId),
         messages: [],
         title: dto.message.slice(0, 80),
+        tags: dto.tags || [],
       });
     }
 
@@ -108,6 +120,164 @@ export class EkaService {
     const patientName = user?.profile
       ? `${user.profile.first_name || ''} ${user.profile.last_name || ''}`.trim()
       : 'there';
+
+    // Check if patient is enrolled in recovery
+    let recoveryContext: RecoveryContext | null = null;
+    const recoveryProfile = await this.recoveryProfileModel.findOne({
+      user: new Types.ObjectId(userId),
+      status: 'active',
+      deleted_at: { $exists: false },
+    }).lean();
+
+    if (recoveryProfile) {
+      const uid = new Types.ObjectId(userId);
+      const sobrietyDays = recoveryProfile.sobriety_start_date
+        ? Math.max(0, Math.floor((Date.now() - new Date(recoveryProfile.sobriety_start_date).getTime()) / 86400000))
+        : 0;
+      const primarySubstance = (recoveryProfile as any).substance_use_history?.find((s: any) => s.is_primary)?.substance || 'substances';
+
+      const fourteenDaysAgo = new Date(Date.now() - 14 * 86400000);
+
+      // Fetch all context data in parallel
+      const [recentLogs, recentScreenings, recentExercises, milestones, activePlan] = await Promise.all([
+        this.sobrietyLogModel
+          .find({ user: uid, log_date: { $gte: fourteenDaysAgo } })
+          .sort({ log_date: -1 })
+          .limit(7)
+          .lean(),
+        this.addictionScreeningModel
+          .find({ user: uid, deleted_at: { $exists: false } })
+          .sort({ created_at: -1 })
+          .limit(5)
+          .select('instrument total_score risk_level created_at')
+          .lean(),
+        this.copingExerciseSessionModel
+          .find({ user: uid, deleted_at: { $exists: false } })
+          .sort({ created_at: -1 })
+          .limit(5)
+          .select('name category created_at')
+          .lean(),
+        this.recoveryMilestoneModel
+          .find({ user: uid })
+          .sort({ achieved_at: -1 })
+          .limit(5)
+          .select('milestone_name')
+          .lean(),
+        this.recoveryPlanModel.findOne({
+          user: uid,
+          status: 'active',
+          deleted_at: { $exists: false },
+        }).select('_id').lean(),
+      ]);
+
+      const moodAvg = recentLogs.length > 0
+        ? Math.round(recentLogs.reduce((s: number, l: any) => s + (l.mood_score || 5), 0) / recentLogs.length * 10) / 10
+        : 5;
+      const cravingAvg = recentLogs.length > 0
+        ? Math.round(recentLogs.reduce((s: number, l: any) => s + (l.craving_intensity || 0), 0) / recentLogs.length * 10) / 10
+        : 0;
+
+      const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+      const todayLog = recentLogs.find((l: any) => new Date(l.log_date) >= todayStart);
+
+      // Build check-in snapshots
+      const formatDate = (d: any) => new Date(d).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+      const checkinSnapshots = recentLogs.map((l: any) => ({
+        date: formatDate(l.log_date),
+        mood_score: l.mood_score || 5,
+        craving_intensity: l.craving_intensity ?? 0,
+        sober: l.sober_today !== false,
+        triggers: l.triggers_encountered || [],
+        coping_strategies: l.coping_strategies_used || [],
+        sleep_quality: l.sleep_quality,
+        sleep_hours: l.sleep_hours,
+        gratitude_note: l.gratitude_note,
+      }));
+
+      // Screening snapshots
+      const screeningMaxScores: Record<string, number> = { audit: 40, dast10: 10, cage: 4, assist: 39 };
+      const screeningSnapshots = recentScreenings.map((s: any) => ({
+        instrument: s.instrument,
+        score: s.total_score,
+        max_score: screeningMaxScores[s.instrument] || 40,
+        risk_level: s.risk_level,
+        date: formatDate(s.created_at),
+      }));
+
+      // Exercise snapshots
+      const exerciseSnapshots = recentExercises.map((e: any) => ({
+        name: e.name,
+        category: e.category,
+        date: formatDate(e.created_at),
+      }));
+
+      // Calculate trends (compare first half vs second half of check-ins)
+      const calculateTrend = (values: number[]): 'improving' | 'declining' | 'stable' | 'insufficient_data' => {
+        if (values.length < 3) return 'insufficient_data';
+        const mid = Math.floor(values.length / 2);
+        const recentHalf = values.slice(0, mid);
+        const olderHalf = values.slice(mid);
+        const recentAvg = recentHalf.reduce((a, b) => a + b, 0) / recentHalf.length;
+        const olderAvg = olderHalf.reduce((a, b) => a + b, 0) / olderHalf.length;
+        const diff = recentAvg - olderAvg;
+        if (Math.abs(diff) < 0.5) return 'stable';
+        return diff > 0 ? 'improving' : 'declining';
+      };
+
+      const moodValues = recentLogs.map((l: any) => l.mood_score || 5);
+      const cravingValues = recentLogs.map((l: any) => l.craving_intensity ?? 0);
+
+      // For cravings, lower is better — so invert the trend label
+      const rawCravingTrend = calculateTrend(cravingValues);
+      const cravingTrend = rawCravingTrend === 'improving' ? 'worsening'
+        : rawCravingTrend === 'declining' ? 'improving'
+        : rawCravingTrend;
+
+      // Top triggers and coping strategies (frequency count)
+      const triggerCounts: Record<string, number> = {};
+      const copingCounts: Record<string, number> = {};
+      for (const l of recentLogs as any[]) {
+        for (const t of l.triggers_encountered || []) { triggerCounts[t] = (triggerCounts[t] || 0) + 1; }
+        for (const c of l.coping_strategies_used || []) { copingCounts[c] = (copingCounts[c] || 0) + 1; }
+      }
+      const topTriggers = Object.entries(triggerCounts).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k]) => k);
+      const topCoping = Object.entries(copingCounts).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k]) => k);
+
+      // Log streak: consecutive days with a log from today backwards
+      let logStreak = 0;
+      const sortedByDateAsc = [...recentLogs].sort((a: any, b: any) => new Date(b.log_date).getTime() - new Date(a.log_date).getTime());
+      const checkDate = new Date(); checkDate.setHours(0, 0, 0, 0);
+      for (const l of sortedByDateAsc as any[]) {
+        const logDay = new Date(l.log_date); logDay.setHours(0, 0, 0, 0);
+        if (logDay.getTime() === checkDate.getTime()) {
+          logStreak++;
+          checkDate.setDate(checkDate.getDate() - 1);
+        } else if (logDay.getTime() < checkDate.getTime()) {
+          break;
+        }
+      }
+
+      recoveryContext = {
+        sobriety_days: sobrietyDays,
+        primary_substance: primarySubstance,
+        risk_level: (recoveryProfile as any).current_risk_level || 'low',
+        care_level: (recoveryProfile as any).care_level || 'outpatient',
+        recent_mood_avg: moodAvg,
+        recent_craving_avg: cravingAvg,
+        has_plan: !!activePlan,
+        last_checkin_date: recentLogs[0]?.log_date ? new Date((recentLogs[0] as any).log_date).toISOString() : null,
+        today_checked_in: !!todayLog,
+        recent_checkins: checkinSnapshots,
+        recent_screenings: screeningSnapshots,
+        recent_exercises: exerciseSnapshots,
+        milestones_earned: milestones.map((m: any) => m.milestone_name),
+        log_streak: logStreak,
+        mood_trend: calculateTrend(moodValues),
+        craving_trend: cravingTrend as any,
+        top_triggers: topTriggers,
+        top_coping_strategies: topCoping,
+      };
+    }
 
     // Build messages for Claude (last N messages)
     const recentMessages = conversation.messages.slice(-MAX_CONTEXT_MESSAGES);
@@ -147,7 +317,7 @@ export class EkaService {
     // Retry up to 2 times on overloaded/transient errors
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
-        fullResponse = yield* this.streamWithTools(claudeMessages, patientName, userId, toolsUsed, dto.language, activeCheckupPhase);
+        fullResponse = yield* this.streamWithTools(claudeMessages, patientName, userId, toolsUsed, dto.language, activeCheckupPhase, recoveryContext);
         break; // Success
       } catch (error: any) {
         const isOverloaded = error?.message?.includes('overloaded') || error?.message?.includes('Overloaded') || error?.error?.type === 'overloaded_error';
@@ -181,6 +351,7 @@ export class EkaService {
     toolsUsed: string[],
     language?: string,
     activeCheckupPhase?: string | null,
+    recoveryContext?: RecoveryContext | null,
   ): AsyncGenerator<any, string> {
     let currentMessages = [...messages];
     let fullResponse = '';
@@ -192,7 +363,7 @@ export class EkaService {
       const apiParams: any = {
         model: MODEL,
         max_tokens: MAX_TOKENS,
-        system: buildSystemPrompt(patientName, language),
+        system: buildSystemPrompt(patientName, language, recoveryContext),
         messages: currentMessages,
       };
 
@@ -274,7 +445,7 @@ export class EkaService {
       }
 
       // Slow tools: show fun loading text while executing
-      const SLOW_TOOLS = ['check_drug_interactions', 'generate_checkup_report', 'analyze_prescription_upload', 'analyze_existing_prescription'];
+      const SLOW_TOOLS = ['check_drug_interactions', 'generate_checkup_report', 'analyze_prescription_upload', 'analyze_existing_prescription', 'submit_screening'];
       const slowToolName = toolCalls.find(tc => SLOW_TOOLS.includes(tc.name))?.name;
 
       let toolResults: { id: string; name: string; result: any }[];
@@ -397,6 +568,10 @@ export class EkaService {
         if (tr.name === 'analyze_prescription_upload' || tr.name === 'analyze_existing_prescription') {
           textOnlyNextRound = true;
         }
+        // Recovery write tools → text-only to present conversational summary
+        if (['log_daily_checkin', 'start_screening', 'submit_screening', 'run_coping_exercise'].includes(tr.name)) {
+          textOnlyNextRound = true;
+        }
       }
 
       // Build tool result messages for next round (strip __artifact before sending to Claude)
@@ -471,6 +646,11 @@ export class EkaService {
         'Pulling up your prescription details...',
         'Checking medication availability and pricing...',
         'Almost there — putting the analysis together...',
+      ],
+      submit_screening: [
+        'Scoring your responses...',
+        'Analysing risk levels and comparing with clinical thresholds...',
+        'Generating your personalised interpretation...',
       ],
     };
     return messages[toolName] || ['Working on that for you...'];
@@ -607,6 +787,78 @@ export class EkaService {
         );
         break;
       }
+
+      // ── Recovery tools ──
+      case 'get_recovery_profile':
+      case 'get_recovery_dashboard': {
+        suggestions.push(
+          { label: 'Daily check-in', message: 'I want to do my daily check-in' },
+          { label: 'View sobriety stats', message: 'Show my sobriety statistics' },
+          { label: 'Take a screening', message: 'I want to take a screening assessment' },
+        );
+        break;
+      }
+
+      case 'get_sobriety_stats': {
+        suggestions.push(
+          { label: 'Recovery dashboard', message: 'Show my recovery dashboard' },
+          { label: 'Daily check-in', message: 'I want to do my daily check-in' },
+          { label: 'Coping exercise', message: 'I need a coping exercise' },
+        );
+        break;
+      }
+
+      case 'get_daily_logs': {
+        suggestions.push(
+          { label: 'What do my trends show?', message: 'Analyse my mood and craving trends' },
+          { label: 'Daily check-in', message: 'I want to do my daily check-in' },
+        );
+        break;
+      }
+
+      case 'get_screening_history': {
+        suggestions.push(
+          { label: 'Take a new screening', message: 'I want to take a screening assessment' },
+          { label: 'Recovery dashboard', message: 'Show my recovery dashboard' },
+        );
+        break;
+      }
+
+      case 'log_daily_checkin': {
+        suggestions.push(
+          { label: 'Recovery dashboard', message: 'Show my recovery dashboard' },
+          { label: 'Coping exercise', message: 'I need a coping exercise for cravings' },
+          { label: 'View my plan', message: 'Show my recovery plan' },
+        );
+        break;
+      }
+
+      case 'submit_screening': {
+        suggestions.push(
+          { label: 'What does this mean?', message: 'Explain my screening results in detail' },
+          { label: 'Recovery dashboard', message: 'Show my recovery dashboard' },
+          { label: 'Book an appointment', message: 'Book an appointment to discuss my results' },
+        );
+        break;
+      }
+
+      case 'run_coping_exercise': {
+        suggestions.push(
+          { label: 'Try another exercise', message: 'Show me another coping exercise' },
+          { label: 'Daily check-in', message: 'I want to do my daily check-in' },
+          { label: 'Recovery dashboard', message: 'Show my recovery dashboard' },
+        );
+        break;
+      }
+
+      case 'complete_exercise': {
+        suggestions.push(
+          { label: 'Try another exercise', message: 'I want to try another coping exercise' },
+          { label: 'Daily check-in', message: 'I want to do my daily check-in' },
+          { label: 'How am I doing?', message: 'Show my recovery dashboard' },
+        );
+        break;
+      }
     }
 
     return suggestions;
@@ -649,6 +901,31 @@ export class EkaService {
         return 'Prescription image analysis';
       case 'analyze_existing_prescription':
         return `Existing prescription analysis (${input?.source || 'unknown'})`;
+      // Recovery tools
+      case 'get_recovery_profile':
+        return 'Patient recovery profile';
+      case 'get_recovery_dashboard':
+        return 'Recovery dashboard data';
+      case 'get_sobriety_stats':
+        return 'Sobriety statistics';
+      case 'get_daily_logs':
+        return `Daily recovery logs (last ${input?.days || 14} days)`;
+      case 'get_screening_history':
+        return `Screening history${input?.instrument ? ' (' + input.instrument + ')' : ''}`;
+      case 'get_recovery_plan':
+        return 'Active recovery plan';
+      case 'log_daily_checkin':
+        return 'Daily check-in logged';
+      case 'start_screening':
+        return `Screening instrument: ${input?.instrument || 'unknown'}`;
+      case 'submit_screening':
+        return `Screening results: ${input?.instrument || 'unknown'}`;
+      case 'run_coping_exercise':
+        return `Coping exercise: ${input?.exercise_type || 'unknown'}`;
+      case 'mark_exercise_step':
+        return `Exercise step ${input?.step_number || '?'} marked complete`;
+      case 'complete_exercise':
+        return `Exercise completed: ${input?.exercise_type || 'unknown'}`;
       default:
         return toolName;
     }
@@ -708,6 +985,31 @@ export class EkaService {
         return this.toolAnalyzePrescriptionUpload(uid, input.upload_id);
       case 'analyze_existing_prescription':
         return this.toolAnalyzeExistingPrescription(uid, input.prescription_id, input.source);
+      // ── Recovery tools ──
+      case 'get_recovery_profile':
+        return this.toolGetRecoveryProfile(uid);
+      case 'get_recovery_dashboard':
+        return this.toolGetRecoveryDashboard(uid);
+      case 'get_sobriety_stats':
+        return this.toolGetSobrietyStats(uid);
+      case 'get_daily_logs':
+        return this.toolGetDailyLogs(uid, input.days || 14);
+      case 'get_screening_history':
+        return this.toolGetScreeningHistory(uid, input.instrument, input.limit || 5);
+      case 'get_recovery_plan':
+        return this.toolGetRecoveryPlan(uid);
+      case 'log_daily_checkin':
+        return this.toolLogDailyCheckin(uid, input);
+      case 'start_screening':
+        return this.toolStartScreening(input.instrument);
+      case 'submit_screening':
+        return this.toolSubmitScreening(uid, input.instrument, input.answers, input.duration_ms);
+      case 'run_coping_exercise':
+        return this.toolRunCopingExercise(input.exercise_type, uid);
+      case 'mark_exercise_step':
+        return this.toolMarkExerciseStep(input.step_number, uid);
+      case 'complete_exercise':
+        return this.toolCompleteExercise(input.exercise_type, input.outcome, uid);
       default:
         return { error: `Unknown tool: ${name}` };
     }
@@ -2712,16 +3014,19 @@ export class EkaService {
 
   // ============ CONVERSATION CRUD ============
 
-  async getConversations(userId: string) {
+  async getConversations(userId: string, tag?: string) {
+    const filter: any = { user: new Types.ObjectId(userId), is_active: true };
+    if (tag) filter.tags = tag;
     return this.conversationModel
-      .find({ user: new Types.ObjectId(userId), is_active: true })
+      .find(filter)
       .sort({ updated_at: -1 })
-      .select('title messages created_at updated_at')
+      .select('title messages tags created_at updated_at')
       .lean()
       .then((convos) =>
         convos.map((c: any) => ({
           _id: c._id,
           title: c.title,
+          tags: c.tags || [],
           message_count: c.messages?.length || 0,
           last_message: c.messages?.[c.messages.length - 1]?.content?.slice(0, 100),
           created_at: c.created_at,
@@ -3042,6 +3347,10 @@ export class EkaService {
         if (tr.name === 'generate_checkup_report' && !tr.result?.error) {
           textOnlyNextRound = true;
         }
+        // Recovery write tools → text-only to present conversational summary
+        if (['start_screening', 'submit_screening', 'run_coping_exercise'].includes(tr.name)) {
+          textOnlyNextRound = true;
+        }
       }
 
       // Build tool result messages for next round
@@ -3102,6 +3411,17 @@ export class EkaService {
         return this.toolRunCheckupInterview(uid, input.session_id, input);
       case 'generate_checkup_report':
         return this.toolGenerateCheckupReportTrial(uid, input.session_id);
+      // Recovery tools (stateless — no user data needed)
+      case 'start_screening':
+        return this.toolStartScreening(input.instrument);
+      case 'submit_screening':
+        return this.toolSubmitScreeningTrial(input.instrument, input.answers, input.duration_ms);
+      case 'run_coping_exercise':
+        return this.toolRunCopingExercise(input.exercise_type);
+      case 'mark_exercise_step':
+        return this.toolMarkExerciseStep(input.step_number);
+      case 'complete_exercise':
+        return this.toolCompleteExercise(input.exercise_type, input.outcome);
       default:
         return { error: 'This feature requires a full Rapid Capsule account. Sign up at rapidcapsule.com to unlock it!' };
     }
@@ -3273,5 +3593,750 @@ export class EkaService {
       this.logger.error('Trial drug interaction check failed:', e.message);
       return { error: 'Failed to check drug interactions. Please try again.' };
     }
+  }
+
+  // ============ RECOVERY TOOL HANDLERS ============
+
+  private async toolGetRecoveryProfile(userId: Types.ObjectId) {
+    const profile = await this.recoveryProfileModel.findOne({
+      user: userId,
+      status: { $ne: 'archived' },
+      deleted_at: { $exists: false },
+    }).lean();
+
+    if (!profile) {
+      return { message: 'You are not enrolled in the recovery programme. Visit the Recovery section to get started.', enrolled: false };
+    }
+
+    const sobrietyDays = (profile as any).sobriety_start_date
+      ? Math.max(0, Math.floor((Date.now() - new Date((profile as any).sobriety_start_date).getTime()) / 86400000))
+      : 0;
+
+    const substances = ((profile as any).substance_use_history || []).map((s: any) => ({
+      substance: s.substance,
+      is_primary: s.is_primary,
+      use_frequency: s.use_frequency,
+      years_of_use: s.years_of_use,
+    }));
+
+    const totalMilestones = await this.recoveryMilestoneModel.countDocuments({ user: userId });
+
+    return {
+      enrolled: true,
+      status: (profile as any).status,
+      sobriety_days: sobrietyDays,
+      sobriety_start_date: (profile as any).sobriety_start_date,
+      substances,
+      risk_level: (profile as any).current_risk_level || 'low',
+      care_level: (profile as any).care_level || 'outpatient',
+      motivation_level: (profile as any).motivation_level,
+      total_milestones_earned: totalMilestones,
+      enrollment_date: (profile as any).created_at,
+    };
+  }
+
+  private async toolGetRecoveryDashboard(userId: Types.ObjectId) {
+    const profile = await this.recoveryProfileModel.findOne({
+      user: userId,
+      status: 'active',
+      deleted_at: { $exists: false },
+    }).lean();
+
+    if (!profile) {
+      return { message: 'You are not enrolled in the recovery programme.', enrolled: false };
+    }
+
+    const sobrietyDays = (profile as any).sobriety_start_date
+      ? Math.max(0, Math.floor((Date.now() - new Date((profile as any).sobriety_start_date).getTime()) / 86400000))
+      : 0;
+
+    const primarySubstance = ((profile as any).substance_use_history || []).find((s: any) => s.is_primary)?.substance || 'substances';
+
+    // Mood + craving trends (last 14 days)
+    const fourteenDaysAgo = new Date(Date.now() - 14 * 86400000);
+    const logs = await this.sobrietyLogModel
+      .find({ user: userId, log_date: { $gte: fourteenDaysAgo } })
+      .sort({ log_date: 1 })
+      .lean();
+
+    const moodTrend = logs.filter((l: any) => l.mood_score != null).map((l: any) => ({
+      date: new Date(l.log_date).toISOString().split('T')[0],
+      value: l.mood_score,
+    }));
+    const cravingTrend = logs.filter((l: any) => l.craving_intensity != null).map((l: any) => ({
+      date: new Date(l.log_date).toISOString().split('T')[0],
+      value: l.craving_intensity,
+    }));
+
+    const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+    const todayCheckedIn = logs.some((l: any) => new Date(l.log_date) >= todayStart);
+
+    // Next milestone
+    const nextMs = getNextSobrietyMilestone(sobrietyDays);
+    const nextMilestone = nextMs ? {
+      name: nextMs.name,
+      days_required: nextMs.value,
+      days_remaining: nextMs.value - sobrietyDays,
+    } : null;
+
+    // Recent milestones (last 5)
+    const recentMilestones = await this.recoveryMilestoneModel
+      .find({ user: userId })
+      .sort({ achieved_at: -1 })
+      .limit(5)
+      .lean();
+
+    // Latest screening
+    const latestScreening = await this.addictionScreeningModel
+      .findOne({ user: userId, status: 'completed' })
+      .sort({ completed_at: -1 })
+      .lean();
+
+    const dashboardData = {
+      sobriety_days: sobrietyDays,
+      sobriety_start_date: (profile as any).sobriety_start_date,
+      primary_substance: primarySubstance,
+      risk_level: (profile as any).current_risk_level || 'low',
+      care_level: (profile as any).care_level || 'outpatient',
+      today_checked_in: todayCheckedIn,
+      mood_trend: moodTrend,
+      craving_trend: cravingTrend,
+      next_milestone: nextMilestone,
+      recent_milestones: recentMilestones.map((m: any) => ({
+        name: m.name,
+        icon: m.icon || '🏆',
+        points: m.points || 0,
+        achieved_at: m.achieved_at,
+      })),
+      latest_screening: latestScreening ? {
+        instrument: (latestScreening as any).instrument,
+        score: (latestScreening as any).total_score,
+        max_score: (latestScreening as any).max_possible_score,
+        risk_level: (latestScreening as any).risk_zone?.level,
+        date: (latestScreening as any).completed_at,
+      } : null,
+    };
+
+    return {
+      ...dashboardData,
+      __artifact: { type: 'recovery_dashboard', data: dashboardData },
+    };
+  }
+
+  private async toolGetSobrietyStats(userId: Types.ObjectId) {
+    const profile = await this.recoveryProfileModel.findOne({
+      user: userId,
+      status: 'active',
+      deleted_at: { $exists: false },
+    }).lean();
+
+    if (!profile) {
+      return { message: 'You are not enrolled in the recovery programme.', enrolled: false };
+    }
+
+    const sobrietyDays = (profile as any).sobriety_start_date
+      ? Math.max(0, Math.floor((Date.now() - new Date((profile as any).sobriety_start_date).getTime()) / 86400000))
+      : 0;
+
+    const milestones = await this.recoveryMilestoneModel
+      .find({ user: userId, milestone_type: 'sobriety_days' })
+      .sort({ achieved_at: -1 })
+      .lean();
+
+    const nextMs = getNextSobrietyMilestone(sobrietyDays);
+    const totalPoints = milestones.reduce((sum: number, m: any) => sum + (m.reward_points || 0), 0);
+
+    return {
+      current_streak_days: sobrietyDays,
+      sobriety_start_date: (profile as any).sobriety_start_date,
+      milestones_earned: milestones.length,
+      total_points: totalPoints,
+      latest_milestone: milestones[0] ? {
+        name: (milestones[0] as any).milestone_name,
+        achieved_at: (milestones[0] as any).achieved_at,
+      } : null,
+      next_milestone: nextMs ? {
+        name: nextMs.name,
+        days_required: nextMs.value,
+        days_remaining: nextMs.value - sobrietyDays,
+        points: nextMs.points,
+      } : null,
+    };
+  }
+
+  private async toolGetDailyLogs(userId: Types.ObjectId, days: number) {
+    const since = new Date(Date.now() - days * 86400000);
+    const logs = await this.sobrietyLogModel
+      .find({ user: userId, log_date: { $gte: since } })
+      .sort({ log_date: -1 })
+      .lean();
+
+    if (!logs.length) {
+      return { message: `No daily logs found in the last ${days} days.`, logs: [] };
+    }
+
+    return {
+      count: logs.length,
+      period_days: days,
+      logs: logs.map((l: any) => ({
+        date: new Date(l.log_date).toISOString().split('T')[0],
+        sober_today: l.sober_today,
+        mood_score: l.mood_score,
+        craving_intensity: l.craving_intensity,
+        sleep_quality: l.sleep_quality,
+        triggers_encountered: l.triggers_encountered,
+        notes: l.notes,
+      })),
+    };
+  }
+
+  private async toolGetScreeningHistory(userId: Types.ObjectId, instrument?: string, limit = 5) {
+    const query: any = { user: userId, deleted_at: { $exists: false } };
+    if (instrument) query.instrument = instrument;
+
+    const screenings = await this.addictionScreeningModel
+      .find(query)
+      .sort({ created_at: -1 })
+      .limit(limit)
+      .lean();
+
+    if (!screenings.length) {
+      return { message: 'No screenings found.', screenings: [] };
+    }
+
+    const maxScores: Record<string, number> = { audit: 40, dast10: 10, cage: 4, assist: 39 };
+    return {
+      count: screenings.length,
+      screenings: screenings.map((s: any) => ({
+        instrument: s.instrument,
+        total_score: s.total_score,
+        max_score: maxScores[s.instrument] || 40,
+        risk_level: s.risk_level,
+        risk_zone_label: s.risk_zone_label,
+        date: s.created_at,
+        is_baseline: s.is_baseline,
+      })),
+    };
+  }
+
+  private async toolGetRecoveryPlan(userId: Types.ObjectId) {
+    const plan = await this.recoveryPlanModel.findOne({
+      user: userId,
+      status: 'active',
+      deleted_at: { $exists: false },
+    }).lean();
+
+    if (!plan) {
+      return { message: 'No active recovery plan found. Ask your care team or start one in the Recovery section.' };
+    }
+
+    return {
+      stage_of_change: (plan as any).stage_of_change,
+      goals: (plan as any).goals,
+      relapse_prevention: (plan as any).relapse_prevention,
+      coping_strategies: (plan as any).coping_strategies,
+      support_network: (plan as any).support_network,
+      created_at: (plan as any).created_at,
+      updated_at: (plan as any).updated_at,
+    };
+  }
+
+  private async toolLogDailyCheckin(userId: Types.ObjectId, input: any) {
+    // Check if already logged today
+    const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+    const existing = await this.sobrietyLogModel.findOne({
+      user: userId,
+      log_date: { $gte: todayStart },
+    });
+    if (existing) {
+      return { message: 'You have already completed your daily check-in today. Come back tomorrow!', already_logged: true };
+    }
+
+    const soberValue = input.sober_today === false || input.sober_today === 'false' || input.sober_today === 'no' ? false : true;
+    const logData: any = {
+      user: userId,
+      log_date: new Date(),
+      sober_today: soberValue,
+      mood_score: Math.min(10, Math.max(1, input.mood_score || 5)),
+    };
+    if (input.craving_intensity != null) logData.craving_intensity = Math.min(10, Math.max(0, input.craving_intensity));
+    if (input.sleep_quality != null) logData.sleep_quality = Math.min(10, Math.max(1, input.sleep_quality));
+    if (input.sleep_hours != null) logData.sleep_hours = input.sleep_hours;
+    if (input.energy_level != null) logData.energy_level = Math.min(10, Math.max(1, input.energy_level));
+    if (input.anxiety_level != null) logData.anxiety_level = Math.min(10, Math.max(1, input.anxiety_level));
+    if (input.triggers_encountered?.length) logData.triggers_encountered = input.triggers_encountered;
+    if (input.coping_strategies_used?.length) logData.coping_strategies_used = input.coping_strategies_used;
+    if (input.medications_taken != null) logData.medications_taken = input.medications_taken;
+    if (input.exercised != null) logData.exercised = input.exercised;
+    if (input.gratitude_note) logData.gratitude_note = input.gratitude_note;
+    if (input.notes) logData.notes = input.notes;
+    if (!logData.sober_today && input.relapse_details) logData.relapse_details = input.relapse_details;
+
+    const log = await this.sobrietyLogModel.create(logData);
+
+    // Check and award milestones
+    const profile = await this.recoveryProfileModel.findOne({ user: userId, status: 'active' }).lean();
+    let newMilestone: any = null;
+    if (profile && (profile as any).sobriety_start_date) {
+      const sobrietyDays = Math.max(0, Math.floor((Date.now() - new Date((profile as any).sobriety_start_date).getTime()) / 86400000));
+      const matchingMs = SOBRIETY_MILESTONES.find(m => m.value === sobrietyDays);
+      if (matchingMs) {
+        const alreadyEarned = await this.recoveryMilestoneModel.findOne({
+          user: userId,
+          milestone_type: 'sobriety_days',
+          milestone_value: matchingMs.value,
+        });
+        if (!alreadyEarned) {
+          newMilestone = await this.recoveryMilestoneModel.create({
+            user: userId,
+            milestone_type: 'sobriety_days',
+            milestone_name: matchingMs.name,
+            milestone_value: matchingMs.value,
+            reward_points: matchingMs.points || 0,
+            celebration_message: matchingMs.message,
+            achieved_at: new Date(),
+          });
+        }
+      }
+    }
+
+    // Fetch yesterday's log for comparison
+    const yesterdayStart = new Date(todayStart); yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+    const yesterdayLog = await this.sobrietyLogModel.findOne({
+      user: userId,
+      log_date: { $gte: yesterdayStart, $lt: todayStart },
+    }).lean() as any;
+
+    // Calculate streak (consecutive sober days up to today)
+    const recentForStreak = await this.sobrietyLogModel
+      .find({ user: userId, sober_today: true })
+      .sort({ log_date: -1 })
+      .limit(30)
+      .select('log_date')
+      .lean();
+    let soberStreak = 1; // counting today
+    const streakCheck = new Date(todayStart); streakCheck.setDate(streakCheck.getDate() - 1);
+    for (const sl of recentForStreak as any[]) {
+      const slDay = new Date(sl.log_date); slDay.setHours(0, 0, 0, 0);
+      if (slDay.getTime() === streakCheck.getTime()) {
+        soberStreak++;
+        streakCheck.setDate(streakCheck.getDate() - 1);
+      } else if (slDay.getTime() < streakCheck.getTime()) {
+        break;
+      }
+    }
+
+    // Build comparison data
+    const comparison: any = {};
+    if (yesterdayLog) {
+      comparison.yesterday_mood = yesterdayLog.mood_score;
+      comparison.mood_change = (log as any).mood_score - (yesterdayLog.mood_score || 0);
+      if (yesterdayLog.craving_intensity != null && (log as any).craving_intensity != null) {
+        comparison.yesterday_craving = yesterdayLog.craving_intensity;
+        comparison.craving_change = (log as any).craving_intensity - yesterdayLog.craving_intensity;
+      }
+      if (yesterdayLog.sleep_quality && (log as any).sleep_quality) {
+        comparison.yesterday_sleep_quality = yesterdayLog.sleep_quality;
+      }
+      if (yesterdayLog.triggers_encountered?.length) {
+        comparison.yesterday_triggers = yesterdayLog.triggers_encountered;
+      }
+    }
+
+    // Build a refreshed dashboard artifact so the right pane auto-updates
+    const dashboardResult = await this.toolGetRecoveryDashboard(userId);
+
+    return {
+      logged: true,
+      log_date: log.log_date,
+      mood_score: (log as any).mood_score,
+      craving_intensity: (log as any).craving_intensity,
+      sober_today: (log as any).sober_today,
+      sleep_quality: (log as any).sleep_quality,
+      sleep_hours: (log as any).sleep_hours,
+      triggers: (log as any).triggers_encountered || [],
+      coping_strategies: (log as any).coping_strategies_used || [],
+      gratitude_note: (log as any).gratitude_note,
+      // Comparison with yesterday
+      comparison,
+      sober_streak_days: logData.sober_today ? soberStreak : 0,
+      new_milestone: newMilestone ? {
+        name: newMilestone.milestone_name,
+        points: newMilestone.reward_points,
+        message: newMilestone.celebration_message,
+      } : null,
+      // Attach dashboard artifact so right pane refreshes
+      __artifact: (dashboardResult as any).__artifact,
+    };
+  }
+
+  private toolStartScreening(instrument: string) {
+    const instruments: Record<string, any> = { audit: AUDIT, dast10: DAST10, cage: CAGE, assist: ASSIST };
+    const inst = instruments[instrument?.toLowerCase()];
+    if (!inst) {
+      return { error: `Unknown screening instrument: ${instrument}. Available: AUDIT, DAST-10, CAGE, ASSIST.` };
+    }
+
+    return {
+      instrument: inst.id,
+      instrument_name: inst.name,
+      description: inst.description,
+      estimated_minutes: inst.estimated_minutes,
+      total_questions: inst.questions.length,
+      questions: inst.questions.map((q: any) => ({
+        id: q.id,
+        text: q.text,
+        help_text: q.help_text,
+        options: q.options,
+      })),
+    };
+  }
+
+  private async toolSubmitScreening(userId: Types.ObjectId, instrument: string, answers: Record<string, number>, durationMs?: number) {
+    const instruments: Record<string, any> = { audit: AUDIT, dast10: DAST10, cage: CAGE, assist: ASSIST };
+    const inst = instruments[instrument?.toLowerCase()];
+    if (!inst) {
+      return { error: `Unknown instrument: ${instrument}` };
+    }
+
+    // Score the answers
+    let totalScore = 0;
+    const questionScores: Record<string, number> = {};
+    for (const q of inst.questions) {
+      const val = answers[q.id] ?? 0;
+      questionScores[q.id] = val;
+      totalScore += val;
+    }
+
+    // Calculate subscales if defined
+    const subscaleScores: Record<string, number> = {};
+    if (inst.scoring.subscales) {
+      for (const [name, qIds] of Object.entries(inst.scoring.subscales) as [string, string[]][]) {
+        subscaleScores[name] = qIds.reduce((s, qid) => s + (questionScores[qid] || 0), 0);
+      }
+    }
+
+    // Determine risk zone
+    const riskZone = inst.risk_zones.find((z: any) => totalScore >= z.min_score && totalScore <= z.max_score);
+
+    // Get previous score for comparison
+    const previousScreening = await this.addictionScreeningModel
+      .findOne({ user: userId, instrument: inst.id, status: 'completed' })
+      .sort({ completed_at: -1 })
+      .lean();
+    const previousScore = previousScreening ? (previousScreening as any).total_score : null;
+
+    // Check if baseline
+    const isBaseline = !previousScreening;
+
+    // Generate AI interpretation using Haiku
+    let aiInterpretation: any = null;
+    try {
+      if (this.client) {
+        const interpretPrompt = `You are a clinical recovery AI. Interpret the following screening result for a patient.
+Instrument: ${inst.name}
+Score: ${totalScore} / ${inst.scoring.max_score}
+Risk Zone: ${riskZone?.label || 'Unknown'} (${riskZone?.level || 'unknown'})
+${previousScore != null ? `Previous Score: ${previousScore}` : 'This is their baseline screening.'}
+${Object.keys(subscaleScores).length ? `Subscale Scores: ${JSON.stringify(subscaleScores)}` : ''}
+
+Respond in JSON with these fields:
+- summary (1-2 sentences)
+- risk_assessment (1-2 sentences about what the risk level means)
+- recommended_interventions (array of 2-4 brief action items)
+- motivational_message (1 encouraging sentence)
+${previousScore != null ? '- comparison_to_previous (1 sentence comparing scores)' : ''}`;
+
+        const response = await this.client.messages.create({
+          model: MODEL,
+          max_tokens: 600,
+          messages: [{ role: 'user', content: interpretPrompt }],
+        });
+        const text = (response.content[0] as any).text || '';
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          aiInterpretation = JSON.parse(jsonMatch[0]);
+        }
+      }
+    } catch (err) {
+      this.logger.warn('Failed to generate screening AI interpretation:', err.message);
+    }
+
+    // Save to database
+    const screening = await this.addictionScreeningModel.create({
+      user: userId,
+      instrument: inst.id,
+      screening_type: 'self',
+      answers: questionScores,
+      total_score: totalScore,
+      subscale_scores: subscaleScores,
+      risk_level: riskZone?.level || 'low',
+      risk_zone_label: riskZone?.label || 'Unknown',
+      is_baseline: isBaseline,
+      ai_interpretation: aiInterpretation,
+      duration_ms: durationMs,
+    });
+
+    const reportData = {
+      instrument: inst.id,
+      instrument_name: inst.name,
+      total_score: totalScore,
+      max_score: inst.scoring.max_score,
+      risk_level: riskZone?.level || 'unknown',
+      risk_zone_label: riskZone?.label,
+      colour: riskZone?.colour,
+      recommendation: riskZone?.recommendation,
+      risk_zones: inst.risk_zones,
+      subscale_scores: subscaleScores,
+      ai_interpretation: aiInterpretation,
+      previous_score: previousScore,
+      is_baseline: isBaseline,
+      date: new Date().toISOString(),
+    };
+
+    return {
+      screening_id: screening._id,
+      ...reportData,
+      __artifact: { type: 'screening_report', data: reportData },
+    };
+  }
+
+  private async toolRunCopingExercise(exerciseType: string, userId?: Types.ObjectId) {
+    const exercise = getExercise(exerciseType);
+    if (!exercise) {
+      // Return available exercises so Claude can suggest one
+      const available = THERAPEUTIC_EXERCISES.map(e => ({
+        id: e.id,
+        name: e.name,
+        category: e.category,
+        when_to_use: e.when_to_use,
+        estimated_minutes: e.estimated_minutes,
+      }));
+      return {
+        error: `Exercise "${exerciseType}" not found.`,
+        available_exercises: available,
+      };
+    }
+
+    const exerciseData = {
+      exercise_id: exercise.id,
+      name: exercise.name,
+      category: exercise.category,
+      description: exercise.description,
+      estimated_minutes: exercise.estimated_minutes,
+      steps: exercise.steps,
+      evidence_base: exercise.evidence_base,
+    };
+
+    // Persist to DB for authenticated users
+    if (userId) {
+      try {
+        // Find the active conversation this exercise is in
+        const activeConv = await this.conversationModel
+          .findOne({ user: userId, is_active: true })
+          .sort({ updated_at: -1 })
+          .select('_id')
+          .lean();
+
+        await this.copingExerciseSessionModel.create({
+          user: userId,
+          ...exerciseData,
+          source: 'eka',
+          conversation_id: activeConv?._id || undefined,
+        });
+      } catch (err) {
+        this.logger.error('Failed to persist coping exercise session:', err);
+      }
+    }
+
+    return {
+      ...exerciseData,
+      instructions: 'IMPORTANT: As you guide the patient through each step, call mark_exercise_step(step_number) after each step is done. When the exercise is complete, call complete_exercise with a summary.',
+      __artifact: { type: 'coping_exercise', data: exerciseData },
+    };
+  }
+
+  private async toolMarkExerciseStep(stepNumber: number, userId?: Types.ObjectId) {
+    // Persist step to DB for authenticated users
+    if (userId) {
+      try {
+        await this.copingExerciseSessionModel.findOneAndUpdate(
+          { user: userId, deleted_at: { $exists: false } },
+          { $addToSet: { completed_steps: stepNumber } },
+          { sort: { created_at: -1 } },
+        );
+      } catch (err) {
+        this.logger.error('Failed to persist exercise step:', err);
+      }
+    }
+
+    return {
+      marked: true,
+      step: stepNumber,
+      __artifact: {
+        type: 'exercise_step_update',
+        data: { step: stepNumber },
+      },
+    };
+  }
+
+  private async toolCompleteExercise(exerciseType: string, outcome: string, userId?: Types.ObjectId) {
+    const exercise = getExercise(exerciseType);
+    const totalSteps = exercise ? exercise.steps.length : 7;
+    const allSteps = Array.from({ length: totalSteps }, (_, i) => i + 1);
+    const completedAt = new Date();
+
+    // Persist completion + extract conversation responses for authenticated users
+    if (userId) {
+      try {
+        const updateData: any = {
+          completed: true,
+          completed_steps: allSteps,
+          outcome,
+          completed_at: completedAt,
+        };
+
+        // Find the exercise session to get conversation_id and created_at
+        const session = await this.copingExerciseSessionModel
+          .findOne({ user: userId, exercise_id: exerciseType, deleted_at: { $exists: false } })
+          .sort({ created_at: -1 })
+          .select('conversation_id created_at')
+          .lean();
+
+        // Extract conversation messages from the exercise period
+        if (session?.conversation_id) {
+          try {
+            const conversation = await this.conversationModel
+              .findById(session.conversation_id)
+              .select('messages')
+              .lean();
+
+            if (conversation?.messages) {
+              // 60s buffer to capture the user message that triggered the exercise
+              const exerciseStart = new Date(new Date(session.created_at).getTime() - 60000);
+              const exerciseMessages = conversation.messages
+                .filter((m: any) => new Date(m.created_at) >= exerciseStart)
+                .map((m: any) => ({ role: m.role, content: m.content }));
+
+              if (exerciseMessages.length > 0) {
+                updateData.responses = exerciseMessages;
+              }
+            }
+          } catch (convErr) {
+            this.logger.warn('Could not extract exercise conversation:', convErr);
+          }
+        }
+
+        await this.copingExerciseSessionModel.findOneAndUpdate(
+          { user: userId, exercise_id: exerciseType, deleted_at: { $exists: false } },
+          updateData,
+          { sort: { created_at: -1 } },
+        );
+      } catch (err) {
+        this.logger.error('Failed to persist exercise completion:', err);
+      }
+    }
+
+    return {
+      completed: true,
+      exercise_type: exerciseType,
+      outcome,
+      __artifact: {
+        type: 'exercise_complete',
+        data: {
+          exercise_type: exerciseType,
+          completed_steps: allSteps,
+          completed: true,
+          outcome,
+          completed_at: completedAt.toISOString(),
+        },
+      },
+    };
+  }
+
+  // ============ TRIAL-SPECIFIC RECOVERY HANDLERS ============
+
+  private async toolSubmitScreeningTrial(instrument: string, answers: Record<string, number>, durationMs?: number) {
+    const instruments: Record<string, any> = { audit: AUDIT, dast10: DAST10, cage: CAGE, assist: ASSIST };
+    const inst = instruments[instrument?.toLowerCase()];
+    if (!inst) {
+      return { error: `Unknown instrument: ${instrument}` };
+    }
+
+    // Score the answers
+    let totalScore = 0;
+    const questionScores: Record<string, number> = {};
+    for (const q of inst.questions) {
+      const val = answers[q.id] ?? 0;
+      questionScores[q.id] = val;
+      totalScore += val;
+    }
+
+    // Calculate subscales
+    const subscaleScores: Record<string, number> = {};
+    if (inst.scoring.subscales) {
+      for (const [name, qIds] of Object.entries(inst.scoring.subscales) as [string, string[]][]) {
+        subscaleScores[name] = qIds.reduce((s, qid) => s + (questionScores[qid] || 0), 0);
+      }
+    }
+
+    // Determine risk zone
+    const riskZone = inst.risk_zones.find((z: any) => totalScore >= z.min_score && totalScore <= z.max_score);
+
+    // AI interpretation
+    let aiInterpretation: any = null;
+    try {
+      if (this.client) {
+        const interpretPrompt = `You are a clinical recovery AI. Interpret the following screening result.
+Instrument: ${inst.name}
+Score: ${totalScore} / ${inst.scoring.max_score}
+Risk Zone: ${riskZone?.label || 'Unknown'} (${riskZone?.level || 'unknown'})
+This is a trial user's first screening (baseline).
+${Object.keys(subscaleScores).length ? `Subscale Scores: ${JSON.stringify(subscaleScores)}` : ''}
+
+Respond in JSON with these fields:
+- summary (1-2 sentences)
+- risk_assessment (1-2 sentences about what the risk level means)
+- recommended_interventions (array of 2-4 brief action items)
+- motivational_message (1 encouraging sentence)`;
+
+        const response = await this.client.messages.create({
+          model: MODEL,
+          max_tokens: 600,
+          messages: [{ role: 'user', content: interpretPrompt }],
+        });
+        const text = (response.content[0] as any).text || '';
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          aiInterpretation = JSON.parse(jsonMatch[0]);
+        }
+      }
+    } catch (err) {
+      this.logger.warn('Trial screening AI interpretation failed:', err.message);
+    }
+
+    // NOT saved to DB in trial mode
+    const reportData = {
+      instrument: inst.id,
+      instrument_name: inst.name,
+      total_score: totalScore,
+      max_score: inst.scoring.max_score,
+      risk_level: riskZone?.level || 'unknown',
+      risk_zone_label: riskZone?.label,
+      colour: riskZone?.colour,
+      recommendation: riskZone?.recommendation,
+      risk_zones: inst.risk_zones,
+      subscale_scores: subscaleScores,
+      ai_interpretation: aiInterpretation,
+      previous_score: null,
+      is_baseline: true,
+      date: new Date().toISOString(),
+    };
+
+    return {
+      ...reportData,
+      trial_mode: true,
+      __artifact: { type: 'screening_report', data: reportData },
+    };
   }
 }

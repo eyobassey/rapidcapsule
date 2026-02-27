@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { EXERCISE_SUMMARY } from './eka-recovery-knowledge';
 
 export const EKA_TOOLS: Anthropic.Tool[] = [
   {
@@ -230,12 +231,368 @@ export const EKA_TOOLS: Anthropic.Tool[] = [
       required: ['prescription_id', 'source'],
     },
   },
+
+  // ─── RECOVERY TOOLS ─────────────────────────────────────────────
+  {
+    name: 'get_recovery_profile',
+    description:
+      "Get the patient's addiction recovery profile — enrollment status, sobriety days, primary substance, risk level, care level, consent status, outcomes, and relapse history. Call this first when a recovery-enrolled patient asks about their recovery.",
+    input_schema: {
+      type: 'object' as const,
+      properties: {},
+    },
+  },
+  {
+    name: 'get_recovery_dashboard',
+    description:
+      "Get the patient's recovery dashboard snapshot — today's check-in status, mood trend (14 days), recent milestones, and latest screening summary. Shows a recovery dashboard artifact in the side panel.",
+    input_schema: {
+      type: 'object' as const,
+      properties: {},
+    },
+  },
+  {
+    name: 'get_sobriety_stats',
+    description:
+      "Get the patient's sobriety statistics — current sobriety days, longest streak, total relapses, next milestone, and earned milestones. Use when patient asks 'how am I doing?' or 'how long have I been sober?'",
+    input_schema: {
+      type: 'object' as const,
+      properties: {},
+    },
+  },
+  {
+    name: 'get_daily_logs',
+    description:
+      "Get the patient's recent daily recovery check-in logs for trend analysis. Returns mood, craving, sleep, triggers, and coping strategies over time.",
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        days: { type: 'number', description: 'Number of recent days to return (default 14)' },
+      },
+    },
+  },
+  {
+    name: 'get_screening_history',
+    description:
+      "Get the patient's addiction screening history — past AUDIT, DAST-10, CAGE, and ASSIST results with scores, risk levels, and AI interpretations.",
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        instrument: { type: 'string', enum: ['audit', 'dast10', 'cage', 'assist'], description: 'Filter by specific instrument' },
+        limit: { type: 'number', description: 'Number of recent screenings (default 5)' },
+      },
+    },
+  },
+  {
+    name: 'get_recovery_plan',
+    description:
+      "Get the patient's active recovery plan — stages, goals, interventions, and relapse prevention strategies (triggers, warning signs, coping strategies, emergency plan).",
+    input_schema: {
+      type: 'object' as const,
+      properties: {},
+    },
+  },
+  {
+    name: 'log_daily_checkin',
+    description:
+      "Submit the patient's daily recovery check-in. Call this AFTER you have conversationally gathered all the check-in fields. Required: sober_today (boolean), mood_score (1-10). Optional: craving_intensity (0-10), sleep_quality (1-10), sleep_hours, energy_level (1-10), anxiety_level (1-10), triggers_encountered (string array), coping_strategies_used (string array), medications_taken (boolean), exercised (boolean), gratitude_note, notes. If sober_today is false, also gather relapse_details.",
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        sober_today: { type: 'boolean', description: 'Whether the patient stayed sober today' },
+        mood_score: { type: 'number', description: 'Mood score 1-10' },
+        craving_intensity: { type: 'number', description: 'Craving intensity 0-10' },
+        sleep_quality: { type: 'number', description: 'Sleep quality 1-10' },
+        sleep_hours: { type: 'number', description: 'Hours of sleep' },
+        energy_level: { type: 'number', description: 'Energy level 1-10' },
+        anxiety_level: { type: 'number', description: 'Anxiety level 1-10' },
+        triggers_encountered: { type: 'array', items: { type: 'string' }, description: 'Triggers experienced today' },
+        coping_strategies_used: { type: 'array', items: { type: 'string' }, description: 'Coping strategies used' },
+        medications_taken: { type: 'boolean', description: 'Whether recovery medications were taken' },
+        exercised: { type: 'boolean', description: 'Whether patient exercised' },
+        gratitude_note: { type: 'string', description: "Patient's gratitude note" },
+        notes: { type: 'string', description: 'Additional notes' },
+        relapse_details: {
+          type: 'object',
+          description: 'Required if sober_today is false — details about the relapse',
+          properties: {
+            substance: { type: 'string' },
+            amount: { type: 'string' },
+            trigger: { type: 'string' },
+            was_planned: { type: 'boolean' },
+            sought_help_after: { type: 'boolean' },
+          },
+        },
+      },
+      required: ['sober_today', 'mood_score'],
+    },
+  },
+  {
+    name: 'start_screening',
+    description:
+      "Start a clinical addiction screening (AUDIT for alcohol, DAST-10 for drugs, CAGE for quick alcohol screen, ASSIST for multi-substance). Returns the instrument's questions. You will then administer them conversationally, one at a time, and finally call submit_screening with all answers.",
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        instrument: { type: 'string', enum: ['audit', 'dast10', 'cage', 'assist'], description: 'Screening instrument to use' },
+      },
+      required: ['instrument'],
+    },
+  },
+  {
+    name: 'submit_screening',
+    description:
+      "Submit completed screening answers. Pass all question answers as key-value pairs (question_id: selected_value). Returns scored results with risk level. A screening report artifact appears in the side panel.",
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        instrument: { type: 'string', enum: ['audit', 'dast10', 'cage', 'assist'], description: 'Instrument type' },
+        answers: { type: 'object', description: 'Question ID to selected numeric value mapping (e.g. { "audit_q1": 2, "audit_q2": 1 })' },
+        duration_ms: { type: 'number', description: 'Time taken in milliseconds' },
+      },
+      required: ['instrument', 'answers'],
+    },
+  },
+  {
+    name: 'run_coping_exercise',
+    description:
+      "Guide the patient through an evidence-based coping exercise. Returns structured exercise steps and shows an interactive exercise artifact in the side panel. Choose the exercise type based on the patient's current need.",
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        exercise_type: {
+          type: 'string',
+          enum: ['urge_surfing', 'grounding_5_4_3_2_1', 'box_breathing', 'thought_record', 'pros_cons_analysis', 'halt_check', 'safety_planning'],
+          description: 'The type of coping exercise to run',
+        },
+      },
+      required: ['exercise_type'],
+    },
+  },
+  {
+    name: 'mark_exercise_step',
+    description:
+      'Mark a coping exercise step as completed. You MUST call this after the patient completes each step of a coping exercise. This updates the progress tracker in the side panel. Without this call, the patient sees "0 of N steps" which is confusing.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        step_number: {
+          type: 'number',
+          description: 'The 1-indexed step number that was just completed (e.g. 1 for the first step)',
+        },
+      },
+      required: ['step_number'],
+    },
+  },
+  {
+    name: 'complete_exercise',
+    description:
+      'Mark a coping exercise as fully completed and generate a completion summary. You MUST call this when the patient finishes a coping exercise. This shows a completion report in the side panel with all steps checked off and a summary of how the patient is feeling.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        exercise_type: {
+          type: 'string',
+          description: 'The exercise that was completed (e.g. halt_check, box_breathing)',
+        },
+        outcome: {
+          type: 'string',
+          description: 'Brief summary of how the patient feels after the exercise and any key observations from the conversation',
+        },
+      },
+      required: ['exercise_type', 'outcome'],
+    },
+  },
 ];
 
-export function buildSystemPrompt(patientName: string, language?: string): string {
+export interface CheckinSnapshot {
+  date: string;
+  mood_score: number;
+  craving_intensity: number;
+  sober: boolean;
+  triggers: string[];
+  coping_strategies: string[];
+  sleep_quality?: number;
+  sleep_hours?: number;
+  gratitude_note?: string;
+}
+
+export interface ScreeningSnapshot {
+  instrument: string;
+  score: number;
+  max_score: number;
+  risk_level: string;
+  date: string;
+}
+
+export interface ExerciseSnapshot {
+  name: string;
+  category: string;
+  date: string;
+}
+
+export interface RecoveryContext {
+  sobriety_days: number;
+  primary_substance: string;
+  risk_level: string;
+  care_level: string;
+  recent_mood_avg: number;
+  recent_craving_avg: number;
+  has_plan: boolean;
+  last_checkin_date: string | null;
+  today_checked_in: boolean;
+  // Rich history
+  recent_checkins: CheckinSnapshot[];
+  recent_screenings: ScreeningSnapshot[];
+  recent_exercises: ExerciseSnapshot[];
+  milestones_earned: string[];
+  log_streak: number;
+  mood_trend: 'improving' | 'declining' | 'stable' | 'insufficient_data';
+  craving_trend: 'improving' | 'worsening' | 'stable' | 'insufficient_data';
+  top_triggers: string[];
+  top_coping_strategies: string[];
+}
+
+export function buildRecoveryPromptSection(ctx: RecoveryContext): string {
+  // Build recent check-in history summary
+  let checkinHistory = '';
+  if (ctx.recent_checkins.length > 0) {
+    const entries = ctx.recent_checkins.map(c => {
+      const parts = [`${c.date}: mood ${c.mood_score}/10, cravings ${c.craving_intensity}/10, ${c.sober ? 'sober' : 'relapse'}`];
+      if (c.triggers.length) parts.push(`triggers: ${c.triggers.join(', ')}`);
+      if (c.coping_strategies.length) parts.push(`coping: ${c.coping_strategies.join(', ')}`);
+      if (c.sleep_quality) parts.push(`sleep ${c.sleep_quality}/10 (${c.sleep_hours || '?'}h)`);
+      if (c.gratitude_note) parts.push(`grateful for: "${c.gratitude_note}"`);
+      return `  ${parts.join(' | ')}`;
+    });
+    checkinHistory = `\nRECENT CHECK-INS (newest first):\n${entries.join('\n')}`;
+  }
+
+  // Build screening history
+  let screeningHistory = '';
+  if (ctx.recent_screenings.length > 0) {
+    const entries = ctx.recent_screenings.map(s =>
+      `  ${s.date}: ${s.instrument.toUpperCase()} — ${s.score}/${s.max_score} (${s.risk_level})`
+    );
+    screeningHistory = `\nRECENT SCREENINGS:\n${entries.join('\n')}`;
+  }
+
+  // Build exercise history
+  let exerciseHistory = '';
+  if (ctx.recent_exercises.length > 0) {
+    const entries = ctx.recent_exercises.map(e => `  ${e.date}: ${e.name} (${e.category})`);
+    exerciseHistory = `\nRECENT COPING EXERCISES:\n${entries.join('\n')}`;
+  }
+
+  // Build milestones
+  let milestonesSection = '';
+  if (ctx.milestones_earned.length > 0) {
+    milestonesSection = `\nMILESTONES EARNED: ${ctx.milestones_earned.join(', ')}`;
+  }
+
+  // Build patterns
+  let patterns = '\nPATTERNS & TRENDS:';
+  patterns += `\n- Mood trend: ${ctx.mood_trend}`;
+  patterns += `\n- Craving trend: ${ctx.craving_trend}`;
+  patterns += `\n- Check-in streak: ${ctx.log_streak} day(s)`;
+  if (ctx.top_triggers.length) patterns += `\n- Common triggers: ${ctx.top_triggers.join(', ')}`;
+  if (ctx.top_coping_strategies.length) patterns += `\n- Preferred coping strategies: ${ctx.top_coping_strategies.join(', ')}`;
+
+  return `
+
+RECOVERY COMPANION MODE:
+This patient is enrolled in addiction recovery. You are their AI recovery companion in addition to being their health assistant.
+
+RECOVERY PROFILE:
+- Sobriety: Day ${ctx.sobriety_days}
+- Primary substance: ${ctx.primary_substance}
+- Risk level: ${ctx.risk_level}
+- Care level: ${ctx.care_level}
+- Recent mood average (14d): ${ctx.recent_mood_avg}/10
+- Recent craving average (14d): ${ctx.recent_craving_avg}/10
+- Today's check-in: ${ctx.today_checked_in ? 'Complete' : 'Not yet done'}
+${ctx.has_plan ? '- Has active recovery plan' : ''}
+${checkinHistory}
+${screeningHistory}
+${exerciseHistory}
+${milestonesSection}
+${patterns}
+
+USING THE PATIENT'S HISTORY — CRITICAL:
+You have the patient's recent recovery history above. USE IT to make your responses personal and contextual:
+- Reference their specific check-in data: "Yesterday your mood was a 7 and cravings were at 3 — how are you feeling compared to that?"
+- Acknowledge patterns: "I notice you've been using music and walking as coping strategies — that seems to really work for you."
+- Celebrate progress: "Your craving intensity has been trending down this week — that's real progress."
+- Reference triggers they've mentioned before: "You mentioned work stress before — is that still a factor?"
+- If mood is declining, gently check in: "Your mood has dipped over the last few days — is there something weighing on you?"
+- Reference their screening journey if relevant: "Your last AUDIT score showed improvement — keep that momentum going."
+- If they've done exercises, reference those: "Last time you tried the grounding exercise — would you like to try something different today?"
+Do NOT recite the data back robotically. Weave it naturally into warm, conversational responses.
+Do NOT mention that you "have access to their data" — just reference it as if you naturally remember, like a caring companion would.
+
+RECOVERY PERSONALITY:
+- Extra warm, non-judgmental, trauma-informed.
+- Celebrate small wins. Never shame setbacks.
+- If they report a relapse: "Thank you for being honest. A setback doesn't erase your progress."
+- Use British English throughout.
+
+CRISIS DETECTION — CRITICAL:
+If patient expresses suicidal ideation, self-harm, overdose, or severe withdrawal:
+1. Respond with empathy: "I hear you, and I'm glad you told me."
+2. Ask C-SSRS triage: "Have you had thoughts of ending your life?" → "Have you thought about how?" → "Have you taken any steps?"
+3. Provide resources: "Please call Samaritans on 116 123 (free, 24/7) or text HOME to 741741."
+4. Strongly encourage: [[Book an appointment|book_appointment]] with a specialist.
+This OVERRIDES the recovery companion role. Do not continue casual conversation during active crisis.
+
+DAILY CHECK-IN FLOW:
+IMPORTANT: If today's check-in is already "Complete" (see above), DO NOT start another check-in. Instead, acknowledge they've already checked in today, briefly summarise how they're doing based on their recovery context, and suggest other actions (view dashboard, coping exercise, screening, or just chat).
+
+When the patient wants to do their daily check-in AND has NOT checked in today, you MUST gather ALL of the following. Do NOT skip any — especially craving_intensity:
+1. "How are you feeling today? (mood 1-10)" — REQUIRED
+2. "Were you sober today?" — REQUIRED
+3. "How strong were your cravings today? (0 = none, 10 = overwhelming)" — REQUIRED, always ask this even if they relapsed
+4. If NOT sober: gently ask about the relapse (substance, amount, trigger, whether they sought help after)
+5. "How did you sleep? (quality 1-10, and roughly how many hours)"
+6. "Any triggers today?" (map answers to triggers_encountered array)
+7. "What coping strategies did you use?" (map to coping_strategies_used array — even "called a friend" counts)
+8. "Anything you're grateful for today?" (save as gratitude_note)
+Then call log_daily_checkin with ALL gathered data. Double-check you have mood_score, sober_today, AND craving_intensity before submitting.
+Do NOT ask all questions at once. Ask 1-2 at a time, conversationally. But do NOT skip questions — every field matters for tracking trends.
+
+SCREENING ADMINISTRATION:
+When administering a screening (AUDIT, DAST-10, CAGE, ASSIST):
+1. Call start_screening with the instrument.
+2. Present questions ONE AT A TIME, conversationally.
+3. For each question, state the question text and list the options clearly.
+4. When patient responds, map their answer to the closest option value.
+5. After all questions, call submit_screening with the complete answer map.
+6. Present results empathetically: "Your score suggests..." — never "You scored X which means you have..."
+
+COPING EXERCISES (use run_coping_exercise tool):
+${EXERCISE_SUMMARY}
+Select based on what the patient describes. Guide through steps one at a time.
+
+EXERCISE PROGRESS TRACKING — MANDATORY:
+When guiding a patient through a coping exercise, you MUST use these tools:
+1. After EACH step is discussed/completed: call mark_exercise_step({ step_number: N }) where N is the 1-indexed step number. This updates the progress tracker in the side panel. Without this, the patient sees "0 of N steps" even though they're making progress.
+2. When the exercise is FINISHED: call complete_exercise({ exercise_type: "...", outcome: "..." }) with a summary of how the patient is feeling. This shows a completion report in the side panel.
+If the patient uses the interactive Box Breathing circle in the side panel and tells you they completed it, acknowledge that and call complete_exercise — do not re-explain the breathing steps.
+
+RECOVERY ACTION LINKS:
+- [[View your recovery dashboard|recovery]] — recovery home page
+- [[Log your daily check-in|recovery_checkin]] — daily check-in page
+- [[Take a screening|recovery_screening]] — start a screening
+- [[View your recovery plan|recovery_plan]] — recovery plan details
+
+MEDICATION QUESTIONS:
+For MAT (medication-assisted treatment) questions, you may share general information about how medications like naltrexone, buprenorphine, or acamprosate work. But ALWAYS add: "Your specialist is the best person to advise on medications for your specific situation." Link to [[Book an appointment|book_appointment]].`;
+}
+
+export function buildSystemPrompt(patientName: string, language?: string, recoveryContext?: RecoveryContext | null): string {
   const langInstruction = language && language !== 'English'
     ? `\n\nLANGUAGE:\nYou MUST respond entirely in ${language}. The patient has chosen ${language} as their preferred language. Every response — including greetings, medical explanations, action link text, and follow-up questions — must be in ${language}. Keep medical terminology simple and culturally appropriate. For action links, translate the link text into ${language} but keep the route_key unchanged (e.g. [[Translated text here|book_appointment]]).`
     : '';
+  const recoverySection = recoveryContext ? buildRecoveryPromptSection(recoveryContext) : '';
 
   return `You are Eka, a warm and caring AI health companion for ${patientName}.
 "Eka" means "mother" in the Efik language of Nigeria.
@@ -453,5 +810,5 @@ How to present results:
 - Frame readiness issues helpfully: "Your prescription looks good but may need a visible date before ordering" — not "Your prescription failed validation."
 - If the prescription contains controlled substances, mention they require pharmacist review when ordering.
 - Suggest the full upload flow if the patient wants to order: [[Upload for Order|upload_prescription]]
-- When users mention prescriptions, uploading, or analyzing medications, remind them they can attach a prescription image using the paperclip button next to the message input.${langInstruction}`;
+- When users mention prescriptions, uploading, or analyzing medications, remind them they can attach a prescription image using the paperclip button next to the message input.${recoverySection}${langInstruction}`;
 }
