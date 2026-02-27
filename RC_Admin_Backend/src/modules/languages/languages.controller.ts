@@ -9,6 +9,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { Types } from 'mongoose';
 import { LanguagesService } from './languages.service';
 import { CreateLanguageDto } from './dto/create-language.dto';
@@ -16,12 +17,17 @@ import { UpdateLanguageDto } from './dto/update-language.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ParseObjectIdPipe } from '../../common/pipes/parse-object-id.pipe';
 
+@ApiTags('Admin Languages')
+@ApiBearerAuth('JWT-auth')
 @Controller('languages')
 @UseGuards(JwtAuthGuard)
 export class LanguagesController {
   constructor(private readonly languagesService: LanguagesService) {}
 
   @Post()
+  @ApiOperation({ summary: 'Create language', description: 'Add a new language to the platform for specialist language assignment' })
+  @ApiResponse({ status: 201, description: 'Language created successfully' })
+  @ApiResponse({ status: 400, description: 'Validation error or duplicate code' })
   async create(@Body() createLanguageDto: CreateLanguageDto) {
     const result = await this.languagesService.create(createLanguageDto);
     return {
@@ -31,6 +37,12 @@ export class LanguagesController {
   }
 
   @Get()
+  @ApiOperation({ summary: 'List languages', description: 'Retrieve paginated, filterable list of languages' })
+  @ApiQuery({ name: 'page', required: false, example: '1' })
+  @ApiQuery({ name: 'limit', required: false, example: '50' })
+  @ApiQuery({ name: 'is_active', required: false, example: 'true' })
+  @ApiQuery({ name: 'search', required: false, example: 'Yoruba' })
+  @ApiResponse({ status: 200, description: 'Paginated language list returned' })
   async findAll(
     @Query('page') page?: string,
     @Query('limit') limit?: string,
@@ -57,6 +69,8 @@ export class LanguagesController {
   }
 
   @Get('active')
+  @ApiOperation({ summary: 'List active languages', description: 'Retrieve only active languages' })
+  @ApiResponse({ status: 200, description: 'Active languages returned' })
   async findAllActive() {
     const result = await this.languagesService.findAllActive();
     return {
@@ -66,6 +80,10 @@ export class LanguagesController {
   }
 
   @Get(':id')
+  @ApiOperation({ summary: 'Get language by ID', description: 'Retrieve a single language by its ID' })
+  @ApiParam({ name: 'id', description: 'Language ID', example: '507f1f77bcf86cd799439011' })
+  @ApiResponse({ status: 200, description: 'Language details returned' })
+  @ApiResponse({ status: 404, description: 'Language not found' })
   async findOne(@Param('id', ParseObjectIdPipe) id: Types.ObjectId) {
     const result = await this.languagesService.findOne(id);
     return {
@@ -75,6 +93,10 @@ export class LanguagesController {
   }
 
   @Patch(':id')
+  @ApiOperation({ summary: 'Update language', description: 'Update an existing language' })
+  @ApiParam({ name: 'id', description: 'Language ID', example: '507f1f77bcf86cd799439011' })
+  @ApiResponse({ status: 200, description: 'Language updated successfully' })
+  @ApiResponse({ status: 404, description: 'Language not found' })
   async update(
     @Param('id', ParseObjectIdPipe) id: Types.ObjectId,
     @Body() updateLanguageDto: UpdateLanguageDto,
@@ -87,6 +109,10 @@ export class LanguagesController {
   }
 
   @Delete(':id')
+  @ApiOperation({ summary: 'Delete language', description: 'Deactivate a language' })
+  @ApiParam({ name: 'id', description: 'Language ID', example: '507f1f77bcf86cd799439011' })
+  @ApiResponse({ status: 200, description: 'Language deactivated successfully' })
+  @ApiResponse({ status: 404, description: 'Language not found' })
   async remove(@Param('id', ParseObjectIdPipe) id: Types.ObjectId) {
     const result = await this.languagesService.remove(id);
     return {
@@ -96,6 +122,8 @@ export class LanguagesController {
   }
 
   @Post('seed')
+  @ApiOperation({ summary: 'Seed default languages', description: 'Populate the database with default languages (English, Yoruba, Igbo, Hausa, etc.)' })
+  @ApiResponse({ status: 201, description: 'Default languages seeded' })
   async seedDefaults() {
     await this.languagesService.seedDefaultLanguages();
     return {

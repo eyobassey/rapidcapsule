@@ -9,6 +9,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { Types } from 'mongoose';
 import { SpecialistCategoriesService } from './specialist-categories.service';
 import { CreateSpecialistCategoryDto } from './dto/create-specialist-category.dto';
@@ -16,6 +17,8 @@ import { UpdateSpecialistCategoryDto } from './dto/update-specialist-category.dt
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ParseObjectIdPipe } from '../../common/pipes/parse-object-id.pipe';
 
+@ApiTags('Admin Specialist Categories')
+@ApiBearerAuth('JWT-auth')
 @Controller('specialist-categories')
 @UseGuards(JwtAuthGuard)
 export class SpecialistCategoriesController {
@@ -24,6 +27,9 @@ export class SpecialistCategoriesController {
   ) {}
 
   @Post()
+  @ApiOperation({ summary: 'Create specialist category', description: 'Create a new specialist category (e.g. Cardiology, Dermatology)' })
+  @ApiResponse({ status: 201, description: 'Category created successfully' })
+  @ApiResponse({ status: 400, description: 'Validation error or duplicate name' })
   async create(@Body() createCategoryDto: CreateSpecialistCategoryDto) {
     const result = await this.categoriesService.create(createCategoryDto);
     return {
@@ -33,6 +39,14 @@ export class SpecialistCategoriesController {
   }
 
   @Get()
+  @ApiOperation({ summary: 'List specialist categories', description: 'Retrieve paginated, filterable list of specialist categories' })
+  @ApiQuery({ name: 'page', required: false, example: '1' })
+  @ApiQuery({ name: 'limit', required: false, example: '50' })
+  @ApiQuery({ name: 'is_active', required: false, example: 'true' })
+  @ApiQuery({ name: 'is_popular', required: false, example: 'true' })
+  @ApiQuery({ name: 'professional_category', required: false, example: 'Medical Doctor' })
+  @ApiQuery({ name: 'search', required: false, example: 'cardio' })
+  @ApiResponse({ status: 200, description: 'Paginated category list returned' })
   async findAll(
     @Query('page') page?: string,
     @Query('limit') limit?: string,
@@ -63,6 +77,8 @@ export class SpecialistCategoriesController {
   }
 
   @Get('active')
+  @ApiOperation({ summary: 'List active categories', description: 'Retrieve only active specialist categories' })
+  @ApiResponse({ status: 200, description: 'Active categories returned' })
   async findAllActive() {
     const result = await this.categoriesService.findAllActive();
     return {
@@ -72,6 +88,8 @@ export class SpecialistCategoriesController {
   }
 
   @Get('popular')
+  @ApiOperation({ summary: 'List popular categories', description: 'Retrieve specialist categories marked as popular/featured' })
+  @ApiResponse({ status: 200, description: 'Popular categories returned' })
   async findPopular() {
     const result = await this.categoriesService.findPopular();
     return {
@@ -81,6 +99,10 @@ export class SpecialistCategoriesController {
   }
 
   @Get(':id')
+  @ApiOperation({ summary: 'Get category by ID', description: 'Retrieve a single specialist category' })
+  @ApiParam({ name: 'id', description: 'Category ID', example: '507f1f77bcf86cd799439011' })
+  @ApiResponse({ status: 200, description: 'Category details returned' })
+  @ApiResponse({ status: 404, description: 'Category not found' })
   async findOne(@Param('id', ParseObjectIdPipe) id: Types.ObjectId) {
     const result = await this.categoriesService.findOne(id);
     return {
@@ -90,6 +112,10 @@ export class SpecialistCategoriesController {
   }
 
   @Patch(':id')
+  @ApiOperation({ summary: 'Update specialist category', description: 'Update an existing specialist category' })
+  @ApiParam({ name: 'id', description: 'Category ID', example: '507f1f77bcf86cd799439011' })
+  @ApiResponse({ status: 200, description: 'Category updated successfully' })
+  @ApiResponse({ status: 404, description: 'Category not found' })
   async update(
     @Param('id', ParseObjectIdPipe) id: Types.ObjectId,
     @Body() updateCategoryDto: UpdateSpecialistCategoryDto,
@@ -102,6 +128,10 @@ export class SpecialistCategoriesController {
   }
 
   @Delete(':id')
+  @ApiOperation({ summary: 'Delete specialist category', description: 'Deactivate a specialist category' })
+  @ApiParam({ name: 'id', description: 'Category ID', example: '507f1f77bcf86cd799439011' })
+  @ApiResponse({ status: 200, description: 'Category deactivated successfully' })
+  @ApiResponse({ status: 404, description: 'Category not found' })
   async remove(@Param('id', ParseObjectIdPipe) id: Types.ObjectId) {
     const result = await this.categoriesService.remove(id);
     return {
@@ -111,6 +141,8 @@ export class SpecialistCategoriesController {
   }
 
   @Post('seed')
+  @ApiOperation({ summary: 'Seed default categories', description: 'Populate the database with default specialist categories' })
+  @ApiResponse({ status: 201, description: 'Default categories seeded' })
   async seedDefaults() {
     await this.categoriesService.seedDefaultCategories();
     return {

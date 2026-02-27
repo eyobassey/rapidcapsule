@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ValidateInputPipe } from './core/pipes/validation.pipes';
 import { ResponseInterceptor } from './core/interceptors/response.interceptors';
 import { MongoExceptions } from './core/exceptions/mongo.exceptions';
@@ -21,6 +22,34 @@ async function bootstrap() {
   app.use(bodyParser.json({ limit: '50mb' }));
   app.use(morgan('dev'));
   app.setGlobalPrefix('api');
+
+  // Swagger / OpenAPI setup
+  const swaggerConfig = new DocumentBuilder()
+    .setTitle('Rapid Capsule Admin API')
+    .setDescription(
+      'Admin panel API — Dashboard, Patient Management, Specialist Management, Pharmacy, Finance, Analytics, Compliance, and Settings\n\nAuthored by Bassey Eyo (eyobassey@gmail.com)',
+    )
+    .setVersion('2.1.0')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        description: 'Enter admin JWT token',
+      },
+      'JWT-auth',
+    )
+    .build();
+
+  const document = SwaggerModule.createDocument(app, swaggerConfig);
+  SwaggerModule.setup('api/docs', app, document, {
+    swaggerOptions: {
+      persistAuthorization: true,
+      tagsSorter: 'alpha',
+      operationsSorter: 'alpha',
+    },
+  });
+
   // handle all user input validation globally
   app.useGlobalPipes(
     new ValidateInputPipe({
@@ -35,6 +64,7 @@ async function bootstrap() {
   await settingService.findOrCreate();
   await app.listen(port, () => {
     logger.log(`Server running on port ${port}`);
+    logger.log(`Swagger docs available at http://localhost:${port}/api/docs`);
   });
 }
 bootstrap();

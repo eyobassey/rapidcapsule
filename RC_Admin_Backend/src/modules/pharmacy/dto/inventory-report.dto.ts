@@ -1,5 +1,6 @@
 import { IsOptional, IsString, IsDateString, IsEnum, IsNumber, Min, Max, IsMongoId } from 'class-validator';
 import { Type } from 'class-transformer';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export enum ReportFilter {
   ALL = 'all',
@@ -10,30 +11,37 @@ export enum ReportFilter {
 }
 
 export class InventoryReportQueryDto {
+  @ApiPropertyOptional({ description: 'Report period start date (ISO 8601)', example: '2025-01-01' })
   @IsOptional()
   @IsDateString()
   start_date?: string;
 
+  @ApiPropertyOptional({ description: 'Report period end date (ISO 8601)', example: '2025-06-30' })
   @IsOptional()
   @IsDateString()
   end_date?: string;
 
+  @ApiPropertyOptional({ description: 'Filter by drug category ObjectId', example: '65a1b2c3d4e5f6a7b8c9d0e2' })
   @IsOptional()
   @IsMongoId()
   category_id?: string;
 
+  @ApiPropertyOptional({ description: 'Filter by supplier ObjectId', example: '65a1b2c3d4e5f6a7b8c9d0e3' })
   @IsOptional()
   @IsMongoId()
   supplier_id?: string;
 
+  @ApiPropertyOptional({ description: 'Filter by manufacturer ObjectId', example: '65a1b2c3d4e5f6a7b8c9d0e4' })
   @IsOptional()
   @IsMongoId()
   manufacturer?: string;
 
+  @ApiPropertyOptional({ description: 'Report filter type', enum: ReportFilter, example: 'low_stock' })
   @IsOptional()
   @IsEnum(ReportFilter)
   filter?: ReportFilter;
 
+  @ApiPropertyOptional({ description: 'Number of days to look ahead for expiry report (1-365, default 90)', example: 90 })
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
@@ -41,6 +49,7 @@ export class InventoryReportQueryDto {
   @Max(365)
   expiry_days?: number; // For expiry report - default 90
 
+  @ApiPropertyOptional({ description: 'Maximum number of results to return (1-100)', example: 50 })
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
