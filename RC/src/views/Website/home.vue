@@ -3,14 +3,16 @@
 		<HomepageNav />
 		<main>
 			<HeroSection />
+			<EkaAISection id="eka-ai" @openModal="openTrialModal" />
+			<RxGPTSection id="rxgpt" @openModal="openTrialModal" />
+			<PrescriptionVerificationSection @openModal="openTrialModal" />
+			<FeaturesBentoGrid id="features" />
 			<HowItWorksSection id="how-it-works" />
-			<BenefitsSection id="benefits" />
-			<AITechnologySection id="technology" />
+			<SpecialistCTASection id="specialists" />
+			<TrustSecuritySection id="trust" />
 			<StatsBarSection />
-			<TrustSecuritySection />
-			<TrialSection id="try-it" @openModal="openTrialModal" />
 			<PricingSection id="pricing" />
-			<FAQSection id="faq" />
+			<FAQSection />
 			<CTASection />
 		</main>
 		<FooterSection />
@@ -26,12 +28,14 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 import HomepageNav from './components/HomepageNav.vue';
 import HeroSection from './components/HeroSection.vue';
+import EkaAISection from './components/EkaAISection.vue';
+import RxGPTSection from './components/RxGPTSection.vue';
+import PrescriptionVerificationSection from './components/PrescriptionVerificationSection.vue';
+import FeaturesBentoGrid from './components/FeaturesBentoGrid.vue';
 import HowItWorksSection from './components/HowItWorksSection.vue';
-import BenefitsSection from './components/BenefitsSection.vue';
-import AITechnologySection from './components/AITechnologySection.vue';
-import StatsBarSection from './components/StatsBarSection.vue';
+import SpecialistCTASection from './components/SpecialistCTASection.vue';
 import TrustSecuritySection from './components/TrustSecuritySection.vue';
-import TrialSection from './components/TrialSection.vue';
+import StatsBarSection from './components/StatsBarSection.vue';
 import PricingSection from './components/PricingSection.vue';
 import FAQSection from './components/FAQSection.vue';
 import CTASection from './components/CTASection.vue';
@@ -64,7 +68,7 @@ const schemas = [
 		name: 'Rapid Capsule',
 		url: 'https://rapidcapsule.com',
 		description:
-			'Online telemedicine platform offering AI symptom checking, specialist video consultations, RxGPT prescription verification, and pharmacy delivery.',
+			'Online telemedicine platform offering AI symptom checking with Eka, specialist video consultations, RxGPT prescription verification, and pharmacy delivery.',
 		medicalSpecialty: [
 			'General Practice',
 			'Cardiology',
@@ -77,8 +81,8 @@ const schemas = [
 		availableService: [
 			{
 				'@type': 'MedicalProcedure',
-				name: 'AI Symptom Checker',
-				description: 'AI-powered symptom analysis and triage assessment',
+				name: 'Eka AI Health Companion',
+				description: 'AI-powered conversational health assistant with symptom analysis and triage assessment',
 			},
 			{
 				'@type': 'MedicalProcedure',
@@ -109,15 +113,23 @@ const schemas = [
 		mainEntity: [
 			{
 				'@type': 'Question',
-				name: 'How does the AI health checkup work?',
+				name: 'What is Eka and how does it work?',
 				acceptedAnswer: {
 					'@type': 'Answer',
-					text: "Our AI health checkup uses advanced natural language processing to analyze your symptoms. You'll answer a series of questions about how you're feeling, and our system provides an intelligent triage assessment, potential conditions, and specialist recommendations — all in under 5 minutes.",
+					text: "Eka is your 24/7 AI health companion. It uses advanced medical AI to conduct intelligent symptom interviews, check drug interactions, analyze prescriptions, and connect you with the right specialist — all through natural conversation.",
 				},
 			},
 			{
 				'@type': 'Question',
-				name: 'What happens during a video consultation?',
+				name: 'How accurate is RxGPT prescription verification?',
+				acceptedAnswer: {
+					'@type': 'Answer',
+					text: 'RxGPT cross-references prescriptions against six authoritative clinical sources: PubMed, WHO Essential Medicines List, OpenFDA, NICE guidelines, the British National Formulary, and RxNav. A 7-layer hallucination detection pipeline ensures clinical accuracy.',
+				},
+			},
+			{
+				'@type': 'Question',
+				name: 'How do video consultations work?',
 				acceptedAnswer: {
 					'@type': 'Answer',
 					text: 'Video consultations are conducted through secure, HD Zoom integration. Your specialist will review your health profile, discuss your concerns, provide a diagnosis, and can issue digital prescriptions — all from the comfort of your home.',
@@ -125,18 +137,10 @@ const schemas = [
 			},
 			{
 				'@type': 'Question',
-				name: 'Is my health data secure and private?',
+				name: 'Is my health data secure?',
 				acceptedAnswer: {
 					'@type': 'Answer',
 					text: 'We use JWT/OAuth authentication, end-to-end encryption for all data in transit and at rest, and follow HIPAA-aware data handling standards. Your health information is never shared without your explicit consent.',
-				},
-			},
-			{
-				'@type': 'Question',
-				name: 'How does RxGPT prescription verification work?',
-				acceptedAnswer: {
-					'@type': 'Answer',
-					text: 'RxGPT cross-references prescriptions against six authoritative clinical sources: PubMed research databases, WHO Essential Medicines List, OpenFDA drug labels, NICE clinical guidelines, the British National Formulary (BNF), and RxNav. It checks for drug interactions, contraindications, and dosage accuracy.',
 				},
 			},
 			{
@@ -149,26 +153,18 @@ const schemas = [
 			},
 			{
 				'@type': 'Question',
-				name: 'How do I become a verified specialist?',
+				name: 'Can I connect my wearable devices?',
 				acceptedAnswer: {
 					'@type': 'Answer',
-					text: 'Specialists can register through our onboarding process which includes credential verification, profile setup, availability configuration, and rate card creation.',
+					text: 'Yes. Rapid Capsule integrates with Apple Health, Google Fit, Samsung Health, Fitbit, Garmin, and more. Your vitals sync automatically and are available to your care team during consultations.',
 				},
 			},
 			{
 				'@type': 'Question',
-				name: 'Can I get medications delivered to my location?',
+				name: 'How do I verify my prescription?',
 				acceptedAnswer: {
 					'@type': 'Answer',
-					text: 'Our integrated pharmacy ecosystem connects you with licensed pharmacies. After receiving a digital prescription, you can browse our catalog of 3,087+ medications and arrange delivery.',
-				},
-			},
-			{
-				'@type': 'Question',
-				name: 'What are the referral rewards?',
-				acceptedAnswer: {
-					'@type': 'Answer',
-					text: 'When you refer friends or family to Rapid Capsule, both you and the referred person receive wallet credits applied toward consultations.',
+					text: 'Upload a photo or PDF of your prescription and our 3-tier AI verification system checks document quality, validates medications against clinical databases, and detects potential issues — all in seconds.',
 				},
 			},
 		],
@@ -196,13 +192,11 @@ onUnmounted(() => {
 	width: 100%;
 	min-height: 100vh;
 	overflow-x: hidden;
-	background: #ffffff;
-	// Reset any inherited specialist-app styles
-	font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-	color: #0F172A;
+	background: #F7F8FA;
+	font-family: 'Inter', system-ui, -apple-system, sans-serif;
+	color: #172340;
 }
 
-// Smooth scroll offset for anchor links
 :deep([id]) {
 	scroll-margin-top: 80px;
 }

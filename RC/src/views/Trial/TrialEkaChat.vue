@@ -192,6 +192,18 @@
               v-else-if="artifactMode === 'interactions' && artifact.data"
               :report="artifact.data"
             />
+            <EkaScreeningReport
+              v-else-if="artifactMode === 'screening_report' && artifact.data"
+              :data="artifact.data"
+            />
+            <EkaCopingExercise
+              v-else-if="artifactMode === 'coping_exercise' && artifact.data"
+              :data="artifact.data"
+            />
+            <EkaSafetyPlan
+              v-else-if="artifactMode === 'safety_plan' && artifact.data"
+              :data="artifact.data"
+            />
           </div>
         </div>
       </transition>
@@ -204,10 +216,13 @@ import EkaMessage from '@/components/EkaChat/EkaMessage.vue'
 import EkaCheckupReport from '@/components/EkaChat/EkaCheckupReport.vue'
 import EkaBodyAvatar from '@/components/EkaChat/EkaBodyAvatar.vue'
 import EkaInteractionReport from '@/components/EkaChat/EkaInteractionReport.vue'
+import EkaScreeningReport from '@/components/EkaChat/EkaScreeningReport.vue'
+import EkaCopingExercise from '@/components/EkaChat/EkaCopingExercise.vue'
+import EkaSafetyPlan from '@/components/EkaChat/EkaSafetyPlan.vue'
 
 export default {
   name: 'TrialEkaChat',
-  components: { EkaMessage, EkaCheckupReport, EkaBodyAvatar, EkaInteractionReport },
+  components: { EkaMessage, EkaCheckupReport, EkaBodyAvatar, EkaInteractionReport, EkaScreeningReport, EkaCopingExercise, EkaSafetyPlan },
   data() {
     return {
       firstName: '',
@@ -231,7 +246,7 @@ export default {
         { label: 'Search for Paracetamol', message: 'Search for Paracetamol', icon: 'ri-search-line' },
         { label: 'Check drug interactions', message: 'Check interactions between Ibuprofen and Aspirin', icon: 'ri-capsule-line' },
         { label: 'Start a health checkup', message: 'I want to start a health checkup', icon: 'hi-heart' },
-        { label: 'What helps with headaches?', message: 'What medications help with headaches?', icon: 'hi-light-bulb' },
+        { label: 'I need help with addiction', message: 'I am struggling with addiction and need support', icon: 'ri-heart-pulse-line' },
       ],
     }
   },
@@ -249,6 +264,9 @@ export default {
       if (this.artifact.type === 'health_checkup_start') return 'avatar'
       if (this.artifact.type === 'health_checkup_report') return 'report'
       if (this.artifact.type === 'drug_interaction_report') return 'interactions'
+      if (this.artifact.type === 'screening_report') return 'screening_report'
+      if (this.artifact.type === 'coping_exercise') return 'coping_exercise'
+      if (this.artifact.type === 'safety_plan') return 'safety_plan'
       return null
     },
     artifactIcon() {
@@ -256,6 +274,9 @@ export default {
         avatar: 'hi-user',
         report: 'hi-document-report',
         interactions: 'ri-capsule-line',
+        screening_report: 'hi-clipboard-check',
+        coping_exercise: 'ri-heart-pulse-line',
+        safety_plan: 'hi-shield-check',
       }
       return map[this.artifactMode] || 'hi-document'
     },
@@ -264,6 +285,9 @@ export default {
         avatar: 'Body Diagram',
         report: 'Health Report',
         interactions: 'Interaction Report',
+        screening_report: 'Screening Report',
+        coping_exercise: 'Coping Exercise',
+        safety_plan: 'Safety Plan',
       }
       return map[this.artifactMode] || 'Details'
     },
@@ -426,6 +450,15 @@ export default {
                   this.artifactOpen = true
                 } else if (chunk.artifact_type === 'drug_interaction_report') {
                   this.artifact = { type: 'drug_interaction_report', data: chunk.data }
+                  this.artifactOpen = true
+                } else if (chunk.artifact_type === 'screening_report') {
+                  this.artifact = { type: 'screening_report', data: chunk.data }
+                  this.artifactOpen = true
+                } else if (chunk.artifact_type === 'coping_exercise') {
+                  this.artifact = { type: 'coping_exercise', data: chunk.data }
+                  this.artifactOpen = true
+                } else if (chunk.artifact_type === 'safety_plan') {
+                  this.artifact = { type: 'safety_plan', data: chunk.data }
                   this.artifactOpen = true
                 }
               } else if (chunk.type === 'clear_loading') {

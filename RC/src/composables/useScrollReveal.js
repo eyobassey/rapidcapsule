@@ -6,6 +6,9 @@ export function useScrollReveal(options = {}) {
 
   function reveal(el) {
     if (!el) return;
+    // Handle component instances (el.$el) vs raw DOM elements
+    if (el.$el) el = el.$el;
+    if (!(el instanceof Element)) return;
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {

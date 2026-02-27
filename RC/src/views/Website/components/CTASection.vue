@@ -1,25 +1,34 @@
 <template>
 	<section class="cta">
-		<div class="cta__bg-decor">
-			<div class="cta__circle cta__circle--1"></div>
-			<div class="cta__circle cta__circle--2"></div>
+		<!-- Background blobs -->
+		<div class="cta__blobs">
+			<div class="cta__blob cta__blob--1"></div>
+			<div class="cta__blob cta__blob--2"></div>
+			<div class="cta__blob cta__blob--3"></div>
 		</div>
 
 		<div class="cta__container" :ref="reveal">
-			<h2 class="cta__title">Ready to Transform Your Healthcare Experience?</h2>
+			<h2 class="cta__title">Your Health, Reimagined</h2>
 			<p class="cta__subtitle">
-				Join thousands of patients and specialists already using Rapid Capsule
+				Join thousands using AI-powered healthcare. Start with a free health checkup today.
 			</p>
 
 			<div class="cta__buttons">
-				<router-link to="/signup/patient" class="cta__btn cta__btn--primary">
-					Get Started Now
-					<v-icon name="hi-arrow-right" scale="0.9" />
+				<router-link to="/signup/patient" class="cta__btn-accent">
+					Get Started Free
 				</router-link>
-				<a href="#" class="cta__btn cta__btn--ghost">
-					Schedule a Demo
+				<a
+					href="#eka"
+					class="cta__btn-teal"
+					@click.prevent="scrollTo('#eka')"
+				>
+					Talk to Eka Now
 				</a>
 			</div>
+
+			<p class="cta__footer">
+				No credit card required &middot; Free AI health checkups &middot; Cancel anytime
+			</p>
 		</div>
 	</section>
 </template>
@@ -28,162 +37,185 @@
 import { useScrollReveal } from '@/composables/useScrollReveal.js';
 
 const { reveal } = useScrollReveal();
+
+function scrollTo(href) {
+	const el = document.querySelector(href);
+	if (el) el.scrollIntoView({ behavior: 'smooth' });
+}
 </script>
 
 <style scoped lang="scss">
-// Design tokens
-$primary: #4fc3f7;
-$primary-dark: #0288d1;
-$primary-light: #e1f5fe;
-$secondary: #FF5C00;
-$secondary-dark: #E05000;
-$navy: #0f172a;
-$slate: #334155;
-$gray: #475569;
-$emerald: #10b981;
-$bg: #f8fafc;
+@import '../_homepage-tokens';
 
+// ── Section ──────────────────────────────────────────────────
 .cta {
 	position: relative;
-	background: linear-gradient(135deg, $navy 0%, #1e3a5f 100%);
+	background: $navy;
+	color: $navy-fg;
 	padding: 96px 0;
 	overflow: hidden;
 
-	@media (max-width: 768px) {
-		padding: 64px 0;
+	@media (min-width: $bp-lg) {
+		padding: 128px 0;
 	}
 }
 
-.cta__bg-decor {
+// ── Background blobs ─────────────────────────────────────────
+.cta__blobs {
 	position: absolute;
 	inset: 0;
 	pointer-events: none;
+	z-index: 0;
 }
 
-.cta__circle {
+.cta__blob {
 	position: absolute;
 	border-radius: 50%;
-	background: rgba(255, 255, 255, 0.04);
-	filter: blur(60px);
+	filter: blur(120px);
 
 	&--1 {
 		width: 400px;
 		height: 400px;
-		top: -120px;
-		right: -80px;
+		top: -100px;
+		left: -100px;
+		background: rgba($primary, 0.15);
+		animation: blob-float 20s ease-in-out infinite;
 	}
 
 	&--2 {
+		width: 350px;
+		height: 350px;
+		bottom: -80px;
+		right: -80px;
+		background: rgba($teal, 0.1);
+		animation: blob-float-reverse 25s ease-in-out infinite;
+	}
+
+	&--3 {
 		width: 300px;
 		height: 300px;
-		bottom: -100px;
-		left: -60px;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		background: rgba($accent, 0.1);
+		animation: blob-float 22s ease-in-out infinite;
 	}
 }
 
+// ── Container ────────────────────────────────────────────────
 .cta__container {
-	max-width: 960px;
+	max-width: 896px;
 	margin: 0 auto;
-	padding: 0 32px;
+	padding: 0 $container-px;
 	text-align: center;
 	position: relative;
-	z-index: 2;
-	opacity: 0;
-	transform: translateY(24px);
-	transition: opacity 0.6s ease, transform 0.6s ease;
+	z-index: 1;
+	@include reveal-base;
 
-	&.revealed {
-		opacity: 1;
-		transform: translateY(0);
+	@media (max-width: $bp-sm) {
+		padding: 0 $container-px-sm;
 	}
 
-	@media (max-width: 768px) {
-		padding: 0 16px;
+	@media (max-width: $bp-xs) {
+		padding: 0 $container-px-xs;
 	}
 }
 
+// ── Title ────────────────────────────────────────────────────
 .cta__title {
-	font-size: 48px;
+	font-size: 30px;
 	font-weight: 800;
-	color: #fff;
+	color: $white;
+	line-height: 1.1;
 	letter-spacing: -1px;
-	line-height: 1.2;
 	margin: 0 0 20px;
 
-	@media (max-width: 768px) {
-		font-size: 32px;
+	@media (min-width: $bp-sm) {
+		font-size: 36px;
 	}
 
-	@media (max-width: 480px) {
-		font-size: 26px;
+	@media (min-width: $bp-lg) {
+		font-size: 60px;
+		letter-spacing: -1.5px;
 	}
 }
 
+// ── Subtitle ─────────────────────────────────────────────────
 .cta__subtitle {
-	font-size: 20px;
-	color: rgba(255, 255, 255, 0.75);
-	line-height: 1.6;
+	font-size: 18px;
+	color: rgba(255, 255, 255, 0.7);
+	line-height: 1.65;
 	margin: 0 0 40px;
-	max-width: 560px;
+	max-width: 580px;
 	margin-left: auto;
 	margin-right: auto;
 
-	@media (max-width: 768px) {
+	@media (max-width: $bp-md) {
 		font-size: 16px;
 		margin-bottom: 32px;
 	}
 }
 
+// ── Buttons ──────────────────────────────────────────────────
 .cta__buttons {
 	display: flex;
 	gap: 16px;
 	justify-content: center;
 	flex-wrap: wrap;
+	margin-bottom: 28px;
 
-	@media (max-width: 540px) {
+	@media (max-width: $bp-sm) {
 		flex-direction: column;
 		align-items: stretch;
 	}
 }
 
-.cta__btn {
+.cta__btn-accent {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
 	gap: 8px;
 	padding: 16px 36px;
-	font-size: 16px;
+	font-size: 17px;
 	font-weight: 700;
+	color: $white;
+	background: linear-gradient(to right, $accent, $accent-dark);
 	border-radius: 50px;
 	text-decoration: none;
-	transition: all 0.25s ease;
+	box-shadow: 0 10px 25px rgba($accent, 0.35);
+	transition: all 0.3s ease;
 
-	&--primary {
-		background: $secondary;
-		color: #fff;
-		box-shadow: 0 8px 30px rgba($secondary, 0.35);
-
-		&:hover {
-			background: $secondary-dark;
-			transform: translateY(-2px);
-			box-shadow: 0 12px 36px rgba($secondary, 0.45);
-		}
+	&:hover {
+		box-shadow: 0 16px 36px rgba($accent, 0.45);
+		transform: scale(1.05);
 	}
+}
 
-	&--ghost {
-		background: transparent;
-		color: #fff;
-		border: 2px solid rgba(255, 255, 255, 0.5);
+.cta__btn-teal {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	padding: 16px 36px;
+	font-size: 17px;
+	font-weight: 700;
+	color: $white;
+	background: transparent;
+	border: 1px solid rgba($teal, 0.5);
+	border-radius: 50px;
+	text-decoration: none;
+	transition: all 0.3s ease;
 
-		&:hover {
-			background: rgba(255, 255, 255, 0.1);
-			border-color: #fff;
-			transform: translateY(-2px);
-		}
+	&:hover {
+		background: rgba($teal, 0.1);
+		border-color: $teal;
 	}
+}
 
-	@media (max-width: 540px) {
-		padding: 14px 28px;
-	}
+// ── Footer text ──────────────────────────────────────────────
+.cta__footer {
+	font-size: 14px;
+	color: rgba(255, 255, 255, 0.4);
+	margin: 0;
 }
 </style>

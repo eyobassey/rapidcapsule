@@ -1,125 +1,125 @@
 <template>
 	<footer class="footer">
 		<div class="footer__container">
-			<div class="footer__top">
-				<!-- Brand Column -->
+			<div class="footer__grid">
+				<!-- Brand column -->
 				<div class="footer__brand">
 					<router-link to="/" class="footer__logo-link">
-						<img src="/RapidCapsule_Logo.png" alt="Rapid Capsule" class="footer__logo-img" />
+						<img
+							src="/RapidCapsule_Logo.png"
+							alt="Rapid Capsule"
+							class="footer__logo"
+						/>
 					</router-link>
-					<p class="footer__tagline">
-						AI-powered telemedicine platform connecting patients to quality healthcare. Anytime, anywhere.
+					<p class="footer__desc">
+						AI-powered telemedicine platform connecting patients with verified specialists.
+						Anytime, anywhere.
 					</p>
-					<div class="footer__socials">
-						<a href="#" class="social-icon" aria-label="Facebook"><span>F</span></a>
-						<a href="#" class="social-icon" aria-label="X (Twitter)"><span>X</span></a>
-						<a href="#" class="social-icon" aria-label="Instagram"><span>I</span></a>
-						<a href="#" class="social-icon" aria-label="LinkedIn"><span>L</span></a>
-					</div>
 				</div>
 
-				<!-- Quick Links -->
+				<!-- Platform -->
 				<div class="footer__col">
-					<h3 class="footer__col-title">Quick Links</h3>
+					<h4 class="footer__col-title">Platform</h4>
+					<ul class="footer__links">
+						<li><router-link to="/signup/patient">For Patients</router-link></li>
+						<li><router-link to="/signup/specialist">For Specialists</router-link></li>
+						<li><a href="#pricing" @click.prevent="scrollTo('#pricing')">Pricing</a></li>
+						<li><a href="#how-it-works" @click.prevent="scrollTo('#how-it-works')">How It Works</a></li>
+						<li><a href="#">Download App</a></li>
+					</ul>
+				</div>
+
+				<!-- AI Features -->
+				<div class="footer__col">
+					<h4 class="footer__col-title">AI Features</h4>
+					<ul class="footer__links">
+						<li><a href="#eka" @click.prevent="scrollTo('#eka')">Eka Health Assistant</a></li>
+						<li><a href="#rxgpt" @click.prevent="scrollTo('#rxgpt')">RxGPT Verification</a></li>
+						<li><a href="#features" @click.prevent="scrollTo('#features')">Symptom Checker</a></li>
+						<li><a href="#features" @click.prevent="scrollTo('#features')">Drug Interactions</a></li>
+						<li><a href="#prescription" @click.prevent="scrollTo('#prescription')">Prescription Upload</a></li>
+					</ul>
+				</div>
+
+				<!-- Company -->
+				<div class="footer__col">
+					<h4 class="footer__col-title">Company</h4>
 					<ul class="footer__links">
 						<li><a href="#">About Us</a></li>
-						<li><a href="#features">Features</a></li>
-						<li><a href="#pricing">Pricing</a></li>
-						<li><a href="#contact">Contact</a></li>
-						<li><a href="#faq">FAQ</a></li>
-					</ul>
-				</div>
-
-				<!-- Legal -->
-				<div class="footer__col">
-					<h3 class="footer__col-title">Legal</h3>
-					<ul class="footer__links">
+						<li><a href="#">Careers</a></li>
 						<li><router-link to="/privacy-policy">Privacy Policy</router-link></li>
 						<li><router-link to="/terms-of-service">Terms of Service</router-link></li>
-						<li><a href="#">Cookie Policy</a></li>
-						<li><a href="#">Disclaimer</a></li>
-					</ul>
-				</div>
-
-				<!-- Contact -->
-				<div class="footer__col">
-					<h3 class="footer__col-title">Contact</h3>
-					<ul class="footer__contact">
-						<li>
-							<v-icon name="hi-mail" scale="0.9" />
-							<a href="mailto:support@rapidcapsule.com">support@rapidcapsule.com</a>
-						</li>
+						<li><a href="mailto:support@rapidcapsule.com">Contact</a></li>
 					</ul>
 				</div>
 			</div>
 
-			<!-- Bottom Bar -->
+			<!-- Bottom bar -->
 			<div class="footer__bottom">
 				<p class="footer__copyright">&copy; 2026 Rapid Capsule. All rights reserved.</p>
-				<div class="footer__accent-line"></div>
+				<p class="footer__badges">HIPAA-Aware &middot; Encrypted &middot; Verified Specialists</p>
 			</div>
 		</div>
 	</footer>
 </template>
 
 <script setup>
+function scrollTo(href) {
+	const el = document.querySelector(href);
+	if (el) el.scrollIntoView({ behavior: 'smooth' });
+}
 </script>
 
 <style scoped lang="scss">
-// Design tokens
-$primary: #4fc3f7;
-$primary-dark: #0288d1;
-$primary-light: #e1f5fe;
-$secondary: #FF5C00;
-$secondary-dark: #E05000;
-$navy: #0f172a;
-$slate: #334155;
-$gray: #475569;
-$emerald: #10b981;
-$bg: #f8fafc;
+@import '../_homepage-tokens';
 
+// ── Footer ───────────────────────────────────────────────────
 .footer {
 	background: $navy;
-	padding: 64px 0 0;
+	color: $navy-fg;
+	padding-top: 64px;
+	padding-bottom: 32px;
 }
 
+// ── Container ────────────────────────────────────────────────
 .footer__container {
-	max-width: 1600px;
+	max-width: $max-width;
 	margin: 0 auto;
-	padding: 0 40px;
+	padding: 0 $container-px;
 
-	@media (max-width: 768px) {
-		padding: 0 20px;
+	@media (max-width: $bp-sm) {
+		padding: 0 $container-px-sm;
+	}
+
+	@media (max-width: $bp-xs) {
+		padding: 0 $container-px-xs;
 	}
 }
 
-// Top grid
-.footer__top {
+// ── Grid ─────────────────────────────────────────────────────
+.footer__grid {
 	display: grid;
-	grid-template-columns: 2fr 1fr 1fr 1fr;
-	gap: 48px;
-	padding-bottom: 48px;
+	grid-template-columns: 1.6fr 1fr 1fr 1fr;
+	gap: 40px;
+	margin-bottom: 48px;
 
-	@media (max-width: 900px) {
-		grid-template-columns: 1fr;
-		gap: 36px;
+	@media (max-width: $bp-lg) {
+		grid-template-columns: 1fr 1fr;
 	}
 
-	@media (min-width: 540px) and (max-width: 900px) {
-		grid-template-columns: 1fr 1fr;
-
-		.footer__brand {
-			grid-column: 1 / -1;
-		}
+	@media (max-width: $bp-sm) {
+		grid-template-columns: 1fr;
+		gap: 32px;
 	}
 }
 
-// Brand column
+// ── Brand column ─────────────────────────────────────────────
 .footer__brand {
-	max-width: 360px;
+	max-width: 340px;
 
-	@media (max-width: 900px) {
+	@media (max-width: $bp-lg) {
 		max-width: 100%;
+		grid-column: 1 / -1;
 	}
 }
 
@@ -128,65 +128,27 @@ $bg: #f8fafc;
 	margin-bottom: 16px;
 }
 
-.footer__logo-img {
-	height: 36px;
+.footer__logo {
+	height: 34px;
 	width: auto;
 	filter: brightness(0) invert(1);
-
-	@media (max-width: 768px) {
-		height: 30px;
-	}
 }
 
-.footer__tagline {
+.footer__desc {
 	font-size: 14px;
-	color: rgba(255, 255, 255, 0.6);
-	line-height: 1.7;
-	margin: 0 0 20px;
+	color: rgba(255, 255, 255, 0.5);
+	line-height: 1.75;
+	margin: 0;
 }
 
-// Social icons
-.footer__socials {
-	display: flex;
-	gap: 10px;
-}
-
-.social-icon {
-	width: 36px;
-	height: 36px;
-	border-radius: 50%;
-	background: rgba(255, 255, 255, 0.08);
-	border: 1px solid rgba(255, 255, 255, 0.12);
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	text-decoration: none;
-	transition: all 0.25s ease;
-
-	span {
-		font-size: 13px;
-		font-weight: 700;
-		color: rgba(255, 255, 255, 0.7);
-		line-height: 1;
-	}
-
-	&:hover {
-		background: $primary;
-		border-color: $primary;
-
-		span {
-			color: #fff;
-		}
-	}
-}
-
-// Link columns
+// ── Link columns ─────────────────────────────────────────────
 .footer__col-title {
-	font-size: 15px;
+	font-size: 14px;
 	font-weight: 700;
-	color: #fff;
-	margin: 0 0 20px;
-	letter-spacing: 0.3px;
+	color: rgba(255, 255, 255, 0.9);
+	margin: 0 0 16px;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
 }
 
 .footer__links {
@@ -199,65 +161,41 @@ $bg: #f8fafc;
 
 	a {
 		font-size: 14px;
-		color: rgba(255, 255, 255, 0.7);
+		color: rgba(255, 255, 255, 0.5);
 		text-decoration: none;
 		transition: color 0.2s ease;
 
 		&:hover {
-			color: $primary;
+			color: rgba(255, 255, 255, 0.8);
 		}
 	}
 }
 
-// Contact list
-.footer__contact {
-	list-style: none;
-	padding: 0;
-	margin: 0;
-	display: flex;
-	flex-direction: column;
-	gap: 14px;
-
-	li {
-		display: flex;
-		align-items: center;
-		gap: 10px;
-		color: rgba(255, 255, 255, 0.65);
-	}
-
-	a,
-	span {
-		font-size: 14px;
-		color: rgba(255, 255, 255, 0.7);
-		text-decoration: none;
-		transition: color 0.2s ease;
-	}
-
-	a:hover {
-		color: $primary;
-	}
-}
-
-// Bottom bar
+// ── Bottom bar ───────────────────────────────────────────────
 .footer__bottom {
-	border-top: 1px solid rgba(255, 255, 255, 0.08);
-	padding: 24px 0;
+	border-top: 1px solid rgba(255, 255, 255, 0.1);
+	padding-top: 32px;
 	display: flex;
-	flex-direction: column;
 	align-items: center;
-	gap: 16px;
+	justify-content: space-between;
+	flex-wrap: wrap;
+	gap: 12px;
+
+	@media (max-width: $bp-sm) {
+		flex-direction: column;
+		text-align: center;
+	}
 }
 
 .footer__copyright {
-	font-size: 13px;
-	color: rgba(255, 255, 255, 0.65);
+	font-size: 12px;
+	color: rgba(255, 255, 255, 0.4);
 	margin: 0;
 }
 
-.footer__accent-line {
-	width: 120px;
-	height: 3px;
-	border-radius: 3px;
-	background: linear-gradient(90deg, $primary, $secondary);
+.footer__badges {
+	font-size: 12px;
+	color: rgba(255, 255, 255, 0.4);
+	margin: 0;
 }
 </style>

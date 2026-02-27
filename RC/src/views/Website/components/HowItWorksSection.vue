@@ -1,93 +1,26 @@
 <template>
-	<section class="how-it-works">
-		<div class="how-it-works__container">
-			<div class="how-it-works__header" :ref="reveal">
-				<h2 class="how-it-works__title">How It Works</h2>
-				<p class="how-it-works__subtitle">
-					Simple, seamless healthcare for everyone
-				</p>
+	<section class="how">
+		<div class="how__container">
+			<div class="how__header" :ref="reveal">
+				<h2 class="how__title">Your Health Journey in 4 Steps</h2>
 			</div>
 
-			<div class="how-it-works__grid">
-				<!-- Patient Column -->
-				<div class="how-it-works__column" :ref="reveal">
-					<h3 class="column-title column-title--patient">
-						<v-icon name="hi-user" scale="1.3" />
-						For Patients
-					</h3>
+			<div class="how__grid">
+				<div
+					v-for="(step, i) in steps"
+					:key="step.title"
+					class="how__step"
+					:ref="reveal"
+					:style="{ transitionDelay: `${i * 100}ms` }"
+				>
+					<!-- Connecting dashed line (desktop only, not on last item) -->
+					<div v-if="i < steps.length - 1" class="how__connector" aria-hidden="true"></div>
 
-					<div class="steps">
-						<div
-							v-for="(step, i) in patientSteps"
-							:key="step.title"
-							class="step"
-							:ref="reveal"
-							:style="{ transitionDelay: `${i * 120}ms` }"
-						>
-							<div class="step__indicator">
-								<div class="step__number step__number--patient">{{ i + 1 }}</div>
-								<div v-if="i < patientSteps.length - 1" class="step__line step__line--patient"></div>
-							</div>
-							<div class="step__text">
-								<h4 class="step__title">{{ step.title }}</h4>
-								<p class="step__desc">{{ step.desc }}</p>
-							</div>
-						</div>
+					<div class="how__number">
+						<span>{{ i + 1 }}</span>
 					</div>
-				</div>
-
-				<!-- Specialist Column -->
-				<div class="how-it-works__column" :ref="reveal">
-					<h3 class="column-title column-title--specialist">
-						<v-icon name="fa-stethoscope" scale="1.3" />
-						For Specialists
-					</h3>
-
-					<div class="steps">
-						<div
-							v-for="(step, i) in specialistSteps"
-							:key="step.title"
-							class="step"
-							:ref="reveal"
-							:style="{ transitionDelay: `${i * 120 + 60}ms` }"
-						>
-							<div class="step__indicator">
-								<div class="step__number step__number--specialist">{{ i + 1 }}</div>
-								<div v-if="i < specialistSteps.length - 1" class="step__line step__line--specialist"></div>
-							</div>
-							<div class="step__text">
-								<h4 class="step__title">{{ step.title }}</h4>
-								<p class="step__desc">{{ step.desc }}</p>
-							</div>
-						</div>
-					</div>
-				</div>
-
-				<!-- RxGPT Column -->
-				<div class="how-it-works__column" :ref="reveal">
-					<h3 class="column-title column-title--rxgpt">
-						<v-icon name="hi-lightning-bolt" scale="1.3" />
-						RxGPT Assistant
-					</h3>
-
-					<div class="steps">
-						<div
-							v-for="(step, i) in rxgptSteps"
-							:key="step.title"
-							class="step"
-							:ref="reveal"
-							:style="{ transitionDelay: `${i * 120 + 120}ms` }"
-						>
-							<div class="step__indicator">
-								<div class="step__number step__number--rxgpt">{{ i + 1 }}</div>
-								<div v-if="i < rxgptSteps.length - 1" class="step__line step__line--rxgpt"></div>
-							</div>
-							<div class="step__text">
-								<h4 class="step__title">{{ step.title }}</h4>
-								<p class="step__desc">{{ step.desc }}</p>
-							</div>
-						</div>
-					</div>
+					<h3 class="how__step-title">{{ step.title }}</h3>
+					<p class="how__step-desc">{{ step.desc }}</p>
 				</div>
 			</div>
 		</div>
@@ -99,250 +32,136 @@ import { useScrollReveal } from '@/composables/useScrollReveal.js';
 
 const { reveal } = useScrollReveal();
 
-const patientSteps = [
-	{ title: 'Sign Up & Create Profile', desc: 'Quick registration with secure authentication' },
-	{ title: 'AI Health Checkup', desc: 'Answer questions for intelligent symptom assessment' },
-	{ title: 'Book Matched Specialist', desc: 'Choose from verified healthcare providers' },
-	{ title: 'Video Consultation', desc: 'Connect face-to-face with your doctor' },
-	{ title: 'Order Medications', desc: 'Receive e-prescriptions and order from digital pharmacy' },
-];
-
-const specialistSteps = [
-	{ title: 'Register & Verify Credentials', desc: 'Quick onboarding with professional verification' },
-	{ title: 'Set Availability & Rates', desc: 'Manage your schedule and consultation fees' },
-	{ title: 'Receive Patient Bookings', desc: 'Get matched with patients needing your expertise' },
-	{ title: 'Consult & Prescribe', desc: 'Conduct video consultations with AI assistance' },
-	{ title: 'Track Analytics & Earnings', desc: 'Monitor your practice performance and revenue' },
-];
-
-const rxgptSteps = [
-	{ title: 'Enter Prescription Details', desc: 'Specialist inputs medication, dosage, and patient info' },
-	{ title: 'AI Multi-Source Verification', desc: 'Cross-referenced against PubMed, WHO EML, OpenFDA, NICE, BNF, and RxNav' },
-	{ title: 'Drug Interaction Check', desc: 'Automatic detection of contraindications and conflicts' },
-	{ title: 'Evidence-Based Dosing', desc: 'AI-recommended dosage validated by clinical research' },
-	{ title: 'Verified & Ready to Send', desc: 'Prescription confirmed safe and sent to pharmacy' },
+const steps = [
+	{
+		icon: 'ri-user-add-line',
+		title: 'Sign Up Free',
+		desc: 'Create your account in under 2 minutes. No credit card required.',
+	},
+	{
+		icon: 'gi-stethoscope',
+		title: 'Check Your Health',
+		desc: 'Chat with Eka for an AI health assessment or book a specialist directly.',
+	},
+	{
+		icon: 'hi-video-camera',
+		title: 'Consult a Specialist',
+		desc: 'Video call with a verified doctor. Get prescriptions, notes, and follow-ups.',
+	},
+	{
+		icon: 'hi-cube',
+		title: 'Get Your Medications',
+		desc: 'Order verified medications from our digital pharmacy. Delivered to your door.',
+	},
 ];
 </script>
 
 <style scoped lang="scss">
-$primary: #4FC3F7;
-$primary-dark: #0288D1;
-$primary-light: #E1F5FE;
-$secondary: #FF5C00;
-$secondary-dark: #E05000;
-$secondary-light: #FFF3E0;
-$emerald: #10B981;
-$emerald-dark: #059669;
-$emerald-light: #D1FAE5;
-$navy: #0F172A;
-$slate: #334155;
-$gray: #475569;
-$bg: #F8FAFC;
+@import '../_homepage-tokens';
 
-.how-it-works {
-	background: $bg;
-	padding: 100px 0;
+.how {
+	background: $card-bg;
+	@include section-padding;
 	scroll-margin-top: 80px;
-
-	@media (max-width: 768px) {
-		padding: 64px 0;
-	}
 }
 
-.how-it-works__container {
-	max-width: 1600px;
-	margin: 0 auto;
-	padding: 0 40px;
-
-	@media (max-width: 768px) {
-		padding: 0 20px;
-	}
+.how__container {
+	@include container;
 }
 
-.how-it-works__header {
+// ── Header ──────────────────────────────────────────────────────
+.how__header {
 	text-align: center;
 	margin-bottom: 72px;
-	opacity: 0;
-	transform: translateY(24px);
-	transition: opacity 0.6s ease, transform 0.6s ease;
+	@include reveal-base;
 
-	&.revealed {
-		opacity: 1;
-		transform: translateY(0);
-	}
-
-	@media (max-width: 768px) {
+	@media (max-width: $bp-md) {
 		margin-bottom: 48px;
 	}
 }
 
-.how-it-works__title {
-	font-size: 52px;
-	font-weight: 800;
-	color: $navy;
-	letter-spacing: -1px;
-	margin: 0 0 16px;
-
-	@media (max-width: 768px) {
-		font-size: 36px;
-	}
+.how__title {
+	@include section-title;
 }
 
-.how-it-works__subtitle {
-	font-size: 20px;
-	color: $gray;
-	line-height: 1.6;
-	margin: 0;
-
-	@media (max-width: 768px) {
-		font-size: 16px;
-	}
-}
-
-.how-it-works__grid {
+// ── Steps Grid ──────────────────────────────────────────────────
+.how__grid {
 	display: grid;
-	grid-template-columns: 1fr 1fr 1fr;
-	gap: 48px;
+	grid-template-columns: repeat(4, 1fr);
+	gap: 32px;
+	max-width: 1100px;
+	margin: 0 auto;
 
-	@media (max-width: 1100px) {
+	@media (max-width: $bp-lg) and (min-width: $bp-sm + 1) {
+		grid-template-columns: repeat(2, 1fr);
+		max-width: 680px;
+	}
+
+	@media (max-width: $bp-sm) {
 		grid-template-columns: 1fr;
-		gap: 56px;
+		max-width: 400px;
 	}
 }
 
-.how-it-works__column {
-	opacity: 0;
-	transform: translateY(24px);
-	transition: opacity 0.6s ease, transform 0.6s ease;
-
-	&.revealed {
-		opacity: 1;
-		transform: translateY(0);
-	}
-}
-
-.column-title {
-	display: flex;
-	align-items: center;
-	gap: 12px;
-	font-size: 26px;
-	font-weight: 800;
-	margin: 0 0 36px;
-
-	&--patient {
-		color: $primary-dark;
-	}
-
-	&--specialist {
-		color: $secondary;
-	}
-
-	&--rxgpt {
-		color: $emerald-dark;
-	}
-
-	@media (max-width: 768px) {
-		font-size: 24px;
-		margin-bottom: 32px;
-	}
-}
-
-.steps {
-	display: flex;
-	flex-direction: column;
-}
-
-.step {
-	display: flex;
-	gap: 18px;
-	opacity: 0;
-	transform: translateY(20px);
-	transition: opacity 0.5s ease, transform 0.5s ease;
-
-	&.revealed {
-		opacity: 1;
-		transform: translateY(0);
-	}
-}
-
-.step__indicator {
+// ── Step ────────────────────────────────────────────────────────
+.how__step {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	flex-shrink: 0;
-	width: 44px;
+	text-align: center;
+	position: relative;
+	@include reveal-base;
 }
 
-.step__number {
-	width: 44px;
-	height: 44px;
+// ── Connecting Dashed Line (desktop) ────────────────────────────
+.how__connector {
+	display: none;
+
+	@media (min-width: $bp-lg + 1) {
+		display: block;
+		position: absolute;
+		top: 32px;
+		left: 60%;
+		width: 80%;
+		height: 0;
+		border-top: 2px dashed rgba($primary, 0.15);
+		pointer-events: none;
+	}
+}
+
+// ── Numbered Circle ─────────────────────────────────────────────
+.how__number {
+	width: 64px;
+	height: 64px;
 	border-radius: 50%;
+	background: linear-gradient(135deg, $primary, $primary-dark);
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	font-size: 18px;
-	font-weight: 800;
-	color: #fff;
-	flex-shrink: 0;
+	margin-bottom: 20px;
+	box-shadow: 0 8px 24px rgba($primary-dark, 0.25);
 	position: relative;
-	z-index: 1;
+	z-index: 2;
 
-	&--patient {
-		background: $primary;
-	}
-
-	&--specialist {
-		background: $secondary;
-	}
-
-	&--rxgpt {
-		background: $emerald;
+	span {
+		font-size: 22px;
+		font-weight: 800;
+		color: $white;
+		line-height: 1;
 	}
 }
 
-.step__line {
-	width: 2px;
-	flex: 1;
-	min-height: 36px;
-	border-left: 2px solid;
-
-	&--patient {
-		border-color: rgba($primary, 0.25);
-	}
-
-	&--specialist {
-		border-color: rgba($secondary, 0.25);
-	}
-
-	&--rxgpt {
-		border-color: rgba($emerald, 0.25);
-	}
-}
-
-.step__text {
-	flex: 1;
-	padding: 6px 0 40px;
-}
-
-.step__title {
+.how__step-title {
 	font-size: 18px;
 	font-weight: 700;
-	color: $navy;
-	margin: 0 0 5px;
-
-	@media (max-width: 768px) {
-		font-size: 17px;
-	}
+	color: $foreground;
+	margin: 0 0 10px;
 }
 
-.step__desc {
+.how__step-desc {
 	font-size: 15px;
-	color: $gray;
-	line-height: 1.5;
+	color: $muted-fg;
+	line-height: 1.65;
 	margin: 0;
-
-	@media (max-width: 768px) {
-		font-size: 14px;
-	}
 }
 </style>

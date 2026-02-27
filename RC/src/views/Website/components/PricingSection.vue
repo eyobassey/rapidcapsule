@@ -1,64 +1,57 @@
 <template>
-	<section class="pricing" id="pricing">
+	<section id="pricing" class="pricing">
 		<div class="pricing__container">
 			<div class="pricing__header" :ref="reveal">
-				<span class="pricing__label">Plans</span>
-				<h2 class="pricing__title">Transparent Pricing</h2>
-				<p class="pricing__subtitle">Choose the plan that works for you</p>
+				<h2 class="pricing__title">Simple, Transparent Pricing</h2>
 			</div>
 
 			<div class="pricing__grid">
 				<!-- Patient Card -->
-				<div class="pricing-card pricing-card--patient" :ref="reveal">
-					<div class="pricing-card__icon-box pricing-card__icon-box--patient">
-						<v-icon name="hi-user" scale="1.4" />
+				<div class="pricing-card" :ref="reveal">
+					<h3 class="pricing-card__name">For Patients</h3>
+					<p class="pricing-card__tagline">Pay Per Consultation</p>
+
+					<div class="pricing-card__price">
+						<span class="pricing-card__amount">$15</span>
+						<span class="pricing-card__period">/consultation</span>
 					</div>
-					<h3 class="pricing-card__title">For Patients</h3>
-					<p class="pricing-card__subtitle">Pay only when you need care</p>
 
 					<ul class="pricing-card__features">
-						<li v-for="feature in patientFeatures" :key="feature" class="pricing-card__feature">
-							<span class="pricing-card__check">
-								<v-icon name="hi-check" scale="0.8" />
-							</span>
-							<span>{{ feature }}</span>
+						<li v-for="f in patientFeatures" :key="f">
+							<v-icon name="hi-check-circle" scale="0.9" class="pricing-card__check pricing-card__check--emerald" />
+							<span>{{ f }}</span>
 						</li>
 					</ul>
 
-					<div class="pricing-card__price">
-						<span class="pricing-card__amount">From $15</span>
-						<span class="pricing-card__period">per consultation</span>
-					</div>
-
-					<router-link to="/signup/patient" class="pricing-card__cta pricing-card__cta--primary">
+					<router-link to="/signup/patient" class="pricing-card__cta pricing-card__cta--accent">
 						Get Started Free
 					</router-link>
 				</div>
 
 				<!-- Specialist Card -->
-				<div class="pricing-card pricing-card--specialist" :ref="reveal">
-					<div class="pricing-card__badge">Popular</div>
-					<div class="pricing-card__icon-box pricing-card__icon-box--specialist">
-						<v-icon name="fa-stethoscope" scale="1.4" />
+				<div
+					class="pricing-card pricing-card--featured"
+					:ref="reveal"
+					:style="{ transitionDelay: '120ms' }"
+				>
+					<span class="pricing-card__badge">Featured</span>
+
+					<h3 class="pricing-card__name">For Specialists</h3>
+					<p class="pricing-card__tagline">Earn Per Consultation</p>
+
+					<div class="pricing-card__price">
+						<span class="pricing-card__amount">15%</span>
+						<span class="pricing-card__period">per session</span>
 					</div>
-					<h3 class="pricing-card__title">For Specialists</h3>
-					<p class="pricing-card__subtitle">Grow your practice with us</p>
 
 					<ul class="pricing-card__features">
-						<li v-for="feature in specialistFeatures" :key="feature" class="pricing-card__feature">
-							<span class="pricing-card__check">
-								<v-icon name="hi-check" scale="0.8" />
-							</span>
-							<span>{{ feature }}</span>
+						<li v-for="f in specialistFeatures" :key="f">
+							<v-icon name="hi-check-circle" scale="0.9" class="pricing-card__check pricing-card__check--primary" />
+							<span>{{ f }}</span>
 						</li>
 					</ul>
 
-					<div class="pricing-card__price">
-						<span class="pricing-card__amount">15% Fee</span>
-						<span class="pricing-card__period">per completed consultation</span>
-					</div>
-
-					<router-link to="/signup/specialist" class="pricing-card__cta pricing-card__cta--primary">
+					<router-link to="/signup/specialist" class="pricing-card__cta pricing-card__cta--teal">
 						Join as Specialist
 					</router-link>
 				</div>
@@ -74,217 +67,144 @@ const { reveal } = useScrollReveal();
 
 const patientFeatures = [
 	'Free AI health checkups',
-	'Pay-per-consultation pricing',
-	'Digital wallet top-up',
-	'Referral reward credits',
-	'RxGPT prescription verification',
+	'Free Eka access',
+	'Pay only when you consult',
+	'Digital pharmacy access',
+	'Prescription verification',
+	'Health monitoring',
+	'Wallet credits',
 ];
 
 const specialistFeatures = [
-	'Set your own consultation rates',
-	'Patient management dashboard',
-	'RxGPT AI prescription assistant',
-	'Revenue analytics & reporting',
-	'Marketing & patient matching',
+	'Set your own rates',
+	'RxGPT AI assistant',
+	'Patient management tools',
+	'Clinical notes system',
+	'Earnings dashboard',
+	'Bank payouts',
+	'No upfront fees',
 ];
 </script>
 
 <style scoped lang="scss">
-// Design tokens
-$primary: #4fc3f7;
-$primary-dark: #0288d1;
-$primary-light: #e1f5fe;
-$secondary: #FF5C00;
-$secondary-dark: #E05000;
-$navy: #0f172a;
-$slate: #334155;
-$gray: #475569;
-$emerald: #10b981;
-$bg: #f8fafc;
+@import '../_homepage-tokens';
 
+// ── Section ──────────────────────────────────────────────────
 .pricing {
-	background: $bg;
-	padding: 96px 0;
-	scroll-margin-top: 80px;
-
-	@media (max-width: 768px) {
-		padding: 64px 0;
-	}
+	@include section-padding;
 }
 
+// ── Container ────────────────────────────────────────────────
 .pricing__container {
-	max-width: 1600px;
+	max-width: 960px;
 	margin: 0 auto;
-	padding: 0 32px;
+	padding: 0 $container-px;
 
-	@media (max-width: 768px) {
-		padding: 0 16px;
+	@media (max-width: $bp-sm) {
+		padding: 0 $container-px-sm;
+	}
+
+	@media (max-width: $bp-xs) {
+		padding: 0 $container-px-xs;
 	}
 }
 
-// Header
+// ── Header ───────────────────────────────────────────────────
 .pricing__header {
 	text-align: center;
-	margin-bottom: 64px;
-	opacity: 0;
-	transform: translateY(24px);
-	transition: opacity 0.6s ease, transform 0.6s ease;
+	margin-bottom: 56px;
+	@include reveal-base;
 
-	&.revealed {
-		opacity: 1;
-		transform: translateY(0);
-	}
-
-	@media (max-width: 768px) {
+	@media (max-width: $bp-md) {
 		margin-bottom: 40px;
 	}
 }
 
-.pricing__label {
-	display: inline-block;
-	padding: 6px 18px;
-	background: $primary-light;
-	color: $primary-dark;
-	font-size: 14px;
-	font-weight: 700;
-	letter-spacing: 0.5px;
-	text-transform: uppercase;
-	border-radius: 50px;
-	margin-bottom: 16px;
-}
-
 .pricing__title {
-	font-size: 52px;
-	font-weight: 800;
-	color: $navy;
-	letter-spacing: -1px;
-	margin: 0 0 16px;
-
-	@media (max-width: 768px) {
-		font-size: 36px;
-	}
+	@include section-title;
 }
 
-.pricing__subtitle {
-	font-size: 20px;
-	color: $gray;
-	line-height: 1.6;
-	margin: 0;
-	max-width: 520px;
-	margin-left: auto;
-	margin-right: auto;
-
-	@media (max-width: 768px) {
-		font-size: 16px;
-	}
-}
-
-// Grid
+// ── Grid ─────────────────────────────────────────────────────
 .pricing__grid {
 	display: grid;
 	grid-template-columns: 1fr 1fr;
 	gap: 32px;
-	max-width: 1100px;
-	margin: 0 auto;
 
-	@media (max-width: 768px) {
+	@media (max-width: $bp-md) {
 		grid-template-columns: 1fr;
-		max-width: 480px;
+		max-width: 460px;
+		margin: 0 auto;
 	}
 }
 
-// Card
+// ── Card ─────────────────────────────────────────────────────
 .pricing-card {
 	position: relative;
-	background: #fff;
-	border-radius: 24px;
-	border: 2px solid transparent;
-	padding: 40px 32px;
-	box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
-	transition: transform 0.3s ease, box-shadow 0.3s ease;
-	opacity: 0;
-	transform: translateY(24px);
-	transition: opacity 0.6s ease, transform 0.6s ease, box-shadow 0.3s ease;
+	@include card-glass;
+	padding: 32px;
+	@include reveal-base;
 
 	&.revealed {
 		opacity: 1;
 		transform: translateY(0);
 	}
 
-	&:hover {
-		transform: translateY(-6px);
-		box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
-	}
-
-	&.revealed:hover {
-		transform: translateY(-6px);
-	}
-
-	&--patient {
-		border-color: $primary;
-	}
-
-	&--specialist {
-		border-color: $secondary;
-	}
-
-	@media (max-width: 768px) {
-		padding: 32px 24px;
+	&--featured {
+		box-shadow: 0 0 0 2px rgba($primary, 0.3);
 	}
 }
 
-// Popular badge
+// ── Featured badge ───────────────────────────────────────────
 .pricing-card__badge {
 	position: absolute;
-	top: -14px;
-	right: 24px;
+	top: -12px;
+	left: 50%;
+	transform: translateX(-50%);
 	padding: 6px 20px;
-	background: $secondary;
-	color: #fff;
+	background: linear-gradient(to right, $primary, $primary-dark);
+	color: $white;
 	font-size: 13px;
 	font-weight: 700;
 	border-radius: 50px;
-	letter-spacing: 0.3px;
-	box-shadow: 0 4px 12px rgba($secondary, 0.35);
+	white-space: nowrap;
 }
 
-// Icon box
-.pricing-card__icon-box {
-	width: 56px;
-	height: 56px;
-	border-radius: 16px;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	margin-bottom: 20px;
-
-	&--patient {
-		background: linear-gradient(135deg, $primary-light, lighten($primary, 18%));
-		color: $primary-dark;
-	}
-
-	&--specialist {
-		background: linear-gradient(135deg, #fff3e0, lighten($secondary, 28%));
-		color: $secondary-dark;
-	}
-}
-
-// Title and subtitle
-.pricing-card__title {
-	font-size: 26px;
+// ── Card content ─────────────────────────────────────────────
+.pricing-card__name {
+	font-size: 24px;
 	font-weight: 800;
-	color: $navy;
-	margin: 0 0 8px;
+	color: $foreground;
+	margin: 0 0 4px;
 }
 
-.pricing-card__subtitle {
+.pricing-card__tagline {
 	font-size: 15px;
-	color: $gray;
-	margin: 0 0 28px;
-	line-height: 1.5;
+	color: $muted-fg;
+	margin: 0 0 24px;
 }
 
-// Feature list
+.pricing-card__price {
+	display: flex;
+	align-items: baseline;
+	gap: 4px;
+	margin-bottom: 28px;
+	padding-bottom: 24px;
+	border-bottom: 1px solid $border;
+}
+
+.pricing-card__amount {
+	font-size: 36px;
+	font-weight: 800;
+	color: $foreground;
+	letter-spacing: -0.5px;
+}
+
+.pricing-card__period {
+	font-size: 15px;
+	color: $muted-fg;
+}
+
+// ── Feature list ─────────────────────────────────────────────
 .pricing-card__features {
 	list-style: none;
 	padding: 0;
@@ -292,71 +212,58 @@ $bg: #f8fafc;
 	display: flex;
 	flex-direction: column;
 	gap: 14px;
-}
 
-.pricing-card__feature {
-	display: flex;
-	align-items: center;
-	gap: 12px;
-	font-size: 16px;
-	color: $slate;
-	line-height: 1.4;
+	li {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		font-size: 15px;
+		color: $foreground;
+		line-height: 1.4;
+	}
 }
 
 .pricing-card__check {
-	width: 24px;
-	height: 24px;
-	border-radius: 50%;
-	background: rgba($emerald, 0.12);
-	color: $emerald;
-	display: flex;
-	align-items: center;
-	justify-content: center;
 	flex-shrink: 0;
+
+	&--emerald {
+		color: $emerald;
+	}
+
+	&--primary {
+		color: $primary;
+	}
 }
 
-// Price
-.pricing-card__price {
-	display: flex;
-	align-items: baseline;
-	gap: 8px;
-	margin-bottom: 28px;
-	padding-top: 24px;
-	border-top: 1px solid #f1f5f9;
-}
-
-.pricing-card__amount {
-	font-size: 36px;
-	font-weight: 800;
-	color: $navy;
-	letter-spacing: -0.5px;
-}
-
-.pricing-card__period {
-	font-size: 15px;
-	color: $gray;
-}
-
-// CTA button
+// ── CTA buttons ──────────────────────────────────────────────
 .pricing-card__cta {
 	display: block;
 	text-align: center;
-	padding: 16px 32px;
+	padding: 14px 32px;
 	border-radius: 50px;
 	font-size: 16px;
 	font-weight: 700;
 	text-decoration: none;
-	transition: all 0.25s ease;
+	color: $white;
+	transition: all 0.3s ease;
 
-	&--primary {
-		background: $secondary;
-		color: #fff;
-		box-shadow: 0 6px 20px rgba($secondary, 0.3);
+	&--accent {
+		background: linear-gradient(to right, $accent, $accent-dark);
+		box-shadow: 0 8px 20px rgba($accent, 0.25);
 
 		&:hover {
-			background: $secondary-dark;
+			box-shadow: 0 12px 28px rgba($accent, 0.35);
 			transform: translateY(-2px);
-			box-shadow: 0 8px 28px rgba($secondary, 0.4);
+		}
+	}
+
+	&--teal {
+		background: linear-gradient(to right, $teal, $primary-dark);
+		box-shadow: 0 8px 20px rgba($teal, 0.25);
+
+		&:hover {
+			box-shadow: 0 12px 28px rgba($teal, 0.35);
+			transform: translateY(-2px);
 		}
 	}
 }

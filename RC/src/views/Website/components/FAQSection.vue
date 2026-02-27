@@ -1,10 +1,8 @@
 <template>
-	<section class="faq" id="faq">
+	<section class="faq">
 		<div class="faq__container">
 			<div class="faq__header" :ref="reveal">
-				<span class="faq__label">Support</span>
 				<h2 class="faq__title">Frequently Asked Questions</h2>
-				<p class="faq__subtitle">Everything you need to know</p>
 			</div>
 
 			<div class="faq__list">
@@ -16,16 +14,22 @@
 					:ref="reveal"
 					:style="{ transitionDelay: `${index * 60}ms` }"
 				>
-					<button class="faq-item__question" @click="toggle(index)" :aria-expanded="openIndex === index">
-						<span class="faq-item__question-text">{{ item.question }}</span>
+					<button
+						class="faq-item__trigger"
+						@click="toggle(index)"
+						:aria-expanded="openIndex === index"
+					>
+						<span class="faq-item__question">{{ item.q }}</span>
 						<span class="faq-item__chevron">
 							<v-icon name="hi-chevron-down" scale="1" />
 						</span>
 					</button>
-					<div class="faq-item__answer-wrap" :class="{ 'faq-item__answer-wrap--open': openIndex === index }">
-						<div class="faq-item__answer">
-							<p>{{ item.answer }}</p>
-						</div>
+
+					<div
+						class="faq-item__body"
+						:class="{ 'faq-item__body--open': openIndex === index }"
+					>
+						<p class="faq-item__answer">{{ item.a }}</p>
 					</div>
 				</div>
 			</div>
@@ -38,7 +42,6 @@ import { ref } from 'vue';
 import { useScrollReveal } from '@/composables/useScrollReveal.js';
 
 const { reveal } = useScrollReveal();
-
 const openIndex = ref(null);
 
 function toggle(index) {
@@ -47,150 +50,88 @@ function toggle(index) {
 
 const faqs = [
 	{
-		question: 'How does the AI health checkup work?',
-		answer:
-			"Our AI health checkup uses advanced natural language processing to analyze your symptoms. You'll answer a series of questions about how you're feeling, and our system provides an intelligent triage assessment, potential conditions, and specialist recommendations \u2014 all in under 5 minutes.",
+		q: 'What is Eka and how does it work?',
+		a: 'Eka is our AI health assistant that conducts intelligent symptom interviews, provides triage assessments, checks drug interactions, and connects you with the right specialist — all through natural conversation available 24/7.',
 	},
 	{
-		question: 'What happens during a video consultation?',
-		answer:
-			'Video consultations are conducted through secure, HD Zoom integration. Your specialist will review your health profile, discuss your concerns, provide a diagnosis, and can issue digital prescriptions \u2014 all from the comfort of your home.',
+		q: "How accurate is RxGPT's prescription verification?",
+		a: 'RxGPT verifies prescriptions against 6 clinical databases including PubMed, WHO Essential Medicines, and OpenFDA. Our 7-layer hallucination detection pipeline ensures clinical accuracy with full traceability.',
 	},
 	{
-		question: 'Is my health data secure and private?',
-		answer:
-			'Absolutely. We use JWT/OAuth authentication, end-to-end encryption for all data in transit and at rest, and follow HIPAA-aware data handling standards. Your health information is never shared without your explicit consent.',
+		q: 'How do video consultations work?',
+		a: 'Book a consultation with a verified specialist, connect via HD video in-app, and receive prescriptions, clinical notes, and follow-up plans — all in one seamless experience.',
 	},
 	{
-		question: 'How does RxGPT prescription verification work?',
-		answer:
-			'RxGPT cross-references prescriptions against six authoritative clinical sources: PubMed research databases, WHO Essential Medicines List, OpenFDA drug labels, NICE clinical guidelines, the British National Formulary (BNF), and RxNav. It checks for drug interactions, contraindications, and dosage accuracy to ensure prescription safety.',
+		q: 'Is my health data secure?',
+		a: 'Absolutely. We use end-to-end encryption, HIPAA-aware infrastructure, and verify every specialist\'s license before activation. Your data is encrypted in transit and at rest.',
 	},
 	{
-		question: 'What payment methods do you accept?',
-		answer:
-			'We accept payments through Paystack, supporting credit/debit cards and bank transfers. You can also use our digital wallet system for quick payments, and earn credits through our referral rewards program.',
+		q: 'What payment methods are accepted?',
+		a: 'We support credit/debit cards, mobile wallets, and in-app wallet credits with multi-currency support for a seamless payment experience worldwide.',
 	},
 	{
-		question: 'How do I become a verified specialist?',
-		answer:
-			"Specialists can register through our onboarding process which includes credential verification, profile setup, availability configuration, and rate card creation. Once verified, you'll be matched with patients seeking your expertise.",
+		q: 'Can I connect my wearable devices?',
+		a: 'Yes! Connect Apple Watch, Fitbit, Garmin, and other popular wearables to automatically track vitals with charts, trends, and health alerts built in.',
 	},
 	{
-		question: 'Can I get medications delivered to my location?',
-		answer:
-			'Yes! Our integrated pharmacy ecosystem connects you with licensed pharmacies. After receiving a digital prescription from your specialist, you can browse our catalog of 3,087+ medications and arrange delivery to your location.',
-	},
-	{
-		question: 'What are the referral rewards?',
-		answer:
-			'When you refer friends or family to Rapid Capsule, both you and the referred person receive wallet credits. These credits can be applied toward consultations, making healthcare more affordable for everyone.',
+		q: 'How do I verify my prescription?',
+		a: 'Simply upload a photo or PDF of your prescription. Our 3-tier AI system verifies document quality, performs clinical validation, and checks for fraud — all in seconds.',
 	},
 ];
 </script>
 
 <style scoped lang="scss">
-// Design tokens
-$primary: #4fc3f7;
-$primary-dark: #0288d1;
-$primary-light: #e1f5fe;
-$secondary: #FF5C00;
-$secondary-dark: #E05000;
-$navy: #0f172a;
-$slate: #334155;
-$gray: #475569;
-$emerald: #10b981;
-$bg: #f8fafc;
+@import '../_homepage-tokens';
 
+// ── Section ──────────────────────────────────────────────────
 .faq {
-	background: #fff;
-	padding: 96px 0;
-	scroll-margin-top: 80px;
-
-	@media (max-width: 768px) {
-		padding: 64px 0;
-	}
+	background: rgba($secondary-bg, 0.5);
+	@include section-padding;
 }
 
+// ── Container ────────────────────────────────────────────────
 .faq__container {
-	max-width: 960px;
+	max-width: 768px;
 	margin: 0 auto;
-	padding: 0 32px;
+	padding: 0 $container-px;
 
-	@media (max-width: 768px) {
-		padding: 0 16px;
+	@media (max-width: $bp-sm) {
+		padding: 0 $container-px-sm;
+	}
+
+	@media (max-width: $bp-xs) {
+		padding: 0 $container-px-xs;
 	}
 }
 
-// Header
+// ── Header ───────────────────────────────────────────────────
 .faq__header {
 	text-align: center;
-	margin-bottom: 56px;
-	opacity: 0;
-	transform: translateY(24px);
-	transition: opacity 0.6s ease, transform 0.6s ease;
+	margin-bottom: 48px;
+	@include reveal-base;
 
-	&.revealed {
-		opacity: 1;
-		transform: translateY(0);
-	}
-
-	@media (max-width: 768px) {
+	@media (max-width: $bp-md) {
 		margin-bottom: 36px;
 	}
 }
 
-.faq__label {
-	display: inline-block;
-	padding: 6px 18px;
-	background: $primary-light;
-	color: $primary-dark;
-	font-size: 14px;
-	font-weight: 700;
-	letter-spacing: 0.5px;
-	text-transform: uppercase;
-	border-radius: 50px;
-	margin-bottom: 16px;
-}
-
 .faq__title {
-	font-size: 52px;
-	font-weight: 800;
-	color: $navy;
-	letter-spacing: -1px;
-	margin: 0 0 16px;
-
-	@media (max-width: 768px) {
-		font-size: 36px;
-	}
+	@include section-title;
 }
 
-.faq__subtitle {
-	font-size: 20px;
-	color: $gray;
-	line-height: 1.6;
-	margin: 0;
-
-	@media (max-width: 768px) {
-		font-size: 16px;
-	}
-}
-
-// FAQ List
+// ── List ─────────────────────────────────────────────────────
 .faq__list {
 	display: flex;
 	flex-direction: column;
 	gap: 12px;
 }
 
-// FAQ Item
+// ── Item ─────────────────────────────────────────────────────
 .faq-item {
-	background: $bg;
-	border-radius: 16px;
+	@include card-glass;
+	padding: 0;
 	overflow: hidden;
-	transition: opacity 0.5s ease, transform 0.5s ease, box-shadow 0.25s ease;
-	opacity: 0;
-	transform: translateY(20px);
+	@include reveal-base;
 
 	&.revealed {
 		opacity: 1;
@@ -198,21 +139,22 @@ $bg: #f8fafc;
 	}
 
 	&:hover {
-		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+		transform: none;
 	}
 
 	&--open {
-		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+		box-shadow: 0 8px 28px rgba(0, 0, 0, 0.08);
 	}
 }
 
-.faq-item__question {
+// ── Question trigger ─────────────────────────────────────────
+.faq-item__trigger {
 	width: 100%;
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
 	gap: 16px;
-	padding: 20px 24px;
+	padding: 16px 24px;
 	border: none;
 	background: none;
 	cursor: pointer;
@@ -220,21 +162,17 @@ $bg: #f8fafc;
 	transition: background 0.2s ease;
 
 	&:hover {
-		background: rgba($primary, 0.04);
-	}
-
-	@media (max-width: 768px) {
-		padding: 16px 18px;
+		background: rgba($primary, 0.03);
 	}
 }
 
-.faq-item__question-text {
-	font-size: 18px;
+.faq-item__question {
+	font-size: 14px;
 	font-weight: 600;
-	color: $navy;
+	color: $foreground;
 	line-height: 1.4;
 
-	@media (max-width: 768px) {
+	@media (min-width: $bp-sm) {
 		font-size: 16px;
 	}
 }
@@ -246,20 +184,20 @@ $bg: #f8fafc;
 	width: 32px;
 	height: 32px;
 	border-radius: 50%;
-	background: rgba($primary, 0.1);
+	background: rgba($primary, 0.08);
 	color: $primary-dark;
 	flex-shrink: 0;
-	transition: transform 0.35s ease, background 0.25s ease;
+	transition: transform 0.35s ease, background 0.25s ease, color 0.25s ease;
 
 	.faq-item--open & {
 		transform: rotate(180deg);
 		background: $primary;
-		color: #fff;
+		color: $white;
 	}
 }
 
-// Answer panel
-.faq-item__answer-wrap {
+// ── Answer body ──────────────────────────────────────────────
+.faq-item__body {
 	max-height: 0;
 	opacity: 0;
 	overflow: hidden;
@@ -272,21 +210,10 @@ $bg: #f8fafc;
 }
 
 .faq-item__answer {
-	padding: 0 24px 20px;
-
-	p {
-		font-size: 15px;
-		color: $gray;
-		line-height: 1.7;
-		margin: 0;
-	}
-
-	@media (max-width: 768px) {
-		padding: 0 18px 16px;
-
-		p {
-			font-size: 14px;
-		}
-	}
+	padding: 0 24px 16px;
+	font-size: 14px;
+	color: $muted-fg;
+	line-height: 1.75;
+	margin: 0;
 }
 </style>
