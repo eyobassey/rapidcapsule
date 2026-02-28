@@ -223,6 +223,10 @@ export class NotificationOrchestratorService {
       [NotificationType.NEW_USER_REGISTERED]: 'appointment_updates',
       [NotificationType.SPECIALIST_VERIFICATION_PENDING]: 'appointment_updates',
       [NotificationType.SUPPORT_TICKET]: 'appointment_updates',
+      [NotificationType.RECOVERY_RISK_MODERATE]: 'health_reminders',
+      [NotificationType.RECOVERY_RISK_HIGH]: 'health_reminders',
+      [NotificationType.RECOVERY_RISK_CRITICAL]: 'vitals_alerts',
+      [NotificationType.RECOVERY_RISK_IMPROVED]: 'health_reminders',
     };
 
     return mapping[type] || 'appointment_updates';

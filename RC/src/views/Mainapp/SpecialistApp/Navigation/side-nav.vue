@@ -191,6 +191,13 @@ export default {
 					matchRoutes: ["/app/specialist/patients"]
 				},
 				{
+					link: "/app/specialist/recovery",
+					label: "Recovery",
+					children: [],
+					icon: "recovery",
+					matchRoutes: ["/app/specialist/recovery"]
+				},
+				{
 					link: "/app/specialist/clinical-notes",
 					label: "Clinical Notes",
 					children: [],

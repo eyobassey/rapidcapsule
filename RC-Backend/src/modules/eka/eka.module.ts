@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { EkaController } from './eka.controller';
 import { EkaService } from './eka.service';
@@ -30,6 +30,8 @@ import { RecoveryJournal, RecoveryJournalSchema } from '../recovery/entities/rec
 import { CrisisEvent, CrisisEventSchema } from '../recovery/entities/crisis-event.entity';
 import { RecoveryPlan, RecoveryPlanSchema } from '../recovery/entities/recovery-plan.entity';
 import { CopingExerciseSession, CopingExerciseSessionSchema } from '../recovery/entities/coping-exercise-session.entity';
+import { RiskAssessmentReport, RiskAssessmentReportSchema } from '../recovery/entities/risk-assessment-report.entity';
+import { RecoveryModule } from '../recovery/recovery.module';
 
 @Module({
   imports: [
@@ -59,8 +61,10 @@ import { CopingExerciseSession, CopingExerciseSessionSchema } from '../recovery/
       { name: CrisisEvent.name, schema: CrisisEventSchema },
       { name: RecoveryPlan.name, schema: RecoveryPlanSchema },
       { name: CopingExerciseSession.name, schema: CopingExerciseSessionSchema },
+      { name: RiskAssessmentReport.name, schema: RiskAssessmentReportSchema },
     ]),
     ClaudeSummaryCreditsModule,
+    forwardRef(() => RecoveryModule),
   ],
   controllers: [EkaController],
   providers: [EkaService, ClaudeHealthSummaryService, ClaudeAIService, TextractService],

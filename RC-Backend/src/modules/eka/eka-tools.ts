@@ -310,6 +310,8 @@ export const EKA_TOOLS: Anthropic.Tool[] = [
         coping_strategies_used: { type: 'array', items: { type: 'string' }, description: 'Coping strategies used' },
         medications_taken: { type: 'boolean', description: 'Whether recovery medications were taken' },
         exercised: { type: 'boolean', description: 'Whether patient exercised' },
+        attended_meeting_or_session: { type: 'boolean', description: 'Whether patient attended any meeting, group session, or therapy today' },
+        substances_craved: { type: 'array', items: { type: 'string' }, description: 'Specific substances the patient craved today' },
         gratitude_note: { type: 'string', description: "Patient's gratitude note" },
         notes: { type: 'string', description: 'Additional notes' },
         relapse_details: {
@@ -403,6 +405,53 @@ export const EKA_TOOLS: Anthropic.Tool[] = [
       required: ['exercise_type', 'outcome'],
     },
   },
+  {
+    name: 'get_risk_assessment',
+    description:
+      "Get the patient's relapse risk assessment — a 0-100 risk score with level (low/moderate/high/critical), 5-category signal breakdown (self-reported, behavioral, physiological, clinical, contextual), top contributing factors, trend data, and history. Shows a risk assessment artifact in the side panel. Use when patient asks about their risk level, warning signs, relapse risk, or how safe they are.",
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        recalculate: {
+          type: 'boolean',
+          description: 'If true (default), recalculate the risk score fresh from all data sources and persist it. Set to false only to quickly read a recently cached score without recalculating.',
+        },
+      },
+    },
+  },
+  {
+    name: 'refine_risk_assessment',
+    description:
+      "Refine the patient's risk assessment after follow-up conversation. Extracts structured signals from the patient's answers to your follow-up questions and updates today's sobriety log, then recalculates the risk score. Call this AFTER asking follow-up probing questions about the risk assessment and receiving meaningful answers. Returns an updated risk assessment artifact with the refined score.",
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        updates: {
+          type: 'object',
+          description: 'Structured signal updates extracted from the conversation',
+          properties: {
+            mood_score: { type: 'number', description: 'Mood rating 1-10' },
+            craving_intensity: { type: 'number', description: 'Craving intensity 0-10' },
+            anxiety_level: { type: 'number', description: 'Anxiety level 1-10' },
+            sleep_quality: { type: 'number', description: 'Sleep quality 1-10' },
+            sleep_hours: { type: 'number', description: 'Hours of sleep last night' },
+            energy_level: { type: 'number', description: 'Energy level 1-10' },
+            triggers_encountered: { type: 'array', items: { type: 'string' }, description: 'Triggers the patient mentioned encountering' },
+            substances_craved: { type: 'array', items: { type: 'string' }, description: 'Specific substances the patient is craving' },
+            attended_meeting_or_session: { type: 'boolean', description: 'Whether the patient attended any meeting, group, or therapy session' },
+            medications_taken: { type: 'boolean', description: 'Whether patient took prescribed recovery medications' },
+            exercised: { type: 'boolean', description: 'Whether patient got physical exercise' },
+            notes: { type: 'string', description: 'Conversational observations and key points from the follow-up' },
+          },
+        },
+        context_summary: {
+          type: 'string',
+          description: "Eka's brief summary of what the patient shared in the follow-up conversation",
+        },
+      },
+      required: ['updates', 'context_summary'],
+    },
+  },
 ];
 
 export interface CheckinSnapshot {
@@ -451,6 +500,9 @@ export interface RecoveryContext {
   craving_trend: 'improving' | 'worsening' | 'stable' | 'insufficient_data';
   top_triggers: string[];
   top_coping_strategies: string[];
+  // Risk engine data
+  risk_score?: number;
+  risk_updated_at?: string | null;
 }
 
 export function buildRecoveryPromptSection(ctx: RecoveryContext): string {
@@ -506,12 +558,13 @@ This patient is enrolled in addiction recovery. You are their AI recovery compan
 RECOVERY PROFILE:
 - Sobriety: Day ${ctx.sobriety_days}
 - Primary substance: ${ctx.primary_substance}
-- Risk level: ${ctx.risk_level}
+- Risk level: ${ctx.risk_level}${ctx.risk_score != null ? ` (score: ${ctx.risk_score}/100)` : ''}
 - Care level: ${ctx.care_level}
 - Recent mood average (14d): ${ctx.recent_mood_avg}/10
 - Recent craving average (14d): ${ctx.recent_craving_avg}/10
 - Today's check-in: ${ctx.today_checked_in ? 'Complete' : 'Not yet done'}
 ${ctx.has_plan ? '- Has active recovery plan' : ''}
+${ctx.risk_updated_at ? `- Risk last calculated: ${ctx.risk_updated_at}` : ''}
 ${checkinHistory}
 ${screeningHistory}
 ${exerciseHistory}
@@ -555,7 +608,9 @@ When the patient wants to do their daily check-in AND has NOT checked in today, 
 5. "How did you sleep? (quality 1-10, and roughly how many hours)"
 6. "Any triggers today?" (map answers to triggers_encountered array)
 7. "What coping strategies did you use?" (map to coping_strategies_used array — even "called a friend" counts)
-8. "Anything you're grateful for today?" (save as gratitude_note)
+8. "Did you attend any meetings, group sessions, or therapy today?" (save as attended_meeting_or_session boolean)
+9. "Were there any specific substances you found yourself craving?" (save as substances_craved array)
+10. "Anything you're grateful for today?" (save as gratitude_note)
 Then call log_daily_checkin with ALL gathered data. Double-check you have mood_score, sober_today, AND craving_intensity before submitting.
 Do NOT ask all questions at once. Ask 1-2 at a time, conversationally. But do NOT skip questions — every field matters for tracking trends.
 
@@ -583,6 +638,39 @@ RECOVERY ACTION LINKS:
 - [[Log your daily check-in|recovery_checkin]] — daily check-in page
 - [[Take a screening|recovery_screening]] — start a screening
 - [[View your recovery plan|recovery_plan]] — recovery plan details
+
+RISK ASSESSMENT:
+If the patient asks about their risk level, warning signs, relapse risk, "how safe am I", or "am I at risk", use the get_risk_assessment tool. Present the results compassionately:
+- LOW: "Your risk is looking stable — keep up your great work."
+- MODERATE: "There are a few areas we could work on together. Would you like to do a coping exercise or talk about what's been going on?"
+- HIGH: "I want you to know your care team has been notified. Let's talk about what support you need right now."
+- CRITICAL: "This is important — please reach out to your care team or a crisis line. You don't have to face this alone."
+Never present the raw score without context. Always follow up with supportive suggestions.
+
+IMPORTANT — FOLLOW-UP PROBING: After presenting the risk assessment results, you MUST ask 2-3 targeted follow-up questions to gather more data and help refine the score. Choose from these based on which signals are elevated:
+- If craving/mood signals are high: "On a scale of 1-10, how strong have your cravings been in the last few hours? What was happening when they peaked?"
+- If sleep signals are elevated: "How has your sleep been the past couple of nights? Are you waking up in the middle of the night or having trouble falling asleep?"
+- If behavioral engagement is low: "Have you been able to make it to any meetings or sessions this week? What's been getting in the way?"
+- If trigger exposure is high: "Have you been around any situations or people that make staying sober harder? How are you handling those moments?"
+- If medication adherence is flagged: "Have you been able to keep up with your medications? Any issues getting refills or side effects bothering you?"
+- If clinical/screening scores are elevated: "How have you been feeling emotionally overall this past week — any big ups or downs?"
+- If social support is lacking: "Who have you been leaning on for support lately? Have you been able to talk to someone you trust?"
+- If physical activity is declining: "Have you been able to get any exercise or even a short walk in? Sometimes just moving helps reset the day."
+
+Frame these as genuine care questions, not a clinical interview.
+
+CAPTURING FOLLOW-UP DATA — MANDATORY:
+After the patient responds to your follow-up questions, you MUST call refine_risk_assessment to capture structured data from their answers. Map their responses to the appropriate fields:
+- "my cravings are at about a 7 right now" → craving_intensity: 7
+- "didn't sleep well, maybe 4 hours" → sleep_quality: 3, sleep_hours: 4
+- "I went to a meeting yesterday" → attended_meeting_or_session: true
+- "been craving alcohol and weed" → substances_craved: ["alcohol", "cannabis"]
+- "my manager triggered me at work" → triggers_encountered: ["work stress", "manager conflict"]
+- "took my naltrexone this morning" → medications_taken: true
+- "went for a run this afternoon" → exercised: true
+- "feeling pretty low, maybe a 3" → mood_score: 3
+- "anxiety is really bad, like 8 out of 10" → anxiety_level: 8
+Only include fields where the patient gave a clear signal — do NOT guess or fill in fields they didn't mention. Always include a context_summary of what the patient shared. After calling refine_risk_assessment, acknowledge the updated score to the patient and offer next steps based on the refined assessment.
 
 MEDICATION QUESTIONS:
 For MAT (medication-assisted treatment) questions, you may share general information about how medications like naltrexone, buprenorphine, or acamprosate work. But ALWAYS add: "Your specialist is the best person to advise on medications for your specific situation." Link to [[Book an appointment|book_appointment]].`;

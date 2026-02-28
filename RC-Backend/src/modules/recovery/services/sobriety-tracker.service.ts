@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Model, Types } from 'mongoose';
 import {
   SobrietyLog,
@@ -38,6 +39,7 @@ export class SobrietyTrackerService {
     private profileModel: Model<RecoveryProfileDocument>,
     @InjectModel(RecoveryMilestone.name)
     private milestoneModel: Model<RecoveryMilestoneDocument>,
+    private eventEmitter: EventEmitter2,
   ) {}
 
   /**
@@ -82,6 +84,12 @@ export class SobrietyTrackerService {
 
     // Check milestones
     const milestones = await this.checkAndAwardMilestones(userId);
+
+    // Emit events for risk engine recalculation
+    this.eventEmitter.emit('recovery.checkin_logged', { userId });
+    if (!dto.sober_today) {
+      this.eventEmitter.emit('recovery.relapse_reported', { userId });
+    }
 
     return {
       log,

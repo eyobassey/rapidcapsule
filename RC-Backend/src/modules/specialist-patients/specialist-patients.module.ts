@@ -42,6 +42,38 @@ import {
   AdvancedHealthScore,
   AdvancedHealthScoreSchema,
 } from '../advanced-health-score/entities/advanced-health-score.entity';
+import {
+  RecoveryProfile,
+  RecoveryProfileSchema,
+} from '../recovery/entities/recovery-profile.entity';
+import {
+  SobrietyLog,
+  SobrietyLogSchema,
+} from '../recovery/entities/sobriety-log.entity';
+import {
+  AddictionScreening,
+  AddictionScreeningSchema,
+} from '../recovery/entities/addiction-screening.entity';
+import {
+  CrisisEvent,
+  CrisisEventSchema,
+} from '../recovery/entities/crisis-event.entity';
+import {
+  RecoveryPlan,
+  RecoveryPlanSchema,
+} from '../recovery/entities/recovery-plan.entity';
+import {
+  CopingExerciseSession,
+  CopingExerciseSessionSchema,
+} from '../recovery/entities/coping-exercise-session.entity';
+import {
+  RiskAssessmentReport,
+  RiskAssessmentReportSchema,
+} from '../recovery/entities/risk-assessment-report.entity';
+import {
+  RecoveryMilestone,
+  RecoveryMilestoneSchema,
+} from '../recovery/entities/recovery-milestone.entity';
 
 @Module({
   imports: [
@@ -58,6 +90,15 @@ import {
       { name: PharmacyOrder.name, schema: PharmacyOrderSchema },
       { name: Drug.name, schema: DrugSchema },
       { name: AdvancedHealthScore.name, schema: AdvancedHealthScoreSchema },
+      // Recovery entities for specialist recovery view
+      { name: RecoveryProfile.name, schema: RecoveryProfileSchema },
+      { name: SobrietyLog.name, schema: SobrietyLogSchema },
+      { name: AddictionScreening.name, schema: AddictionScreeningSchema },
+      { name: CrisisEvent.name, schema: CrisisEventSchema },
+      { name: RecoveryPlan.name, schema: RecoveryPlanSchema },
+      { name: CopingExerciseSession.name, schema: CopingExerciseSessionSchema },
+      { name: RiskAssessmentReport.name, schema: RiskAssessmentReportSchema },
+      { name: RecoveryMilestone.name, schema: RecoveryMilestoneSchema },
     ]),
   ],
   controllers: [SpecialistPatientsController],

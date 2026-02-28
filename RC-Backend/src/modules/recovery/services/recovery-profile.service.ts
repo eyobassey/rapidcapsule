@@ -27,6 +27,7 @@ import {
   CreateRecoveryProfileDto,
   SubstanceHistoryDto,
 } from '../dto/create-recovery-profile.dto';
+import { RiskAssessmentReport } from '../entities/risk-assessment-report.entity';
 
 @Injectable()
 export class RecoveryProfileService {
@@ -41,6 +42,8 @@ export class RecoveryProfileService {
     private milestoneModel: Model<RecoveryMilestoneDocument>,
     @InjectModel(AddictionScreening.name)
     private screeningModel: Model<AddictionScreeningDocument>,
+    @InjectModel(RiskAssessmentReport.name)
+    private riskAssessmentReportModel: Model<any>,
   ) {}
 
   /**
@@ -469,6 +472,63 @@ export class RecoveryProfileService {
         milestones_achieved: p.outcomes?.milestones_achieved || 0,
       };
     });
+  }
+
+  /**
+   * Get paginated risk assessment reports for the user.
+   */
+  async getRiskAssessmentReports(userId: string, page: number, limit: number) {
+    const safeLimit = Math.min(Math.max(limit, 1), 50);
+    const safePage = Math.max(page, 1);
+    const skip = (safePage - 1) * safeLimit;
+
+    const filter = {
+      user: new Types.ObjectId(userId),
+      deleted_at: { $exists: false },
+    };
+
+    const [reports, total] = await Promise.all([
+      this.riskAssessmentReportModel
+        .find(filter)
+        .sort({ created_at: -1 })
+        .skip(skip)
+        .limit(safeLimit)
+        .select(
+          'score level categories top_factors trend context_summary suggestions ' +
+            'previous_score previous_level created_at',
+        )
+        .lean(),
+      this.riskAssessmentReportModel.countDocuments(filter),
+    ]);
+
+    return {
+      reports,
+      pagination: {
+        page: safePage,
+        limit: safeLimit,
+        total,
+        pages: Math.ceil(total / safeLimit),
+      },
+    };
+  }
+
+  /**
+   * Get a single risk assessment report with ownership check.
+   */
+  async getRiskAssessmentReport(userId: string, reportId: string) {
+    const report = await this.riskAssessmentReportModel
+      .findOne({
+        _id: new Types.ObjectId(reportId),
+        user: new Types.ObjectId(userId),
+        deleted_at: { $exists: false },
+      })
+      .lean();
+
+    if (!report) {
+      throw new NotFoundException('Risk assessment report not found');
+    }
+
+    return report;
   }
 
   // ─── Helpers ─────────────────────────────────────────────────────

@@ -1432,6 +1432,11 @@
 							<p>No dependents registered for this patient</p>
 						</div>
 					</div>
+
+					<!-- Recovery Tab -->
+					<div v-if="activeTab === 'recovery'" class="recovery-tab-container">
+						<RecoveryTab :patient-id="patientId" />
+					</div>
 				</div>
 			</div>
 		</div>
@@ -1456,6 +1461,7 @@ import TopBar from "@/components/Navigation/top-bar";
 import Loader from "@/components/Loader/main-loader";
 import RcAvatar from "@/components/RCAvatar";
 import ClinicalNoteModal from "@/views/Mainapp/SpecialistApp/SpecialistAppointments/modals/ClinicalNoteModal.vue";
+import RecoveryTab from "./components/RecoveryTab.vue";
 
 defineEmits(["openSideNav"]);
 
@@ -1506,16 +1512,24 @@ const uploadedSection = ref(null);
 const ordersSection = ref(null);
 
 // Tab configuration
-const tabs = [
-	{ value: 'overview', label: 'Overview', icon: 'hi-view-grid' },
-	{ value: 'scores', label: 'Health Scores', icon: 'hi-chart-pie' },
-	{ value: 'health', label: 'Health Records', icon: 'hi-heart' },
-	{ value: 'prescriptions', label: 'Medications', icon: 'ri-capsule-line' },
-	{ value: 'appointments', label: 'Appointments', icon: 'hi-calendar' },
-	{ value: 'purchases', label: 'Purchases', icon: 'hi-shopping-bag' },
-	{ value: 'timeline', label: 'Timeline', icon: 'hi-clock' },
-	{ value: 'dependents', label: 'Dependents', icon: 'hi-user-group' },
-];
+const hasRecoveryProfile = ref(false);
+
+const tabs = computed(() => {
+	const base = [
+		{ value: 'overview', label: 'Overview', icon: 'hi-view-grid' },
+		{ value: 'scores', label: 'Health Scores', icon: 'hi-chart-pie' },
+		{ value: 'health', label: 'Health Records', icon: 'hi-heart' },
+		{ value: 'prescriptions', label: 'Medications', icon: 'ri-capsule-line' },
+		{ value: 'appointments', label: 'Appointments', icon: 'hi-calendar' },
+		{ value: 'purchases', label: 'Purchases', icon: 'hi-shopping-bag' },
+		{ value: 'timeline', label: 'Timeline', icon: 'hi-clock' },
+		{ value: 'dependents', label: 'Dependents', icon: 'hi-user-group' },
+	];
+	if (hasRecoveryProfile.value) {
+		base.splice(2, 0, { value: 'recovery', label: 'Recovery', icon: 'hi-shield-check' });
+	}
+	return base;
+});
 
 // Computed
 const patientId = computed(() => route.params.patientId);
@@ -1657,6 +1671,14 @@ async function fetchPatientData() {
 			vitals: healthData.vitals || {},
 			healthScores: healthData.health_scores || {},
 		};
+
+		// Check if patient has a recovery profile (non-blocking)
+		$http.$_getPatientRecoveryData(patientId.value)
+			.then(res => {
+				const rd = res.data?.data || res.data;
+				hasRecoveryProfile.value = !!rd?.has_recovery_profile;
+			})
+			.catch(() => { hasRecoveryProfile.value = false; });
 
 		await loadTabData(activeTab.value);
 	} catch (err) {

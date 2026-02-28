@@ -48,6 +48,13 @@
                 <span class="hero-stat__label">Sober Days</span>
               </div>
               <div class="hero-stat__divider"></div>
+              <div class="hero-stat hero-stat--risk" @click="openEkaRisk">
+                <span class="hero-stat__value" :class="`hero-stat__value--${dashboard.profile?.risk_level || 'low'}`">
+                  {{ dashboard.profile?.risk_score ?? 0 }}<small>/100</small>
+                </span>
+                <span class="hero-stat__label">Risk Score</span>
+              </div>
+              <div class="hero-stat__divider"></div>
               <div class="hero-stat">
                 <span class="hero-stat__value">{{ dashboard.profile?.log_streak || 0 }}</span>
                 <span class="hero-stat__label">Day Streak</span>
@@ -148,6 +155,26 @@
               </template>
               <template v-else>
                 <p class="bento-card__empty">Try your first exercise</p>
+              </template>
+            </div>
+            <v-icon name="hi-arrow-right" scale="1" class="bento-card__nav" />
+          </div>
+
+          <!-- Risk Assessments Card -->
+          <div class="bento-card" @click="navigateTo('risk-history')">
+            <div class="bento-card__header">
+              <h3>Risk Assessments</h3>
+              <span v-if="dashboard.profile?.risk_level" class="bento-card__badge" :class="`bento-card__badge--${dashboard.profile.risk_level}`">
+                {{ dashboard.profile.risk_level }}
+              </span>
+            </div>
+            <div class="bento-card__content">
+              <template v-if="dashboard.profile?.risk_score != null">
+                <p class="bento-card__score">{{ dashboard.profile.risk_score }}<small style="font-size: 14px; color: #94A3B8; font-weight: 500;">/100</small></p>
+                <p class="bento-card__label">Current risk score</p>
+              </template>
+              <template v-else>
+                <p class="bento-card__empty">Check your risk level</p>
               </template>
             </div>
             <v-icon name="hi-arrow-right" scale="1" class="bento-card__nav" />
@@ -284,6 +311,10 @@
       v-if="activeView === 'exercise-history'"
       @back="activeView = null"
     />
+    <RiskHistory
+      v-if="activeView === 'risk-history'"
+      @back="activeView = null"
+    />
     <ProgrammeHistory
       v-if="activeView === 'programme-history'"
       @back="activeView = null"
@@ -325,6 +356,7 @@ import MilestoneWall from "./parts/MilestoneWall.vue";
 import CheckinHistory from "./parts/CheckinHistory.vue";
 import ScreeningHistory from "./parts/ScreeningHistory.vue";
 import ExerciseHistory from "./parts/ExerciseHistory.vue";
+import RiskHistory from "./parts/RiskHistory.vue";
 import ProgrammeHistory from "./parts/ProgrammeHistory.vue";
 import EnrolHero from "./parts/components/EnrolHero.vue";
 import ProgrammeSettings from "./parts/components/ProgrammeSettings.vue";
@@ -421,6 +453,13 @@ async function fetchDashboard() {
 
 function navigateTo(view) {
   activeView.value = view;
+}
+
+function openEkaRisk() {
+  router.push({
+    path: "/app/patient/eka",
+    query: { prompt: "What's my current relapse risk level?", tags: "recovery" },
+  });
 }
 
 function navigateToEka(context) {
@@ -712,10 +751,27 @@ $violet-light: #EDE9FE;
   flex-direction: column;
   align-items: center;
 
+  &--risk {
+    cursor: pointer;
+    transition: opacity 0.15s;
+    &:hover { opacity: 0.8; }
+  }
+
   &__value {
     font-size: 24px;
     font-weight: 700;
     line-height: 1;
+
+    small {
+      font-size: 13px;
+      font-weight: 500;
+      opacity: 0.6;
+    }
+
+    &--low { color: #6EE7B7; }
+    &--moderate { color: #FCD34D; }
+    &--high { color: #FB923C; }
+    &--critical { color: #FCA5A5; }
   }
 
   &__label {

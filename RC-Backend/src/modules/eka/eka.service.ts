@@ -1,5 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Model, Types } from 'mongoose';
 import Anthropic from '@anthropic-ai/sdk';
 import { EkaConversation, EkaConversationDocument } from './entities/eka-conversation.entity';
@@ -15,6 +16,7 @@ import { ClaudeSummaryCreditsService } from '../claude-summary-credits/claude-su
 import { ClaudeAIService } from '../pharmacy/services/claude-ai.service';
 import { TextractService } from '../pharmacy/services/textract.service';
 import { PrescriptionNumberHelper } from '../../common/helpers/prescription-number.helper';
+import { RiskScoringService } from '../recovery/services/risk-scoring.service';
 import { UploadSource } from '../pharmacy/entities/patient-prescription-upload.entity';
 import * as AWS from 'aws-sdk';
 
@@ -52,11 +54,14 @@ export class EkaService {
     @InjectModel('CrisisEvent') private crisisEventModel: Model<any>,
     @InjectModel('RecoveryPlan') private recoveryPlanModel: Model<any>,
     @InjectModel('CopingExerciseSession') private copingExerciseSessionModel: Model<any>,
+    @InjectModel('RiskAssessmentReport') private riskAssessmentReportModel: Model<any>,
     private readonly claudeHealthSummaryService: ClaudeHealthSummaryService,
     private readonly claudeSummaryCreditsService: ClaudeSummaryCreditsService,
     private readonly claudeAIService: ClaudeAIService,
     private readonly textractService: TextractService,
     private readonly prescriptionNumberHelper: PrescriptionNumberHelper,
+    private readonly riskScoringService: RiskScoringService,
+    private eventEmitter: EventEmitter2,
   ) {
     this.initializeClient();
     this.s3 = new AWS.S3({
@@ -276,6 +281,10 @@ export class EkaService {
         craving_trend: cravingTrend as any,
         top_triggers: topTriggers,
         top_coping_strategies: topCoping,
+        risk_score: (recoveryProfile as any).current_risk_score ?? undefined,
+        risk_updated_at: (recoveryProfile as any).risk_updated_at
+          ? new Date((recoveryProfile as any).risk_updated_at).toISOString()
+          : null,
       };
     }
 
@@ -317,7 +326,7 @@ export class EkaService {
     // Retry up to 2 times on overloaded/transient errors
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
-        fullResponse = yield* this.streamWithTools(claudeMessages, patientName, userId, toolsUsed, dto.language, activeCheckupPhase, recoveryContext);
+        fullResponse = yield* this.streamWithTools(claudeMessages, patientName, userId, toolsUsed, dto.language, activeCheckupPhase, recoveryContext, conversation._id);
         break; // Success
       } catch (error: any) {
         const isOverloaded = error?.message?.includes('overloaded') || error?.message?.includes('Overloaded') || error?.error?.type === 'overloaded_error';
@@ -352,6 +361,7 @@ export class EkaService {
     language?: string,
     activeCheckupPhase?: string | null,
     recoveryContext?: RecoveryContext | null,
+    conversationId?: Types.ObjectId,
   ): AsyncGenerator<any, string> {
     let currentMessages = [...messages];
     let fullResponse = '';
@@ -457,7 +467,7 @@ export class EkaService {
         let toolsDone = false;
         const toolPromise = Promise.all(
           toolCalls.map(async (tc) => {
-            const result = await this.executeTool(tc.name, tc.input, userId);
+            const result = await this.executeTool(tc.name, tc.input, userId, conversationId);
             return { id: tc.id, name: tc.name, result };
           }),
         );
@@ -494,7 +504,7 @@ export class EkaService {
       } else {
         toolResults = await Promise.all(
           toolCalls.map(async (tc) => {
-            const result = await this.executeTool(tc.name, tc.input, userId);
+            const result = await this.executeTool(tc.name, tc.input, userId, conversationId);
             return { id: tc.id, name: tc.name, result };
           }),
         );
@@ -926,6 +936,10 @@ export class EkaService {
         return `Exercise step ${input?.step_number || '?'} marked complete`;
       case 'complete_exercise':
         return `Exercise completed: ${input?.exercise_type || 'unknown'}`;
+      case 'get_risk_assessment':
+        return 'Relapse risk assessment';
+      case 'refine_risk_assessment':
+        return 'Refining risk assessment';
       default:
         return toolName;
     }
@@ -947,7 +961,7 @@ export class EkaService {
     return obj;
   }
 
-  private async executeTool(name: string, input: any, userId: string): Promise<any> {
+  private async executeTool(name: string, input: any, userId: string, conversationId?: Types.ObjectId): Promise<any> {
     const uid = new Types.ObjectId(userId);
 
     switch (name) {
@@ -1010,6 +1024,10 @@ export class EkaService {
         return this.toolMarkExerciseStep(input.step_number, uid);
       case 'complete_exercise':
         return this.toolCompleteExercise(input.exercise_type, input.outcome, uid);
+      case 'get_risk_assessment':
+        return this.toolGetRiskAssessment(uid, input.recalculate, conversationId);
+      case 'refine_risk_assessment':
+        return this.toolRefineRiskAssessment(uid, input, conversationId);
       default:
         return { error: `Unknown tool: ${name}` };
     }
@@ -3841,6 +3859,248 @@ export class EkaService {
     };
   }
 
+  private async toolGetRiskAssessment(userId: Types.ObjectId, recalculate?: boolean, conversationId?: Types.ObjectId) {
+    try {
+      const userIdStr = userId.toString();
+      let result: any;
+
+      // Always recalculate fresh when patient explicitly asks for their risk
+      // Use cached only if recalculate is explicitly false AND a recent score exists
+      if (recalculate !== false) {
+        await this.riskScoringService.calculateAndPersistRisk(userIdStr);
+      }
+
+      // Get the full breakdown (includes top_factors, trend, signals)
+      result = await this.riskScoringService.getRiskBreakdown(userIdStr);
+
+      if (!result || result.score === undefined || result.score === null) {
+        return { message: 'No recovery profile found. Complete a screening first to get started.' };
+      }
+
+      // Get risk history for trend sparkline
+      const history = await this.riskScoringService.getRiskHistory(userIdStr, 7);
+
+      const suggestions = this.getRiskSuggestions(result.level);
+
+      // Persist the risk assessment report
+      const report = await this.riskAssessmentReportModel.create({
+        user: userId,
+        score: result.score,
+        level: result.level,
+        categories: result.signals,
+        top_factors: result.top_factors || [],
+        trend: result.trend || null,
+        history: history || [],
+        conversation_id: conversationId || undefined,
+        suggestions,
+        previous_score: result.previous_score,
+        previous_level: result.previous_level,
+      });
+
+      const artifactData = {
+        report_id: report._id.toString(),
+        score: result.score,
+        level: result.level,
+        updated_at: result.updated_at || new Date(),
+        categories: result.signals,
+        top_factors: result.top_factors || [],
+        trend: result.trend || null,
+        history: history || [],
+        suggestions,
+      };
+
+      return {
+        score: result.score,
+        level: result.level,
+        report_id: report._id.toString(),
+        top_factors: (result.top_factors || []).slice(0, 5),
+        trend_direction: result.trend?.direction || 'stable',
+        __artifact: {
+          type: 'risk_assessment',
+          data: artifactData,
+        },
+      };
+    } catch (error) {
+      this.logger.error('Failed to get risk assessment:', error);
+      return { error: 'Unable to calculate risk assessment at this time.' };
+    }
+  }
+
+  private async toolRefineRiskAssessment(
+    userId: Types.ObjectId,
+    input: { updates: Record<string, any>; context_summary: string },
+    conversationId?: Types.ObjectId,
+  ) {
+    try {
+      const updates = input.updates || {};
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+
+      // Build $set — only include fields that were provided
+      const setFields: Record<string, any> = {};
+      if (updates.mood_score != null) setFields.mood_score = Math.min(10, Math.max(1, updates.mood_score));
+      if (updates.craving_intensity != null) setFields.craving_intensity = Math.min(10, Math.max(0, updates.craving_intensity));
+      if (updates.anxiety_level != null) setFields.anxiety_level = Math.min(10, Math.max(1, updates.anxiety_level));
+      if (updates.sleep_quality != null) setFields.sleep_quality = Math.min(10, Math.max(1, updates.sleep_quality));
+      if (updates.sleep_hours != null) setFields.sleep_hours = Math.max(0, updates.sleep_hours);
+      if (updates.energy_level != null) setFields.energy_level = Math.min(10, Math.max(1, updates.energy_level));
+      if (updates.medications_taken != null) setFields.medications_taken = updates.medications_taken;
+      if (updates.exercised != null) setFields.exercised = updates.exercised;
+      if (updates.attended_meeting_or_session != null) setFields.attended_meeting_or_session = updates.attended_meeting_or_session;
+      if (updates.notes) setFields.notes = updates.notes;
+
+      // Arrays — $addToSet to merge, not overwrite
+      const addToSetFields: Record<string, any> = {};
+      if (updates.triggers_encountered?.length) {
+        addToSetFields.triggers_encountered = { $each: updates.triggers_encountered };
+      }
+      if (updates.substances_craved?.length) {
+        addToSetFields.substances_craved = { $each: updates.substances_craved };
+      }
+
+      // Upsert today's sobriety log with the refined data
+      const updateOp: any = {};
+      if (Object.keys(setFields).length) updateOp.$set = setFields;
+      if (Object.keys(addToSetFields).length) updateOp.$addToSet = addToSetFields;
+
+      if (Object.keys(updateOp).length > 0) {
+        await this.sobrietyLogModel.findOneAndUpdate(
+          { user: userId, log_date: { $gte: todayStart } },
+          { ...updateOp, $setOnInsert: { user: userId, log_date: new Date(), sober_today: true } },
+          { upsert: true, new: true },
+        );
+      }
+
+      // Emit event for real-time updates
+      this.eventEmitter.emit('recovery.checkin_logged', { userId: userId.toString() });
+
+      // Recalculate risk score with the new data
+      const userIdStr = userId.toString();
+      const calcResult = await this.riskScoringService.calculateAndPersistRisk(userIdStr);
+
+      if (!calcResult) {
+        return { message: 'Unable to recalculate risk — no recovery profile found.' };
+      }
+
+      // Get full breakdown (includes top_factors, trend)
+      const breakdown = await this.riskScoringService.getRiskBreakdown(userIdStr);
+      const history = await this.riskScoringService.getRiskHistory(userIdStr, 7);
+      const suggestions = this.getRiskSuggestions(calcResult.level);
+
+      // Persist the refined report
+      const report = await this.riskAssessmentReportModel.create({
+        user: userId,
+        score: calcResult.score,
+        level: calcResult.level,
+        categories: calcResult.signals,
+        top_factors: breakdown?.top_factors || [],
+        trend: breakdown?.trend || null,
+        history: history || [],
+        context_summary: input.context_summary,
+        conversation_id: conversationId || undefined,
+        suggestions,
+        previous_score: calcResult.previous_score,
+        previous_level: calcResult.previous_level,
+      });
+
+      // Extract conversation responses (follow-up Q&A) for the artifact
+      let responses: { role: string; content: string }[] = [];
+      if (conversationId) {
+        try {
+          const conversation = await this.conversationModel
+            .findById(conversationId)
+            .select('messages')
+            .lean();
+          if (conversation?.messages) {
+            // Find the last risk_assessment tool call and extract messages after it
+            const msgs = conversation.messages as any[];
+            let lastToolIdx = -1;
+            for (let i = msgs.length - 1; i >= 0; i--) {
+              if (msgs[i].role === 'assistant' && msgs[i].tool_calls?.some((tc: any) => tc.function?.name === 'get_risk_assessment')) {
+                lastToolIdx = i;
+                break;
+              }
+            }
+            // Grab user/assistant messages after the initial risk assessment tool call
+            if (lastToolIdx >= 0) {
+              responses = msgs
+                .slice(lastToolIdx + 1)
+                .filter((m: any) => (m.role === 'user' || m.role === 'assistant') && m.content)
+                .map((m: any) => ({ role: m.role, content: m.content }));
+            }
+          }
+        } catch (convErr) {
+          this.logger.warn('Could not extract risk assessment conversation:', convErr);
+        }
+      }
+
+      const artifactData = {
+        report_id: report._id.toString(),
+        score: calcResult.score,
+        level: calcResult.level,
+        updated_at: new Date(),
+        categories: calcResult.signals,
+        top_factors: breakdown?.top_factors || [],
+        trend: breakdown?.trend || null,
+        history: history || [],
+        suggestions,
+        context_summary: input.context_summary,
+        responses: responses.length > 0 ? responses : undefined,
+      };
+
+      return {
+        refined: true,
+        score: calcResult.score,
+        level: calcResult.level,
+        report_id: report._id.toString(),
+        previous_score: calcResult.previous_score,
+        fields_updated: Object.keys(setFields).concat(Object.keys(addToSetFields)),
+        __artifact: {
+          type: 'risk_assessment',
+          data: artifactData,
+        },
+      };
+    } catch (error) {
+      this.logger.error('Failed to refine risk assessment:', error);
+      return { error: 'Unable to refine risk assessment at this time.' };
+    }
+  }
+
+  private getRiskSuggestions(level: string): { text: string; action?: string }[] {
+    const suggestions: { text: string; action?: string }[] = [];
+
+    switch (level) {
+      case 'critical':
+        suggestions.push(
+          { text: 'Contact your care team now', action: 'book_appointment' },
+          { text: 'Call a crisis line (116 123)', action: 'crisis' },
+          { text: 'Do a grounding exercise', action: 'coping_exercise' },
+        );
+        break;
+      case 'high':
+        suggestions.push(
+          { text: 'Book an appointment with your specialist', action: 'book_appointment' },
+          { text: 'Try a coping exercise', action: 'coping_exercise' },
+          { text: 'Talk to Eka about what\'s going on', action: 'chat' },
+        );
+        break;
+      case 'moderate':
+        suggestions.push(
+          { text: 'Do a coping exercise', action: 'coping_exercise' },
+          { text: 'Log your daily check-in', action: 'recovery_checkin' },
+          { text: 'Review your recovery plan', action: 'recovery_plan' },
+        );
+        break;
+      default: // low
+        suggestions.push(
+          { text: 'Keep up the good work!', action: 'recovery' },
+          { text: 'Log your daily check-in', action: 'recovery_checkin' },
+          { text: 'View your milestones', action: 'recovery' },
+        );
+    }
+    return suggestions;
+  }
+
   private async toolLogDailyCheckin(userId: Types.ObjectId, input: any) {
     // Check if already logged today
     const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
@@ -3868,6 +4128,8 @@ export class EkaService {
     if (input.coping_strategies_used?.length) logData.coping_strategies_used = input.coping_strategies_used;
     if (input.medications_taken != null) logData.medications_taken = input.medications_taken;
     if (input.exercised != null) logData.exercised = input.exercised;
+    if (input.attended_meeting_or_session != null) logData.attended_meeting_or_session = input.attended_meeting_or_session;
+    if (input.substances_craved?.length) logData.substances_craved = input.substances_craved;
     if (input.gratitude_note) logData.gratitude_note = input.gratitude_note;
     if (input.notes) logData.notes = input.notes;
     if (!logData.sober_today && input.relapse_details) logData.relapse_details = input.relapse_details;
@@ -3941,6 +4203,12 @@ export class EkaService {
       if (yesterdayLog.triggers_encountered?.length) {
         comparison.yesterday_triggers = yesterdayLog.triggers_encountered;
       }
+    }
+
+    // Emit events for risk engine recalculation
+    this.eventEmitter.emit('recovery.checkin_logged', { userId: userId.toString() });
+    if (!logData.sober_today) {
+      this.eventEmitter.emit('recovery.relapse_reported', { userId: userId.toString() });
     }
 
     // Build a refreshed dashboard artifact so the right pane auto-updates
@@ -4075,6 +4343,12 @@ ${previousScore != null ? '- comparison_to_previous (1 sentence comparing scores
       is_baseline: isBaseline,
       ai_interpretation: aiInterpretation,
       duration_ms: durationMs,
+    });
+
+    // Emit event for risk engine recalculation
+    this.eventEmitter.emit('recovery.screening_completed', {
+      userId: userId.toString(),
+      screeningId: screening._id.toString(),
     });
 
     const reportData = {
@@ -4232,6 +4506,11 @@ ${previousScore != null ? '- comparison_to_previous (1 sentence comparing scores
           updateData,
           { sort: { created_at: -1 } },
         );
+
+        // Emit event for risk engine recalculation
+        this.eventEmitter.emit('recovery.coping_exercise_completed', {
+          userId: userId.toString(),
+        });
       } catch (err) {
         this.logger.error('Failed to persist exercise completion:', err);
       }

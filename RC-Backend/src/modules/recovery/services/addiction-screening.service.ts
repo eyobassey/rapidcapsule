@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Model, Types } from 'mongoose';
 import {
   AddictionScreening,
@@ -36,6 +37,7 @@ export class AddictionScreeningService {
     private screeningModel: Model<AddictionScreeningDocument>,
     @InjectModel(RecoveryProfile.name)
     private recoveryProfileModel: Model<RecoveryProfileDocument>,
+    private eventEmitter: EventEmitter2,
   ) {
     this.initClaude();
   }
@@ -160,6 +162,12 @@ export class AddictionScreeningService {
         { $set: update },
       );
     }
+
+    // Emit event for risk engine recalculation
+    this.eventEmitter.emit('recovery.screening_completed', {
+      userId,
+      screeningId: screening._id.toString(),
+    });
 
     return {
       screening_id: screening._id,

@@ -69,6 +69,28 @@ export class SpecialistPatientsController {
   }
 
   /**
+   * Get recovery overview for all patients
+   */
+  @ApiOperation({ summary: 'Get recovery overview', description: 'Retrieve bird\'s-eye view of all recovery patients: stats, risk distribution, and patient list sorted by risk level' })
+  @ApiResponse({ status: 200, description: 'Recovery overview returned' })
+  @ApiQuery({ name: 'risk_level', required: false, enum: ['low', 'moderate', 'high', 'critical'], description: 'Filter by risk level' })
+  @ApiQuery({ name: 'checkin_status', required: false, enum: ['today', 'this_week', 'overdue'], description: 'Filter by check-in recency' })
+  @ApiQuery({ name: 'search', required: false, description: 'Search by patient name' })
+  @Get('recovery-overview')
+  async getRecoveryOverview(
+    @Request() req,
+    @Query('risk_level') riskLevel: string,
+    @Query('checkin_status') checkinStatus: string,
+    @Query('search') search: string,
+  ) {
+    const result = await this.specialistPatientsService.getRecoveryOverview(
+      req.user.sub,
+      { risk_level: riskLevel, checkin_status: checkinStatus, search },
+    );
+    return sendSuccessResponse(Messages.RETRIEVED, result);
+  }
+
+  /**
    * Get detailed patient information
    */
   @ApiOperation({ summary: 'Get patient details', description: 'Retrieve detailed patient profile, medical history, and relationship data. Logs access for non-related patients.' })
@@ -293,5 +315,149 @@ export class SpecialistPatientsController {
       dto,
     );
     return sendSuccessResponse(Messages.UPDATED, result);
+  }
+
+  // ─── Recovery Endpoints ──────────────────────────────────────────
+
+  /**
+   * Get patient recovery data — profile, risk score, logs, screenings, plan
+   */
+  @ApiOperation({ summary: 'Get patient recovery data', description: 'Retrieve full recovery profile, risk score breakdown, recent logs, screenings, and plan for a patient' })
+  @ApiResponse({ status: 200, description: 'Recovery data returned' })
+  @ApiParam({ name: 'patientId', description: 'Patient user ID' })
+  @Get(':patientId/recovery')
+  async getPatientRecoveryData(
+    @Param('patientId') patientId: string,
+    @Request() req,
+  ) {
+    const result = await this.specialistPatientsService.getPatientRecoveryData(
+      patientId,
+      req.user.sub,
+    );
+    return sendSuccessResponse(Messages.RETRIEVED, result);
+  }
+
+  /**
+   * Get patient risk history
+   */
+  @ApiOperation({ summary: 'Get patient risk history', description: 'Retrieve risk score history for a patient with optional period filter' })
+  @ApiResponse({ status: 200, description: 'Risk history returned' })
+  @ApiParam({ name: 'patientId', description: 'Patient user ID' })
+  @ApiQuery({ name: 'limit', required: false, example: '30' })
+  @ApiQuery({ name: 'period', required: false, enum: ['7d', '30d', '90d'] })
+  @Get(':patientId/recovery/risk-history')
+  async getPatientRiskHistory(
+    @Param('patientId') patientId: string,
+    @Query('limit') limit: string = '30',
+    @Query('period') period: string,
+  ) {
+    const result = await this.specialistPatientsService.getPatientRiskHistory(
+      patientId,
+      parseInt(limit),
+      period,
+    );
+    return sendSuccessResponse(Messages.RETRIEVED, result);
+  }
+
+  /**
+   * Get patient screening history (paginated)
+   */
+  @ApiOperation({ summary: 'Get patient screening history', description: 'Retrieve paginated addiction screening reports for a patient' })
+  @ApiResponse({ status: 200, description: 'Screening history returned' })
+  @ApiParam({ name: 'patientId', description: 'Patient user ID' })
+  @ApiQuery({ name: 'page', required: false, example: '1' })
+  @ApiQuery({ name: 'limit', required: false, example: '10' })
+  @Get(':patientId/recovery/screenings')
+  async getPatientScreeningHistory(
+    @Param('patientId') patientId: string,
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '10',
+  ) {
+    const result = await this.specialistPatientsService.getPatientScreeningHistory(
+      patientId,
+      parseInt(page),
+      parseInt(limit),
+    );
+    return sendSuccessResponse(Messages.RETRIEVED, result);
+  }
+
+  /**
+   * Get patient coping exercise history (paginated)
+   */
+  @ApiOperation({ summary: 'Get patient exercise history', description: 'Retrieve paginated coping exercise sessions for a patient' })
+  @ApiResponse({ status: 200, description: 'Exercise history returned' })
+  @ApiParam({ name: 'patientId', description: 'Patient user ID' })
+  @ApiQuery({ name: 'page', required: false, example: '1' })
+  @ApiQuery({ name: 'limit', required: false, example: '10' })
+  @Get(':patientId/recovery/exercises')
+  async getPatientExerciseHistory(
+    @Param('patientId') patientId: string,
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '10',
+  ) {
+    const result = await this.specialistPatientsService.getPatientExerciseHistory(
+      patientId,
+      parseInt(page),
+      parseInt(limit),
+    );
+    return sendSuccessResponse(Messages.RETRIEVED, result);
+  }
+
+  /**
+   * Get patient risk assessment reports (paginated)
+   */
+  @ApiOperation({ summary: 'Get patient risk assessments', description: 'Retrieve paginated risk assessment reports for a patient' })
+  @ApiResponse({ status: 200, description: 'Risk assessments returned' })
+  @ApiParam({ name: 'patientId', description: 'Patient user ID' })
+  @ApiQuery({ name: 'page', required: false, example: '1' })
+  @ApiQuery({ name: 'limit', required: false, example: '10' })
+  @Get(':patientId/recovery/risk-assessments')
+  async getPatientRiskAssessments(
+    @Param('patientId') patientId: string,
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '10',
+  ) {
+    const result = await this.specialistPatientsService.getPatientRiskAssessments(
+      patientId,
+      parseInt(page),
+      parseInt(limit),
+    );
+    return sendSuccessResponse(Messages.RETRIEVED, result);
+  }
+
+  /**
+   * Get patient milestones
+   */
+  @ApiOperation({ summary: 'Get patient milestones', description: 'Retrieve all recovery milestones for a patient' })
+  @ApiResponse({ status: 200, description: 'Milestones returned' })
+  @ApiParam({ name: 'patientId', description: 'Patient user ID' })
+  @Get(':patientId/recovery/milestones')
+  async getPatientMilestones(
+    @Param('patientId') patientId: string,
+  ) {
+    const result = await this.specialistPatientsService.getPatientMilestones(patientId);
+    return sendSuccessResponse(Messages.RETRIEVED, result);
+  }
+
+  /**
+   * Get patient check-in history (paginated sobriety logs)
+   */
+  @ApiOperation({ summary: 'Get patient check-in history', description: 'Retrieve paginated daily check-in logs for a patient' })
+  @ApiResponse({ status: 200, description: 'Check-in history returned' })
+  @ApiParam({ name: 'patientId', description: 'Patient user ID' })
+  @ApiQuery({ name: 'page', required: false, example: '1' })
+  @ApiQuery({ name: 'limit', required: false, example: '14' })
+  @Get(':patientId/recovery/checkins')
+  async getPatientCheckinHistory(
+    @Param('patientId') patientId: string,
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '14',
+  ) {
+    const result = await this.specialistPatientsService.getPatientCheckinHistory(
+      patientId,
+      parseInt(page),
+      parseInt(limit),
+    );
+    return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 }

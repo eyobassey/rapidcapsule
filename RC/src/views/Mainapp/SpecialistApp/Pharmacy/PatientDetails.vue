@@ -314,6 +314,11 @@
               v-if="activeTab === 'timeline'"
               :patient-id="patientId"
             />
+
+            <PatientRecoveryTab
+              v-if="activeTab === 'recovery'"
+              :patient-id="patientId"
+            />
           </div>
         </template>
       </div>
@@ -350,6 +355,7 @@ import PatientVitalsTab from './components/PatientVitalsTab.vue';
 import PatientCheckupsTab from './components/PatientCheckupsTab.vue';
 import PatientAppointmentsTab from './components/PatientAppointmentsTab.vue';
 import PatientTimelineTab from './components/PatientTimelineTab.vue';
+import PatientRecoveryTab from './components/PatientRecoveryTab.vue';
 import VitalHistoryModal from './components/VitalHistoryModal.vue';
 import ClinicalNoteModal from '@/views/Mainapp/SpecialistApp/SpecialistAppointments/modals/ClinicalNoteModal.vue';
 import { usePharmacy } from './composables/usePharmacy';
@@ -391,6 +397,7 @@ const tabs = [
   { id: 'checkups', label: 'Health Checkups', icon: 'hi-shield-check' },
   { id: 'appointments', label: 'Appointments', icon: 'hi-calendar' },
   { id: 'timeline', label: 'Timeline', icon: 'hi-clock' },
+  { id: 'recovery', label: 'Recovery', icon: 'gi-medicine-pills' },
 ];
 
 // Computed
@@ -718,6 +725,12 @@ function getTimelineDescription(event) {
 }
 
 onMounted(async () => {
+  // Support deep-link with ?tab=recovery (or other tab ids)
+  const tabQuery = route.query.tab;
+  if (tabQuery && tabs.some((t) => t.id === tabQuery)) {
+    activeTab.value = tabQuery;
+  }
+
   await fetchPatientDetails();
   await Promise.all([
     fetchMedicalHistory(),

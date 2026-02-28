@@ -55,6 +55,12 @@ export enum NotificationType {
   NEW_USER_REGISTERED = 'new_user_registered',
   SPECIALIST_VERIFICATION_PENDING = 'specialist_verification_pending',
   SUPPORT_TICKET = 'support_ticket',
+
+  // Recovery Risk Alerts
+  RECOVERY_RISK_MODERATE = 'recovery_risk_moderate',
+  RECOVERY_RISK_HIGH = 'recovery_risk_high',
+  RECOVERY_RISK_CRITICAL = 'recovery_risk_critical',
+  RECOVERY_RISK_IMPROVED = 'recovery_risk_improved',
 }
 
 export enum NotificationPriority {

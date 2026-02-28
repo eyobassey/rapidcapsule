@@ -334,6 +334,11 @@
                 v-else-if="artifactMode === 'safety_plan' && artifact.data"
                 :data="artifact.data"
               />
+              <EkaRiskAssessment
+                v-else-if="artifactMode === 'risk_assessment' && artifact.data"
+                :data="artifact.data"
+                :patient="patientInfo"
+              />
             </div>
           </div>
         </transition>
@@ -353,11 +358,12 @@ import EkaRecoveryDashboard from './EkaRecoveryDashboard.vue'
 import EkaScreeningReport from './EkaScreeningReport.vue'
 import EkaCopingExercise from './EkaCopingExercise.vue'
 import EkaSafetyPlan from './EkaSafetyPlan.vue'
+import EkaRiskAssessment from './EkaRiskAssessment.vue'
 import http from '@/services/http'
 
 export default {
   name: 'EkaChatPanel',
-  components: { EkaMessage, EkaCheckupReport, EkaBodyAvatar, EkaInteractionReport, EkaPrescriptionAnalysis, EkaRecoveryDashboard, EkaScreeningReport, EkaCopingExercise, EkaSafetyPlan },
+  components: { EkaMessage, EkaCheckupReport, EkaBodyAvatar, EkaInteractionReport, EkaPrescriptionAnalysis, EkaRecoveryDashboard, EkaScreeningReport, EkaCopingExercise, EkaSafetyPlan, EkaRiskAssessment },
 
   data() {
     return {
@@ -458,6 +464,7 @@ export default {
       if (this.artifact.type === 'screening_report') return 'screening_report'
       if (this.artifact.type === 'coping_exercise') return 'coping_exercise'
       if (this.artifact.type === 'safety_plan') return 'safety_plan'
+      if (this.artifact.type === 'risk_assessment') return 'risk_assessment'
       return 'avatar'
     },
     artifactIcon() {
@@ -470,6 +477,7 @@ export default {
         screening_report: 'hi-clipboard-check',
         coping_exercise: 'ri-heart-pulse-line',
         safety_plan: 'hi-shield-check',
+        risk_assessment: 'hi-shield-exclamation',
       }
       return icons[this.artifactMode] || 'hi-document-text'
     },
@@ -483,6 +491,7 @@ export default {
         screening_report: 'Screening Report',
         coping_exercise: 'Coping Exercise',
         safety_plan: 'Safety Plan',
+        risk_assessment: 'Risk Assessment',
       }
       return titles[this.artifactMode] || 'Report'
     },

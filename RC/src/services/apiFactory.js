@@ -1104,6 +1104,51 @@ const apiFactory = {
     return http.post(`/specialist/patients/${patientId}/star`, payload);
   },
 
+  /**
+   * Get patient recovery data for specialist view
+   * @param {string} patientId - The patient ID
+   */
+  $_getPatientRecoveryData(patientId) {
+    return http.get(`/specialist/patients/${patientId}/recovery`);
+  },
+
+  /**
+   * Get patient risk history for specialist view
+   * @param {string} patientId - The patient ID
+   * @param {Object} params - { limit?, period? }
+   */
+  $_getPatientRiskHistory(patientId, params = {}) {
+    return http.get(`/specialist/patients/${patientId}/recovery/risk-history`, { params });
+  },
+
+  /**
+   * Get recovery overview for specialist (all recovery patients)
+   * @param {Object} params - { risk_level?, checkin_status?, search? }
+   */
+  $_getSpecialistRecoveryOverview(params = {}) {
+    return http.get("/specialist/patients/recovery-overview", { params });
+  },
+
+  $_getPatientScreeningHistory(patientId, params = {}) {
+    return http.get(`/specialist/patients/${patientId}/recovery/screenings`, { params });
+  },
+
+  $_getPatientExerciseHistory(patientId, params = {}) {
+    return http.get(`/specialist/patients/${patientId}/recovery/exercises`, { params });
+  },
+
+  $_getPatientRiskAssessments(patientId, params = {}) {
+    return http.get(`/specialist/patients/${patientId}/recovery/risk-assessments`, { params });
+  },
+
+  $_getPatientMilestones(patientId) {
+    return http.get(`/specialist/patients/${patientId}/recovery/milestones`);
+  },
+
+  $_getPatientCheckinHistory(patientId, params = {}) {
+    return http.get(`/specialist/patients/${patientId}/recovery/checkins`, { params });
+  },
+
   // ========================================
   // Languages API
   // ========================================
@@ -1454,6 +1499,14 @@ const apiFactory = {
   },
   $_getExerciseById(id) {
     return http.get(`/recovery/exercises/${id}`);
+  },
+
+  // Risk Assessments
+  $_getRiskAssessmentReports(params) {
+    return http.get("/recovery/profile/risk-assessments", { params });
+  },
+  $_getRiskAssessmentReport(id) {
+    return http.get(`/recovery/profile/risk-assessments/${id}`);
   },
 
   // Programme Management

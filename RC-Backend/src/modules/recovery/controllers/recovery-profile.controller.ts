@@ -5,6 +5,7 @@ import {
   Patch,
   Body,
   Param,
+  Query,
   Request,
   UseGuards,
   Ip,
@@ -15,6 +16,7 @@ import {
   ApiOperation,
   ApiResponse,
   ApiBody,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RecoveryProfileService } from '../services/recovery-profile.service';
@@ -217,5 +219,48 @@ export class RecoveryProfileController {
       ip,
     );
     return sendSuccessResponse(Messages.UPDATED, result);
+  }
+
+  @ApiOperation({
+    summary: 'Get risk assessment history',
+    description:
+      'Returns a paginated list of the patient\'s risk assessment reports, sorted by most recent first.',
+  })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number (default 1)' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Items per page (default 20)' })
+  @ApiResponse({ status: 200, description: 'Paginated risk assessment reports returned' })
+  @ApiResponse({ status: 401, description: 'Unauthorised - invalid or missing JWT token' })
+  @Get('risk-assessments')
+  async getRiskAssessments(
+    @Query('page') page: string,
+    @Query('limit') limit: string,
+    @Request() req,
+  ) {
+    const result = await this.profileService.getRiskAssessmentReports(
+      req.user.sub,
+      parseInt(page) || 1,
+      parseInt(limit) || 20,
+    );
+    return sendSuccessResponse(Messages.RETRIEVED, result);
+  }
+
+  @ApiOperation({
+    summary: 'Get a single risk assessment report',
+    description:
+      'Retrieves a specific risk assessment report by ID, with ownership verification.',
+  })
+  @ApiResponse({ status: 200, description: 'Risk assessment report returned' })
+  @ApiResponse({ status: 404, description: 'Report not found' })
+  @ApiResponse({ status: 401, description: 'Unauthorised - invalid or missing JWT token' })
+  @Get('risk-assessments/:id')
+  async getRiskAssessment(
+    @Param('id') id: string,
+    @Request() req,
+  ) {
+    const result = await this.profileService.getRiskAssessmentReport(
+      req.user.sub,
+      id,
+    );
+    return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 }

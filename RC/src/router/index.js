@@ -582,6 +582,11 @@ const routes = [
         redirect: to => ({ path: `/app/specialist/pharmacy/patients/${to.params.patientId}` }),
       },
       {
+        path: "recovery",
+        name: "SpecialistRecovery",
+        component: () => import("@/views/Mainapp/SpecialistApp/Recovery/index.vue"),
+      },
+      {
         path: "clinical-notes",
         name: "ClinicalNotesDashboard",
         component: ClinicalNotesDashboard,

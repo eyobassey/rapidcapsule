@@ -334,6 +334,8 @@ export default {
                   commit('COMPLETE_EXERCISE', chunk.data)
                 } else if (chunk.artifact_type === 'safety_plan') {
                   commit('SET_ARTIFACT', { type: 'safety_plan', data: chunk.data })
+                } else if (chunk.artifact_type === 'risk_assessment') {
+                  commit('SET_ARTIFACT', { type: 'risk_assessment', data: chunk.data })
                 }
               } else if (chunk.type === 'clear_loading') {
                 commit('CLEAR_LAST_MESSAGE')
