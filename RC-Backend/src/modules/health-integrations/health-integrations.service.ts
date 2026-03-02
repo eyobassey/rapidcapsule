@@ -28,6 +28,7 @@ import { GoogleFitProvider } from './providers/google-fit.provider';
 import { SamsungHealthProvider } from './providers/samsung-health.provider';
 import { AppleHealthProvider } from './providers/apple-health.provider';
 import { RawHealthData } from './providers/health-provider.interface';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { OWClientService } from './providers/ow/ow-client.service';
 import { GarminProvider } from './providers/ow/garmin.provider';
 import { PolarProvider } from './providers/ow/polar.provider';
@@ -77,6 +78,7 @@ export class HealthIntegrationsService implements OnModuleInit {
     private polarProvider: PolarProvider,
     private suuntoProvider: SuuntoProvider,
     private whoopProvider: WhoopProvider,
+    private eventEmitter: EventEmitter2,
   ) {}
 
   async onModuleInit() {
@@ -473,7 +475,102 @@ export class HealthIntegrationsService implements OnModuleInit {
       await this.syncToVitals(healthData);
     }
 
+    // Recovery critical vitals check (overdose/withdrawal detection)
+    this.checkCriticalVitals(
+      integration.userId.toString(),
+      rawData.dataType,
+      rawData.value?.primary,
+      rawData.value,
+    );
+
     return healthData;
+  }
+
+  /**
+   * Post-sync hook: check for critical vital signs that may indicate
+   * opioid overdose, alcohol withdrawal, or inactivity emergency.
+   * Emits events consumed by the recovery CrisisInterventionService.
+   */
+  private checkCriticalVitals(
+    userId: string,
+    dataType: string,
+    primaryValue: number | undefined,
+    fullValue: any,
+  ) {
+    if (primaryValue === undefined || primaryValue === null) return;
+
+    // Opioid overdose indicators
+    if (dataType === HealthDataType.OXYGEN_SATURATION && primaryValue < 92) {
+      this.logger.warn(
+        `CRITICAL: SpO2 ${primaryValue}% for user ${userId} — possible opioid overdose`,
+      );
+      this.eventEmitter.emit('recovery.wearable_crisis', {
+        userId,
+        crisisType: 'overdose_suspected',
+        triggerSource: 'wearable_spo2',
+        severity: primaryValue < 85 ? 'life_threatening' : 'high',
+        detectionData: {
+          vital_type: 'spo2',
+          value: primaryValue,
+          threshold: 92,
+          unit: '%',
+        },
+      });
+    }
+
+    if (dataType === HealthDataType.RESPIRATORY_RATE && primaryValue < 10) {
+      this.logger.warn(
+        `CRITICAL: Respiratory rate ${primaryValue}/min for user ${userId} — possible opioid overdose`,
+      );
+      this.eventEmitter.emit('recovery.wearable_crisis', {
+        userId,
+        crisisType: 'overdose_suspected',
+        triggerSource: 'wearable_respiratory_rate',
+        severity: primaryValue < 6 ? 'life_threatening' : 'high',
+        detectionData: {
+          vital_type: 'respiratory_rate',
+          value: primaryValue,
+          threshold: 10,
+          unit: 'breaths/min',
+        },
+      });
+    }
+
+    // Alcohol withdrawal indicator
+    if (dataType === HealthDataType.HEART_RATE && primaryValue > 130) {
+      this.logger.warn(
+        `WARNING: Heart rate ${primaryValue}bpm for user ${userId} — possible withdrawal tachycardia`,
+      );
+      this.eventEmitter.emit('recovery.wearable_crisis', {
+        userId,
+        crisisType: 'severe_withdrawal',
+        triggerSource: 'wearable_heart_rate',
+        severity: primaryValue > 160 ? 'life_threatening' : 'high',
+        detectionData: {
+          vital_type: 'heart_rate',
+          value: primaryValue,
+          threshold: 130,
+          unit: 'bpm',
+        },
+      });
+    }
+
+    // Inactivity check: 0 steps for extended period
+    if (dataType === HealthDataType.STEPS && primaryValue === 0) {
+      const recordedHour = fullValue?.metadata?.hour || new Date().getHours();
+      // Only alert during waking hours (8AM-10PM) for 6+ hour zero-step windows
+      if (recordedHour >= 8 && recordedHour <= 22) {
+        this.eventEmitter.emit('recovery.wearable_wellness_check', {
+          userId,
+          triggerSource: 'wearable_inactivity',
+          detectionData: {
+            vital_type: 'steps',
+            value: 0,
+            note: 'Zero steps detected during waking hours',
+          },
+        });
+      }
+    }
   }
 
   // ─── Vitals Sync ────────────────────────────────────────────────

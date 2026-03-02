@@ -165,12 +165,13 @@ async function fetchReports(page = 1) {
     const result = res.data?.data || res.data?.result || res.data;
     reports.value = result?.data || [];
     pagination.value = result?.pagination || { page: 1, limit: 10, total: 0, pages: 0 };
-    nextTick(() => renderChart());
   } catch (err) {
     console.error('Error fetching risk reports:', err);
     $toast.error('Failed to load risk reports');
   } finally {
     loading.value = false;
+    await nextTick();
+    renderChart();
   }
 }
 

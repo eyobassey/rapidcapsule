@@ -203,20 +203,25 @@ export class SobrietyTrackerService {
       .sort({ milestone_value: 1 })
       .lean();
 
+    // Calculate log streak (consecutive days with a check-in)
+    const logStreak = await this.calculateLogStreak(userId);
+
     return {
       sobriety_days: sobrietyDays,
       sobriety_start_date: profile.sobriety_start_date,
       longest_streak: profile.longest_sobriety_days,
+      current_streak: logStreak,
+      total_milestones: earnedMilestones.length,
       total_relapses: profile.total_relapse_count,
       last_relapse: profile.relapse_dates?.length
         ? profile.relapse_dates[profile.relapse_dates.length - 1]
         : null,
       next_milestone: nextMilestone
         ? {
-            name: nextMilestone.name,
+            milestone_name: nextMilestone.name,
             days_required: nextMilestone.value,
             days_remaining: daysToNext,
-            points: nextMilestone.points,
+            reward_points: nextMilestone.points,
             message: nextMilestone.message,
           }
         : null,

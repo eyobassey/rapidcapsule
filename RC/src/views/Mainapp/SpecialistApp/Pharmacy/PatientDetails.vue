@@ -355,7 +355,7 @@ import PatientVitalsTab from './components/PatientVitalsTab.vue';
 import PatientCheckupsTab from './components/PatientCheckupsTab.vue';
 import PatientAppointmentsTab from './components/PatientAppointmentsTab.vue';
 import PatientTimelineTab from './components/PatientTimelineTab.vue';
-import PatientRecoveryTab from './components/PatientRecoveryTab.vue';
+import PatientRecoveryTab from '@/views/Mainapp/SpecialistApp/Recovery/components/PatientRecoveryTab.vue';
 import VitalHistoryModal from './components/VitalHistoryModal.vue';
 import ClinicalNoteModal from '@/views/Mainapp/SpecialistApp/SpecialistAppointments/modals/ClinicalNoteModal.vue';
 import { usePharmacy } from './composables/usePharmacy';

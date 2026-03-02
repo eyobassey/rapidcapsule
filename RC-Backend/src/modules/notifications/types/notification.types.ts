@@ -61,6 +61,11 @@ export enum NotificationType {
   RECOVERY_RISK_HIGH = 'recovery_risk_high',
   RECOVERY_RISK_CRITICAL = 'recovery_risk_critical',
   RECOVERY_RISK_IMPROVED = 'recovery_risk_improved',
+
+  // Recovery Engagement
+  RECOVERY_CHECK_IN_REMINDER = 'recovery_check_in_reminder',
+  RECOVERY_MILESTONE_ACHIEVED = 'recovery_milestone_achieved',
+  RECOVERY_MAT_COMPLIANCE_WARNING = 'recovery_mat_compliance_warning',
 }
 
 export enum NotificationPriority {

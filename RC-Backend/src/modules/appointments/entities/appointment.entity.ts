@@ -48,6 +48,15 @@ export enum MeetingChannel {
 export enum AppointmentUrgency {
   ROUTINE = 'routine',
   URGENT = 'urgent',
+  CRISIS = 'crisis',
+}
+
+export enum SessionType {
+  INDIVIDUAL = 'individual',
+  GROUP = 'group',
+  CRISIS = 'crisis',
+  PEER_CHECK_IN = 'peer_check_in',
+  FAMILY = 'family',
 }
 
 @Schema({ timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } })
@@ -521,6 +530,19 @@ export class Appointment {
 
   @Prop({ type: Boolean, default: false })
   sms_reminder_sent: boolean;
+
+  // ── Recovery Group Session Fields ───────────────────────────────────
+  @Prop({ type: String, enum: Object.values(SessionType), default: SessionType.INDIVIDUAL })
+  session_type: string;
+
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'GroupSession' })
+  group_session: mongoose.Types.ObjectId;
+
+  @Prop({ type: Number, default: 1 })
+  max_participants: number;
+
+  @Prop({ type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], default: [] })
+  group_participants: mongoose.Types.ObjectId[];
 }
 const AppointmentSchema = SchemaFactory.createForClass(Appointment);
 AppointmentSchema.pre('find', function (next) {

@@ -8,6 +8,8 @@ export enum ScreeningInstrumentType {
   DAST10 = 'dast10',
   CAGE = 'cage',
   ASSIST = 'assist',
+  COWS = 'cows',
+  CIWA_AR = 'ciwa_ar',
 }
 
 export enum ScreeningType {
@@ -18,8 +20,10 @@ export enum ScreeningType {
 
 export enum RiskLevel {
   LOW = 'low',
+  MILD = 'mild',
   MODERATE = 'moderate',
   HIGH = 'high',
+  MODERATELY_SEVERE = 'moderately_severe',
   SEVERE = 'severe',
 }
 
@@ -48,6 +52,8 @@ export class AddictionScreening {
         ScreeningInstrumentType.DAST10,
         ScreeningInstrumentType.CAGE,
         ScreeningInstrumentType.ASSIST,
+        ScreeningInstrumentType.COWS,
+        ScreeningInstrumentType.CIWA_AR,
       ],
     },
   })
@@ -81,8 +87,10 @@ export class AddictionScreening {
     enum: {
       values: [
         RiskLevel.LOW,
+        RiskLevel.MILD,
         RiskLevel.MODERATE,
         RiskLevel.HIGH,
+        RiskLevel.MODERATELY_SEVERE,
         RiskLevel.SEVERE,
       ],
     },

@@ -7,6 +7,27 @@ import {
   SpecialistPrescriptionStatus,
   PrescriptionPaymentStatus,
 } from '../entities/specialist-prescription.entity';
+import { Drug, DrugDocument } from '../../pharmacy/entities/drug.entity';
+import {
+  RecoveryProfile,
+  RecoveryProfileDocument,
+} from '../../recovery/entities/recovery-profile.entity';
+import {
+  AddictionScreening,
+  AddictionScreeningDocument,
+} from '../../recovery/entities/addiction-screening.entity';
+import {
+  SobrietyLog,
+  SobrietyLogDocument,
+} from '../../recovery/entities/sobriety-log.entity';
+import {
+  CrisisEvent,
+  CrisisEventDocument,
+} from '../../recovery/entities/crisis-event.entity';
+import {
+  Appointment,
+  AppointmentDocument,
+} from '../../appointments/entities/appointment.entity';
 import { GeneralHelpers } from '../../../common/helpers/general.helpers';
 import {
   refillReminderEmail,
@@ -18,6 +39,18 @@ import {
   PrescriptionExpiringEmailData,
   EarlyRefillDeniedEmailData,
 } from '../../../core/emails/mails/prescriptionEmails';
+
+export interface MATRefillEligibility {
+  eligible: boolean;
+  blockers: Array<{ code: string; message: string }>;
+  warnings: Array<{ code: string; message: string }>;
+  compliance: {
+    appointment_attendance: { attended: number; missed: number; rate: number };
+    screening_compliance: { last_date: Date | null; overdue: boolean; interval_days: number };
+    sobriety_logging: { total_days: number; logged_days: number; rate: number };
+    crisis_events: { unresolved_count: number };
+  };
+}
 
 export interface RefillEligibility {
   is_eligible: boolean;
@@ -44,8 +77,185 @@ export class RefillService {
   constructor(
     @InjectModel(SpecialistPrescription.name)
     private prescriptionModel: Model<SpecialistPrescriptionDocument>,
+    @InjectModel(Drug.name)
+    private drugModel: Model<DrugDocument>,
+    @InjectModel(RecoveryProfile.name)
+    private profileModel: Model<RecoveryProfileDocument>,
+    @InjectModel(AddictionScreening.name)
+    private screeningModel: Model<AddictionScreeningDocument>,
+    @InjectModel(SobrietyLog.name)
+    private sobrietyLogModel: Model<SobrietyLogDocument>,
+    @InjectModel(CrisisEvent.name)
+    private crisisEventModel: Model<CrisisEventDocument>,
+    @InjectModel(Appointment.name)
+    private appointmentModel: Model<AppointmentDocument>,
     private readonly generalHelpers: GeneralHelpers,
   ) {}
+
+  /**
+   * Check MAT-specific refill eligibility.
+   * Validates appointment attendance, screening compliance, sobriety logging, and crisis events.
+   */
+  async checkMATRefillEligibility(
+    prescriptionId: string,
+    patientId: string,
+  ): Promise<MATRefillEligibility> {
+    const blockers: Array<{ code: string; message: string }> = [];
+    const warnings: Array<{ code: string; message: string }> = [];
+
+    const prescription = await this.prescriptionModel.findById(prescriptionId).lean();
+    if (!prescription) throw new NotFoundException('Prescription not found');
+
+    // Determine if this is a MAT prescription by checking items against MAT drugs
+    const drugIds = (prescription.items || [])
+      .map((item: any) => item.drug_id)
+      .filter(Boolean);
+    const matDrugs = await this.drugModel
+      .find({ _id: { $in: drugIds }, is_mat_medication: true })
+      .lean();
+
+    if (matDrugs.length === 0) {
+      // Not a MAT prescription, standard rules apply
+      return {
+        eligible: true,
+        blockers: [],
+        warnings: [],
+        compliance: {
+          appointment_attendance: { attended: 0, missed: 0, rate: 1 },
+          screening_compliance: { last_date: null, overdue: false, interval_days: 30 },
+          sobriety_logging: { total_days: 0, logged_days: 0, rate: 1 },
+          crisis_events: { unresolved_count: 0 },
+        },
+      };
+    }
+
+    // Get the monitoring requirements from the first MAT drug
+    const monitoringReqs = matDrugs[0].mat_protocol?.monitoring_requirements;
+    const screeningIntervalDays = monitoringReqs?.screening_interval_days || 30;
+
+    // 1. Appointment attendance since last refill
+    const lastFillDate = (prescription as any).last_fill_date || (prescription as any).created_at;
+    const appointments = await this.appointmentModel
+      .find({
+        $or: [
+          { patient: new Types.ObjectId(patientId) },
+          { specialist: new Types.ObjectId(patientId) },
+        ],
+        scheduled_date: { $gte: lastFillDate },
+      })
+      .select('status')
+      .lean();
+
+    const attended = appointments.filter(
+      (a: any) => a.status === 'completed' || a.status === 'Completed',
+    ).length;
+    const missed = appointments.filter(
+      (a: any) =>
+        a.status === 'missed' ||
+        a.status === 'no_show' ||
+        a.status === 'Missed',
+    ).length;
+    const attendanceRate = attended + missed > 0 ? attended / (attended + missed) : 1;
+
+    if (missed > 0 && attendanceRate < 0.5) {
+      blockers.push({
+        code: 'LOW_APPOINTMENT_ATTENDANCE',
+        message: `Appointment attendance rate is ${Math.round(attendanceRate * 100)}% (${attended}/${attended + missed}). Minimum 50% required for MAT refill.`,
+      });
+    } else if (attendanceRate < 0.75) {
+      warnings.push({
+        code: 'ATTENDANCE_WARNING',
+        message: `Appointment attendance rate is ${Math.round(attendanceRate * 100)}%. Consider scheduling a follow-up.`,
+      });
+    }
+
+    // 2. Screening compliance
+    const screeningDueDate = new Date();
+    screeningDueDate.setDate(screeningDueDate.getDate() - screeningIntervalDays);
+
+    const lastScreening = await this.screeningModel
+      .findOne({
+        user: new Types.ObjectId(patientId),
+        created_at: { $gte: screeningDueDate },
+        deleted_at: { $exists: false },
+      })
+      .sort({ created_at: -1 })
+      .lean();
+
+    const lastScreeningDate = lastScreening
+      ? (lastScreening as any).created_at
+      : null;
+    const screeningOverdue = !lastScreening;
+
+    if (screeningOverdue) {
+      blockers.push({
+        code: 'SCREENING_OVERDUE',
+        message: `No addiction screening within the required ${screeningIntervalDays}-day interval. A new screening must be completed before refill.`,
+      });
+    }
+
+    // 3. Sobriety log compliance (>=50% daily logging)
+    const daysSinceLastFill = Math.max(
+      1,
+      Math.floor(
+        (Date.now() - new Date(lastFillDate).getTime()) / (1000 * 60 * 60 * 24),
+      ),
+    );
+
+    const sobrietyLogs = await this.sobrietyLogModel.countDocuments({
+      user: new Types.ObjectId(patientId),
+      created_at: { $gte: lastFillDate },
+      deleted_at: { $exists: false },
+    });
+
+    const loggingRate = sobrietyLogs / daysSinceLastFill;
+
+    if (loggingRate < 0.5) {
+      blockers.push({
+        code: 'LOW_SOBRIETY_LOGGING',
+        message: `Sobriety logging rate is ${Math.round(loggingRate * 100)}% (${sobrietyLogs}/${daysSinceLastFill} days). Minimum 50% daily logging required.`,
+      });
+    } else if (loggingRate < 0.75) {
+      warnings.push({
+        code: 'LOGGING_WARNING',
+        message: `Sobriety logging rate is ${Math.round(loggingRate * 100)}%. Aim for daily check-ins.`,
+      });
+    }
+
+    // 4. Unresolved crisis events
+    const unresolvedCrises = await this.crisisEventModel.countDocuments({
+      user: new Types.ObjectId(patientId),
+      status: { $in: ['active', 'responding'] },
+      deleted_at: { $exists: false },
+    });
+
+    if (unresolvedCrises > 0) {
+      blockers.push({
+        code: 'UNRESOLVED_CRISIS',
+        message: `${unresolvedCrises} unresolved crisis event(s). Crisis must be resolved before MAT refill.`,
+      });
+    }
+
+    return {
+      eligible: blockers.length === 0,
+      blockers,
+      warnings,
+      compliance: {
+        appointment_attendance: { attended, missed, rate: attendanceRate },
+        screening_compliance: {
+          last_date: lastScreeningDate,
+          overdue: screeningOverdue,
+          interval_days: screeningIntervalDays,
+        },
+        sobriety_logging: {
+          total_days: daysSinceLastFill,
+          logged_days: sobrietyLogs,
+          rate: loggingRate,
+        },
+        crisis_events: { unresolved_count: unresolvedCrises },
+      },
+    };
+  }
 
   /**
    * Check if a prescription is eligible for refill

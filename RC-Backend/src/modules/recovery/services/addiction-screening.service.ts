@@ -449,6 +449,233 @@ export class AddictionScreeningService {
     return { deleted: true };
   }
 
+  /**
+   * Compare a screening result to the patient's baseline screening.
+   * Returns delta, percentage change, and clinical context.
+   */
+  async compareToBaseline(screeningId: string, userId: string) {
+    const screening = await this.screeningModel
+      .findOne({
+        _id: new Types.ObjectId(screeningId),
+        user: new Types.ObjectId(userId),
+        deleted_at: { $exists: false },
+      })
+      .lean();
+
+    if (!screening) {
+      throw new NotFoundException('Screening not found');
+    }
+
+    // Find baseline (first screening of same instrument)
+    const baseline = await this.screeningModel
+      .findOne({
+        user: new Types.ObjectId(userId),
+        instrument: screening.instrument,
+        is_baseline: true,
+        deleted_at: { $exists: false },
+      })
+      .lean();
+
+    if (!baseline) {
+      return {
+        screening_id: screeningId,
+        has_baseline: false,
+        message: 'No baseline screening found for this instrument',
+      };
+    }
+
+    const delta = screening.total_score - baseline.total_score;
+    const percentChange =
+      baseline.total_score > 0
+        ? Math.round((delta / baseline.total_score) * 100)
+        : 0;
+
+    // Compare subscales
+    const subscaleComparison: Record<
+      string,
+      { baseline: number; current: number; delta: number }
+    > = {};
+    if (screening.subscale_scores && baseline.subscale_scores) {
+      for (const key of Object.keys(screening.subscale_scores)) {
+        subscaleComparison[key] = {
+          baseline: (baseline.subscale_scores as any)[key] ?? 0,
+          current: (screening.subscale_scores as any)[key] ?? 0,
+          delta:
+            ((screening.subscale_scores as any)[key] ?? 0) -
+            ((baseline.subscale_scores as any)[key] ?? 0),
+        };
+      }
+    }
+
+    return {
+      screening_id: screeningId,
+      has_baseline: true,
+      baseline: {
+        screening_id: baseline._id,
+        score: baseline.total_score,
+        risk_level: baseline.risk_level,
+        date: (baseline as any).created_at,
+      },
+      current: {
+        score: screening.total_score,
+        risk_level: screening.risk_level,
+        date: (screening as any).created_at,
+      },
+      delta,
+      percent_change: percentChange,
+      direction: delta > 0 ? 'worsened' : delta < 0 ? 'improved' : 'unchanged',
+      risk_level_change:
+        baseline.risk_level !== screening.risk_level
+          ? { from: baseline.risk_level, to: screening.risk_level }
+          : null,
+      subscale_comparison: subscaleComparison,
+    };
+  }
+
+  /**
+   * Schedule a follow-up screening at a specified interval.
+   * Updates the screening record and the recovery profile.
+   */
+  async scheduleFollowUp(
+    screeningId: string,
+    userId: string,
+    intervalDays: number,
+  ) {
+    if (intervalDays < 1 || intervalDays > 365) {
+      throw new BadRequestException(
+        'Interval must be between 1 and 365 days',
+      );
+    }
+
+    const screening = await this.screeningModel.findOne({
+      _id: new Types.ObjectId(screeningId),
+      user: new Types.ObjectId(userId),
+      deleted_at: { $exists: false },
+    });
+
+    if (!screening) {
+      throw new NotFoundException('Screening not found');
+    }
+
+    const dueDate = new Date();
+    dueDate.setDate(dueDate.getDate() + intervalDays);
+
+    // Update screening record
+    await this.screeningModel.updateOne(
+      { _id: screening._id },
+      { $set: { next_screening_due: dueDate } },
+    );
+
+    // Update recovery profile
+    await this.recoveryProfileModel.updateOne(
+      { user: new Types.ObjectId(userId), deleted_at: { $exists: false } },
+      { $set: { next_screening_due: dueDate } },
+    );
+
+    return {
+      screening_id: screeningId,
+      instrument: screening.instrument,
+      next_screening_due: dueDate,
+      interval_days: intervalDays,
+    };
+  }
+
+  /**
+   * Specialist-administered screening mode.
+   * The specialist fills in the screening on behalf of the patient.
+   */
+  async administerScreening(
+    patientId: string,
+    specialistId: string,
+    instrumentType: ScreeningInstrumentType,
+    answers: Record<string, number>,
+    clinicalNotes?: string,
+  ) {
+    const instrument = getInstrument(instrumentType);
+    if (!instrument) {
+      throw new BadRequestException(
+        `Unknown instrument: ${instrumentType}`,
+      );
+    }
+
+    // Validate answers (same as self-reported)
+    if (instrumentType !== ScreeningInstrumentType.ASSIST) {
+      const requiredIds = instrument.questions.map((q) => q.id);
+      const missing = requiredIds.filter((id) => answers[id] === undefined);
+      if (missing.length > 0) {
+        throw new BadRequestException(
+          `Missing answers for: ${missing.join(', ')}`,
+        );
+      }
+    }
+
+    const scoreResult = this.calculateScore(instrumentType, answers);
+    const riskZone = this.determineRiskZone(instrumentType, scoreResult.total_score);
+    const substances = this.identifySubstances(instrumentType, answers);
+
+    const existingCount = await this.screeningModel.countDocuments({
+      user: new Types.ObjectId(patientId),
+      instrument: instrumentType,
+      deleted_at: { $exists: false },
+    });
+
+    const screening = await this.screeningModel.create({
+      user: new Types.ObjectId(patientId),
+      instrument: instrumentType,
+      screening_type: 'specialist',
+      administered_by: new Types.ObjectId(specialistId),
+      answers,
+      total_score: scoreResult.total_score,
+      subscale_scores: scoreResult.subscale_scores,
+      risk_level: riskZone.level,
+      risk_zone_label: riskZone.label,
+      substances_identified: substances,
+      is_baseline: existingCount === 0,
+      clinical_notes: clinicalNotes,
+      completed_at: new Date(),
+    });
+
+    // Update recovery profile
+    const profile = await this.recoveryProfileModel.findOne({
+      user: new Types.ObjectId(patientId),
+    });
+    if (profile) {
+      const update: any = {
+        'outcomes.screening_score_current': scoreResult.total_score,
+      };
+      if (existingCount === 0) {
+        update['outcomes.screening_score_at_enrollment'] = scoreResult.total_score;
+        update.baseline_screening = screening._id;
+      }
+      await this.recoveryProfileModel.updateOne(
+        { _id: profile._id },
+        { $set: update },
+      );
+    }
+
+    // Emit event for risk engine
+    this.eventEmitter.emit('recovery.screening_completed', {
+      userId: patientId,
+      screeningId: screening._id.toString(),
+    });
+
+    return {
+      screening_id: screening._id,
+      instrument: instrumentType,
+      total_score: scoreResult.total_score,
+      max_score: instrument.scoring.max_score,
+      subscale_scores: scoreResult.subscale_scores,
+      risk_level: riskZone.level,
+      risk_zone_label: riskZone.label,
+      recommendation: riskZone.recommendation,
+      colour: riskZone.colour,
+      substances_identified: substances,
+      is_baseline: existingCount === 0,
+      administered_by: specialistId,
+      risk_zones: instrument.risk_zones,
+    };
+  }
+
   // ─── Scoring Algorithms ──────────────────────────────────────────
 
   private calculateScore(

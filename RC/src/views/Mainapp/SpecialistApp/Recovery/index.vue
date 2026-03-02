@@ -66,73 +66,151 @@
       </div>
     </div>
 
-    <!-- Distribution + Filters Row -->
-    <div v-if="!selectedPatientId" class="controls-row">
-      <!-- Risk Distribution Chart -->
-      <div class="bento-card distribution-card" v-if="overview.distribution">
-        <div class="distribution-card__header">
-          <h3>Risk Distribution</h3>
-        </div>
-        <div class="distribution-card__chart">
-          <canvas ref="donutCanvas"></canvas>
-        </div>
-        <div class="distribution-card__legend">
-          <div class="legend-item" v-for="item in distributionLegend" :key="item.label">
-            <span class="legend-dot" :style="{ background: item.color }"></span>
-            <span class="legend-label">{{ item.label }}</span>
-            <span class="legend-count">{{ item.count }}</span>
+    <!-- Analytics Dashboard (Bento Cards) -->
+    <div v-if="!selectedPatientId && overview.stats" class="analytics-row">
+      <!-- Risk Score Card -->
+      <div class="analytics-card">
+        <div class="analytics-card__header">
+          <span class="analytics-card__title">Risk Score</span>
+          <div class="analytics-card__icon analytics-card__icon--blue">
+            <v-icon name="hi-shield-check" scale="0.7" />
           </div>
+        </div>
+        <div class="analytics-card__body">
+          <div class="analytics-card__stat">
+            <span class="analytics-card__number">{{ overview.stats.avg_score }}</span>
+            <span class="analytics-card__unit">/100</span>
+          </div>
+          <div class="analytics-card__chart">
+            <canvas ref="riskSparkRef"></canvas>
+          </div>
+        </div>
+        <div class="analytics-card__footer">
+          <span class="analytics-card__comparison analytics-card__comparison--info">
+            <v-icon name="hi-users" scale="0.55" />
+            {{ overview.stats.total }} patients monitored
+          </span>
         </div>
       </div>
 
-      <!-- Filters -->
-      <div class="bento-card filter-card">
-        <div class="filter-card__header">
-          <h3>Filters</h3>
-          <button v-if="hasActiveFilter" class="filter-card__clear" @click="clearFilters">Clear all</button>
-        </div>
-        <div class="filter-group">
-          <label>Risk Level</label>
-          <div class="filter-chips">
-            <button
-              v-for="level in riskLevels"
-              :key="level.value"
-              class="filter-chip"
-              :class="{ 'filter-chip--active': activeRiskLevel === level.value, [`filter-chip--${level.value}`]: activeRiskLevel === level.value }"
-              @click="toggleRiskLevel(level.value)"
-            >
-              {{ level.label }}
-            </button>
+      <!-- Check-in Rate Card -->
+      <div class="analytics-card">
+        <div class="analytics-card__header">
+          <span class="analytics-card__title">Check-in Rate</span>
+          <div class="analytics-card__icon analytics-card__icon--green">
+            <v-icon name="hi-clipboard-check" scale="0.7" />
           </div>
         </div>
-        <div class="filter-group">
-          <label>Check-in Status</label>
-          <div class="filter-chips">
-            <button
-              v-for="status in checkinStatuses"
-              :key="status.value"
-              class="filter-chip"
-              :class="{ 'filter-chip--active': activeCheckinStatus === status.value }"
-              @click="toggleCheckinStatus(status.value)"
-            >
-              {{ status.label }}
-            </button>
+        <div class="analytics-card__body">
+          <div class="analytics-card__stat">
+            <span class="analytics-card__number">{{ overview.stats.checkin_rate }}</span>
+            <span class="analytics-card__unit">%</span>
+          </div>
+          <div class="analytics-card__chart">
+            <canvas ref="checkinSparkRef"></canvas>
           </div>
         </div>
-        <div class="filter-group">
-          <label>Search</label>
-          <div class="search-input-wrapper">
-            <v-icon name="hi-search" scale="0.8" class="search-icon" />
-            <input
-              v-model="searchQuery"
-              type="text"
-              placeholder="Search by name..."
-              @input="debouncedSearch"
-            />
-            <button v-if="searchQuery" class="clear-btn" @click="searchQuery = ''; fetchData()">
-              <v-icon name="hi-x" scale="0.7" />
-            </button>
+        <div class="analytics-card__footer">
+          <span
+            class="analytics-card__comparison"
+            :class="overduePatients.length ? 'analytics-card__comparison--warning' : 'analytics-card__comparison--success'"
+          >
+            <v-icon :name="overduePatients.length ? 'hi-exclamation' : 'hi-check-circle'" scale="0.55" />
+            {{ overduePatients.length ? `${overduePatients.length} overdue` : 'All on track' }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Risk Levels Card -->
+      <div class="analytics-card">
+        <div class="analytics-card__header">
+          <span class="analytics-card__title">Risk Levels</span>
+          <div class="analytics-card__icon analytics-card__icon--rose">
+            <v-icon name="hi-chart-pie" scale="0.7" />
           </div>
+        </div>
+        <div class="analytics-card__body">
+          <div class="analytics-card__stat">
+            <span class="analytics-card__number">{{ overview.stats.high_risk + overview.stats.critical }}</span>
+            <span class="analytics-card__label-sub">at risk</span>
+          </div>
+          <div class="analytics-card__chart analytics-card__chart--donut">
+            <canvas ref="distSparkRef"></canvas>
+          </div>
+        </div>
+        <div class="analytics-card__footer">
+          <div class="dist-legend" v-if="overview.distribution">
+            <span class="dist-legend__item">
+              <span class="dist-legend__dot" style="background:#10B981"></span>
+              <span class="dist-legend__label">Low</span> {{ overview.distribution.low }}
+            </span>
+            <span class="dist-legend__item">
+              <span class="dist-legend__dot" style="background:#F59E0B"></span>
+              <span class="dist-legend__label">Mod</span> {{ overview.distribution.moderate }}
+            </span>
+            <span class="dist-legend__item">
+              <span class="dist-legend__dot" style="background:#FB923C"></span>
+              <span class="dist-legend__label">High</span> {{ overview.distribution.high }}
+            </span>
+            <span class="dist-legend__item">
+              <span class="dist-legend__dot" style="background:#F43F5E"></span>
+              <span class="dist-legend__label">Crit</span> {{ overview.distribution.critical }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div v-if="!selectedPatientId" class="filter-row">
+      <div class="bento-card filter-card filter-card--horizontal">
+        <div class="filter-card__inline">
+          <div class="filter-group filter-group--inline">
+            <label>Risk Level</label>
+            <div class="filter-chips">
+              <button
+                v-for="level in riskLevels"
+                :key="level.value"
+                class="filter-chip"
+                :class="{ 'filter-chip--active': activeRiskLevel === level.value, [`filter-chip--${level.value}`]: activeRiskLevel === level.value }"
+                @click="toggleRiskLevel(level.value)"
+              >
+                {{ level.label }}
+              </button>
+            </div>
+          </div>
+          <div class="filter-group filter-group--inline">
+            <label>Status</label>
+            <div class="filter-chips">
+              <button
+                v-for="status in checkinStatuses"
+                :key="status.value"
+                class="filter-chip"
+                :class="{ 'filter-chip--active': activeCheckinStatus === status.value }"
+                @click="toggleCheckinStatus(status.value)"
+              >
+                {{ status.label }}
+              </button>
+            </div>
+          </div>
+          <div class="filter-group filter-group--search">
+            <div class="search-input-wrapper">
+              <v-icon name="hi-search" scale="0.8" class="search-icon" />
+              <input
+                v-model="searchQuery"
+                type="text"
+                placeholder="Search patients..."
+                @input="debouncedSearch"
+              />
+              <button v-if="searchQuery" class="clear-btn" @click="searchQuery = ''; fetchData()">
+                <v-icon name="hi-x" scale="0.7" />
+              </button>
+            </div>
+          </div>
+          <button v-if="hasActiveFilter" class="filter-clear-btn" @click="clearFilters">
+            <v-icon name="hi-x" scale="0.6" />
+            Clear
+          </button>
         </div>
       </div>
     </div>
@@ -251,7 +329,7 @@ import { ref, computed, inject, onMounted, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import { useToast } from "vue-toast-notification";
 import Chart from "chart.js/auto";
-import PatientRecoveryTab from "@/views/Mainapp/SpecialistApp/Pharmacy/components/PatientRecoveryTab.vue";
+import PatientRecoveryTab from "./components/PatientRecoveryTab.vue";
 
 const $http = inject("$http");
 const $toast = useToast();
@@ -259,8 +337,12 @@ const router = useRouter();
 
 const loading = ref(true);
 const overview = ref({ stats: null, distribution: null, patients: [] });
-const donutCanvas = ref(null);
-let donutChart = null;
+const riskSparkRef = ref(null);
+const checkinSparkRef = ref(null);
+const distSparkRef = ref(null);
+let riskSparkChart = null;
+let checkinSparkChart = null;
+let distSparkChart = null;
 
 const activeRiskLevel = ref("");
 const activeCheckinStatus = ref("");
@@ -310,17 +392,6 @@ const overduePatients = computed(() => {
 const criticalOverdue = computed(() =>
   overduePatients.value.filter((p) => p.risk_level === "critical" || p.risk_level === "high")
 );
-
-const distributionLegend = computed(() => {
-  const d = overview.value.distribution;
-  if (!d) return [];
-  return [
-    { label: "Low", count: d.low, color: "#10B981" },
-    { label: "Moderate", count: d.moderate, color: "#F59E0B" },
-    { label: "High", count: d.high, color: "#FB923C" },
-    { label: "Critical", count: d.critical, color: "#F43F5E" },
-  ];
-});
 
 function toggleRiskLevel(level) {
   activeRiskLevel.value = activeRiskLevel.value === level ? "" : level;
@@ -381,43 +452,100 @@ function viewFullProfile(userId) {
   router.push(`/app/specialist/pharmacy/patients/${userId}?tab=recovery`);
 }
 
-function renderDonut() {
-  if (!donutCanvas.value || !overview.value.distribution) return;
-  if (donutChart) donutChart.destroy();
+function sparkOpts() {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: { enabled: false } },
+    scales: { x: { display: false }, y: { display: false } },
+    elements: { point: { radius: 0 } },
+  };
+}
+
+function renderSparklines() {
+  renderRiskSparkline();
+  renderCheckinSparkline();
+  renderDistSparkline();
+}
+
+function renderRiskSparkline() {
+  if (!riskSparkRef.value) return;
+  if (riskSparkChart) riskSparkChart.destroy();
+
+  const patients = overview.value.patients || [];
+  let scores = patients.slice(0, 12).map((p) => p.risk_score || 0);
+  if (scores.length < 3) scores = [35, 42, 38, 45, 40, 48, 42];
+
+  const ctx = riskSparkRef.value.getContext("2d");
+  const grad = ctx.createLinearGradient(0, 0, 0, 56);
+  grad.addColorStop(0, "rgba(2, 136, 209, 0.25)");
+  grad.addColorStop(1, "rgba(2, 136, 209, 0.02)");
+
+  riskSparkChart = new Chart(riskSparkRef.value, {
+    type: "line",
+    data: {
+      labels: scores.map((_, i) => i),
+      datasets: [{
+        data: scores,
+        borderColor: "#0288D1",
+        backgroundColor: grad,
+        borderWidth: 2.5,
+        fill: true,
+        tension: 0.4,
+        pointRadius: 0,
+      }],
+    },
+    options: sparkOpts(),
+  });
+}
+
+function renderCheckinSparkline() {
+  if (!checkinSparkRef.value) return;
+  if (checkinSparkChart) checkinSparkChart.destroy();
 
   const d = overview.value.distribution;
-  const data = [d.low, d.moderate, d.high, d.critical];
-  const total = data.reduce((a, b) => a + b, 0);
-  if (total === 0) return;
+  const bars = d ? [d.low, d.moderate, d.high, d.critical] : [4, 3, 2, 1];
 
-  donutChart = new Chart(donutCanvas.value, {
+  checkinSparkChart = new Chart(checkinSparkRef.value, {
+    type: "bar",
+    data: {
+      labels: ["Low", "Mod", "High", "Crit"],
+      datasets: [{
+        data: bars,
+        backgroundColor: ["#10B981", "#F59E0B", "#FB923C", "#F43F5E"],
+        borderRadius: 6,
+        barPercentage: 0.6,
+      }],
+    },
+    options: sparkOpts(),
+  });
+}
+
+function renderDistSparkline() {
+  if (!distSparkRef.value) return;
+  if (distSparkChart) distSparkChart.destroy();
+
+  const d = overview.value.distribution;
+  if (!d) return;
+  const data = [d.low, d.moderate, d.high, d.critical];
+  if (data.every((v) => v === 0)) return;
+
+  distSparkChart = new Chart(distSparkRef.value, {
     type: "doughnut",
     data: {
       labels: ["Low", "Moderate", "High", "Critical"],
       datasets: [{
         data,
         backgroundColor: ["#10B981", "#F59E0B", "#FB923C", "#F43F5E"],
-        borderWidth: 2,
+        borderWidth: 3,
         borderColor: "#fff",
       }],
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      cutout: "65%",
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          backgroundColor: "rgba(15, 23, 42, 0.9)",
-          cornerRadius: 8,
-          titleFont: { size: 13 },
-          bodyFont: { size: 13 },
-          padding: 12,
-          callbacks: {
-            label: (ctx) => `${ctx.label}: ${ctx.raw} patient${ctx.raw !== 1 ? 's' : ''} (${Math.round(ctx.raw / total * 100)}%)`,
-          },
-        },
-      },
+      cutout: "70%",
+      plugins: { legend: { display: false }, tooltip: { enabled: false } },
     },
   });
 }
@@ -437,7 +565,7 @@ async function fetchData() {
   } finally {
     loading.value = false;
     await nextTick();
-    renderDonut();
+    renderSparklines();
   }
 }
 
@@ -594,14 +722,160 @@ $violet: #8B5CF6;
   &__critical { font-weight: 600; color: $rose; }
 }
 
-// ─── Controls Row ─────────────────────────────────────────────────
-.controls-row {
+// ─── Analytics Row (SerenIQ-style Bento Cards) ──────────────────
+.analytics-row {
   display: grid;
-  grid-template-columns: 1fr 2fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 20px;
   margin-bottom: 20px;
 
   @media (max-width: 900px) { grid-template-columns: 1fr; }
+  @media (min-width: 901px) and (max-width: 1100px) { grid-template-columns: repeat(2, 1fr); }
+}
+
+.analytics-card {
+  background: $white;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 20px;
+  padding: 24px 24px 18px;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+  }
+
+  &__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+
+  &__title {
+    font-size: 13px;
+    font-weight: 600;
+    color: $gray;
+    letter-spacing: 0.3px;
+  }
+
+  &__icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &--blue { background: rgba($sky, 0.1); color: $sky-dark; }
+    &--green { background: rgba($emerald, 0.1); color: $emerald-dark; }
+    &--rose { background: rgba($rose, 0.1); color: $rose; }
+  }
+
+  &__body {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    flex: 1;
+    margin-bottom: 18px;
+  }
+
+  &__stat {
+    display: flex;
+    align-items: baseline;
+    gap: 3px;
+  }
+
+  &__number {
+    font-size: 44px;
+    font-weight: 800;
+    color: $navy;
+    line-height: 1;
+    letter-spacing: -2px;
+    font-feature-settings: 'tnum';
+  }
+
+  &__unit {
+    font-size: 18px;
+    font-weight: 600;
+    color: $light-gray;
+  }
+
+  &__label-sub {
+    font-size: 15px;
+    font-weight: 500;
+    color: $light-gray;
+    margin-left: 5px;
+  }
+
+  &__chart {
+    width: 120px;
+    height: 56px;
+    flex-shrink: 0;
+    position: relative;
+
+    canvas {
+      width: 100% !important;
+      height: 100% !important;
+    }
+
+    &--donut {
+      width: 72px;
+      height: 72px;
+    }
+  }
+
+  &__footer {
+    padding-top: 14px;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+  }
+
+  &__comparison {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    font-weight: 600;
+
+    &--success { color: $emerald-dark; }
+    &--warning { color: $rose; }
+    &--info { color: $sky-dark; }
+  }
+}
+
+.dist-legend {
+  display: flex;
+  gap: 16px;
+
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    font-weight: 700;
+    color: $slate;
+  }
+
+  &__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  &__label {
+    color: $gray;
+    font-weight: 500;
+  }
+}
+
+// ─── Filter Row ──────────────────────────────────────────────────
+.filter-row {
+  margin-bottom: 20px;
 }
 
 .bento-card {
@@ -610,48 +884,46 @@ $violet: #8B5CF6;
   padding: 20px;
 }
 
-// ─── Distribution Card ───────────────────────────────────────────
-.distribution-card {
-  &__header {
-    h3 { font-size: 14px; font-weight: 600; color: $navy; margin: 0 0 16px; }
-  }
-  &__chart {
-    height: 160px; position: relative; margin-bottom: 16px;
-
-    canvas {
-      width: 100% !important;
-      height: 100% !important;
-    }
-  }
-  &__legend {
-    display: flex; flex-direction: column; gap: 8px;
-  }
+.filter-card--horizontal {
+  padding: 16px 22px;
 }
 
-.legend-item {
-  display: flex; align-items: center; gap: 8px; font-size: 13px;
-}
-.legend-dot {
-  width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
-}
-.legend-label { flex: 1; color: $slate; }
-.legend-count { font-weight: 700; color: $navy; }
-
-// ─── Filter Card ─────────────────────────────────────────────────
 .filter-card {
-  &__header {
-    display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;
-    h3 { font-size: 14px; font-weight: 600; color: $navy; margin: 0; }
-  }
-  &__clear {
-    font-size: 12px; color: $sky-dark; background: none; border: none; cursor: pointer;
-    font-weight: 500; &:hover { text-decoration: underline; }
+  &__inline {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+
+    @media (max-width: 768px) {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 12px;
+    }
   }
 }
 
 .filter-group {
-  margin-bottom: 14px;
-  label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; color: $gray; margin-bottom: 6px; display: block; }
+  margin-bottom: 0;
+  label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: $light-gray;
+    margin-bottom: 5px;
+    display: block;
+  }
+
+  &--inline {
+    display: flex;
+    flex-direction: column;
+  }
+
+  &--search {
+    flex: 1;
+    min-width: 180px;
+  }
 }
 
 .filter-chips {
@@ -674,6 +946,25 @@ $violet: #8B5CF6;
   }
 }
 
+.filter-clear-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 14px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid rgba($rose, 0.2);
+  background: rgba($rose, 0.05);
+  color: $rose;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  align-self: flex-end;
+
+  &:hover { background: rgba($rose, 0.1); border-color: rgba($rose, 0.3); }
+}
+
 .search-input-wrapper {
   position: relative; display: flex; align-items: center;
 
@@ -682,8 +973,8 @@ $violet: #8B5CF6;
   }
 
   input {
-    width: 100%; padding: 10px 36px 10px 36px; border: 1px solid rgba(0, 0, 0, 0.08);
-    border-radius: 12px; font-size: 13px; color: $navy; background: $white;
+    width: 100%; padding: 8px 36px 8px 36px; border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 10px; font-size: 13px; color: $navy; background: $white;
     transition: border-color 0.2s;
     &:focus { outline: none; border-color: $sky; }
     &::placeholder { color: $light-gray; }

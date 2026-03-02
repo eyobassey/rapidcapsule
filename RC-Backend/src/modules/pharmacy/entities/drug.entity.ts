@@ -171,6 +171,80 @@ export class Drug {
   @Prop({ type: String })
   pregnancy_category: string; // A, B, C, D, X
 
+  // ============ MAT (Medication-Assisted Treatment) ============
+
+  @Prop({ type: Boolean, default: false, index: true })
+  is_mat_medication: boolean;
+
+  @Prop(
+    raw({
+      target_conditions: { type: [String], default: [] }, // e.g., ['opioid_use_disorder', 'alcohol_use_disorder']
+      induction_dose: { type: String }, // e.g., "2-4mg sublingual"
+      maintenance_dose_range: {
+        min: { type: String },
+        max: { type: String },
+        unit: { type: String },
+      },
+      max_dose: { type: String }, // e.g., "24mg/day"
+      tapering_schedule: [
+        {
+          week: { type: Number },
+          dose: { type: String },
+          notes: { type: String },
+        },
+      ],
+      monitoring_requirements: {
+        frequency: { type: String }, // e.g., "weekly_first_month, biweekly_thereafter"
+        lab_tests: { type: [String], default: [] }, // e.g., ['urine_drug_screen', 'liver_function']
+        vital_checks: { type: [String], default: [] }, // e.g., ['blood_pressure', 'heart_rate']
+        screening_interval_days: { type: Number, default: 30 },
+      },
+      contraindications: { type: [String], default: [] }, // MAT-specific contraindications
+      drug_interactions_critical: [
+        {
+          drug_name: { type: String },
+          severity: { type: String, enum: ['warning', 'hard_block'] },
+          reason: { type: String },
+        },
+      ],
+      requires_observed_dosing: { type: Boolean, default: false },
+      naloxone_coprescribe: { type: Boolean, default: false },
+      specialist_categories: { type: [String], default: [] }, // e.g., ['addiction_medicine', 'psychiatry']
+      requires_mat_waiver: { type: Boolean, default: false },
+    }),
+  )
+  mat_protocol: {
+    target_conditions?: string[];
+    induction_dose?: string;
+    maintenance_dose_range?: {
+      min?: string;
+      max?: string;
+      unit?: string;
+    };
+    max_dose?: string;
+    tapering_schedule?: Array<{
+      week: number;
+      dose: string;
+      notes?: string;
+    }>;
+    monitoring_requirements?: {
+      frequency?: string;
+      lab_tests?: string[];
+      vital_checks?: string[];
+      screening_interval_days?: number;
+    };
+    contraindications?: string[];
+    drug_interactions_critical?: Array<{
+      drug_name: string;
+      severity: 'warning' | 'hard_block';
+      reason: string;
+    }>;
+    requires_observed_dosing?: boolean;
+    naloxone_coprescribe?: boolean;
+    specialist_categories?: string[];
+    requires_mat_waiver?: boolean;
+  };
+
   // ============ PURCHASE CONTROLS ============
 
   @Prop({ type: Number, default: 10 })
@@ -334,6 +408,7 @@ DrugSchema.index({ purchase_type: 1, is_active: 1, status: 1 });
 DrugSchema.index({ categories: 1, is_active: 1 });
 DrugSchema.index({ selling_price: 1 });
 DrugSchema.index({ manufacturer: 1 });
+DrugSchema.index({ is_mat_medication: 1, is_active: 1 });
 
 // ============ VIRTUALS ============
 

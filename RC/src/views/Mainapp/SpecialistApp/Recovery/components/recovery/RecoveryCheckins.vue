@@ -162,12 +162,13 @@ async function fetchCheckins(page = 1) {
     const result = res.data?.data || res.data?.result || res.data;
     checkins.value = result?.data || [];
     pagination.value = result?.pagination || { page: 1, limit: 14, total: 0, pages: 0 };
-    nextTick(() => renderChart());
   } catch (err) {
     console.error('Error fetching check-ins:', err);
     $toast.error('Failed to load check-ins');
   } finally {
     loading.value = false;
+    await nextTick();
+    renderChart();
   }
 }
 

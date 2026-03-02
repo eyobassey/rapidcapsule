@@ -17,6 +17,7 @@ import {
   ApiOperation,
   ApiResponse,
   ApiParam,
+  ApiBody,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { AddictionScreeningService } from '../services/addiction-screening.service';
@@ -162,6 +163,95 @@ export class AddictionScreeningController {
       instrument,
     );
     return sendSuccessResponse(Messages.RETRIEVED, result);
+  }
+
+  @ApiOperation({
+    summary: 'Compare screening to baseline',
+    description:
+      'Compares a screening result against the patient\'s baseline screening of the same instrument. Returns delta, percentage change, subscale comparison, and risk level change.',
+  })
+  @ApiParam({ name: 'id', description: 'Screening ID to compare' })
+  @ApiResponse({ status: 200, description: 'Baseline comparison returned' })
+  @ApiResponse({ status: 404, description: 'Screening not found' })
+  @Get(':id/compare-baseline')
+  async compareToBaseline(@Param('id') id: string, @Request() req) {
+    const result = await this.screeningService.compareToBaseline(
+      id,
+      req.user.sub,
+    );
+    return sendSuccessResponse(Messages.RETRIEVED, result);
+  }
+
+  @ApiOperation({
+    summary: 'Schedule a follow-up screening',
+    description:
+      'Schedules a follow-up screening at the specified interval in days. Updates both the screening record and recovery profile with the next due date.',
+  })
+  @ApiParam({ name: 'id', description: 'Screening ID to schedule follow-up for', example: '663f961ebb4dc1fec5426abc' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['interval_days'],
+      properties: {
+        interval_days: { type: 'number', description: 'Number of days until the follow-up screening', example: 30 },
+      },
+    },
+  })
+  @ApiResponse({ status: 200, description: 'Follow-up screening scheduled' })
+  @ApiResponse({ status: 400, description: 'Invalid interval' })
+  @ApiResponse({ status: 404, description: 'Screening not found' })
+  @Post(':id/schedule-followup')
+  async scheduleFollowUp(
+    @Param('id') id: string,
+    @Body() body: { interval_days: number },
+    @Request() req,
+  ) {
+    const result = await this.screeningService.scheduleFollowUp(
+      id,
+      req.user.sub,
+      body.interval_days,
+    );
+    return sendSuccessResponse(Messages.UPDATED, result);
+  }
+
+  @ApiOperation({
+    summary: 'Specialist-administered screening',
+    description:
+      'Allows a specialist to administer a screening on behalf of a patient. The specialist fills in the answers and optionally adds clinical notes.',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['patient_id', 'instrument', 'answers'],
+      properties: {
+        patient_id: { type: 'string', description: 'Patient user ID', example: '507f1f77bcf86cd799439011' },
+        instrument: { type: 'string', enum: ['AUDIT', 'DAST_10', 'CAGE', 'PHQ_9', 'GAD_7', 'ASSIST', 'CRAFFT'], description: 'Screening instrument to administer', example: 'AUDIT' },
+        answers: { type: 'object', description: 'Map of question IDs to numeric answers', example: { q1: 2, q2: 1, q3: 0, q4: 3 } },
+        clinical_notes: { type: 'string', description: 'Optional clinical notes from the specialist', example: 'Patient was cooperative. Responses consistent with mild alcohol use disorder.' },
+      },
+    },
+  })
+  @ApiResponse({ status: 201, description: 'Specialist-administered screening scored and saved' })
+  @ApiResponse({ status: 400, description: 'Validation error' })
+  @Post('administer')
+  async administerScreening(
+    @Body()
+    body: {
+      patient_id: string;
+      instrument: ScreeningInstrumentType;
+      answers: Record<string, number>;
+      clinical_notes?: string;
+    },
+    @Request() req,
+  ) {
+    const result = await this.screeningService.administerScreening(
+      body.patient_id,
+      req.user.sub,
+      body.instrument,
+      body.answers,
+      body.clinical_notes,
+    );
+    return sendSuccessResponse(Messages.CREATED, result);
   }
 
   @ApiOperation({

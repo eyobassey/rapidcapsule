@@ -7,6 +7,16 @@ export enum RewardActivity {
   COMPLETED_APPOINTMENT = 'Completed appointment',
   REFERRAL = 'Referral',
   NEWSLETTER_SUBSCRIPTION = 'Newsletter Subscription',
+  // Recovery activities
+  SOBRIETY_MILESTONE = 'Sobriety Milestone',
+  DAILY_CHECK_IN_STREAK = 'Daily Check-in Streak',
+  SCREENING_COMPLETED = 'Screening Completed',
+  RECOVERY_PLAN_GOAL_ACHIEVED = 'Recovery Plan Goal Achieved',
+  GROUP_SESSION_ATTENDED = 'Group Session Attended',
+  COMPANION_SESSION_COMPLETED = 'Companion Session Completed',
+  JOURNAL_ENTRY_STREAK = 'Journal Entry Streak',
+  EXERCISE_STREAK = 'Exercise Streak',
+  PEER_CHECK_IN_COMPLETED = 'Peer Check-in Completed',
 }
 
 export type RewardDocument = HydratedDocument<Reward>;
@@ -21,13 +31,7 @@ export class Reward {
   @Prop({
     type: String,
     enum: {
-      values: [
-        RewardActivity.COMPLETED_APPOINTMENT,
-        RewardActivity.COMPLETED_PROFILE,
-        RewardActivity.NEWSLETTER_SUBSCRIPTION,
-        RewardActivity.REFERRAL,
-        RewardActivity.SIGN_UP,
-      ],
+      values: Object.values(RewardActivity),
     },
   })
   activity: RewardActivity;

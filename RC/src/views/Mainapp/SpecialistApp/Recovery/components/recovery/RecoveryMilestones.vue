@@ -44,17 +44,23 @@
 
             <div class="milestone-card__details">
               <div v-if="m.value != null" class="detail-item">
-                <span class="detail-label">Achieved</span>
-                <span class="detail-value">{{ m.value }}</span>
+                <span class="detail-label">Value Achieved</span>
+                <span class="detail-value">{{ m.value }} {{ valueUnit(m.type) }}</span>
               </div>
-              <div v-if="m.target_value != null" class="detail-item">
-                <span class="detail-label">Target</span>
-                <span class="detail-value">{{ m.target_value }}</span>
+              <div v-if="m.reward_points" class="detail-item">
+                <span class="detail-label">Reward Points</span>
+                <span class="detail-value detail-value--gold">{{ m.reward_points }} pts</span>
               </div>
-              <div v-if="m.celebrated_at" class="detail-item">
-                <span class="detail-label">Celebrated</span>
-                <span class="detail-value">{{ formatDate(m.celebrated_at) }}</span>
+              <div v-if="m.shared_with_care_team" class="detail-item">
+                <span class="detail-label">Shared</span>
+                <span class="detail-value detail-value--sky">With Care Team</span>
               </div>
+            </div>
+
+            <!-- Celebration Message -->
+            <div v-if="m.celebration_message" class="milestone-card__celebration">
+              <v-icon name="hi-star" scale="0.6" />
+              <span>{{ m.celebration_message }}</span>
             </div>
           </div>
         </div>
@@ -108,6 +114,17 @@ function formatDate(d) {
 function formatType(type) {
   if (!type) return 'Milestone';
   return type.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function valueUnit(type) {
+  const units = {
+    sobriety_days: 'days',
+    journal_streak: 'entries',
+    appointment_streak: 'appointments',
+    companion_sessions: 'sessions',
+    exercise_streak: 'exercises',
+  };
+  return units[type] || '';
 }
 
 function milestoneIcon(type) {
@@ -277,7 +294,27 @@ $amber-light: #FEF3C7;
 }
 
 .detail-label { font-size: 11px; color: $color-g-54; font-weight: 500; }
-.detail-value { font-size: 15px; font-weight: 700; color: $color-g-21; }
+.detail-value {
+  font-size: 15px; font-weight: 700; color: $color-g-21;
+  &--gold { color: darken($amber, 10%); }
+  &--sky { color: $sky-dark; font-size: 13px; }
+}
+
+.milestone-card__celebration {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, rgba($amber, 0.06), rgba($amber, 0.12));
+  border: 1px solid rgba($amber, 0.15);
+  border-radius: 12px;
+  font-size: 13px;
+  color: $color-g-36;
+  line-height: 1.5;
+
+  svg { color: $amber; flex-shrink: 0; margin-top: 2px; }
+}
 
 // Loading & Empty
 .loading-state {

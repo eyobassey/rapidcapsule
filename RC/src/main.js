@@ -266,6 +266,46 @@ import {
 	// Vitals expansion icons
 	FaFireAlt,
 	FaWalking,
+	// Recovery module icons
+	HiShieldExclamation,
+	HiStatusOnline,
+	GiMedicinePills,
+	HiChartPie,
+	HiEmojiHappy,
+	HiDocumentReport,
+	HiCalculator,
+	// Homepage v2 icons (Material Design)
+	MdShowchart,
+	MdChevronright,
+	MdClose,
+	MdDocumentscanner,
+	MdLocalpharmacy,
+	MdHealthandsafety,
+	MdAdd,
+	MdSend,
+	MdPerson,
+	MdDescription,
+	MdFiledownload,
+	MdWarning,
+	MdBolt,
+	MdShoppingcart,
+	MdVerifieduser,
+	MdCheck,
+	MdVideocam,
+	MdAccesstime,
+	MdPeople,
+	MdCalendartoday,
+	MdTimeline,
+	MdStar,
+	MdHelpoutline,
+	MdKeyboardarrowup,
+	MdKeyboardarrowdown,
+	// Homepage v2 icons (Game Icons)
+	GiBrain,
+	// Homepage v2 icons (Heroicons)
+	HiMenu,
+	// Homepage v2 icons (Remix)
+	RiFocus3Line,
 } from "oh-vue-icons/icons";
 addIcons(
 	BiCreditCard2Back,
@@ -520,6 +560,46 @@ addIcons(
 	// Vitals expansion icons
 	FaFireAlt,
 	FaWalking,
+	// Recovery module icons
+	HiShieldExclamation,
+	HiStatusOnline,
+	GiMedicinePills,
+	HiChartPie,
+	HiEmojiHappy,
+	HiDocumentReport,
+	HiCalculator,
+	// Homepage v2 icons (Material Design)
+	MdShowchart,
+	MdChevronright,
+	MdClose,
+	MdDocumentscanner,
+	MdLocalpharmacy,
+	MdHealthandsafety,
+	MdAdd,
+	MdSend,
+	MdPerson,
+	MdDescription,
+	MdFiledownload,
+	MdWarning,
+	MdBolt,
+	MdShoppingcart,
+	MdVerifieduser,
+	MdCheck,
+	MdVideocam,
+	MdAccesstime,
+	MdPeople,
+	MdCalendartoday,
+	MdTimeline,
+	MdStar,
+	MdHelpoutline,
+	MdKeyboardarrowup,
+	MdKeyboardarrowdown,
+	// Homepage v2 icons (Game Icons)
+	GiBrain,
+	// Homepage v2 icons (Heroicons)
+	HiMenu,
+	// Homepage v2 icons (Remix)
+	RiFocus3Line,
 );
 
 require("@/store/subscriber");

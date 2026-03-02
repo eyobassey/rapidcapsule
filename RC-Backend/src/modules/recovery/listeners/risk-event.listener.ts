@@ -3,11 +3,13 @@ import { OnEvent } from '@nestjs/event-emitter';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { RiskScoringService } from '../services/risk-scoring.service';
+import { CrisisInterventionService } from '../services/crisis-intervention.service';
 import {
   RecoveryProfile,
   RecoveryProfileDocument,
   RecoveryStatus,
 } from '../entities/recovery-profile.entity';
+import { CrisisType, CrisisSeverity } from '../entities/crisis-event.entity';
 import { NotificationOrchestratorService } from '../../notifications/services/notification-orchestrator.service';
 import { NotificationsGateway } from '../../notifications/notifications.gateway';
 import {
@@ -28,6 +30,7 @@ export class RiskEventListener {
 
   constructor(
     private riskScoringService: RiskScoringService,
+    private crisisInterventionService: CrisisInterventionService,
     private notificationOrchestrator: NotificationOrchestratorService,
     private notificationsGateway: NotificationsGateway,
     @InjectModel(RecoveryProfile.name)
@@ -64,6 +67,99 @@ export class RiskEventListener {
   @OnEvent('recovery.coping_exercise_completed')
   async handleExerciseCompleted(payload: { userId: string }) {
     await this.recalculateAndAlert(payload.userId, 'coping_exercise_completed');
+  }
+
+  // ─── Wearable Overdose / Withdrawal Detection ─────────────────
+
+  @OnEvent('recovery.wearable_crisis')
+  async handleWearableCrisis(payload: {
+    userId: string;
+    crisisType: string;
+    triggerSource: string;
+    severity: string;
+    detectionData: Record<string, any>;
+  }) {
+    try {
+      // Only trigger for users with an active recovery profile
+      const profile = await this.getProfile(payload.userId);
+      if (!profile) return;
+
+      // Cooldown: don't create duplicate crises within 30 minutes
+      if (this.isOnCooldown(payload.userId, `wearable_${payload.crisisType}`)) {
+        this.logger.debug(
+          `Wearable crisis cooldown active for ${payload.userId}: ${payload.crisisType}`,
+        );
+        return;
+      }
+
+      const crisisTypeMap: Record<string, CrisisType> = {
+        overdose_suspected: CrisisType.OVERDOSE_SUSPECTED,
+        severe_withdrawal: CrisisType.SEVERE_WITHDRAWAL,
+      };
+      const severityMap: Record<string, CrisisSeverity> = {
+        life_threatening: CrisisSeverity.LIFE_THREATENING,
+        high: CrisisSeverity.HIGH,
+        medium: CrisisSeverity.MEDIUM,
+      };
+
+      const crisisType = crisisTypeMap[payload.crisisType] || CrisisType.WEARABLE_ALERT;
+      const severity = severityMap[payload.severity] || CrisisSeverity.HIGH;
+
+      await this.crisisInterventionService.initiateCrisis(
+        payload.userId,
+        crisisType,
+        payload.triggerSource,
+        payload.detectionData,
+        severity,
+      );
+
+      this.setCooldown(payload.userId, `wearable_${payload.crisisType}`);
+
+      // Also recalculate risk score
+      await this.recalculateAndAlert(payload.userId, `wearable_${payload.crisisType}`);
+
+      this.logger.warn(
+        `Wearable crisis created for user ${payload.userId}: ${crisisType} (${severity})`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to handle wearable crisis for user ${payload.userId}: ${error.message}`,
+        error.stack,
+      );
+    }
+  }
+
+  @OnEvent('recovery.wearable_wellness_check')
+  async handleWearableWellnessCheck(payload: {
+    userId: string;
+    triggerSource: string;
+    detectionData: Record<string, any>;
+  }) {
+    try {
+      const profile = await this.getProfile(payload.userId);
+      if (!profile) return;
+
+      if (this.isOnCooldown(payload.userId, 'wearable_wellness')) return;
+
+      // Send a wellness check notification (not a full crisis)
+      await this.notificationOrchestrator.sendNotification({
+        userId: payload.userId,
+        user_type: UserTypeNotification.PATIENT,
+        type: NotificationType.RECOVERY_CHECK_IN_REMINDER,
+        title: 'Wellness Check',
+        message:
+          'We noticed you have been inactive for a while. How are you doing? Tap to check in.',
+        data: payload.detectionData,
+        priority: NotificationPriority.MEDIUM,
+        channels: [NotificationChannel.PUSH],
+      });
+
+      this.setCooldown(payload.userId, 'wearable_wellness');
+    } catch (error) {
+      this.logger.error(
+        `Failed to handle wellness check for user ${payload.userId}: ${error.message}`,
+      );
+    }
   }
 
   // ─── Core Logic ─────────────────────────────────────────────────

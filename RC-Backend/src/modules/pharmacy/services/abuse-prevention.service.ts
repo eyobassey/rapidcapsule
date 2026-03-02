@@ -11,6 +11,21 @@ import {
   PharmacyOrderStatus,
 } from '../entities/pharmacy-order.entity';
 import { Drug, DrugDocument } from '../entities/drug.entity';
+import {
+  SuspiciousActivityLog,
+  SuspiciousActivityLogDocument,
+  SuspiciousActivityType,
+  SuspiciousActivitySeverity,
+} from '../entities/suspicious-activity-log.entity';
+import {
+  RecoveryProfile,
+  RecoveryProfileDocument,
+  RecoveryStatus,
+} from '../../recovery/entities/recovery-profile.entity';
+import {
+  SpecialistPrescription,
+  SpecialistPrescriptionDocument,
+} from '../../prescriptions/entities/specialist-prescription.entity';
 import { PurchaseType, ScheduleClass } from '../enums';
 
 /**
@@ -97,6 +112,12 @@ export class AbusePreventionService {
     private readonly orderModel: Model<PharmacyOrderDocument>,
     @InjectModel(Drug.name)
     private readonly drugModel: Model<DrugDocument>,
+    @InjectModel(SuspiciousActivityLog.name)
+    private readonly suspiciousActivityModel: Model<SuspiciousActivityLogDocument>,
+    @InjectModel(RecoveryProfile.name)
+    private readonly recoveryProfileModel: Model<RecoveryProfileDocument>,
+    @InjectModel(SpecialistPrescription.name)
+    private readonly prescriptionModel: Model<SpecialistPrescriptionDocument>,
   ) {}
 
   /**
@@ -486,21 +507,275 @@ export class AbusePreventionService {
   }
 
   /**
-   * Log suspicious activity for admin review
+   * Check if patient is a verified MAT patient (bypasses standard controlled substance limits).
+   */
+  async isVerifiedMATPatient(patientId: Types.ObjectId | string): Promise<boolean> {
+    const profile = await this.recoveryProfileModel
+      .findOne({
+        user: new Types.ObjectId(patientId),
+        status: { $in: [RecoveryStatus.ACTIVE, RecoveryStatus.PAUSED] },
+        deleted_at: { $exists: false },
+      })
+      .lean();
+    return !!profile;
+  }
+
+  /**
+   * Check if a drug is a MAT medication for the given patient.
+   * MAT patients get exempted from standard controlled substance purchase limits
+   * for their prescribed MAT medications.
+   */
+  async checkMATExemption(
+    patientId: Types.ObjectId | string,
+    drugId: string,
+  ): Promise<boolean> {
+    const drug = await this.drugModel.findById(drugId).lean();
+    if (!drug?.is_mat_medication) return false;
+
+    const isMAT = await this.isVerifiedMATPatient(patientId);
+    if (!isMAT) return false;
+
+    // Verify the patient has an active prescription for this MAT medication
+    const hasActivePrescription = await this.prescriptionModel.exists({
+      patient_id: new Types.ObjectId(patientId),
+      'items.drug_id': new Types.ObjectId(drugId),
+      status: { $in: ['signed', 'sent_to_patient', 'sent_to_pharmacy', 'dispensed', 'delivered'] },
+    });
+
+    return !!hasActivePrescription;
+  }
+
+  /**
+   * Cross-patient monitoring: detect patterns across patients.
+   * - Same drug from multiple specialists
+   * - Same drug from multiple pharmacies
+   * - Dose escalation
+   */
+  async runCrossPatientMonitoring(
+    patientId: Types.ObjectId | string,
+    drugId: string,
+    days = 90,
+  ): Promise<void> {
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+
+    const prescriptions = await this.prescriptionModel
+      .find({
+        patient_id: new Types.ObjectId(patientId),
+        'items.drug_id': new Types.ObjectId(drugId),
+        created_at: { $gte: startDate },
+        status: { $nin: ['cancelled', 'expired'] },
+      })
+      .select('specialist_id items pharmacy_id created_at')
+      .lean();
+
+    if (prescriptions.length < 2) return;
+
+    const drug = await this.drugModel.findById(drugId).lean();
+    const drugName = drug?.name || 'Unknown drug';
+
+    // Check multiple specialists for same drug
+    const specialistIds = [
+      ...new Set(prescriptions.map((p) => p.specialist_id?.toString()).filter(Boolean)),
+    ];
+    if (specialistIds.length >= 2) {
+      await this.logSuspiciousActivity(
+        patientId,
+        drugId,
+        `${drugName} prescribed by ${specialistIds.length} different specialists in ${days} days`,
+        {
+          activity_type: SuspiciousActivityType.MULTIPLE_SPECIALISTS,
+          severity: specialistIds.length >= 3
+            ? SuspiciousActivitySeverity.CRITICAL
+            : SuspiciousActivitySeverity.HIGH,
+          specialists_involved: specialistIds.map((id) => new Types.ObjectId(id)),
+          prescriptions_involved: prescriptions.map((p) => p._id),
+        },
+      );
+    }
+
+    // Check multiple pharmacies
+    const pharmacyIds = [
+      ...new Set(
+        prescriptions
+          .map((p) => (p as any).pharmacy_id?.toString())
+          .filter(Boolean),
+      ),
+    ];
+    if (pharmacyIds.length >= 2) {
+      await this.logSuspiciousActivity(
+        patientId,
+        drugId,
+        `${drugName} dispensed by ${pharmacyIds.length} different pharmacies in ${days} days`,
+        {
+          activity_type: SuspiciousActivityType.MULTIPLE_PHARMACIES,
+          severity: SuspiciousActivitySeverity.HIGH,
+          pharmacies_involved: pharmacyIds.map((id) => new Types.ObjectId(id)),
+          prescriptions_involved: prescriptions.map((p) => p._id),
+        },
+      );
+    }
+
+    // Check dose escalation
+    const sortedRx = [...prescriptions].sort(
+      (a, b) =>
+        new Date((a as any).created_at).getTime() -
+        new Date((b as any).created_at).getTime(),
+    );
+    for (let i = 1; i < sortedRx.length; i++) {
+      const prevItem = (sortedRx[i - 1].items || []).find(
+        (it: any) => it.drug_id?.toString() === drugId,
+      ) as any;
+      const currItem = (sortedRx[i].items || []).find(
+        (it: any) => it.drug_id?.toString() === drugId,
+      ) as any;
+
+      if (prevItem?.quantity && currItem?.quantity) {
+        const increase =
+          (currItem.quantity - prevItem.quantity) / prevItem.quantity;
+        if (increase >= 0.5) {
+          await this.logSuspiciousActivity(
+            patientId,
+            drugId,
+            `${drugName} quantity increased by ${Math.round(increase * 100)}% (${prevItem.quantity} → ${currItem.quantity})`,
+            {
+              activity_type: SuspiciousActivityType.DOSE_ESCALATION,
+              severity: increase >= 1.0
+                ? SuspiciousActivitySeverity.CRITICAL
+                : SuspiciousActivitySeverity.HIGH,
+              previous_dose: `${prevItem.quantity}`,
+              current_dose: `${currItem.quantity}`,
+              prescriptions_involved: [sortedRx[i - 1]._id, sortedRx[i]._id],
+            },
+          );
+        }
+      }
+    }
+  }
+
+  /**
+   * Log suspicious activity and persist to DB.
    */
   async logSuspiciousActivity(
     patientId: Types.ObjectId | string,
     drugId: string,
     reason: string,
-    details: any,
+    details: {
+      activity_type: SuspiciousActivityType;
+      severity: SuspiciousActivitySeverity;
+      specialists_involved?: Types.ObjectId[];
+      pharmacies_involved?: Types.ObjectId[];
+      prescriptions_involved?: any[];
+      previous_dose?: string;
+      current_dose?: string;
+      quantity_requested?: number;
+      quantity_allowed?: number;
+      period_days?: number;
+      additional_context?: string;
+    },
   ): Promise<void> {
     this.logger.warn(
       `Suspicious activity detected - Patient: ${patientId}, Drug: ${drugId}, Reason: ${reason}`,
       details,
     );
 
-    // TODO: Store in a separate collection for admin review
-    // TODO: Send notification to admin if critical
+    const record = await this.suspiciousActivityModel.create({
+      patient: new Types.ObjectId(patientId),
+      drug: drugId ? new Types.ObjectId(drugId) : undefined,
+      activity_type: details.activity_type,
+      severity: details.severity,
+      message: reason,
+      details: {
+        specialists_involved: details.specialists_involved,
+        pharmacies_involved: details.pharmacies_involved,
+        prescriptions_involved: details.prescriptions_involved,
+        previous_dose: details.previous_dose,
+        current_dose: details.current_dose,
+        quantity_requested: details.quantity_requested,
+        quantity_allowed: details.quantity_allowed,
+        period_days: details.period_days,
+        additional_context: details.additional_context,
+      },
+      admin_notified:
+        details.severity === SuspiciousActivitySeverity.CRITICAL ||
+        details.severity === SuspiciousActivitySeverity.HIGH,
+    });
+
+    this.logger.log(`Suspicious activity logged: ${record._id}`);
+  }
+
+  /**
+   * Get suspicious activity logs for admin review.
+   */
+  async getSuspiciousActivityLogs(filters: {
+    patient_id?: string;
+    severity?: string;
+    activity_type?: string;
+    reviewed?: boolean;
+    page?: number;
+    limit?: number;
+  }) {
+    const query: any = { deleted_at: { $exists: false } };
+
+    if (filters.patient_id) {
+      query.patient = new Types.ObjectId(filters.patient_id);
+    }
+    if (filters.severity) {
+      query.severity = filters.severity;
+    }
+    if (filters.activity_type) {
+      query.activity_type = filters.activity_type;
+    }
+    if (filters.reviewed !== undefined) {
+      query.reviewed_by = filters.reviewed
+        ? { $exists: true }
+        : { $exists: false };
+    }
+
+    const page = filters.page || 1;
+    const limit = filters.limit || 20;
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await Promise.all([
+      this.suspiciousActivityModel
+        .find(query)
+        .sort({ created_at: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate('patient', 'profile.first_name profile.last_name email')
+        .populate('drug', 'name generic_name strength')
+        .populate('reviewed_by', 'profile.first_name profile.last_name')
+        .lean(),
+      this.suspiciousActivityModel.countDocuments(query),
+    ]);
+
+    return {
+      data,
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+    };
+  }
+
+  /**
+   * Review/resolve a suspicious activity log.
+   */
+  async reviewSuspiciousActivity(
+    logId: string,
+    reviewerId: string,
+    resolution: string,
+  ) {
+    const result = await this.suspiciousActivityModel.findByIdAndUpdate(
+      logId,
+      {
+        $set: {
+          reviewed_by: new Types.ObjectId(reviewerId),
+          reviewed_at: new Date(),
+          resolution,
+        },
+      },
+      { new: true },
+    );
+    if (!result) throw new BadRequestException('Activity log not found');
+    return result.toObject();
   }
 
   /**

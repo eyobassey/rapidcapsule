@@ -172,9 +172,24 @@ const totalPoints = computed(() =>
   milestones.value.reduce((sum, m) => sum + (m.reward_points || 0), 0)
 );
 
+const sobrietyTypes = ["sobriety_days"];
+const engagementTypes = [
+  "screening_improvement",
+  "goals_achieved",
+  "journal_streak",
+  "appointment_streak",
+  "companion_sessions",
+  "exercise_streak",
+  "custom",
+];
+
 const filteredMilestones = computed(() => {
   if (activeTab.value === "all") return milestones.value;
-  return milestones.value.filter((m) => m.milestone_type === activeTab.value);
+  if (activeTab.value === "sobriety")
+    return milestones.value.filter((m) => sobrietyTypes.includes(m.milestone_type));
+  if (activeTab.value === "engagement")
+    return milestones.value.filter((m) => engagementTypes.includes(m.milestone_type));
+  return milestones.value;
 });
 
 const nextCircumference = 2 * Math.PI * 26;

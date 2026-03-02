@@ -52,6 +52,8 @@
         <RecoveryOverview
           v-if="activeSubTab === 'overview'"
           :data="recoveryData"
+          :patient-id="patientId"
+          @plan-created="fetchRecoveryData"
         />
 
         <RecoveryCheckins
@@ -78,6 +80,12 @@
           v-if="activeSubTab === 'milestones'"
           :patient-id="patientId"
         />
+
+        <RecoveryWithdrawal
+          v-if="activeSubTab === 'withdrawal'"
+          :patient-id="patientId"
+          @assessment-completed="fetchRecoveryData"
+        />
       </div>
     </template>
   </div>
@@ -93,6 +101,7 @@ import RecoveryScreenings from './recovery/RecoveryScreenings.vue';
 import RecoveryExercises from './recovery/RecoveryExercises.vue';
 import RecoveryRiskReports from './recovery/RecoveryRiskReports.vue';
 import RecoveryMilestones from './recovery/RecoveryMilestones.vue';
+import RecoveryWithdrawal from './recovery/RecoveryWithdrawal.vue';
 
 const props = defineProps({
   patientId: { type: String, required: true },
@@ -111,6 +120,7 @@ const subTabs = computed(() => [
   { id: 'exercises', label: 'Exercises', icon: 'hi-sparkles', count: recoveryData.value?.counts?.exercises },
   { id: 'risk-reports', label: 'Risk Reports', icon: 'hi-shield-exclamation', count: recoveryData.value?.counts?.risk_assessments },
   { id: 'milestones', label: 'Milestones', icon: 'hi-star', count: recoveryData.value?.counts?.milestones },
+  { id: 'withdrawal', label: 'Withdrawal', icon: 'gi-medicine-pills', count: null },
 ]);
 
 onMounted(() => fetchRecoveryData());

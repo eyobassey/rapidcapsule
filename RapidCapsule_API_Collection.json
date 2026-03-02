@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "rapid-capsule-api-v4",
     "name": "Rapid Capsule API Collection v6.0",
-    "description": "Complete API documentation for Rapid Capsule Telemedicine Platform.\n\n**Patient API**: https://api.rapidcapsule.com/api\n**Specialist API**: https://api.rapidcapsule.com/api\n**Admin API**: https://admin.rapidcapsule.com/admin-api\n\nTotal Endpoints: 939\n\nAll endpoints enriched with Swagger/OpenAPI documentation including request bodies, query parameters, path parameters, and response examples.\n\nIncludes: Authentication (JWT, OAuth, Biometric/WebAuthn), Appointments, Health Checkup (Infermedica AI), Prescriptions, Pharmacy (Orders, Inventory, Compliance), Wallets & Payments (Paystack), RxGPT AI Prescription Analysis, Health Integrations, Clinical Notes, Messaging, Recovery Module, Eka AI Companion, Admin Dashboard & Analytics\n\nCreated by Bassey Eyo (eyobassey@gmail.com) - Founder & CTO\nAPI docs enriched Feb 2026",
+    "description": "Complete API documentation for Rapid Capsule Telemedicine Platform.\n\n**Patient API**: https://api.rapidcapsule.com/api\n**Specialist API**: https://api.rapidcapsule.com/api\n**Admin API**: https://admin.rapidcapsule.com/admin-api\n\nTotal Endpoints: 1013\n\nAll endpoints enriched with Swagger/OpenAPI documentation including request bodies, query parameters, path parameters, and response examples.\n\nIncludes: Authentication (JWT, OAuth, Biometric/WebAuthn), Appointments, Health Checkup (Infermedica AI), Prescriptions, Pharmacy (Orders, Inventory, Compliance), Wallets & Payments (Paystack), RxGPT AI Prescription Analysis, Health Integrations, Clinical Notes, Messaging, Recovery Module, Eka AI Companion, Admin Dashboard & Analytics\n\nCreated by Bassey Eyo (eyobassey@gmail.com) - Founder & CTO\nAPI docs enriched Feb 2026",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -17892,6 +17892,44 @@
                   "code": 200
                 }
               ]
+            },
+            {
+              "name": "Check MAT refill eligibility",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/patient/prescriptions/:id/refill/mat-eligibility",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "patient",
+                    "prescriptions",
+                    ":id",
+                    "refill",
+                    "mat-eligibility"
+                  ]
+                },
+                "description": "Check MAT-specific refill eligibility including appointment attendance, screening compliance, sobriety logging, and crisis event checks"
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "MAT refill eligibility status returned",
+                  "code": 200
+                },
+                {
+                  "name": "Error 404",
+                  "status": "Prescription not found",
+                  "code": 404
+                }
+              ]
             }
           ]
         },
@@ -19731,6 +19769,2478 @@
                   "code": 404
                 }
               ]
+            },
+            {
+              "name": "Compare screening to baseline",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/screening/:id/compare-baseline",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "screening",
+                    ":id",
+                    "compare-baseline"
+                  ]
+                },
+                "description": "Compares a screening result against the patient's baseline screening of the same instrument. Returns delta, percentage change, subscale comparison, and risk level change."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Baseline comparison returned",
+                  "code": 200
+                },
+                {
+                  "name": "Error 404",
+                  "status": "Screening not found",
+                  "code": 404
+                }
+              ]
+            },
+            {
+              "name": "Schedule a follow-up screening",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/screening/:id/schedule-followup",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "screening",
+                    ":id",
+                    "schedule-followup"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"interval_days\": 30\n}"
+                },
+                "description": "Schedules a follow-up screening at the specified interval in days. Updates both the screening record and recovery profile with the next due date."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Follow-up screening scheduled",
+                  "code": 200
+                },
+                {
+                  "name": "Success",
+                  "status": "",
+                  "code": 201
+                },
+                {
+                  "name": "Error 400",
+                  "status": "Invalid interval",
+                  "code": 400
+                },
+                {
+                  "name": "Error 404",
+                  "status": "Screening not found",
+                  "code": 404
+                }
+              ]
+            },
+            {
+              "name": "Specialist-administered screening",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/screening/administer",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "screening",
+                    "administer"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"patient_id\": \"507f1f77bcf86cd799439011\",\n  \"instrument\": \"AUDIT\",\n  \"answers\": {\n    \"q1\": 2,\n    \"q2\": 1,\n    \"q3\": 0,\n    \"q4\": 3\n  },\n  \"clinical_notes\": \"Patient was cooperative. Responses consistent with mild alcohol use disorder.\"\n}"
+                },
+                "description": "Allows a specialist to administer a screening on behalf of a patient. The specialist fills in the answers and optionally adds clinical notes."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Specialist-administered screening scored and saved",
+                  "code": 201
+                },
+                {
+                  "name": "Error 400",
+                  "status": "Validation error",
+                  "code": 400
+                }
+              ]
+            },
+            {
+              "name": "Get risk assessment history",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/profile/risk-assessments",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "profile",
+                    "risk-assessments"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "",
+                      "description": "Page number (default 1)",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "",
+                      "description": "Items per page (default 20)",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Returns a paginated list of the patient's risk assessment reports, sorted by most recent first."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Paginated risk assessment reports returned",
+                  "code": 200
+                },
+                {
+                  "name": "Error 401",
+                  "status": "Unauthorised - invalid or missing JWT token",
+                  "code": 401
+                }
+              ]
+            },
+            {
+              "name": "Get a single risk assessment report",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/profile/risk-assessments/:id",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "profile",
+                    "risk-assessments",
+                    ":id"
+                  ]
+                },
+                "description": "Retrieves a specific risk assessment report by ID, with ownership verification."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Risk assessment report returned",
+                  "code": 200
+                },
+                {
+                  "name": "Error 401",
+                  "status": "Unauthorised - invalid or missing JWT token",
+                  "code": 401
+                },
+                {
+                  "name": "Error 404",
+                  "status": "Report not found",
+                  "code": 404
+                }
+              ]
+            },
+            {
+              "name": "Get daily check-in prompt",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/companion/check-in-prompt",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "companion",
+                    "check-in-prompt"
+                  ]
+                },
+                "description": "Returns a personalised daily check-in prompt based on the patient's recovery stage, recent mood/craving trends, and time since last check-in."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Personalised check-in prompt returned",
+                  "code": 200
+                }
+              ]
+            },
+            {
+              "name": "Get guided meditation exercise",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/companion/meditation",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "companion",
+                    "meditation"
+                  ],
+                  "query": [
+                    {
+                      "key": "duration",
+                      "value": "5",
+                      "description": "Preferred duration in minutes (default: 5)",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Returns a text-based guided meditation or grounding exercise personalised to the patient's current recovery state. Automatically selects the most appropriate exercise type based on recent craving and anxiety levels."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Guided meditation script returned",
+                  "code": 200
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Recovery - Relapse Risk",
+          "item": [
+            {
+              "name": "Get current risk score",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/risk/current",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "risk",
+                    "current"
+                  ]
+                },
+                "description": "Returns the current relapse risk score with a full signal breakdown for the authenticated patient. This reads the latest persisted score and does not trigger a recalculation."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Current risk score and signal breakdown returned",
+                  "code": 200
+                },
+                {
+                  "name": "Error 401",
+                  "status": "Unauthorised",
+                  "code": 401
+                },
+                {
+                  "name": "Error 403",
+                  "status": "No active recovery profile",
+                  "code": 403
+                }
+              ]
+            },
+            {
+              "name": "Get risk score history",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/risk/history",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "risk",
+                    "history"
+                  ],
+                  "query": [
+                    {
+                      "key": "period",
+                      "value": "",
+                      "description": "Time period filter (default: 30d)",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "",
+                      "description": "Maximum number of history entries (default: 30)",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Returns historical risk scores for charting. Supports period filtering (7d, 30d, 90d) and pagination via limit."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Risk history entries returned",
+                  "code": 200
+                },
+                {
+                  "name": "Error 401",
+                  "status": "Unauthorised",
+                  "code": 401
+                },
+                {
+                  "name": "Error 403",
+                  "status": "No active recovery profile",
+                  "code": 403
+                }
+              ]
+            },
+            {
+              "name": "Force recalculate risk score",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/risk/recalculate",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "risk",
+                    "recalculate"
+                  ]
+                },
+                "description": "Triggers an immediate recalculation of the risk score and persists the result. Use sparingly \u2014 the system auto-recalculates daily and on key events."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Risk score recalculated and persisted",
+                  "code": 200
+                },
+                {
+                  "name": "Success",
+                  "status": "",
+                  "code": 201
+                },
+                {
+                  "name": "Error 401",
+                  "status": "Unauthorised",
+                  "code": 401
+                },
+                {
+                  "name": "Error 403",
+                  "status": "No active recovery profile",
+                  "code": 403
+                }
+              ]
+            },
+            {
+              "name": "Get detailed risk signal breakdown",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/risk/signals",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "risk",
+                    "signals"
+                  ]
+                },
+                "description": "Returns a categorised breakdown of all risk signals with their individual scores, trends, and contributing factors. Useful for understanding what is driving the current risk level."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Detailed signal breakdown returned",
+                  "code": 200
+                },
+                {
+                  "name": "Error 401",
+                  "status": "Unauthorised",
+                  "code": 401
+                },
+                {
+                  "name": "Error 403",
+                  "status": "No active recovery profile",
+                  "code": 403
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Recovery - Withdrawal Assessment",
+          "item": [
+            {
+              "name": "List available withdrawal scales",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/withdrawal/scales",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "withdrawal",
+                    "scales"
+                  ]
+                },
+                "description": "Returns metadata for all available clinician-administered withdrawal assessment scales (COWS, CIWA-Ar)."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "List of available scales",
+                  "code": 200
+                }
+              ]
+            },
+            {
+              "name": "Get scale definition",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/withdrawal/scales/:scaleId",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "withdrawal",
+                    "scales",
+                    ":scaleId"
+                  ]
+                },
+                "description": "Returns the full scale definition including all items, options, and scoring zones. Used to render the assessment form."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Scale definition returned",
+                  "code": 200
+                },
+                {
+                  "name": "Error 404",
+                  "status": "Scale not found",
+                  "code": 404
+                }
+              ]
+            },
+            {
+              "name": "Administer withdrawal assessment",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/withdrawal/administer",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "withdrawal",
+                    "administer"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"patient_id\": \"string\",\n  \"scale_id\": \"cows\",\n  \"responses\": [\n    {\n      \"item_id\": \"string\",\n      \"value\": 0\n    }\n  ]\n}"
+                },
+                "description": "Submit a completed withdrawal assessment for a patient. Specialist-only. Calculates total score, determines severity zone, and persists the record."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Assessment scored and saved",
+                  "code": 201
+                },
+                {
+                  "name": "Error 400",
+                  "status": "Validation error",
+                  "code": 400
+                }
+              ]
+            },
+            {
+              "name": "Get withdrawal assessment history",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/withdrawal/history/:patientId",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "withdrawal",
+                    "history",
+                    ":patientId"
+                  ],
+                  "query": [
+                    {
+                      "key": "scale_id",
+                      "value": "",
+                      "description": "Filter by scale type (cows or ciwa_ar)",
+                      "disabled": true
+                    },
+                    {
+                      "key": "page",
+                      "value": "",
+                      "description": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "",
+                      "description": "",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Returns paginated history of withdrawal assessments for a patient. Optionally filter by scale type."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Assessment history returned",
+                  "code": 200
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Recovery - Group Sessions",
+          "item": [
+            {
+              "name": "Create a group session",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/group-sessions",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "group-sessions"
+                  ]
+                },
+                "description": "Creates a new group therapy session. The authenticated user becomes the facilitator."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Group session created",
+                  "code": 201
+                }
+              ]
+            },
+            {
+              "name": "List group sessions",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/group-sessions",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "group-sessions"
+                  ],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "",
+                      "description": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "category",
+                      "value": "",
+                      "description": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "facilitator",
+                      "value": "",
+                      "description": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "upcoming",
+                      "value": "",
+                      "description": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "page",
+                      "value": "",
+                      "description": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "",
+                      "description": "",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Returns a paginated list of group sessions with optional filtering by status, category, and upcoming."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Paginated group sessions returned",
+                  "code": 200
+                }
+              ]
+            },
+            {
+              "name": "Get my enrolled sessions",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/group-sessions/my-sessions",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "group-sessions",
+                    "my-sessions"
+                  ],
+                  "query": [
+                    {
+                      "key": "upcoming",
+                      "value": "",
+                      "description": "",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Returns group sessions the authenticated user is enrolled in."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Enrolled sessions returned",
+                  "code": 200
+                }
+              ]
+            },
+            {
+              "name": "Get a group session by ID",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/group-sessions/:id",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "group-sessions",
+                    ":id"
+                  ]
+                },
+                "description": "Returns full details of a group session including enrolled participants."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Group session details returned",
+                  "code": 200
+                }
+              ]
+            },
+            {
+              "name": "Join a group session",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/group-sessions/:id/join",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "group-sessions",
+                    ":id",
+                    "join"
+                  ]
+                },
+                "description": "Enrolls the authenticated user in a group session. Returns waitlist status if session is full."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Enrolled or waitlisted",
+                  "code": 200
+                },
+                {
+                  "name": "Success",
+                  "status": "",
+                  "code": 201
+                }
+              ]
+            },
+            {
+              "name": "Leave a group session",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/group-sessions/:id/leave",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "group-sessions",
+                    ":id",
+                    "leave"
+                  ]
+                },
+                "description": "Withdraws the authenticated user from a group session."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Successfully withdrawn",
+                  "code": 200
+                },
+                {
+                  "name": "Success",
+                  "status": "",
+                  "code": 201
+                }
+              ]
+            },
+            {
+              "name": "Log attendance",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/group-sessions/:id/attendance",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "group-sessions",
+                    ":id",
+                    "attendance"
+                  ]
+                },
+                "description": "Logs attendance for all participants. Facilitator only."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Attendance logged and session completed",
+                  "code": 200
+                },
+                {
+                  "name": "Success",
+                  "status": "",
+                  "code": 201
+                }
+              ]
+            },
+            {
+              "name": "Update session notes",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/group-sessions/:id/notes",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "group-sessions",
+                    ":id",
+                    "notes"
+                  ]
+                },
+                "description": "Updates session notes and topics covered. Facilitator only."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Session notes updated",
+                  "code": 200
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Recovery - Peer Support",
+          "item": [
+            {
+              "name": "Create a peer assignment",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/peer-support",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "peer-support"
+                  ]
+                },
+                "description": "Assigns a peer supporter to a patient. Typically done by a specialist."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Peer assignment created",
+                  "code": 201
+                }
+              ]
+            },
+            {
+              "name": "List my peer assignments",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/peer-support",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "peer-support"
+                  ],
+                  "query": [
+                    {
+                      "key": "role",
+                      "value": "",
+                      "description": "View as patient or supporter (default: patient)",
+                      "disabled": true
+                    },
+                    {
+                      "key": "include_ended",
+                      "value": "",
+                      "description": "Include ended assignments (default: false)",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Returns peer assignments for the authenticated user, either as patient or supporter."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Peer assignments returned",
+                  "code": 200
+                }
+              ]
+            },
+            {
+              "name": "Get peer assignment details",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/peer-support/:id",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "peer-support",
+                    ":id"
+                  ]
+                },
+                "description": "Returns full details of a peer assignment including check-in history."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Assignment details returned",
+                  "code": 200
+                }
+              ]
+            },
+            {
+              "name": "Give consent to activate assignment",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/peer-support/:id/consent",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "peer-support",
+                    ":id",
+                    "consent"
+                  ]
+                },
+                "description": "Patient or peer gives consent to activate the assignment. Both must consent before it becomes active."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Consent recorded",
+                  "code": 200
+                },
+                {
+                  "name": "Success",
+                  "status": "",
+                  "code": 201
+                }
+              ]
+            },
+            {
+              "name": "End a peer assignment",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/peer-support/:id/end",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "peer-support",
+                    ":id",
+                    "end"
+                  ]
+                },
+                "description": "Ends an active peer assignment with an optional reason."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Assignment ended",
+                  "code": 200
+                },
+                {
+                  "name": "Success",
+                  "status": "",
+                  "code": 201
+                }
+              ]
+            },
+            {
+              "name": "Log a peer check-in",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/peer-support/:id/check-in",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "peer-support",
+                    ":id",
+                    "check-in"
+                  ]
+                },
+                "description": "Records a check-in between patient and peer supporter, with optional mood tracking."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Check-in logged",
+                  "code": 200
+                },
+                {
+                  "name": "Success",
+                  "status": "",
+                  "code": 201
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Recovery - Plans",
+          "item": [
+            {
+              "name": "Create a recovery plan",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/plans",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "plans"
+                  ]
+                },
+                "description": "Creates a new recovery plan for the authenticated patient. Only one active plan is allowed at a time."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Recovery plan created",
+                  "code": 201
+                },
+                {
+                  "name": "Error 400",
+                  "status": "Active plan already exists",
+                  "code": 400
+                }
+              ]
+            },
+            {
+              "name": "Create a plan for a patient (specialist)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/plans/for-patient",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "plans",
+                    "for-patient"
+                  ]
+                },
+                "description": "Allows a specialist to create a recovery plan on behalf of a patient."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Recovery plan created for patient",
+                  "code": 201
+                }
+              ]
+            },
+            {
+              "name": "Generate an AI-powered recovery plan",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/plans/generate-ai",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "plans",
+                    "generate-ai"
+                  ]
+                },
+                "description": "Uses Claude AI to analyse patient recovery data and generate a comprehensive, editable recovery plan. Consumes 1 AI credit."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "AI plan generated successfully",
+                  "code": 200
+                },
+                {
+                  "name": "Success",
+                  "status": "",
+                  "code": 201
+                },
+                {
+                  "name": "Error 400",
+                  "status": "No AI credits or service unavailable",
+                  "code": 400
+                }
+              ]
+            },
+            {
+              "name": "Get active recovery plan",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/plans/active",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "plans",
+                    "active"
+                  ]
+                },
+                "description": "Returns the active recovery plan with computed progress metrics (stage completion, goal tracking)."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Active plan with progress returned",
+                  "code": 200
+                },
+                {
+                  "name": "Error 404",
+                  "status": "No active plan found",
+                  "code": 404
+                }
+              ]
+            },
+            {
+              "name": "Get plan history",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/plans/history",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "plans",
+                    "history"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "",
+                      "description": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "",
+                      "description": "",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Returns all recovery plans (active, completed, abandoned) for the authenticated user."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Plan history returned",
+                  "code": 200
+                }
+              ]
+            },
+            {
+              "name": "Activate a draft plan",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/plans/:id/activate",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "plans",
+                    ":id",
+                    "activate"
+                  ]
+                },
+                "description": "Transitions a draft plan to active status and starts the first stage."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Plan activated",
+                  "code": 200
+                },
+                {
+                  "name": "Success",
+                  "status": "",
+                  "code": 201
+                }
+              ]
+            },
+            {
+              "name": "Abandon a plan",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/plans/:id/abandon",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "plans",
+                    ":id",
+                    "abandon"
+                  ]
+                },
+                "description": "Marks a draft or active plan as abandoned."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Plan abandoned",
+                  "code": 200
+                },
+                {
+                  "name": "Success",
+                  "status": "",
+                  "code": 201
+                }
+              ]
+            },
+            {
+              "name": "Update stage status",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/plans/stages/:stageId/status",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "plans",
+                    "stages",
+                    ":stageId",
+                    "status"
+                  ]
+                },
+                "description": "Updates the status of a stage within the active plan (e.g. start, complete, skip)."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Stage status updated",
+                  "code": 200
+                }
+              ]
+            },
+            {
+              "name": "Update goal status",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/plans/stages/:stageId/goals/:goalId",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "plans",
+                    "stages",
+                    ":stageId",
+                    "goals",
+                    ":goalId"
+                  ]
+                },
+                "description": "Tracks progress on a specific goal within a stage. Optionally include evidence of completion."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Goal status updated",
+                  "code": 200
+                }
+              ]
+            },
+            {
+              "name": "Schedule a plan review",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/plans/:id/schedule-review",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "plans",
+                    ":id",
+                    "schedule-review"
+                  ]
+                },
+                "description": "Sets or updates the next review date for a recovery plan."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Review date scheduled",
+                  "code": 200
+                },
+                {
+                  "name": "Success",
+                  "status": "",
+                  "code": 201
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Recovery - MAT Protocol",
+          "item": [
+            {
+              "name": "List MAT medications",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/mat/medications",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "mat",
+                    "medications"
+                  ],
+                  "query": [
+                    {
+                      "key": "condition",
+                      "value": "",
+                      "description": "Filter by target condition (e.g., opioid_use_disorder)",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Returns all MAT medications in the drug catalog with optional filtering by target condition."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "MAT medications returned",
+                  "code": 200
+                }
+              ]
+            },
+            {
+              "name": "Get MAT protocol for a drug",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/mat/medications/:drugId/protocol",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "mat",
+                    "medications",
+                    ":drugId",
+                    "protocol"
+                  ]
+                },
+                "description": "Returns the full MAT protocol details for a specific medication including tapering schedule, monitoring requirements, and contraindications."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "MAT protocol returned",
+                  "code": 200
+                },
+                {
+                  "name": "Error 404",
+                  "status": "MAT medication not found",
+                  "code": 404
+                }
+              ]
+            },
+            {
+              "name": "Check patient MAT eligibility",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/mat/eligibility",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "mat",
+                    "eligibility"
+                  ]
+                },
+                "description": "Checks if a patient is eligible for MAT with a specific medication. Returns blockers and warnings."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Eligibility result with blockers/warnings",
+                  "code": 200
+                },
+                {
+                  "name": "Success",
+                  "status": "",
+                  "code": 201
+                }
+              ]
+            },
+            {
+              "name": "Verify specialist MAT authorization",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/mat/authorization",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "mat",
+                    "authorization"
+                  ]
+                },
+                "description": "Checks if the authenticated specialist has the required MAT prescribing waiver."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Authorization status returned",
+                  "code": 200
+                }
+              ]
+            },
+            {
+              "name": "Check drug interactions",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/mat/interactions",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "mat",
+                    "interactions"
+                  ]
+                },
+                "description": "Checks for critical drug interactions between a MAT medication and the patient's current prescriptions."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Drug interactions list returned",
+                  "code": 200
+                },
+                {
+                  "name": "Success",
+                  "status": "",
+                  "code": 201
+                }
+              ]
+            },
+            {
+              "name": "Generate tapering schedule",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/mat/tapering-schedule",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "mat",
+                    "tapering-schedule"
+                  ]
+                },
+                "description": "Generates a gradual dose reduction schedule for a MAT medication."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Tapering schedule generated",
+                  "code": 200
+                },
+                {
+                  "name": "Success",
+                  "status": "",
+                  "code": 201
+                }
+              ]
+            },
+            {
+              "name": "Get patient MAT compliance summary",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/mat/compliance",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "mat",
+                    "compliance"
+                  ]
+                },
+                "description": "Returns the patient's MAT compliance status including active prescriptions, screening compliance, and outcomes."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Compliance summary returned",
+                  "code": 200
+                },
+                {
+                  "name": "Error 404",
+                  "status": "Recovery profile not found",
+                  "code": 404
+                }
+              ]
+            },
+            {
+              "name": "Get patient MAT compliance (specialist view)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/mat/compliance/:patientId",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "mat",
+                    "compliance",
+                    ":patientId"
+                  ]
+                },
+                "description": "Returns MAT compliance summary for a specific patient. For specialist use."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Compliance summary returned",
+                  "code": 200
+                }
+              ]
+            },
+            {
+              "name": "Get naloxone co-prescription suggestion",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/mat/medications/:drugId/naloxone-suggestion",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "mat",
+                    "medications",
+                    ":drugId",
+                    "naloxone-suggestion"
+                  ]
+                },
+                "description": "Returns naloxone co-prescription recommendation and available products for a MAT medication."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Naloxone suggestion returned",
+                  "code": 200
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Recovery - Harm Reduction",
+          "item": [
+            {
+              "name": "List available substance guidance topics",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/harm-reduction/substances",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "harm-reduction",
+                    "substances"
+                  ]
+                },
+                "description": "Returns all substances for which harm reduction guidance is available."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Substance list returned",
+                  "code": 200
+                }
+              ]
+            },
+            {
+              "name": "Get safer use guidance for a substance",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/harm-reduction/guidance/:substance",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "harm-reduction",
+                    "guidance",
+                    ":substance"
+                  ]
+                },
+                "description": "Returns evidence-based harm reduction guidance including safer use tips, overdose signs, mixing dangers, and withdrawal warnings."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Substance guidance returned",
+                  "code": 200
+                },
+                {
+                  "name": "Error 404",
+                  "status": "Substance not found",
+                  "code": 404
+                }
+              ]
+            },
+            {
+              "name": "Get comprehensive harm reduction guide for a substance",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/harm-reduction/guide/:substance",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "harm-reduction",
+                    "guide",
+                    ":substance"
+                  ]
+                },
+                "description": "Returns all harm reduction information for a substance in a single response: guidance, overdose response, emergency resources, and relevant services."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Comprehensive guide returned",
+                  "code": 200
+                }
+              ]
+            },
+            {
+              "name": "Get overdose response guide",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/harm-reduction/overdose-response/:substance",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "harm-reduction",
+                    "overdose-response",
+                    ":substance"
+                  ]
+                },
+                "description": "Returns step-by-step first responder overdose response instructions for a substance."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Overdose response guide returned",
+                  "code": 200
+                }
+              ]
+            },
+            {
+              "name": "Get UK emergency resources",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/harm-reduction/emergency-resources",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "harm-reduction",
+                    "emergency-resources"
+                  ]
+                },
+                "description": "Returns UK helplines and emergency resources including NHS, FRANK, Samaritans, and specialist services."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Emergency resources returned",
+                  "code": 200
+                }
+              ]
+            },
+            {
+              "name": "Get fentanyl test strip information",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/harm-reduction/fentanyl-testing",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "harm-reduction",
+                    "fentanyl-testing"
+                  ]
+                },
+                "description": "Returns information about fentanyl test strips: what they are, how to use them, and where to get them."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Fentanyl test strip info returned",
+                  "code": 200
+                }
+              ]
+            },
+            {
+              "name": "Get needle exchange information",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/harm-reduction/needle-exchange",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "harm-reduction",
+                    "needle-exchange"
+                  ]
+                },
+                "description": "Returns information about UK needle and syringe programmes: services offered, how to access, and legal status."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Needle exchange info returned",
+                  "code": 200
+                }
+              ]
+            },
+            {
+              "name": "Get drug checking service information",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/harm-reduction/drug-checking",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "harm-reduction",
+                    "drug-checking"
+                  ]
+                },
+                "description": "Returns information about UK drug checking services including The Loop and WEDINOS."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Drug checking info returned",
+                  "code": 200
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Recovery - Crisis Intervention",
+          "item": [
+            {
+              "name": "Trigger emergency alert (panic button)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/crisis/emergency",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "crisis",
+                    "emergency"
+                  ]
+                },
+                "description": "Patient-initiated emergency crisis button. Immediately creates a crisis event, alerts all care team members and emergency contacts."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Emergency alert triggered",
+                  "code": 201
+                }
+              ]
+            },
+            {
+              "name": "Initiate a crisis event",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/crisis",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "crisis"
+                  ]
+                },
+                "description": "Creates a new crisis event for a patient. Can be initiated by specialist, system, or companion AI."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Crisis event created",
+                  "code": 201
+                }
+              ]
+            },
+            {
+              "name": "Respond to a crisis event",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/crisis/:id/respond",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "crisis",
+                    ":id",
+                    "respond"
+                  ]
+                },
+                "description": "Specialist acknowledges a crisis event and marks it as being responded to."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Crisis response acknowledged",
+                  "code": 200
+                },
+                {
+                  "name": "Success",
+                  "status": "",
+                  "code": 201
+                }
+              ]
+            },
+            {
+              "name": "Resolve a crisis event",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/crisis/:id/resolve",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "crisis",
+                    ":id",
+                    "resolve"
+                  ]
+                },
+                "description": "Marks a crisis as resolved with resolution notes and optional follow-up plan."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Crisis resolved",
+                  "code": 200
+                },
+                {
+                  "name": "Success",
+                  "status": "",
+                  "code": 201
+                }
+              ]
+            },
+            {
+              "name": "Escalate a crisis event",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/crisis/:id/escalate",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "crisis",
+                    ":id",
+                    "escalate"
+                  ]
+                },
+                "description": "Escalates a crisis to all care team members, admin, and emergency contacts."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Crisis escalated",
+                  "code": 200
+                },
+                {
+                  "name": "Success",
+                  "status": "",
+                  "code": 201
+                }
+              ]
+            },
+            {
+              "name": "Get crisis event by ID",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/crisis/:id",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "crisis",
+                    ":id"
+                  ]
+                },
+                "description": "Returns full details of a crisis event including response timeline."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Crisis event returned",
+                  "code": 200
+                },
+                {
+                  "name": "Error 404",
+                  "status": "Crisis event not found",
+                  "code": 404
+                }
+              ]
+            },
+            {
+              "name": "Get active crises for specialist",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/crisis/specialist/active",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "crisis",
+                    "specialist",
+                    "active"
+                  ]
+                },
+                "description": "Returns all active/responding/escalated crises for the specialist's patients."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Active crises returned",
+                  "code": 200
+                }
+              ]
+            },
+            {
+              "name": "Get my crisis history",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/crisis/patient/history",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "crisis",
+                    "patient",
+                    "history"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "",
+                      "description": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "",
+                      "description": "",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Returns paginated crisis event history for the authenticated patient."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Crisis history returned",
+                  "code": 200
+                }
+              ]
+            },
+            {
+              "name": "Get patient crisis history (specialist view)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/recovery/crisis/patient/:patientId/history",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "recovery",
+                    "crisis",
+                    "patient",
+                    ":patientId",
+                    "history"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "",
+                      "description": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "",
+                      "description": "",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Returns paginated crisis history for a specific patient."
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Patient crisis history returned",
+                  "code": 200
+                }
+              ]
             }
           ]
         }
@@ -20418,6 +22928,357 @@
                   "status": "OK",
                   "code": 200,
                   "body": "{\"success\": true, \"data\": [{\"name\": \"Child Doe\", \"relationship\": \"child\", \"age\": 8}]}"
+                }
+              ]
+            },
+            {
+              "name": "Get recovery overview",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/specialist/patients/recovery-overview",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "specialist",
+                    "patients",
+                    "recovery-overview"
+                  ],
+                  "query": [
+                    {
+                      "key": "risk_level",
+                      "value": "",
+                      "description": "Filter by risk level",
+                      "disabled": true
+                    },
+                    {
+                      "key": "checkin_status",
+                      "value": "",
+                      "description": "Filter by check-in recency",
+                      "disabled": true
+                    },
+                    {
+                      "key": "search",
+                      "value": "",
+                      "description": "Search by patient name",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Retrieve bird's-eye view of all recovery patients: stats, risk distribution, and patient list sorted by risk level"
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Recovery overview returned",
+                  "code": 200
+                }
+              ]
+            },
+            {
+              "name": "Get patient recovery data",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/specialist/patients/:patientId/recovery",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "specialist",
+                    "patients",
+                    ":patientId",
+                    "recovery"
+                  ]
+                },
+                "description": "Retrieve full recovery profile, risk score breakdown, recent logs, screenings, and plan for a patient"
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Recovery data returned",
+                  "code": 200
+                }
+              ]
+            },
+            {
+              "name": "Get patient risk history",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/specialist/patients/:patientId/recovery/risk-history",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "specialist",
+                    "patients",
+                    ":patientId",
+                    "recovery",
+                    "risk-history"
+                  ],
+                  "query": [
+                    {
+                      "key": "limit",
+                      "value": "30",
+                      "description": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "period",
+                      "value": "",
+                      "description": "",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Retrieve risk score history for a patient with optional period filter"
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Risk history returned",
+                  "code": 200
+                }
+              ]
+            },
+            {
+              "name": "Get patient screening history",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/specialist/patients/:patientId/recovery/screenings",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "specialist",
+                    "patients",
+                    ":patientId",
+                    "recovery",
+                    "screenings"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10",
+                      "description": "",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Retrieve paginated addiction screening reports for a patient"
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Screening history returned",
+                  "code": 200
+                }
+              ]
+            },
+            {
+              "name": "Get patient exercise history",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/specialist/patients/:patientId/recovery/exercises",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "specialist",
+                    "patients",
+                    ":patientId",
+                    "recovery",
+                    "exercises"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10",
+                      "description": "",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Retrieve paginated coping exercise sessions for a patient"
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Exercise history returned",
+                  "code": 200
+                }
+              ]
+            },
+            {
+              "name": "Get patient risk assessments",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/specialist/patients/:patientId/recovery/risk-assessments",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "specialist",
+                    "patients",
+                    ":patientId",
+                    "recovery",
+                    "risk-assessments"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10",
+                      "description": "",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Retrieve paginated risk assessment reports for a patient"
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Risk assessments returned",
+                  "code": 200
+                }
+              ]
+            },
+            {
+              "name": "Get patient milestones",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/specialist/patients/:patientId/recovery/milestones",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "specialist",
+                    "patients",
+                    ":patientId",
+                    "recovery",
+                    "milestones"
+                  ]
+                },
+                "description": "Retrieve all recovery milestones for a patient"
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Milestones returned",
+                  "code": 200
+                }
+              ]
+            },
+            {
+              "name": "Get patient check-in history",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{patient_base_url}}/specialist/patients/:patientId/recovery/checkins",
+                  "host": [
+                    "{{patient_base_url}}"
+                  ],
+                  "path": [
+                    "specialist",
+                    "patients",
+                    ":patientId",
+                    "recovery",
+                    "checkins"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "14",
+                      "description": "",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Retrieve paginated daily check-in logs for a patient"
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "Check-in history returned",
+                  "code": 200
                 }
               ]
             }

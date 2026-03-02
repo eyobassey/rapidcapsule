@@ -1219,7 +1219,7 @@ export class SpecialistPatientsService {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const [recentLogs, recentScreenings, activePlan, crisisEvents, exerciseCount, riskAssessmentCount, milestoneCount, latestExercise, latestRiskAssessment, latestMilestone, moodTrendLogs] = await Promise.all([
+    const [recentLogs, recentScreenings, activePlan, crisisEvents, exerciseCount, riskAssessmentCount, milestoneCount, latestExercise, latestRiskAssessment, latestMilestone, moodTrendLogs, allSobrietyLogs] = await Promise.all([
       this.sobrietyLogModel
         .find({ user: patientObjId })
         .sort({ log_date: -1 })
@@ -1231,25 +1231,43 @@ export class SpecialistPatientsService {
         .limit(3)
         .lean(),
       this.recoveryPlanModel
-        .findOne({ user: patientObjId, status: 'active', deleted_at: { $exists: false } })
+        .findOne({ user: patientObjId, status: { $in: ['active', 'draft'] }, deleted_at: { $exists: false } })
+        .sort({ created_at: -1 })
         .lean(),
       this.crisisEventModel
         .find({ user: patientObjId })
         .sort({ created_at: -1 })
         .limit(5)
         .lean(),
-      this.copingExerciseSessionModel.countDocuments({ user: patientObjId }),
+      this.copingExerciseSessionModel.countDocuments({ user: patientObjId, deleted_at: { $exists: false } }),
       this.riskAssessmentReportModel.countDocuments({ user: patientObjId, deleted_at: { $exists: false } }),
       this.recoveryMilestoneModel.countDocuments({ user: patientObjId }),
-      this.copingExerciseSessionModel.findOne({ user: patientObjId }).sort({ created_at: -1 }).select('created_at name category').lean(),
+      this.copingExerciseSessionModel.findOne({ user: patientObjId, deleted_at: { $exists: false } }).sort({ created_at: -1 }).select('created_at name category').lean(),
       this.riskAssessmentReportModel.findOne({ user: patientObjId, deleted_at: { $exists: false } }).sort({ created_at: -1 }).select('created_at score level').lean(),
-      this.recoveryMilestoneModel.findOne({ user: patientObjId }).sort({ created_at: -1 }).select('created_at type title value').lean(),
+      this.recoveryMilestoneModel.findOne({ user: patientObjId }).sort({ achieved_at: -1 }).select('achieved_at milestone_type milestone_name milestone_value').lean(),
       this.sobrietyLogModel.find({ user: patientObjId, log_date: { $gte: thirtyDaysAgo } }).sort({ log_date: 1 }).select('log_date mood_score craving_intensity').lean(),
+      this.sobrietyLogModel.find({ user: patientObjId }).sort({ log_date: 1 }).select('log_date sober_today').lean(),
     ]);
 
     const sobrietyDays = (profile as any).sobriety_start_date
       ? Math.max(0, Math.floor((Date.now() - new Date((profile as any).sobriety_start_date).getTime()) / 86400000))
       : 0;
+
+    // Compute longest streak and total relapses from sobriety logs
+    let computedLongestStreak = 0;
+    let computedCurrentStreak = 0;
+    let computedRelapses = 0;
+    for (const log of (allSobrietyLogs || []) as any[]) {
+      if (log.sober_today) {
+        computedCurrentStreak++;
+        if (computedCurrentStreak > computedLongestStreak) {
+          computedLongestStreak = computedCurrentStreak;
+        }
+      } else {
+        computedRelapses++;
+        computedCurrentStreak = 0;
+      }
+    }
 
     return {
       has_recovery_profile: true,
@@ -1259,8 +1277,9 @@ export class SpecialistPatientsService {
         primary_substance: (profile as any).substance_use_history?.[0]?.substance || null,
         care_level: (profile as any).care_level,
         status: (profile as any).status,
-        longest_streak: (profile as any).longest_sobriety_days || 0,
-        total_relapses: (profile as any).total_relapse_count || 0,
+        longest_streak: Math.max((profile as any).longest_sobriety_days || 0, computedLongestStreak),
+        total_relapses: Math.max((profile as any).total_relapse_count || 0, computedRelapses),
+        current_streak: computedCurrentStreak,
         relapse_dates: (profile as any).relapse_dates || [],
       },
       risk: {
@@ -1288,10 +1307,36 @@ export class SpecialistPatientsService {
         date: s.created_at,
       })),
       recovery_plan: activePlan ? {
-        stage_of_change: (activePlan as any).stage_of_change,
-        goals: (activePlan as any).goals,
-        triggers: (activePlan as any).relapse_prevention?.triggers || [],
-        coping_strategies: (activePlan as any).coping_strategies || [],
+        _id: (activePlan as any)._id,
+        plan_name: (activePlan as any).plan_name,
+        status: (activePlan as any).status,
+        stages: ((activePlan as any).stages || []).map((s: any) => ({
+          stage_id: s.stage_id,
+          name: s.name,
+          order: s.order,
+          status: s.status || 'pending',
+          estimated_duration_weeks: s.estimated_duration_weeks,
+          goals: (s.goals || []).map((g: any) => ({
+            goal_id: g.goal_id,
+            description: g.description,
+            measurable_target: g.measurable_target,
+            status: g.status || 'pending',
+            target_date: g.target_date,
+          })),
+          interventions: (s.interventions || []).map((i: any) => ({
+            type: i.type,
+            description: i.description,
+            frequency: i.frequency,
+          })),
+        })),
+        relapse_prevention: {
+          personal_triggers: (activePlan as any).relapse_prevention?.personal_triggers || [],
+          warning_signs: (activePlan as any).relapse_prevention?.warning_signs || [],
+          coping_strategies: (activePlan as any).relapse_prevention?.coping_strategies || [],
+          emergency_plan: (activePlan as any).relapse_prevention?.emergency_plan || '',
+        },
+        next_review_date: (activePlan as any).next_review_date,
+        created_at: (activePlan as any).created_at,
       } : null,
       crisis_events: crisisEvents.map((e: any) => ({
         type: e.type,
@@ -1308,7 +1353,7 @@ export class SpecialistPatientsService {
       latest: {
         exercise: latestExercise ? { date: (latestExercise as any).created_at, name: (latestExercise as any).name, category: (latestExercise as any).category } : null,
         risk_assessment: latestRiskAssessment ? { date: (latestRiskAssessment as any).created_at, score: (latestRiskAssessment as any).score, level: (latestRiskAssessment as any).level } : null,
-        milestone: latestMilestone ? { date: (latestMilestone as any).created_at, type: (latestMilestone as any).type, title: (latestMilestone as any).title, value: (latestMilestone as any).value } : null,
+        milestone: latestMilestone ? { date: (latestMilestone as any).achieved_at, type: (latestMilestone as any).milestone_type, title: (latestMilestone as any).milestone_name, value: (latestMilestone as any).milestone_value } : null,
       },
       mood_trend_30d: moodTrendLogs.map((log: any) => ({
         date: log.log_date,
@@ -1394,14 +1439,15 @@ export class SpecialistPatientsService {
     const patientObjId = new Types.ObjectId(patientId);
     const skip = (page - 1) * limit;
 
+    const query = { user: patientObjId, deleted_at: { $exists: false } };
     const [exercises, total] = await Promise.all([
       this.copingExerciseSessionModel
-        .find({ user: patientObjId })
+        .find(query)
         .sort({ created_at: -1 })
         .skip(skip)
         .limit(limit)
         .lean(),
-      this.copingExerciseSessionModel.countDocuments({ user: patientObjId }),
+      this.copingExerciseSessionModel.countDocuments(query),
     ]);
 
     return {
@@ -1411,11 +1457,15 @@ export class SpecialistPatientsService {
         name: e.name,
         category: e.category,
         description: e.description,
-        duration_minutes: e.duration_minutes,
+        estimated_minutes: e.estimated_minutes,
+        steps: e.steps || [],
+        completed_steps: e.completed_steps || [],
+        evidence_base: e.evidence_base,
+        source: e.source,
         completed: e.completed,
-        mood_before: e.mood_before,
-        mood_after: e.mood_after,
-        notes: e.notes,
+        outcome: e.outcome,
+        completed_at: e.completed_at,
+        responses: e.responses || [],
         date: e.created_at,
       })),
       pagination: { page, limit, total, pages: Math.ceil(total / limit) },
@@ -1465,20 +1515,21 @@ export class SpecialistPatientsService {
 
     const milestones = await this.recoveryMilestoneModel
       .find({ user: patientObjId })
-      .sort({ created_at: -1 })
+      .sort({ achieved_at: -1 })
       .lean();
 
     return {
       data: milestones.map((m: any) => ({
         id: m._id,
-        type: m.type,
-        title: m.title,
+        type: m.milestone_type,
+        title: m.milestone_name,
         description: m.description,
-        value: m.value,
-        target_value: m.target_value,
+        value: m.milestone_value,
         celebrated: m.celebrated,
-        celebrated_at: m.celebrated_at,
-        date: m.created_at,
+        reward_points: m.reward_points,
+        shared_with_care_team: m.shared_with_care_team,
+        celebration_message: m.celebration_message,
+        date: m.achieved_at,
       })),
       total: milestones.length,
     };

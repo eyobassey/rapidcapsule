@@ -32,7 +32,7 @@ import {
 } from './dto/specialist-prescription.dto';
 import { PrescriptionPaymentMethod } from './entities/specialist-prescription.entity';
 import { RefillService } from './services/refill.service';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 
 @ApiTags('Specialist Prescriptions')
 @ApiBearerAuth('JWT-auth')
@@ -741,6 +741,17 @@ export class PatientPrescriptionController {
   @Get(':id/refill/history')
   async getRefillHistory(@Request() req, @Param('id') id: string) {
     const result = await this.refillService.getRefillHistory(id);
+    return sendSuccessResponse(Messages.RETRIEVED, result);
+  }
+
+  @ApiOperation({ summary: 'Check MAT refill eligibility', description: 'Check MAT-specific refill eligibility including appointment attendance, screening compliance, sobriety logging, and crisis event checks' })
+  @ApiResponse({ status: 200, description: 'MAT refill eligibility status returned' })
+  @ApiResponse({ status: 404, description: 'Prescription not found' })
+  @ApiParam({ name: 'id', description: 'Prescription ID', example: '507f1f77bcf86cd799439011' })
+  @UseGuards(JwtAuthGuard)
+  @Get(':id/refill/mat-eligibility')
+  async checkMATRefillEligibility(@Request() req, @Param('id') id: string) {
+    const result = await this.refillService.checkMATRefillEligibility(id, req.user.sub);
     return sendSuccessResponse(Messages.RETRIEVED, result);
   }
 

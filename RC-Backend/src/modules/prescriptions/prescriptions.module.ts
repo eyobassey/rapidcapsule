@@ -22,6 +22,26 @@ import {
   Drug,
   DrugSchema,
 } from '../pharmacy/entities/drug.entity';
+import {
+  RecoveryProfile,
+  RecoveryProfileSchema,
+} from '../recovery/entities/recovery-profile.entity';
+import {
+  AddictionScreening,
+  AddictionScreeningSchema,
+} from '../recovery/entities/addiction-screening.entity';
+import {
+  SobrietyLog,
+  SobrietyLogSchema,
+} from '../recovery/entities/sobriety-log.entity';
+import {
+  CrisisEvent,
+  CrisisEventSchema,
+} from '../recovery/entities/crisis-event.entity';
+import {
+  Appointment,
+  AppointmentSchema,
+} from '../appointments/entities/appointment.entity';
 import { FileUploadHelper } from '../../common/helpers/file-upload.helpers';
 import { TaskScheduler } from '../../core/worker/task.scheduler';
 import { UsersModule } from '../users/users.module';
@@ -66,6 +86,11 @@ import { PrescriptionVerifyController } from './prescription-verify.controller';
       { name: SpecialistPrescription.name, schema: SpecialistPrescriptionSchema },
       { name: StockReservation.name, schema: StockReservationSchema },
       { name: Drug.name, schema: DrugSchema },
+      { name: RecoveryProfile.name, schema: RecoveryProfileSchema },
+      { name: AddictionScreening.name, schema: AddictionScreeningSchema },
+      { name: SobrietyLog.name, schema: SobrietyLogSchema },
+      { name: CrisisEvent.name, schema: CrisisEventSchema },
+      { name: Appointment.name, schema: AppointmentSchema },
     ]),
   ],
   controllers: [

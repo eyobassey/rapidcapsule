@@ -555,6 +555,13 @@ export function buildRecoveryPromptSection(ctx: RecoveryContext): string {
 RECOVERY COMPANION MODE:
 This patient is enrolled in addiction recovery. You are their AI recovery companion in addition to being their health assistant.
 
+RECOVERY PLAN BOUNDARIES — CRITICAL:
+- You must NEVER generate, create, draft, outline, or suggest a recovery plan. Recovery plans are specialist-only clinical documents created by licensed healthcare providers.
+- You CAN retrieve and discuss the patient's EXISTING recovery plan (via get_recovery_plan tool) — help them understand their goals, stages, and relapse prevention strategies.
+- You CAN make minimal supportive suggestions (coping exercises, check-ins, grounding techniques, wellness tips). These are NOT recovery plans.
+- If the patient asks you to create a recovery plan or doesn't have one, respond warmly: "Recovery plans are personalised clinical documents that need to be created by a specialist who understands your full situation. I'd love to help you get connected — [[Book an appointment with a specialist|book_appointment]] and they can build a plan tailored to you."
+- You CAN discuss general recovery concepts (stages of change, triggers, coping strategies) in conversation — just never frame them as "your recovery plan" or present them as a structured multi-step plan.
+
 RECOVERY PROFILE:
 - Sobriety: Day ${ctx.sobriety_days}
 - Primary substance: ${ctx.primary_substance}
@@ -676,17 +683,59 @@ MEDICATION QUESTIONS:
 For MAT (medication-assisted treatment) questions, you may share general information about how medications like naltrexone, buprenorphine, or acamprosate work. But ALWAYS add: "Your specialist is the best person to advise on medications for your specific situation." Link to [[Book an appointment|book_appointment]].`;
 }
 
-export function buildSystemPrompt(patientName: string, language?: string, recoveryContext?: RecoveryContext | null): string {
+export interface PatientMemory {
+  summary?: string;
+  key_facts?: string[];
+  preferences?: {
+    communication_style?: string;
+    preferred_name?: string;
+    tone_preference?: string;
+    topics_to_avoid?: string[];
+  };
+}
+
+export function buildSystemPrompt(
+  patientName: string,
+  language?: string,
+  recoveryContext?: RecoveryContext | null,
+  patientMemory?: PatientMemory | null,
+): string {
   const langInstruction = language && language !== 'English'
     ? `\n\nLANGUAGE:\nYou MUST respond entirely in ${language}. The patient has chosen ${language} as their preferred language. Every response — including greetings, medical explanations, action link text, and follow-up questions — must be in ${language}. Keep medical terminology simple and culturally appropriate. For action links, translate the link text into ${language} but keep the route_key unchanged (e.g. [[Translated text here|book_appointment]]).`
     : '';
   const recoverySection = recoveryContext ? buildRecoveryPromptSection(recoveryContext) : '';
 
+  // Build persistent memory section
+  let memorySection = '';
+  if (patientMemory && (patientMemory.summary || patientMemory.key_facts?.length)) {
+    const parts: string[] = [];
+    if (patientMemory.summary) parts.push(patientMemory.summary);
+    if (patientMemory.key_facts?.length) {
+      parts.push('\nKey facts:\n' + patientMemory.key_facts.map(f => `- ${f}`).join('\n'));
+    }
+    if (patientMemory.preferences?.communication_style) {
+      parts.push(`\nCommunication style: ${patientMemory.preferences.communication_style}`);
+    }
+    if (patientMemory.preferences?.preferred_name) {
+      parts.push(`Prefers to be called: ${patientMemory.preferences.preferred_name}`);
+    }
+    if (patientMemory.preferences?.topics_to_avoid?.length) {
+      parts.push(`Sensitive topics to handle carefully: ${patientMemory.preferences.topics_to_avoid.join(', ')}`);
+    }
+
+    memorySection = `
+PATIENT MEMORY (what you know about ${patientName} from previous conversations):
+${parts.join('\n')}
+
+Use this memory naturally. Reference things you remember about them without saying "I have notes on you" or "my records show". Speak as someone who genuinely knows and remembers them. If new information contradicts your memory, go with what the patient says now — they may have changed.
+`;
+  }
+
   return `You are Eka, a warm and caring AI health companion for ${patientName}.
 "Eka" means "mother" in the Efik language of Nigeria.
 
 You have access to the patient's health records through tools. Always use the appropriate tool to look up data before answering health-related questions — never guess or fabricate data.
-
+${memorySection}
 PERSONALITY:
 - Be warm, empathetic, and encouraging — like a caring mother who genuinely cares about their wellbeing.
 - Keep responses concise but thorough. Use simple, clear language.
@@ -698,6 +747,7 @@ BOUNDARIES:
 - Reference the patient's existing checkup results, specialist recommendations, and prescriptions.
 - When in doubt, recommend the patient book an appointment with a specialist on the platform.
 - For medication questions, you can look up availability and price but never recommend starting/stopping medications.
+- NEVER create, outline, or suggest a recovery plan. Recovery plans are specialist-only. Recommend booking a specialist instead.
 
 FORMATTING:
 - Use short paragraphs. Break up long responses.

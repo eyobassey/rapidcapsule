@@ -75,6 +75,14 @@ import {
   ClaudeSummaryTransaction,
   ClaudeSummaryTransactionSchema,
 } from '../claude-summary-credits/entities/claude-summary-transaction.entity';
+import {
+  SuspiciousActivityLog,
+  SuspiciousActivityLogSchema,
+} from './entities/suspicious-activity-log.entity';
+import {
+  RecoveryProfile,
+  RecoveryProfileSchema,
+} from '../recovery/entities/recovery-profile.entity';
 
 // Services
 import { DrugService } from './services/drug.service';
@@ -128,6 +136,8 @@ import { RxGPTController } from './controllers/rxgpt.controller';
       { name: RxGPTAnalytics.name, schema: RxGPTAnalyticsSchema },
       { name: RxGPTCache.name, schema: RxGPTCacheSchema },
       { name: RxGPTFeedback.name, schema: RxGPTFeedbackSchema },
+      { name: SuspiciousActivityLog.name, schema: SuspiciousActivityLogSchema },
+      { name: RecoveryProfile.name, schema: RecoveryProfileSchema },
     ]),
     forwardRef(() => WalletsModule),
     AccountingModule,

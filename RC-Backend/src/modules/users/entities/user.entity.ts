@@ -27,6 +27,15 @@ export enum UserType {
   ADMIN = 'Admin',
 }
 
+export enum RecoveryStatus {
+  NONE = 'none',
+  ENROLLED = 'enrolled',
+  ACTIVE = 'active',
+  IN_RECOVERY = 'in_recovery',
+  GRADUATED = 'graduated',
+  PAUSED = 'paused',
+}
+
 export enum RegMedium {
   GOOGLE = 'GOOGLE',
   APPLE = 'APPLE',
@@ -773,6 +782,27 @@ export class User {
     }),
   )
   identity_verification?: IdentityVerification;
+
+  // ── Recovery Module Fields ──────────────────────────────────────────
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'RecoveryProfile' })
+  recovery_profile?: mongoose.Types.ObjectId;
+
+  @Prop({ type: String, enum: Object.values(RecoveryStatus), default: RecoveryStatus.NONE })
+  recovery_status?: string;
+
+  @Prop(
+    raw({
+      naloxone_carrier: { type: Boolean, default: false },
+      trained_in_naloxone_use: { type: Boolean, default: false },
+      notify_on_risk_level: { type: String, enum: ['low', 'moderate', 'high', 'critical'], default: 'high' },
+      preferred_contact_method: { type: String, enum: ['push', 'sms', 'call', 'email'], default: 'push' },
+      auto_share_location: { type: Boolean, default: false },
+    }),
+  )
+  recovery_emergency_config?: RecoveryEmergencyConfig;
+
+  @Prop({ type: Boolean, default: false })
+  mat_waiver?: boolean;
 }
 
 export interface IdentityVerification {
@@ -804,6 +834,14 @@ export interface IdentityVerification {
   submitted_at?: Date;
   reviewed_at?: Date;
   reviewed_by?: mongoose.Types.ObjectId;
+}
+
+export interface RecoveryEmergencyConfig {
+  naloxone_carrier?: boolean;
+  trained_in_naloxone_use?: boolean;
+  notify_on_risk_level?: 'low' | 'moderate' | 'high' | 'critical';
+  preferred_contact_method?: 'push' | 'sms' | 'call' | 'email';
+  auto_share_location?: boolean;
 }
 
 export interface DeliveryAddressEntry {

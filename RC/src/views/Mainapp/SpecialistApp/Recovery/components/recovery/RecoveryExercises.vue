@@ -30,9 +30,11 @@
           v-for="(e, idx) in exercises"
           :key="e.id"
           class="exercise-card"
+          :class="{ 'exercise-card--expanded': expanded[e.id] }"
           :style="{ animationDelay: `${idx * 0.06}s` }"
         >
-          <div class="exercise-card__header">
+          <!-- Card Header (clickable) -->
+          <div class="exercise-card__header" @click="toggleExpand(e.id)">
             <div class="exercise-card__icon">
               <v-icon name="hi-sparkles" scale="1" />
             </div>
@@ -40,41 +42,86 @@
               <span class="exercise-name">{{ e.name }}</span>
               <span class="exercise-meta">
                 {{ capitalise(e.category) }} &middot; {{ formatDate(e.date) }}
+                <span v-if="e.estimated_minutes"> &middot; {{ e.estimated_minutes }} min</span>
               </span>
             </div>
             <span :class="['completion-badge', e.completed ? 'completion-badge--done' : 'completion-badge--partial']">
               {{ e.completed ? 'Completed' : 'Partial' }}
             </span>
+            <div class="exercise-card__chevron">
+              <v-icon :name="expanded[e.id] ? 'hi-chevron-up' : 'hi-chevron-down'" scale="0.8" />
+            </div>
           </div>
 
-          <!-- Details Row -->
-          <div class="exercise-card__details">
-            <div v-if="e.duration_minutes" class="detail-item">
-              <v-icon name="hi-clock" scale="0.6" />
-              <span>{{ e.duration_minutes }} min</span>
+          <!-- Collapsed Preview -->
+          <div v-if="!expanded[e.id] && e.description" class="exercise-card__preview">
+            {{ truncate(e.description, 120) }}
+          </div>
+
+          <!-- Expanded Report -->
+          <div v-if="expanded[e.id]" class="exercise-card__report">
+            <!-- Description -->
+            <div v-if="e.description" class="report-section">
+              <h5 class="report-heading">Description</h5>
+              <p class="report-text">{{ e.description }}</p>
             </div>
-            <div v-if="e.mood_before != null" class="detail-item">
-              <span class="detail-label">Mood Before:</span>
-              <span class="detail-value">{{ e.mood_before }}/10</span>
+
+            <!-- Steps -->
+            <div v-if="e.steps?.length" class="report-section">
+              <h5 class="report-heading">Steps</h5>
+              <div class="steps-list">
+                <div
+                  v-for="(step, si) in e.steps"
+                  :key="si"
+                  :class="['step-item', isStepCompleted(e, si) ? 'step-item--done' : '']"
+                >
+                  <div class="step-item__num">
+                    <v-icon v-if="isStepCompleted(e, si)" name="hi-check" scale="0.6" />
+                    <span v-else>{{ si + 1 }}</span>
+                  </div>
+                  <span class="step-item__text">{{ step }}</span>
+                </div>
+              </div>
             </div>
-            <div v-if="e.mood_after != null" class="detail-item">
-              <span class="detail-label">Mood After:</span>
-              <span :class="['detail-value', moodImproved(e) ? 'detail-value--up' : '']">
-                {{ e.mood_after }}/10
-                <span v-if="moodImproved(e)" class="mood-arrow">&#x2191;</span>
+
+            <!-- Outcome -->
+            <div v-if="e.outcome" class="report-section">
+              <h5 class="report-heading">Outcome</h5>
+              <p class="report-text">{{ e.outcome }}</p>
+            </div>
+
+            <!-- Evidence Base -->
+            <div v-if="e.evidence_base" class="report-section">
+              <h5 class="report-heading">Evidence Base</h5>
+              <p class="report-text report-text--muted">{{ e.evidence_base }}</p>
+            </div>
+
+            <!-- Conversation / Responses -->
+            <div v-if="e.responses?.length" class="report-section">
+              <h5 class="report-heading">Exercise Conversation</h5>
+              <div class="conversation">
+                <div
+                  v-for="(msg, mi) in e.responses"
+                  :key="mi"
+                  :class="['message', `message--${msg.role}`]"
+                >
+                  <div class="message__label">
+                    {{ msg.role === 'assistant' ? 'Eka' : 'Patient' }}
+                  </div>
+                  <div class="message__content">{{ msg.content }}</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Footer Meta -->
+            <div class="report-meta">
+              <span v-if="e.source" class="report-meta__item">
+                Source: <strong>{{ capitalise(e.source) }}</strong>
+              </span>
+              <span v-if="e.completed_at" class="report-meta__item">
+                Completed: <strong>{{ formatDate(e.completed_at) }}</strong>
               </span>
             </div>
-          </div>
-
-          <!-- Description -->
-          <div v-if="e.description" class="exercise-card__desc">
-            {{ e.description }}
-          </div>
-
-          <!-- Notes -->
-          <div v-if="e.notes" class="exercise-card__notes">
-            <v-icon name="hi-annotation" scale="0.65" />
-            <span>{{ e.notes }}</span>
           </div>
         </div>
       </div>
@@ -101,7 +148,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, reactive, computed, onMounted, watch } from 'vue';
 import apiFactory from '@/services/apiFactory';
 import { useToast } from 'vue-toast-notification';
 
@@ -113,6 +160,7 @@ const $toast = useToast();
 const loading = ref(false);
 const exercises = ref([]);
 const pagination = ref({ page: 1, limit: 10, total: 0, pages: 0 });
+const expanded = reactive({});
 
 onMounted(() => fetchExercises(1));
 watch(() => props.patientId, () => fetchExercises(1));
@@ -144,6 +192,19 @@ async function fetchExercises(page = 1) {
   }
 }
 
+function toggleExpand(id) {
+  expanded[id] = !expanded[id];
+}
+
+function isStepCompleted(exercise, stepIndex) {
+  return exercise.completed_steps?.includes(stepIndex);
+}
+
+function truncate(str, len) {
+  if (!str) return '';
+  return str.length > len ? str.slice(0, len) + '...' : str;
+}
+
 function formatDate(d) {
   if (!d) return '';
   return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -152,10 +213,6 @@ function formatDate(d) {
 function capitalise(str) {
   if (!str) return '';
   return str.charAt(0).toUpperCase() + str.slice(1).replace(/_/g, ' ');
-}
-
-function moodImproved(e) {
-  return e.mood_after != null && e.mood_before != null && e.mood_after > e.mood_before;
 }
 </script>
 
@@ -167,6 +224,7 @@ $emerald: #10B981;
 $emerald-light: #D1FAE5;
 $amber: #F59E0B;
 $rose: #F43F5E;
+$violet: #8B5CF6;
 
 .exercises-section {
   display: flex;
@@ -204,63 +262,73 @@ $rose: #F43F5E;
 }
 
 .exercise-card {
-  padding: 18px;
   background: rgba(255,255,255,0.9);
   border: 1px solid rgba($color-g-92, 0.5);
   border-radius: 16px;
   animation: fadeSlideUp 0.4s ease forwards;
   opacity: 0;
+  overflow: hidden;
+  transition: border-color 0.2s, box-shadow 0.2s;
+
+  &:hover {
+    border-color: rgba($violet, 0.25);
+  }
+
+  &--expanded {
+    border-color: rgba($violet, 0.3);
+    box-shadow: 0 4px 20px rgba($violet, 0.08);
+  }
 
   &__header {
     display: flex;
     align-items: center;
     gap: 12px;
+    padding: 18px;
+    cursor: pointer;
+    transition: background 0.15s;
+
+    &:hover { background: rgba($violet, 0.02); }
   }
 
   &__icon {
     width: 44px;
     height: 44px;
     border-radius: 12px;
-    background: linear-gradient(135deg, rgba(#8B5CF6, 0.1), rgba(#8B5CF6, 0.2));
+    background: linear-gradient(135deg, rgba($violet, 0.1), rgba($violet, 0.2));
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #8B5CF6;
+    color: $violet;
     flex-shrink: 0;
   }
 
   &__info {
     flex: 1;
+    min-width: 0;
   }
 
-  &__details {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 14px;
-    margin-top: 14px;
-    padding: 12px;
-    background: rgba($color-g-92, 0.1);
-    border-radius: 10px;
+  &__chevron {
+    color: $color-g-67;
+    flex-shrink: 0;
+    transition: transform 0.2s;
   }
 
-  &__desc {
-    margin-top: 10px;
+  &__preview {
+    padding: 0 18px 14px;
     font-size: 13px;
     color: $color-g-54;
     line-height: 1.5;
   }
 
-  &__notes {
+  &__report {
+    padding: 0 18px 18px;
     display: flex;
-    align-items: flex-start;
-    gap: 6px;
-    margin-top: 10px;
-    padding: 10px 14px;
-    background: rgba($sky-light, 0.4);
-    border-radius: 10px;
-    font-size: 13px;
-    color: $color-g-36;
-    svg { color: $color-g-67; flex-shrink: 0; margin-top: 2px; }
+    flex-direction: column;
+    gap: 16px;
+    border-top: 1px solid rgba($color-g-92, 0.4);
+    padding-top: 16px;
+    margin: 0 18px 18px;
+    padding: 16px 0 0;
   }
 }
 
@@ -269,12 +337,16 @@ $rose: #F43F5E;
   font-size: 15px;
   font-weight: 700;
   color: $color-g-21;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .exercise-meta {
   display: block;
   font-size: 12px;
   color: $color-g-54;
+  margin-top: 2px;
 }
 
 .completion-badge {
@@ -282,24 +354,145 @@ $rose: #F43F5E;
   border-radius: 10px;
   font-size: 11px;
   font-weight: 700;
+  white-space: nowrap;
 
   &--done { background: rgba($emerald, 0.1); color: $emerald; }
   &--partial { background: rgba($amber, 0.1); color: darken($amber, 10%); }
 }
 
-.detail-item {
+// Report Sections
+.report-section {
   display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  color: $color-g-36;
-
-  svg { color: $color-g-54; }
+  flex-direction: column;
+  gap: 8px;
 }
 
-.detail-label { color: $color-g-54; font-weight: 500; }
-.detail-value { font-weight: 600; &--up { color: $emerald; } }
-.mood-arrow { font-size: 14px; }
+.report-heading {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: $color-g-54;
+  margin: 0;
+}
+
+.report-text {
+  font-size: 14px;
+  color: $color-g-36;
+  line-height: 1.6;
+  margin: 0;
+
+  &--muted {
+    font-size: 13px;
+    color: $color-g-54;
+    font-style: italic;
+  }
+}
+
+// Steps List
+.steps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.step-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 14px;
+  background: rgba($color-g-92, 0.08);
+  border-radius: 10px;
+  transition: background 0.2s;
+
+  &--done {
+    background: rgba($emerald, 0.06);
+    .step-item__num { background: $emerald; color: #fff; }
+    .step-item__text { color: $color-g-36; }
+  }
+
+  &__num {
+    width: 24px;
+    height: 24px;
+    border-radius: 8px;
+    background: rgba($color-g-67, 0.15);
+    color: $color-g-54;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  &__text {
+    font-size: 13px;
+    color: $color-g-54;
+    line-height: 1.5;
+    padding-top: 2px;
+  }
+}
+
+// Conversation
+.conversation {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.message {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  max-width: 90%;
+
+  &--assistant {
+    background: rgba($sky-light, 0.6);
+    border: 1px solid rgba($sky, 0.12);
+    align-self: flex-start;
+  }
+
+  &--user {
+    background: rgba($violet, 0.06);
+    border: 1px solid rgba($violet, 0.1);
+    align-self: flex-end;
+  }
+
+  &__label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: $color-g-67;
+  }
+
+  &__content {
+    font-size: 13px;
+    color: $color-g-21;
+    line-height: 1.6;
+    white-space: pre-wrap;
+  }
+}
+
+// Report Meta
+.report-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding-top: 12px;
+  border-top: 1px solid rgba($color-g-92, 0.3);
+
+  &__item {
+    font-size: 12px;
+    color: $color-g-54;
+    strong { color: $color-g-36; }
+  }
+}
 
 // Pagination
 .pagination {
@@ -354,7 +547,7 @@ $rose: #F43F5E;
   align-items: center;
   padding: 48px 24px;
   text-align: center;
-  .empty-icon { color: rgba(#8B5CF6, 0.3); margin-bottom: 16px; }
+  .empty-icon { color: rgba($violet, 0.3); margin-bottom: 16px; }
   h3 { font-size: 18px; font-weight: 700; color: $color-g-21; margin-bottom: 8px; }
   p { font-size: 14px; color: $color-g-54; }
 }

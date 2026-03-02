@@ -55,6 +55,7 @@ export class EkaService {
     @InjectModel('RecoveryPlan') private recoveryPlanModel: Model<any>,
     @InjectModel('CopingExerciseSession') private copingExerciseSessionModel: Model<any>,
     @InjectModel('RiskAssessmentReport') private riskAssessmentReportModel: Model<any>,
+    @InjectModel('EkaPatientMemory') private patientMemoryModel: Model<any>,
     private readonly claudeHealthSummaryService: ClaudeHealthSummaryService,
     private readonly claudeSummaryCreditsService: ClaudeSummaryCreditsService,
     private readonly claudeAIService: ClaudeAIService,
@@ -125,6 +126,11 @@ export class EkaService {
     const patientName = user?.profile
       ? `${user.profile.first_name || ''} ${user.profile.last_name || ''}`.trim()
       : 'there';
+
+    // Load persistent patient memory for cross-conversation context
+    const patientMemory = await this.patientMemoryModel.findOne({
+      user: new Types.ObjectId(userId),
+    }).lean();
 
     // Check if patient is enrolled in recovery
     let recoveryContext: RecoveryContext | null = null;
@@ -326,7 +332,7 @@ export class EkaService {
     // Retry up to 2 times on overloaded/transient errors
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
-        fullResponse = yield* this.streamWithTools(claudeMessages, patientName, userId, toolsUsed, dto.language, activeCheckupPhase, recoveryContext, conversation._id);
+        fullResponse = yield* this.streamWithTools(claudeMessages, patientName, userId, toolsUsed, dto.language, activeCheckupPhase, recoveryContext, conversation._id, patientMemory);
         break; // Success
       } catch (error: any) {
         const isOverloaded = error?.message?.includes('overloaded') || error?.message?.includes('Overloaded') || error?.error?.type === 'overloaded_error';
@@ -350,6 +356,17 @@ export class EkaService {
     });
     await conversation.save();
 
+    // Trigger async memory update if enough new messages have accumulated
+    const totalMessages = conversation.messages.length;
+    const lastMemoryMsgCount = patientMemory?.message_count_at_last_update || 0;
+    if (totalMessages - lastMemoryMsgCount >= 10) {
+      this.eventEmitter.emit('eka.memory_update', {
+        userId,
+        conversationId: conversation._id.toString(),
+        totalMessages,
+      });
+    }
+
     yield { type: 'done', conversation_id: conversation._id.toString() };
   }
 
@@ -362,6 +379,7 @@ export class EkaService {
     activeCheckupPhase?: string | null,
     recoveryContext?: RecoveryContext | null,
     conversationId?: Types.ObjectId,
+    patientMemory?: any | null,
   ): AsyncGenerator<any, string> {
     let currentMessages = [...messages];
     let fullResponse = '';
@@ -373,7 +391,7 @@ export class EkaService {
       const apiParams: any = {
         model: MODEL,
         max_tokens: MAX_TOKENS,
-        system: buildSystemPrompt(patientName, language, recoveryContext),
+        system: buildSystemPrompt(patientName, language, recoveryContext, patientMemory),
         messages: currentMessages,
       };
 
@@ -3075,12 +3093,27 @@ export class EkaService {
   }
 
   async deleteConversation(id: string, userId: string) {
-    const convo = await this.conversationModel.findOneAndUpdate(
+    // Extract memory before deactivating, so key facts aren't lost
+    const convo = await this.conversationModel.findOne({
+      _id: id,
+      user: new Types.ObjectId(userId),
+      is_active: true,
+    }).lean();
+
+    if (!convo) throw new NotFoundException('Conversation not found');
+
+    if (convo.messages?.length >= 6) {
+      this.eventEmitter.emit('eka.memory_update', {
+        userId,
+        conversationId: id,
+        totalMessages: convo.messages.length,
+      });
+    }
+
+    await this.conversationModel.findOneAndUpdate(
       { _id: id, user: new Types.ObjectId(userId) },
       { is_active: false },
-      { new: true },
     );
-    if (!convo) throw new NotFoundException('Conversation not found');
     return { success: true };
   }
 
@@ -3845,7 +3878,10 @@ export class EkaService {
     }).lean();
 
     if (!plan) {
-      return { message: 'No active recovery plan found. Ask your care team or start one in the Recovery section.' };
+      return {
+        message: 'No active recovery plan found. Recovery plans are created by specialists — the patient should book an appointment to get a personalised recovery plan.',
+        action: 'Suggest: [[Book an appointment with a specialist|book_appointment]]',
+      };
     }
 
     return {

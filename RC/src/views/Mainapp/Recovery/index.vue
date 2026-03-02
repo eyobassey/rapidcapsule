@@ -225,6 +225,66 @@
             </div>
           </div>
 
+          <!-- Recovery Plan Card -->
+          <div class="bento-card" @click="navigateTo('plan')">
+            <div class="bento-card__header">
+              <h3>Recovery Plan</h3>
+              <span class="bento-card__period">Stages & Goals</span>
+            </div>
+            <div class="bento-card__content">
+              <p class="bento-card__desc">View your personalised treatment plan, track goals, and monitor progress.</p>
+            </div>
+            <v-icon name="hi-arrow-right" scale="1" class="bento-card__nav" />
+          </div>
+
+          <!-- Group Sessions Card -->
+          <div class="bento-card" @click="navigateTo('group-sessions')">
+            <div class="bento-card__header">
+              <h3>Group Sessions</h3>
+              <span class="bento-card__period">Peer Support</span>
+            </div>
+            <div class="bento-card__content">
+              <p class="bento-card__desc">Join group therapy sessions and connect with others in recovery.</p>
+            </div>
+            <v-icon name="hi-arrow-right" scale="1" class="bento-card__nav" />
+          </div>
+
+          <!-- Peer Support Card -->
+          <div class="bento-card" @click="navigateTo('peer-support')">
+            <div class="bento-card__header">
+              <h3>Peer Support</h3>
+              <span class="bento-card__period">1-to-1</span>
+            </div>
+            <div class="bento-card__content">
+              <p class="bento-card__desc">Connect with your assigned peer supporter and log check-ins.</p>
+            </div>
+            <v-icon name="hi-arrow-right" scale="1" class="bento-card__nav" />
+          </div>
+
+          <!-- MAT Card -->
+          <div class="bento-card" @click="navigateTo('mat')">
+            <div class="bento-card__header">
+              <h3>Medication</h3>
+              <span class="bento-card__period">MAT</span>
+            </div>
+            <div class="bento-card__content">
+              <p class="bento-card__desc">Track MAT medications, compliance, and treatment protocols.</p>
+            </div>
+            <v-icon name="hi-arrow-right" scale="1" class="bento-card__nav" />
+          </div>
+
+          <!-- Harm Reduction Card -->
+          <div class="bento-card" @click="navigateTo('harm-reduction')">
+            <div class="bento-card__header">
+              <h3>Harm Reduction</h3>
+              <span class="bento-card__period">Safety</span>
+            </div>
+            <div class="bento-card__content">
+              <p class="bento-card__desc">Evidence-based safer use guidance, overdose prevention, and resources.</p>
+            </div>
+            <v-icon name="hi-arrow-right" scale="1" class="bento-card__nav" />
+          </div>
+
           <!-- Programme Settings Card -->
           <div class="bento-card" @click="showProgrammeSettings = true">
             <div class="bento-card__header">
@@ -262,7 +322,7 @@
           </div>
 
           <!-- Crisis Button -->
-          <div class="bento-card bento-card--full-width bento-card--crisis" @click="showCrisis = true">
+          <div class="bento-card bento-card--full-width bento-card--crisis" @click="navigateTo('crisis')">
             <div class="bento-card__crisis-content">
               <v-icon name="hi-phone" scale="1.4" />
               <div>
@@ -319,6 +379,30 @@
       v-if="activeView === 'programme-history'"
       @back="activeView = null"
     />
+    <PlanOverview
+      v-if="activeView === 'plan'"
+      @back="activeView = null"
+    />
+    <GroupSessions
+      v-if="activeView === 'group-sessions'"
+      @back="activeView = null"
+    />
+    <PeerSupport
+      v-if="activeView === 'peer-support'"
+      @back="activeView = null"
+    />
+    <MATDashboard
+      v-if="activeView === 'mat'"
+      @back="activeView = null"
+    />
+    <HarmReduction
+      v-if="activeView === 'harm-reduction'"
+      @back="activeView = null"
+    />
+    <CrisisScreen
+      v-if="activeView === 'crisis'"
+      @back="activeView = null"
+    />
 
     <!-- Programme Settings Overlay -->
     <ProgrammeSettings
@@ -336,6 +420,12 @@
       mode="reenrol"
       @reenrolled="handleReenrolled"
       @close="showReenrol = false"
+    />
+
+    <!-- Persistent Crisis FAB (visible on all recovery views) -->
+    <CrisisButton
+      v-if="enrolled && activeView !== 'crisis'"
+      @activate="activeView = 'crisis'"
     />
   </div>
 </template>
@@ -358,6 +448,13 @@ import ScreeningHistory from "./parts/ScreeningHistory.vue";
 import ExerciseHistory from "./parts/ExerciseHistory.vue";
 import RiskHistory from "./parts/RiskHistory.vue";
 import ProgrammeHistory from "./parts/ProgrammeHistory.vue";
+import PlanOverview from "./parts/PlanOverview.vue";
+import GroupSessions from "./parts/GroupSessions.vue";
+import PeerSupport from "./parts/PeerSupport.vue";
+import MATDashboard from "./parts/MATDashboard.vue";
+import HarmReduction from "./parts/HarmReduction.vue";
+import CrisisScreen from "./parts/CrisisScreen.vue";
+import CrisisButton from "./parts/components/CrisisButton.vue";
 import EnrolHero from "./parts/components/EnrolHero.vue";
 import ProgrammeSettings from "./parts/components/ProgrammeSettings.vue";
 
@@ -422,7 +519,7 @@ const riskLabel = computed(() => {
 
 const latestScreening = computed(() => dashboard.value.screenings?.latest);
 const screeningInstrumentName = computed(() => {
-  const names = { audit: "AUDIT", dast10: "DAST-10", cage: "CAGE", assist: "ASSIST" };
+  const names = { audit: "AUDIT", dast10: "DAST-10", cage: "CAGE", assist: "ASSIST", cows: "COWS", ciwa_ar: "CIWA-Ar" };
   return names[latestScreening.value?.instrument] || "";
 });
 const recentMilestones = computed(() => dashboard.value.milestones?.recent || []);

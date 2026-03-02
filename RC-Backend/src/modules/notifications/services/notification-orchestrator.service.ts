@@ -227,6 +227,9 @@ export class NotificationOrchestratorService {
       [NotificationType.RECOVERY_RISK_HIGH]: 'health_reminders',
       [NotificationType.RECOVERY_RISK_CRITICAL]: 'vitals_alerts',
       [NotificationType.RECOVERY_RISK_IMPROVED]: 'health_reminders',
+      [NotificationType.RECOVERY_CHECK_IN_REMINDER]: 'health_reminders',
+      [NotificationType.RECOVERY_MILESTONE_ACHIEVED]: 'health_reminders',
+      [NotificationType.RECOVERY_MAT_COMPLIANCE_WARNING]: 'vitals_alerts',
     };
 
     return mapping[type] || 'appointment_updates';

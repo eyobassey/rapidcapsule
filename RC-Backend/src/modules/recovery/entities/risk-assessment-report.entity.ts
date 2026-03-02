@@ -31,7 +31,7 @@ export class RiskAssessmentReport {
   top_factors: Record<string, any>[];
 
   @Prop(raw({
-    direction: { type: String, enum: ['increasing', 'decreasing', 'stable'] },
+    direction: { type: String, enum: ['increasing', 'decreasing', 'stable', 'up', 'down'] },
     change_7d: { type: Number },
     change_30d: { type: Number },
   }))

@@ -92,157 +92,168 @@
         </button>
       </div>
 
-      <!-- Bento Grid Layout -->
-      <div v-if="vitalList.length" class="bento-grid">
-        <!-- Left Column: Vitals Cards -->
-        <div class="bento-vitals">
-          <div class="bento-card bento-card--vitals">
-            <div class="bento-card__header">
-              <h3>Your Vitals</h3>
-              <button
-                v-if="vitalList.length < 5"
-                class="add-btn"
-                @click="openAddModal"
-              >
-                <v-icon name="hi-plus" scale="0.8" />
-                <span>Add</span>
+      <!-- Wellness Dashboard -->
+      <div v-if="vitalList.length" class="wellness">
+        <!-- Section Header -->
+        <div class="wellness-header">
+          <h2 class="wellness-header__title">Daily Wellness</h2>
+          <div class="wellness-header__right">
+            <button v-if="vitalList.length < 20" class="wl-add-btn" @click="openAddModal">
+              <v-icon name="hi-plus" scale="0.8" />
+              <span>Add Vital</span>
+            </button>
+            <button class="wl-icon-btn" @click="downloadChart" title="Download">
+              <v-icon name="hi-download" scale="0.85" />
+            </button>
+            <button class="wl-icon-btn" @click="handleShareChartURL" title="Share">
+              <v-icon name="hi-share" scale="0.85" />
+            </button>
+          </div>
+        </div>
+
+        <!-- Score Cards (Top 3 Vitals) -->
+        <div class="score-row">
+          <div
+            v-for="(vital, idx) in topThreeVitals"
+            :key="vital.name"
+            class="score-card"
+            :class="{ 'score-card--active': activeVitalChart === vital.name }"
+            @click="selectedVitalHandler(vital.name)"
+          >
+            <div class="score-card__top">
+              <span class="score-card__name">{{ vital.name }}</span>
+              <button class="score-card__edit" @click.stop="updateVital(vital)" title="Update">
+                <v-icon name="hi-pencil" scale="0.6" />
               </button>
             </div>
-            <div class="vitals-mini-grid">
-              <div
-                v-for="(vital, index) in recentvitalarray"
-                :key="index"
-                class="vital-mini"
-                :class="getVitalColorClass(vital.name)"
-                @click="updateVital(vital)"
-              >
-                <div class="vital-mini__icon">
-                  <v-icon :name="getVitalIcon(vital.name)" scale="0.9" />
-                </div>
-                <div class="vital-mini__info">
-                  <span class="vital-mini__label">{{ getShortName(vital.name) }}</span>
-                  <div class="vital-mini__value">
-                    <span class="value">{{ vital.value }}</span>
-                    <span class="unit">{{ vital.unit }}</span>
-                  </div>
-                </div>
-                <div class="vital-mini__status" :class="getVitalStatusClass(vital)">
-                  <v-icon :name="getStatusIcon(vital)" scale="0.6" />
-                </div>
+            <div class="score-card__mid">
+              <div class="score-card__numbers">
+                <span class="score-card__val">{{ vital.value }}</span>
+                <span class="score-card__unit">{{ vital.unit }}</span>
               </div>
-
-              <!-- BMI Mini -->
-              <div v-if="bmiData" class="vital-mini vital-mini--bmi">
-                <div class="vital-mini__icon">
-                  <v-icon name="hi-scale" scale="0.9" />
-                </div>
-                <div class="vital-mini__info">
-                  <span class="vital-mini__label">BMI</span>
-                  <div class="vital-mini__value">
-                    <span class="value">{{ bmiData.value }}</span>
-                    <span class="unit">kg/m²</span>
-                  </div>
-                </div>
-                <div class="vital-mini__status" :class="bmiData.status">
-                  <span class="bmi-cat">{{ bmiData.category }}</span>
-                </div>
+              <div class="score-card__spark" :class="getVitalColorClass(vital.name)">
+                <svg viewBox="0 0 80 32" preserveAspectRatio="none">
+                  <path :d="getSparklinePath(idx)" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
               </div>
+            </div>
+            <div class="score-card__badge" :class="getVitalStatusClass(vital)">
+              <v-icon :name="getStatusIcon(vital)" scale="0.5" />
+              <span>{{ getStatusText(vital) }}</span>
             </div>
           </div>
+        </div>
 
-          <!-- Normal Ranges Card -->
-          <div class="bento-card bento-card--reference">
-            <div class="bento-card__header">
-              <h3>Normal Ranges</h3>
+        <!-- Lifestyle & Metrics -->
+        <div v-if="remainingVitals.length || bmiData" class="lifestyle-section">
+          <div class="lifestyle-section__head">
+            <h3>Lifestyle &amp; Metrics</h3>
+          </div>
+          <div class="lifestyle-grid">
+            <div
+              v-for="vital in remainingVitals"
+              :key="vital.name"
+              class="lifestyle-card"
+              :class="{ 'lifestyle-card--active': activeVitalChart === vital.name }"
+              @click="selectedVitalHandler(vital.name)"
+            >
+              <div class="lifestyle-card__top">
+                <div class="lifestyle-card__icon" :class="getVitalColorClass(vital.name)">
+                  <v-icon :name="getVitalIcon(vital.name)" scale="0.85" />
+                </div>
+                <button class="lifestyle-card__edit" @click.stop="updateVital(vital)" title="Update">
+                  <v-icon name="hi-pencil" scale="0.55" />
+                </button>
+              </div>
+              <span class="lifestyle-card__label">{{ vital.name }}</span>
+              <div class="lifestyle-card__value-row">
+                <span class="lifestyle-card__val">{{ vital.value }}</span>
+                <span class="lifestyle-card__unit">{{ vital.unit }}</span>
+              </div>
+              <div class="lifestyle-card__bar">
+                <div
+                  class="lifestyle-card__bar-fill"
+                  :class="getVitalStatusClass(vital)"
+                  :style="{ width: getProgressPercent(vital) + '%' }"
+                ></div>
+              </div>
+              <div class="lifestyle-card__status" :class="getVitalStatusClass(vital)">
+                <v-icon :name="getStatusIcon(vital)" scale="0.5" />
+                <span>{{ getStatusText(vital) }}</span>
+              </div>
             </div>
-            <div class="reference-mini-grid">
-              <div class="ref-mini">
-                <div class="ref-mini__icon vital--temp">
-                  <v-icon name="fa-thermometer-half" scale="0.7" />
-                </div>
-                <div class="ref-mini__text">
-                  <span class="ref-mini__name">Temp</span>
-                  <span class="ref-mini__range">36.1-37.2°C</span>
+
+            <!-- BMI Card -->
+            <div v-if="bmiData" class="lifestyle-card lifestyle-card--bmi">
+              <div class="lifestyle-card__top">
+                <div class="lifestyle-card__icon vital--bmi">
+                  <v-icon name="hi-scale" scale="0.85" />
                 </div>
               </div>
-              <div class="ref-mini">
-                <div class="ref-mini__icon vital--pulse">
-                  <v-icon name="hi-heart" scale="0.7" />
-                </div>
-                <div class="ref-mini__text">
-                  <span class="ref-mini__name">Pulse</span>
-                  <span class="ref-mini__range">60-100 bpm</span>
-                </div>
+              <span class="lifestyle-card__label">BMI</span>
+              <div class="lifestyle-card__value-row">
+                <span class="lifestyle-card__val">{{ bmiData.value }}</span>
+                <span class="lifestyle-card__unit">kg/m²</span>
               </div>
-              <div class="ref-mini">
-                <div class="ref-mini__icon vital--pressure">
-                  <v-icon name="fa-heartbeat" scale="0.7" />
-                </div>
-                <div class="ref-mini__text">
-                  <span class="ref-mini__name">BP</span>
-                  <span class="ref-mini__range">90-120/60-80</span>
-                </div>
+              <div class="lifestyle-card__bar">
+                <div
+                  class="lifestyle-card__bar-fill"
+                  :class="bmiData.status"
+                  :style="{ width: ((bmiData.value / 40) * 100) + '%' }"
+                ></div>
               </div>
-              <div class="ref-mini">
-                <div class="ref-mini__icon vital--sugar">
-                  <v-icon name="bi-droplet-fill" scale="0.7" />
-                </div>
-                <div class="ref-mini__text">
-                  <span class="ref-mini__name">Sugar</span>
-                  <span class="ref-mini__range">70-100 mg/dL</span>
-                </div>
+              <div class="lifestyle-card__cat-badge" :class="bmiData.status">
+                {{ bmiData.category }}
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Right Column: Chart (Main Focus) -->
-        <div class="bento-chart">
-          <div class="bento-card bento-card--chart">
-            <div class="chart-header">
-              <div class="chart-header__title">
-                <h3>Vital Trends</h3>
-                <p>Health data patterns over time</p>
-              </div>
-              <div class="chart-header__actions">
-                <button class="icon-btn" @click="downloadChart" title="Download">
-                  <v-icon name="hi-download" scale="0.85" />
-                </button>
-                <button class="icon-btn" @click="handleShareChartURL" title="Share">
-                  <v-icon name="hi-share" scale="0.85" />
-                </button>
-              </div>
+        <!-- Chart Panel -->
+        <div class="chart-section">
+          <div class="chart-section__head">
+            <div>
+              <h3 class="chart-section__title">Vital Trends</h3>
+              <p class="chart-section__sub">Health data patterns over time</p>
             </div>
-            <div class="chart-tabs">
-              <button
-                v-for="vital in vitalList"
-                :key="vital"
-                class="chart-tab"
-                :class="{ active: activeVitalChart === vital }"
-                @click="selectedVitalHandler(vital)"
-              >
-                <v-icon :name="getVitalIcon(vital)" scale="0.75" />
-                <span>{{ getShortName(vital) }}</span>
+            <div class="chart-section__actions">
+              <button class="wl-icon-btn" @click="downloadChart" title="Download">
+                <v-icon name="hi-download" scale="0.85" />
+              </button>
+              <button class="wl-icon-btn" @click="handleShareChartURL" title="Share">
+                <v-icon name="hi-share" scale="0.85" />
               </button>
             </div>
-            <div class="chart-area">
-              <Chart
-                ref="chartComponent"
-                :chartData="data"
-                :chartType="chart_type"
-                :selectedVital="activeVitalChart"
-                :patientName="patientFullName"
-              />
+          </div>
+          <div class="chart-section__tabs">
+            <button
+              v-for="vital in vitalList"
+              :key="vital"
+              class="chart-tab"
+              :class="{ active: activeVitalChart === vital }"
+              @click="selectedVitalHandler(vital)"
+            >
+              <v-icon :name="getVitalIcon(vital)" scale="0.7" />
+              <span>{{ getShortName(vital) }}</span>
+            </button>
+          </div>
+          <div class="chart-section__canvas">
+            <Chart
+              ref="chartComponent"
+              :chartData="data"
+              :chartType="chart_type"
+              :selectedVital="activeVitalChart"
+              :patientName="patientFullName"
+            />
+          </div>
+          <div class="chart-legend" v-if="activeVitalChart === 'Blood Pressure'">
+            <div class="legend-item">
+              <span class="legend-dot systolic"></span>
+              <span>Systolic</span>
             </div>
-            <div class="chart-legend" v-if="activeVitalChart === 'Blood Pressure'">
-              <div class="legend-item">
-                <span class="legend-dot systolic"></span>
-                <span>Systolic</span>
-              </div>
-              <div class="legend-item">
-                <span class="legend-dot diastolic"></span>
-                <span>Diastolic</span>
-              </div>
+            <div class="legend-item">
+              <span class="legend-dot diastolic"></span>
+              <span>Diastolic</span>
             </div>
           </div>
         </div>
@@ -653,6 +664,14 @@ export default {
         status: this.getBMIStatus(bmi)
       };
     },
+
+    topThreeVitals() {
+      return this.recentvitalarray.slice(0, 3);
+    },
+
+    remainingVitals() {
+      return this.recentvitalarray.slice(3);
+    },
   },
 
   methods: {
@@ -664,6 +683,26 @@ export default {
 
     goToNotifications() {
       this.$router.push('/app/patient/notifications');
+    },
+
+    getSparklinePath(index) {
+      const paths = [
+        'M2,24 L12,20 L22,22 L32,16 L42,18 L52,10 L62,12 L72,6 L78,8',
+        'M2,28 L12,24 L22,26 L32,18 L42,22 L52,14 L62,10 L72,16 L78,6',
+        'M2,20 L12,22 L22,16 L32,24 L42,14 L52,20 L62,12 L72,8 L78,10',
+      ];
+      return paths[index % paths.length];
+    },
+
+    getProgressPercent(vital) {
+      const value = parseFloat(vital.value);
+      const range = this.normalRanges[vital.name];
+      if (!range || !range.min) return 50;
+      if (vital.name === 'Blood Pressure') return 50;
+      const span = range.max - range.min;
+      if (span <= 0) return 50;
+      const pct = ((value - range.min) / span) * 100;
+      return Math.max(5, Math.min(100, pct));
     },
 
     getVitalIcon(name) {
@@ -1232,11 +1271,11 @@ export default {
           maxBarThickness: 24,
         });
       }
-      // Sleep - Bar chart with indigo color
+      // Sleep - Bar chart with indigo color (sum all sleep sessions per day)
       else if (this.query1 === "sleep") {
         const sleepData = chartdata.map((row) => {
           const values = row.data.map((item) => parseFloat(item.value));
-          return (values.reduce((a, b) => a + b, 0) / values.length).toFixed(1);
+          return values.reduce((a, b) => a + b, 0).toFixed(1);
         });
         valueSet.push({
           label: "Sleep",
@@ -1491,6 +1530,14 @@ export default {
     },
   },
 
+  mounted() {
+    // Ensure page starts at top (parent .content is the scroll container)
+    this.$nextTick(() => {
+      const scrollParent = this.$el.closest('.content') || this.$el.parentElement;
+      if (scrollParent) scrollParent.scrollTop = 0;
+    });
+  },
+
   watch: {
     selectedVital(newVal) {
       if (newVal && this.modalType === "add") {
@@ -1548,13 +1595,9 @@ $violet-light: #EDE9FE;
 
 // Page Layout
 .vitals-page {
-  display: flex;
-  flex-direction: column;
-  flex-grow: 1;
-  background: $bg;
-  min-height: 100vh;
-  overflow-x: hidden;
   width: 100%;
+  min-height: 100vh;
+  background: $bg;
 }
 
 // Mobile Header
@@ -1621,20 +1664,12 @@ $violet-light: #EDE9FE;
 }
 
 .page-content {
-  flex: 1;
-  width: 100%;
   max-width: 1400px;
   margin: 0 auto;
-  padding: 1.5rem 2rem 100px;
-  overflow-x: hidden;
-  box-sizing: border-box;
+  padding: 24px 32px 100px;
 
   @media (max-width: 768px) {
-    padding: 1rem 1rem 100px;
-  }
-
-  @media (max-width: 375px) {
-    padding: 0.75rem 0.75rem 100px;
+    padding: 16px 16px 100px;
   }
 }
 
@@ -1649,8 +1684,10 @@ $violet-light: #EDE9FE;
   background: linear-gradient(135deg, $sky 0%, $sky-dark 50%, $sky-darker 100%);
   border-radius: 24px;
   position: relative;
+  z-index: 2;
   overflow: hidden;
   margin-bottom: 24px;
+  flex-shrink: 0;
   box-shadow:
     0 20px 60px rgba(2, 136, 209, 0.3),
     0 0 0 1px rgba(255, 255, 255, 0.1) inset;
@@ -2133,182 +2170,224 @@ $violet-light: #EDE9FE;
 }
 
 // ============================================
-// BENTO GRID LAYOUT
+// WELLNESS DASHBOARD
 // ============================================
-.bento-grid {
-  display: grid;
-  grid-template-columns: 320px 1fr;
-  gap: 20px;
-  width: 100%;
-
-  @media (max-width: 1024px) {
-    grid-template-columns: 280px 1fr;
-    gap: 16px;
-  }
-
-  @media (max-width: 768px) {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-}
-
-.bento-vitals {
+.wellness {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-
-  @media (max-width: 768px) {
-    order: 2;
-  }
+  gap: 24px;
 }
 
-.bento-chart {
-  min-width: 0;
-
-  @media (max-width: 768px) {
-    order: 1;
-  }
-}
-
-.bento-card {
-  @include glass-card;
-  padding: 16px;
-  height: fit-content;
-
-  &__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 12px;
-
-    h3 {
-      font-size: 14px;
-      font-weight: 600;
-      color: $navy;
-      margin: 0;
-    }
-  }
-
-  // Vitals Card
-  &--vitals {
-    .add-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      padding: 6px 10px;
-      background: $sky-light;
-      border: none;
-      border-radius: 8px;
-      font-size: 12px;
-      font-weight: 600;
-      color: $sky-dark;
-      cursor: pointer;
-      transition: all 0.2s;
-
-      &:hover {
-        background: $sky;
-        color: white;
-      }
-    }
-  }
-
-  // Reference Card
-  &--reference {
-    @media (max-width: 768px) {
-      display: none;
-    }
-  }
-
-  // Chart Card
-  &--chart {
-    padding: 20px;
-    height: 100%;
-    min-height: 450px;
-    display: flex;
-    flex-direction: column;
-
-    @media (max-width: 768px) {
-      min-height: 380px;
-      padding: 16px;
-    }
-  }
-}
-
-// Vitals Mini Grid
-.vitals-mini-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.vital-mini {
+// Section Header
+.wellness-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
   gap: 12px;
-  padding: 12px;
-  background: $bg;
-  border-radius: 12px;
+
+  &__title {
+    font-size: 22px;
+    font-weight: 700;
+    color: $navy;
+    margin: 0;
+  }
+
+  &__right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+}
+
+.wl-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  background: $sky-light;
+  border: none;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: $sky-dark;
   cursor: pointer;
   transition: all 0.2s;
 
   &:hover {
-    background: darken($bg, 2%);
-    transform: translateX(4px);
+    background: $sky;
+    color: white;
+  }
+}
+
+.wl-icon-btn {
+  width: 36px;
+  height: 36px;
+  background: rgba(0, 0, 0, 0.04);
+  border: none;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: $gray;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: $sky-light;
+    color: $sky-dark;
+  }
+}
+
+// ============================================
+// SCORE CARDS (Top 3 Vitals)
+// ============================================
+.score-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: 12px;
   }
 
-  &__icon {
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
+  @media (min-width: 769px) and (max-width: 1024px) {
+    gap: 12px;
+  }
+}
+
+.score-card {
+  @include glass-card;
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  position: relative;
+
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.03);
+  }
+
+  &--active {
+    border-color: rgba($sky, 0.5);
+    box-shadow: 0 4px 20px rgba($sky, 0.12), 0 1px 2px rgba(0, 0, 0, 0.02);
+  }
+
+  &__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  &__name {
+    font-size: 13px;
+    font-weight: 500;
+    color: $gray;
+  }
+
+  &__edit {
+    width: 28px;
+    height: 28px;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: white;
-    flex-shrink: 0;
+    color: $light-gray;
+    cursor: pointer;
+    opacity: 0;
+    transition: all 0.2s;
+
+    .score-card:hover & {
+      opacity: 1;
+    }
+
+    &:hover {
+      background: $sky-light;
+      color: $sky-dark;
+    }
   }
 
-  &__info {
-    flex: 1;
-    min-width: 0;
+  &__mid {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
   }
 
-  &__label {
-    display: block;
-    font-size: 11px;
-    color: $gray;
-    margin-bottom: 2px;
-  }
-
-  &__value {
+  &__numbers {
     display: flex;
     align-items: baseline;
-    gap: 4px;
+    gap: 6px;
+  }
 
-    .value {
-      font-size: 18px;
-      font-weight: 700;
-      color: $navy;
-      line-height: 1;
-    }
+  &__val {
+    font-size: 36px;
+    font-weight: 700;
+    color: $navy;
+    line-height: 1;
+    letter-spacing: -0.5px;
 
-    .unit {
-      font-size: 11px;
-      color: $gray;
+    @media (max-width: 768px) {
+      font-size: 30px;
     }
   }
 
-  &__status {
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  &__unit {
+    font-size: 14px;
+    color: $gray;
+    font-weight: 500;
+  }
+
+  &__spark {
+    width: 80px;
+    height: 32px;
     flex-shrink: 0;
+
+    svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    &.vital--temp { color: #f97316; }
+    &.vital--weight { color: #8b5cf6; }
+    &.vital--pulse { color: $sky; }
+    &.vital--sugar { color: #0ea5e9; }
+    &.vital--pressure { color: #ec4899; }
+    &.vital--spo2 { color: #14b8a6; }
+    &.vital--steps { color: #22c55e; }
+    &.vital--sleep { color: #6366f1; }
+    &.vital--calories { color: #ef4444; }
+    &.vital--distance { color: #3b82f6; }
+    &.vital--respiratory { color: #06b6d4; }
+    &.vital--stress { color: #f43f5e; }
+    &.vital--bodyfat { color: #f59e0b; }
+    &.vital--activemins { color: #10b981; }
+    &.vital--hydration { color: #38bdf8; }
+    &.vital--muscle { color: #a855f7; }
+    &.vital--bone { color: #78716c; }
+    &.vital--bodywater { color: #22d3ee; }
+    &.vital--visceral { color: #fb923c; }
+    &.vital--bmr { color: #dc2626; }
+  }
+
+  &__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 12px;
+    border-radius: 20px;
+    width: fit-content;
 
     &.status--normal {
       background: $emerald-light;
-      color: darken($emerald, 5%);
+      color: darken($emerald, 10%);
     }
 
     &.status--high {
@@ -2318,72 +2397,74 @@ $violet-light: #EDE9FE;
 
     &.status--low {
       background: $amber-light;
-      color: darken($amber, 5%);
+      color: darken($amber, 10%);
     }
+  }
+}
 
-    .bmi-cat {
-      font-size: 8px;
+// ============================================
+// LIFESTYLE & METRICS (Remaining Vitals)
+// ============================================
+.lifestyle-section {
+  &__head {
+    margin-bottom: 16px;
+
+    h3 {
+      font-size: 18px;
       font-weight: 700;
-      text-transform: uppercase;
-    }
-  }
-
-  // Color variants
-  &.vital--temp .vital-mini__icon { background: linear-gradient(135deg, #f97316, #ea580c); }
-  &.vital--weight .vital-mini__icon { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
-  &.vital--pulse .vital-mini__icon { background: linear-gradient(135deg, $sky, $sky-dark); }
-  &.vital--sugar .vital-mini__icon { background: linear-gradient(135deg, #0ea5e9, #0284c7); }
-  &.vital--pressure .vital-mini__icon { background: linear-gradient(135deg, #ec4899, #db2777); }
-  &.vital--spo2 .vital-mini__icon { background: linear-gradient(135deg, #14b8a6, #0d9488); }
-  &.vital--steps .vital-mini__icon { background: linear-gradient(135deg, #22c55e, #16a34a); }
-  &.vital--sleep .vital-mini__icon { background: linear-gradient(135deg, #6366f1, #4f46e5); }
-  &.vital--calories .vital-mini__icon { background: linear-gradient(135deg, #ef4444, #dc2626); }
-  &.vital--distance .vital-mini__icon { background: linear-gradient(135deg, #3b82f6, #2563eb); }
-  &.vital--respiratory .vital-mini__icon { background: linear-gradient(135deg, #06b6d4, #0891b2); }
-  &.vital--stress .vital-mini__icon { background: linear-gradient(135deg, #f43f5e, #e11d48); }
-  &.vital--bodyfat .vital-mini__icon { background: linear-gradient(135deg, #f59e0b, #d97706); }
-  &.vital--activemins .vital-mini__icon { background: linear-gradient(135deg, #10b981, #059669); }
-  &.vital--hydration .vital-mini__icon { background: linear-gradient(135deg, #38bdf8, #0284c7); }
-  &.vital--muscle .vital-mini__icon { background: linear-gradient(135deg, #a855f7, #9333ea); }
-  &.vital--bone .vital-mini__icon { background: linear-gradient(135deg, #78716c, #57534e); }
-  &.vital--bodywater .vital-mini__icon { background: linear-gradient(135deg, #22d3ee, #06b6d4); }
-  &.vital--visceral .vital-mini__icon { background: linear-gradient(135deg, #fb923c, #ea580c); }
-  &.vital--bmr .vital-mini__icon { background: linear-gradient(135deg, #dc2626, #b91c1c); }
-
-  &--bmi {
-    .vital-mini__icon {
-      background: linear-gradient(135deg, #14b8a6, #0d9488);
-    }
-
-    .vital-mini__status {
-      width: auto;
-      padding: 4px 8px;
-      border-radius: 6px;
-      font-size: 10px;
-      font-weight: 600;
+      color: $navy;
+      margin: 0;
     }
   }
 }
 
-// Reference Mini Grid
-.reference-mini-grid {
+.lifestyle-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+
+  @media (max-width: 1024px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (max-width: 640px) {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  @media (max-width: 420px) {
+    grid-template-columns: 1fr;
+  }
 }
 
-.ref-mini {
+.lifestyle-card {
+  @include glass-card;
+  padding: 18px;
+  cursor: pointer;
+  transition: all 0.25s ease;
   display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px;
-  background: $bg;
-  border-radius: 10px;
+  flex-direction: column;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.02);
+  }
+
+  &--active {
+    border-color: rgba($sky, 0.5);
+  }
+
+  &__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
 
   &__icon {
-    width: 28px;
-    height: 28px;
-    border-radius: 8px;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2391,9 +2472,10 @@ $violet-light: #EDE9FE;
     flex-shrink: 0;
 
     &.vital--temp { background: linear-gradient(135deg, #f97316, #ea580c); }
+    &.vital--weight { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
     &.vital--pulse { background: linear-gradient(135deg, $sky, $sky-dark); }
-    &.vital--pressure { background: linear-gradient(135deg, #ec4899, #db2777); }
     &.vital--sugar { background: linear-gradient(135deg, #0ea5e9, #0284c7); }
+    &.vital--pressure { background: linear-gradient(135deg, #ec4899, #db2777); }
     &.vital--spo2 { background: linear-gradient(135deg, #14b8a6, #0d9488); }
     &.vital--steps { background: linear-gradient(135deg, #22c55e, #16a34a); }
     &.vital--sleep { background: linear-gradient(135deg, #6366f1, #4f46e5); }
@@ -2409,88 +2491,179 @@ $violet-light: #EDE9FE;
     &.vital--bodywater { background: linear-gradient(135deg, #22d3ee, #06b6d4); }
     &.vital--visceral { background: linear-gradient(135deg, #fb923c, #ea580c); }
     &.vital--bmr { background: linear-gradient(135deg, #dc2626, #b91c1c); }
+    &.vital--bmi { background: linear-gradient(135deg, #14b8a6, #0d9488); }
   }
 
-  &__text {
+  &__edit {
+    width: 26px;
+    height: 26px;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
     display: flex;
-    flex-direction: column;
-    min-width: 0;
+    align-items: center;
+    justify-content: center;
+    color: $light-gray;
+    cursor: pointer;
+    opacity: 0;
+    transition: all 0.2s;
+
+    .lifestyle-card:hover & {
+      opacity: 1;
+    }
+
+    &:hover {
+      background: $sky-light;
+      color: $sky-dark;
+    }
   }
 
-  &__name {
+  &__label {
+    font-size: 12px;
+    font-weight: 500;
+    color: $gray;
+    margin-bottom: 4px;
+  }
+
+  &__value-row {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    margin-bottom: 12px;
+  }
+
+  &__val {
+    font-size: 24px;
+    font-weight: 700;
+    color: $navy;
+    line-height: 1;
+
+    @media (max-width: 640px) {
+      font-size: 20px;
+    }
+  }
+
+  &__unit {
+    font-size: 12px;
+    color: $gray;
+    font-weight: 500;
+  }
+
+  &__bar {
+    height: 6px;
+    background: rgba(0, 0, 0, 0.06);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 10px;
+  }
+
+  &__bar-fill {
+    height: 100%;
+    border-radius: 10px;
+    transition: width 0.6s ease;
+
+    &.status--normal { background: linear-gradient(90deg, lighten($emerald, 10%), $emerald); }
+    &.status--high { background: linear-gradient(90deg, lighten($rose, 10%), $rose); }
+    &.status--low { background: linear-gradient(90deg, lighten($amber, 10%), $amber); }
+  }
+
+  &__status {
+    display: flex;
+    align-items: center;
+    gap: 4px;
     font-size: 11px;
     font-weight: 600;
-    color: $slate;
+
+    &.status--normal { color: $emerald; }
+    &.status--high { color: $rose; }
+    &.status--low { color: $amber; }
   }
 
-  &__range {
-    font-size: 10px;
-    color: $gray;
-    white-space: nowrap;
+  &__cat-badge {
+    display: inline-flex;
+    align-items: center;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 20px;
+    width: fit-content;
+
+    &.status--normal { background: $emerald-light; color: darken($emerald, 10%); }
+    &.status--high { background: $rose-light; color: $rose; }
+    &.status--low { background: $amber-light; color: darken($amber, 10%); }
   }
 }
 
 // ============================================
-// CHART SECTION (BENTO)
+// CHART SECTION
 // ============================================
-.chart-header {
+.chart-section {
+  @include glass-card;
+  padding: 24px;
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  margin-bottom: 16px;
+  flex-direction: column;
+
+  @media (max-width: 768px) {
+    padding: 16px;
+  }
+
+  &__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
 
   &__title {
-    h3 {
-      font-size: 16px;
-      font-weight: 600;
-      color: $navy;
-      margin: 0 0 4px;
-    }
+    font-size: 18px;
+    font-weight: 700;
+    color: $navy;
+    margin: 0 0 4px;
+  }
 
-    p {
-      font-size: 13px;
-      color: $gray;
-      margin: 0;
-    }
+  &__sub {
+    font-size: 13px;
+    color: $gray;
+    margin: 0;
   }
 
   &__actions {
     display: flex;
     gap: 8px;
   }
-}
 
-.icon-btn {
-  width: 32px;
-  height: 32px;
-  background: $bg;
-  border: none;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: $gray;
-  cursor: pointer;
-  transition: all 0.2s;
+  &__tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    padding-bottom: 4px;
 
-  &:hover {
-    background: $sky;
-    color: white;
+    &::-webkit-scrollbar {
+      display: none;
+    }
   }
-}
 
-.chart-tabs {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 16px;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  padding-bottom: 4px;
+  &__canvas {
+    flex: 1;
+    background: $bg;
+    border-radius: 12px;
+    overflow: hidden;
+    min-height: 340px;
+    display: flex;
+    flex-direction: column;
 
-  &::-webkit-scrollbar {
-    display: none;
+    :deep(.chart-wrapper) {
+      flex: 1;
+      min-height: 100%;
+    }
+
+    @media (max-width: 768px) {
+      min-height: 280px;
+    }
   }
 }
 
@@ -2522,26 +2695,6 @@ $violet-light: #EDE9FE;
   }
 }
 
-.chart-area {
-  flex: 1;
-  background: $bg;
-  border-radius: 12px;
-  overflow: hidden;
-  min-height: 320px;
-  display: flex;
-  flex-direction: column;
-
-  // Ensure chart component fills the container
-  :deep(.chart-wrapper) {
-    flex: 1;
-    min-height: 100%;
-  }
-
-  @media (max-width: 768px) {
-    min-height: 280px;
-  }
-}
-
 .chart-legend {
   display: flex;
   align-items: center;
@@ -2564,13 +2717,8 @@ $violet-light: #EDE9FE;
       border-radius: 50%;
       flex-shrink: 0;
 
-      &.systolic {
-        background: $sky;
-      }
-
-      &.diastolic {
-        background: $rose;
-      }
+      &.systolic { background: $sky; }
+      &.diastolic { background: $rose; }
     }
   }
 }

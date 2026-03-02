@@ -100,6 +100,44 @@ export class RecoveryCompanionController {
   }
 
   @ApiOperation({
+    summary: 'Get daily check-in prompt',
+    description:
+      'Returns a personalised daily check-in prompt based on the patient\'s recovery stage, recent mood/craving trends, and time since last check-in.',
+  })
+  @ApiResponse({ status: 200, description: 'Personalised check-in prompt returned' })
+  @Get('check-in-prompt')
+  async getDailyCheckInPrompt(@Request() req) {
+    const result = await this.companionService.getDailyCheckInPrompt(
+      req.user.sub,
+    );
+    return sendSuccessResponse(Messages.RETRIEVED, result);
+  }
+
+  @ApiOperation({
+    summary: 'Get guided meditation exercise',
+    description:
+      'Returns a text-based guided meditation or grounding exercise personalised to the patient\'s current recovery state. Automatically selects the most appropriate exercise type based on recent craving and anxiety levels.',
+  })
+  @ApiQuery({
+    name: 'duration',
+    required: false,
+    description: 'Preferred duration in minutes (default: 5)',
+    example: '5',
+  })
+  @ApiResponse({ status: 200, description: 'Guided meditation script returned' })
+  @Get('meditation')
+  async getGuidedMeditation(
+    @Query('duration') duration: string,
+    @Request() req,
+  ) {
+    const result = await this.companionService.getGuidedMeditation(
+      req.user.sub,
+      duration ? parseInt(duration) : 5,
+    );
+    return sendSuccessResponse(Messages.RETRIEVED, result);
+  }
+
+  @ApiOperation({
     summary: 'Get a companion conversation',
     description:
       'Retrieves the full conversation history for a specific companion session, including all messages, timestamps, and the session summary if ended.',

@@ -78,6 +78,36 @@ export default [
     ],
   },
   {
+    title: 'Recovery',
+    icon: { icon: 'mdi-heart-pulse' },
+    children: [
+      {
+        title: 'Dashboard',
+        to: { name: 'recovery' },
+      },
+      {
+        title: 'Patient Cohort',
+        to: { name: 'recovery-cohort' },
+      },
+      {
+        title: 'Crisis Events',
+        to: { name: 'recovery-crisis' },
+      },
+      {
+        title: 'Withdrawal',
+        to: { name: 'recovery-withdrawal' },
+      },
+      {
+        title: 'MAT Compliance',
+        to: { name: 'recovery-mat' },
+      },
+      {
+        title: 'Outcomes',
+        to: { name: 'recovery-outcomes' },
+      },
+    ],
+  },
+  {
     title: 'Messaging',
     to: { name: 'messaging' },
     icon: { icon: 'bx-message-square-dots' },

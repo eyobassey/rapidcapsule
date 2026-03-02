@@ -65,7 +65,7 @@ export class VitalsService {
 
   // Vitals where daily entries should be summed (not just show latest reading)
   private readonly cumulativeVitals = new Set([
-    'steps', 'calories_burned', 'active_minutes', 'distance',
+    'steps', 'calories_burned', 'active_minutes', 'distance', 'sleep',
   ]);
 
   async getMostRecentVitals(userId: Types.ObjectId) {
@@ -77,16 +77,32 @@ export class VitalsService {
         if (validEntries.length === 0) continue;
 
         if (this.cumulativeVitals.has(key)) {
-          // For cumulative vitals, sum today's entries
+          // For cumulative vitals, sum today's entries; if none, sum the most recent day
           const today = new Date();
           today.setHours(0, 0, 0, 0);
           const todayEntries = validEntries.filter(
             (v: any) => new Date(v.updatedAt) >= today,
           );
-          const entries = todayEntries.length > 0 ? todayEntries : [validEntries[validEntries.length - 1]];
+          let entries: any[];
+          if (todayEntries.length > 0) {
+            entries = todayEntries;
+          } else {
+            // Find the most recent day and sum all entries from that day
+            const lastEntry = validEntries[validEntries.length - 1];
+            const lastDay = new Date(lastEntry.updatedAt);
+            lastDay.setHours(0, 0, 0, 0);
+            const nextDay = new Date(lastDay);
+            nextDay.setDate(nextDay.getDate() + 1);
+            entries = validEntries.filter(
+              (v: any) => {
+                const d = new Date(v.updatedAt);
+                return d >= lastDay && d < nextDay;
+              },
+            );
+          }
           const sum = entries.reduce((acc, v: any) => acc + parseFloat(v.value || '0'), 0);
           const latest = entries.reduce((a, b) => (a.updatedAt > b.updatedAt ? a : b));
-          const rounded = key === 'distance' ? parseFloat(sum.toFixed(1)) : Math.round(sum);
+          const rounded = (key === 'distance' || key === 'sleep') ? parseFloat(sum.toFixed(1)) : Math.round(sum);
           recentVitals[key] = { value: String(rounded), unit: latest.unit, updatedAt: latest.updatedAt };
         } else {
           recentVitals[key] = validEntries.reduce((a, b) =>

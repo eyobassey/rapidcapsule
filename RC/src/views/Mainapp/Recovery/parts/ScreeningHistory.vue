@@ -109,6 +109,12 @@
             <span v-if="s.risk_zone_label" class="screening-card__risk-label">{{ s.risk_zone_label }}</span>
           </div>
 
+          <!-- Specialist badge for clinician-administered assessments -->
+          <div v-if="s.screening_type === 'specialist_administered' || s.administered_by" class="screening-card__specialist-badge">
+            <v-icon name="hi-user" scale="0.55" />
+            Specialist Administered
+          </div>
+
           <!-- AI Summary (collapsed) -->
           <p v-if="s.ai_interpretation?.content?.summary && expandedId !== s._id" class="screening-card__summary">
             {{ s.ai_interpretation.content.summary }}
@@ -116,7 +122,29 @@
 
           <!-- Expanded Details -->
           <div v-if="expandedId === s._id" class="screening-card__details">
-            <div v-if="s.ai_interpretation?.content" class="ai-section">
+            <!-- Withdrawal Clinical Action -->
+            <div v-if="isWithdrawalScale(s.instrument)" class="ai-section">
+              <div v-if="s.risk_zone_label" class="ai-section__block">
+                <h5>Severity</h5>
+                <p>{{ s.risk_zone_label }}</p>
+              </div>
+              <div v-if="getWithdrawalClinicalAction(s)" class="ai-section__block ai-section__block--clinical">
+                <h5>Clinical Recommendation</h5>
+                <p>{{ getWithdrawalClinicalAction(s) }}</p>
+              </div>
+              <div v-if="s.answers && Object.keys(s.answers).length" class="ai-section__block">
+                <h5>Item Scores</h5>
+                <div class="withdrawal-items">
+                  <div v-for="(val, key) in s.answers" :key="key" class="withdrawal-item">
+                    <span class="withdrawal-item__label">{{ formatItemId(key) }}</span>
+                    <span class="withdrawal-item__value">{{ val }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- AI Interpretation (self-reported screenings) -->
+            <div v-else-if="s.ai_interpretation?.content" class="ai-section">
               <div v-if="s.ai_interpretation.content.summary" class="ai-section__block">
                 <h5>Summary</h5>
                 <p>{{ s.ai_interpretation.content.summary }}</p>
@@ -145,6 +173,7 @@
             </div>
 
             <button
+              v-if="!isWithdrawalScale(s.instrument)"
               class="screening-card__view-report"
               @click.stop="openFullReport(s)"
             >
@@ -277,6 +306,8 @@ const tabs = [
   { key: "dast10", label: "DAST-10" },
   { key: "cage", label: "CAGE" },
   { key: "assist", label: "ASSIST" },
+  { key: "cows", label: "COWS" },
+  { key: "ciwa_ar", label: "CIWA-Ar" },
 ];
 
 const latestScreening = computed(() => screenings.value[0] || null);
@@ -291,12 +322,12 @@ function toggleExpand(id) {
 }
 
 function instrumentLabel(instrument) {
-  const labels = { audit: "AUDIT", dast10: "DAST-10", cage: "CAGE", assist: "ASSIST" };
+  const labels = { audit: "AUDIT", dast10: "DAST-10", cage: "CAGE", assist: "ASSIST", cows: "COWS", ciwa_ar: "CIWA-Ar" };
   return labels[instrument] || instrument;
 }
 
 function maxScore(instrument) {
-  const scores = { audit: 40, dast10: 10, cage: 4, assist: 39 };
+  const scores = { audit: 40, dast10: 10, cage: 4, assist: 39, cows: 48, ciwa_ar: 67 };
   return scores[instrument] || "?";
 }
 
@@ -310,6 +341,35 @@ function formatDate(dateStr) {
   });
 }
 
+function isWithdrawalScale(instrument) {
+  return instrument === 'cows' || instrument === 'ciwa_ar';
+}
+
+function formatItemId(id) {
+  if (!id) return '';
+  return id.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+const withdrawalClinicalActions = {
+  cows: {
+    mild: 'Monitor; consider comfort medications. May initiate buprenorphine induction.',
+    moderate: 'Suitable for buprenorphine induction. Provide symptomatic treatment.',
+    moderately_severe: 'Initiate buprenorphine induction. Consider increased monitoring.',
+    severe: 'Immediate intervention required. Consider inpatient management.',
+  },
+  ciwa_ar: {
+    mild: 'May not require medication. Monitor every 4\u20138 hours. Supportive care.',
+    moderate: 'Consider medication (benzodiazepines). Monitor every 2\u20134 hours.',
+    moderately_severe: 'Medication indicated. Consider intensive care monitoring. Reassess every 1\u20132 hours.',
+    severe: 'Intensive care recommended. High risk of seizures and delirium tremens. Continuous monitoring.',
+  },
+};
+
+function getWithdrawalClinicalAction(screening) {
+  const actions = withdrawalClinicalActions[screening.instrument];
+  return actions ? actions[screening.risk_level] : null;
+}
+
 function goToEkaScreening() {
   router.push({
     path: "/app/patient/eka",
@@ -318,7 +378,7 @@ function goToEkaScreening() {
 }
 
 // ─── Chart Logic ───────────────────────────────────────────────
-const riskColors = { low: "#10B981", moderate: "#F59E0B", high: "#FB923C", severe: "#F43F5E" };
+const riskColors = { low: "#10B981", mild: "#F59E0B", moderate: "#FB923C", high: "#FB923C", moderately_severe: "#EF4444", severe: "#F43F5E" };
 
 const chartDataPoints = computed(() => {
   const list = filteredScreenings.value;
@@ -408,7 +468,7 @@ watch(activeTab, async () => {
 
 // ─── Report Overlay ────────────────────────────────────────────
 function getColourForRiskLevel(level) {
-  const colours = { low: "#10B981", moderate: "#F59E0B", high: "#F97316", severe: "#EF4444" };
+  const colours = { low: "#10B981", mild: "#F59E0B", moderate: "#F97316", high: "#F97316", moderately_severe: "#EF4444", severe: "#DC2626" };
   return colours[level] || "#94A3B8";
 }
 
@@ -708,6 +768,13 @@ $amber-light: #FEF3C7;
     padding: 2px 8px; border-radius: 4px;
   }
 
+  &__specialist-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 10px; background: rgba($sky, 0.08); border-radius: 6px;
+    font-size: 11px; font-weight: 600; color: $sky-dark; margin-bottom: 6px;
+    width: fit-content;
+  }
+
   &__expand-hint { display: flex; justify-content: center; margin-top: 8px; color: $light-gray; }
 
   &__view-report {
@@ -722,9 +789,11 @@ $amber-light: #FEF3C7;
 
 // ─── Risk Level Badges ──────────────────────────────────────────
 .risk--low { background: $emerald-light; color: $emerald-dark; }
-.risk--moderate { background: $amber-light; color: darken($amber, 10%); }
+.risk--mild { background: $amber-light; color: darken($amber, 10%); }
+.risk--moderate { background: #FFEDD5; color: #C2410C; }
 .risk--high { background: #FED7AA; color: #C2410C; }
-.risk--severe { background: $rose-light; color: $rose; }
+.risk--moderately_severe { background: $rose-light; color: #DC2626; }
+.risk--severe { background: #FCA5A5; color: #991B1B; }
 
 // ─── AI Section ─────────────────────────────────────────────────
 .ai-section {

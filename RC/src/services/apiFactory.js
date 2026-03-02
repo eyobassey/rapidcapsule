@@ -1149,6 +1149,71 @@ const apiFactory = {
     return http.get(`/specialist/patients/${patientId}/recovery/checkins`, { params });
   },
 
+  /**
+   * Withdrawal Assessment — list available scales (COWS, CIWA-Ar)
+   */
+  $_getWithdrawalScales() {
+    return http.get("/recovery/withdrawal/scales");
+  },
+
+  /**
+   * Withdrawal Assessment — get full scale definition for form rendering
+   * @param {string} scaleId - 'cows' or 'ciwa_ar'
+   */
+  $_getWithdrawalScale(scaleId) {
+    return http.get(`/recovery/withdrawal/scales/${scaleId}`);
+  },
+
+  /**
+   * Withdrawal Assessment — administer assessment (specialist only)
+   * @param {Object} payload - { patient_id, scale_id, responses: [{ item_id, value }] }
+   */
+  $_administerWithdrawalAssessment(payload) {
+    return http.post("/recovery/withdrawal/administer", payload);
+  },
+
+  /**
+   * Withdrawal Assessment — get patient's assessment history
+   * @param {string} patientId
+   * @param {Object} params - { scale_id?, page?, limit? }
+   */
+  $_getWithdrawalHistory(patientId, params = {}) {
+    return http.get(`/recovery/withdrawal/history/${patientId}`, { params });
+  },
+
+  /**
+   * Create a recovery plan for a patient (specialist)
+   * @param {Object} payload - { patient_id, plan_name, stages?, relapse_prevention?, next_review_date? }
+   */
+  $_createPlanForPatient(payload) {
+    return http.post("/recovery/plans/for-patient", payload);
+  },
+
+  /**
+   * Activate a draft recovery plan
+   * @param {string} planId - The plan ID
+   */
+  $_activatePlan(planId) {
+    return http.post(`/recovery/plans/${planId}/activate`);
+  },
+
+  /**
+   * Abandon a recovery plan
+   * @param {string} planId - The plan ID
+   * @param {string} reason - Optional reason
+   */
+  $_abandonPlan(planId, reason) {
+    return http.post(`/recovery/plans/${planId}/abandon`, { reason });
+  },
+
+  /**
+   * Generate an AI-powered recovery plan for a patient
+   * @param {string} patientId - The patient user ID
+   */
+  $_generateAIRecoveryPlan(patientId) {
+    return http.post("/recovery/plans/generate-ai", { patient_id: patientId });
+  },
+
   // ========================================
   // Languages API
   // ========================================
@@ -1538,6 +1603,96 @@ const apiFactory = {
   },
   $_celebrateMilestone(id) {
     return http.patch(`/recovery/sobriety/milestones/${id}/celebrate`);
+  },
+
+  // Recovery Plans
+  $_getActivePlan() {
+    return http.get("/recovery/plans/active");
+  },
+  $_getPlanHistory(params) {
+    return http.get("/recovery/plans/history", { params });
+  },
+  $_updateStageStatus({ stageId, payload }) {
+    return http.patch(`/recovery/plans/stages/${stageId}/status`, payload);
+  },
+  $_updateGoalStatus({ stageId, goalId, payload }) {
+    return http.patch(`/recovery/plans/stages/${stageId}/goals/${goalId}`, payload);
+  },
+
+  // Group Sessions
+  $_getGroupSessions(params) {
+    return http.get("/recovery/group-sessions", { params });
+  },
+  $_getMyGroupSessions() {
+    return http.get("/recovery/group-sessions/my-sessions");
+  },
+  $_getGroupSession(id) {
+    return http.get(`/recovery/group-sessions/${id}`);
+  },
+  $_joinGroupSession(id) {
+    return http.post(`/recovery/group-sessions/${id}/join`);
+  },
+  $_leaveGroupSession(id) {
+    return http.post(`/recovery/group-sessions/${id}/leave`);
+  },
+
+  // Peer Support
+  $_getPeerAssignments(params) {
+    return http.get("/recovery/peer-support", { params });
+  },
+  $_getPeerAssignment(id) {
+    return http.get(`/recovery/peer-support/${id}`);
+  },
+  $_consentPeerAssignment(id) {
+    return http.post(`/recovery/peer-support/${id}/consent`);
+  },
+  $_endPeerAssignment(id) {
+    return http.post(`/recovery/peer-support/${id}/end`);
+  },
+  $_logPeerCheckIn({ id, payload }) {
+    return http.post(`/recovery/peer-support/${id}/check-in`, payload);
+  },
+
+  // MAT Management
+  $_getMATMedications() {
+    return http.get("/recovery/mat/medications");
+  },
+  $_getMATCompliance() {
+    return http.get("/recovery/mat/compliance");
+  },
+  $_getMATProtocol(drugId) {
+    return http.get(`/recovery/mat/medications/${drugId}/protocol`);
+  },
+
+  // Harm Reduction
+  $_getHarmReductionSubstances() {
+    return http.get("/recovery/harm-reduction/substances");
+  },
+  $_getSubstanceGuidance(substance) {
+    return http.get(`/recovery/harm-reduction/guidance/${substance}`);
+  },
+  $_getOverdoseResponse(substance) {
+    return http.get(`/recovery/harm-reduction/overdose-response/${substance}`);
+  },
+  $_getEmergencyResources() {
+    return http.get("/recovery/harm-reduction/emergency-resources");
+  },
+  $_getFentanylTestingInfo() {
+    return http.get("/recovery/harm-reduction/fentanyl-testing");
+  },
+  $_getNeedleExchangeLocations(params) {
+    return http.get("/recovery/harm-reduction/needle-exchange", { params });
+  },
+  $_getDrugCheckingServices(params) {
+    return http.get("/recovery/harm-reduction/drug-checking", { params });
+  },
+
+  // Crisis
+  $_triggerCrisisEmergency(payload) {
+    return http.post("/recovery/crisis/emergency", payload);
+  },
+  $_getCrisisHistory(params) {
+    return http.get("/recovery/crisis/patient/history", { params });
   },
 
   // AI Companion

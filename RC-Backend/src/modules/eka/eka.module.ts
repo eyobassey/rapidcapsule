@@ -32,6 +32,8 @@ import { RecoveryPlan, RecoveryPlanSchema } from '../recovery/entities/recovery-
 import { CopingExerciseSession, CopingExerciseSessionSchema } from '../recovery/entities/coping-exercise-session.entity';
 import { RiskAssessmentReport, RiskAssessmentReportSchema } from '../recovery/entities/risk-assessment-report.entity';
 import { RecoveryModule } from '../recovery/recovery.module';
+import { EkaPatientMemory, EkaPatientMemorySchema } from './entities/eka-patient-memory.entity';
+import { EkaMemoryListener } from './listeners/eka-memory.listener';
 
 @Module({
   imports: [
@@ -62,12 +64,13 @@ import { RecoveryModule } from '../recovery/recovery.module';
       { name: RecoveryPlan.name, schema: RecoveryPlanSchema },
       { name: CopingExerciseSession.name, schema: CopingExerciseSessionSchema },
       { name: RiskAssessmentReport.name, schema: RiskAssessmentReportSchema },
+      { name: EkaPatientMemory.name, schema: EkaPatientMemorySchema },
     ]),
     ClaudeSummaryCreditsModule,
     forwardRef(() => RecoveryModule),
   ],
   controllers: [EkaController],
-  providers: [EkaService, ClaudeHealthSummaryService, ClaudeAIService, TextractService],
+  providers: [EkaService, ClaudeHealthSummaryService, ClaudeAIService, TextractService, EkaMemoryListener],
   exports: [EkaService],
 })
 export class EkaModule {}

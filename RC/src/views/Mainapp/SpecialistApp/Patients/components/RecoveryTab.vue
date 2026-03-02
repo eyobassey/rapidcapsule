@@ -54,6 +54,21 @@
         </div>
       </div>
 
+      <!-- Quick Actions Bar -->
+      <div class="quick-actions">
+        <button v-if="!data.recovery_plan" class="btn-action btn-action--primary btn-action--lg" @click="showPlanBuilder = true; scrollToPlanBuilder()">
+          <span class="btn-icon">+</span> Create Recovery Plan
+        </button>
+        <button v-else class="btn-action btn-action--outline btn-action--lg" @click="showPlanBuilder = true; scrollToPlanBuilder()">
+          <span class="btn-icon">&#9998;</span> Revise Recovery Plan
+        </button>
+        <span v-if="data.recovery_plan" class="quick-actions__status">
+          Plan: <strong>{{ data.recovery_plan.plan_name || 'Active' }}</strong>
+          <span class="plan-status" :class="'plan-status--' + (data.recovery_plan.status || 'active')">{{ data.recovery_plan.status || 'active' }}</span>
+        </span>
+        <span v-else class="quick-actions__hint">No recovery plan set — create one to guide this patient's treatment</span>
+      </div>
+
       <!-- Risk History Chart -->
       <div v-if="riskHistory.length > 1" class="section">
         <h3 class="section__title">Risk History ({{ historyPeriod }})</h3>
@@ -116,11 +131,48 @@
       </div>
 
       <!-- Recovery Plan -->
-      <div v-if="data.recovery_plan" class="section">
-        <h3 class="section__title">Recovery Plan</h3>
-        <div class="plan-card">
+      <div class="section">
+        <h3 class="section__title">
+          Recovery Plan
+          <button v-if="!showPlanBuilder && !data.recovery_plan" class="btn-action btn-action--primary" @click="showPlanBuilder = true">
+            + Create Plan
+          </button>
+          <button v-if="data.recovery_plan && !showPlanBuilder" class="btn-action btn-action--outline" @click="showPlanBuilder = true">
+            Revise Plan
+          </button>
+        </h3>
+
+        <!-- Existing Plan Display -->
+        <div v-if="data.recovery_plan && !showPlanBuilder" class="plan-card">
+          <div class="plan-card__header">
+            <span class="plan-card__name">{{ data.recovery_plan.plan_name || 'Recovery Plan' }}</span>
+            <span class="plan-status" :class="'plan-status--' + (data.recovery_plan.status || 'active')">
+              {{ data.recovery_plan.status || 'active' }}
+            </span>
+          </div>
           <p v-if="data.recovery_plan.stage_of_change"><strong>Stage:</strong> {{ data.recovery_plan.stage_of_change }}</p>
-          <div v-if="data.recovery_plan.goals?.length">
+
+          <!-- Stages -->
+          <div v-if="data.recovery_plan.stages?.length" class="plan-stages">
+            <div v-for="(stage, si) in data.recovery_plan.stages" :key="si" class="plan-stage">
+              <div class="plan-stage__header">
+                <span class="plan-stage__name">{{ formatStageName(stage.name) }}</span>
+                <span class="plan-stage__status" :class="'plan-stage__status--' + (stage.status || 'pending')">
+                  {{ stage.status || 'pending' }}
+                </span>
+              </div>
+              <div v-if="stage.goals?.length" class="plan-stage__goals">
+                <div v-for="(goal, gi) in stage.goals" :key="gi" class="plan-goal">
+                  <span class="plan-goal__check" :class="{ 'plan-goal__check--done': goal.status === 'completed' }">
+                    {{ goal.status === 'completed' ? '&#10003;' : '&#9675;' }}
+                  </span>
+                  <span class="plan-goal__text">{{ goal.description }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="data.recovery_plan.goals?.length && !data.recovery_plan.stages?.length">
             <strong>Goals:</strong>
             <ul>
               <li v-for="(g, i) in data.recovery_plan.goals.slice(0, 5)" :key="i">{{ g.description || g }}</li>
@@ -132,6 +184,141 @@
               <span v-for="(t, i) in data.recovery_plan.triggers.slice(0, 8)" :key="i" class="tag">{{ t }}</span>
             </div>
           </div>
+          <div v-if="data.recovery_plan.relapse_prevention" class="plan-relapse-section">
+            <div v-if="data.recovery_plan.relapse_prevention.personal_triggers?.length">
+              <strong>Known Triggers:</strong>
+              <div class="tag-list">
+                <span v-for="(t, i) in data.recovery_plan.relapse_prevention.personal_triggers" :key="i" class="tag tag--amber">{{ t }}</span>
+              </div>
+            </div>
+            <div v-if="data.recovery_plan.relapse_prevention.coping_strategies?.length" class="mt-8">
+              <strong>Coping Strategies:</strong>
+              <div class="tag-list">
+                <span v-for="(s, i) in data.recovery_plan.relapse_prevention.coping_strategies" :key="i" class="tag tag--green">{{ s }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Plan Builder -->
+        <div v-if="showPlanBuilder" class="plan-builder">
+          <div class="plan-builder__header">
+            <h4>{{ data.recovery_plan ? 'Revise Recovery Plan' : 'Create Recovery Plan' }}</h4>
+            <button class="btn-action btn-action--ghost" @click="closePlanBuilder">Cancel</button>
+          </div>
+
+          <div class="plan-builder__field">
+            <label>Plan Name</label>
+            <input v-model="planForm.plan_name" type="text" placeholder="e.g. 12-Week Opioid Recovery Plan" />
+          </div>
+
+          <div class="plan-builder__field">
+            <label>Next Review Date</label>
+            <input v-model="planForm.next_review_date" type="date" />
+          </div>
+
+          <!-- Stages -->
+          <div class="plan-builder__stages">
+            <div class="plan-builder__stages-header">
+              <label>Stages</label>
+              <button class="btn-action btn-action--small" @click="addStage">+ Add Stage</button>
+            </div>
+
+            <div v-for="(stage, si) in planForm.stages" :key="si" class="stage-block">
+              <div class="stage-block__top">
+                <select v-model="stage.name">
+                  <option value="" disabled>Select stage...</option>
+                  <option v-for="sn in stageNames" :key="sn" :value="sn">{{ formatStageName(sn) }}</option>
+                </select>
+                <input v-model.number="stage.estimated_duration_weeks" type="number" min="1" placeholder="Weeks" class="stage-block__weeks" />
+                <button class="btn-action btn-action--danger-small" @click="removeStage(si)">&times;</button>
+              </div>
+
+              <!-- Goals for this stage -->
+              <div class="stage-block__goals">
+                <div v-for="(goal, gi) in stage.goals" :key="gi" class="goal-row">
+                  <input v-model="goal.description" type="text" placeholder="Goal description" class="goal-row__desc" />
+                  <input v-model="goal.measurable_target" type="text" placeholder="Target measure" class="goal-row__target" />
+                  <input v-model="goal.target_date" type="date" class="goal-row__date" />
+                  <button class="btn-action btn-action--danger-small" @click="removeGoal(si, gi)">&times;</button>
+                </div>
+                <button class="btn-action btn-action--small btn-action--outline" @click="addGoal(si)">+ Goal</button>
+              </div>
+
+              <!-- Interventions for this stage -->
+              <div class="stage-block__interventions">
+                <div v-for="(intv, ii) in stage.interventions" :key="ii" class="intervention-row">
+                  <select v-model="intv.type" class="intervention-row__type">
+                    <option value="" disabled>Type...</option>
+                    <option v-for="it in interventionTypes" :key="it" :value="it">{{ formatInterventionType(it) }}</option>
+                  </select>
+                  <input v-model="intv.description" type="text" placeholder="Description" class="intervention-row__desc" />
+                  <input v-model="intv.frequency" type="text" placeholder="Frequency" class="intervention-row__freq" />
+                  <button class="btn-action btn-action--danger-small" @click="removeIntervention(si, ii)">&times;</button>
+                </div>
+                <button class="btn-action btn-action--small btn-action--outline" @click="addIntervention(si)">+ Intervention</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Relapse Prevention -->
+          <div class="plan-builder__relapse">
+            <label>Relapse Prevention</label>
+
+            <div class="plan-builder__field">
+              <label class="plan-builder__sublabel">Personal Triggers</label>
+              <div class="tag-input">
+                <div class="tag-list">
+                  <span v-for="(t, i) in planForm.relapse_prevention.personal_triggers" :key="i" class="tag tag--removable">
+                    {{ t }} <button @click="planForm.relapse_prevention.personal_triggers.splice(i, 1)">&times;</button>
+                  </span>
+                </div>
+                <input v-model="triggerInput" type="text" placeholder="Type and press Enter" @keydown.enter.prevent="addTrigger" />
+              </div>
+            </div>
+
+            <div class="plan-builder__field">
+              <label class="plan-builder__sublabel">Warning Signs</label>
+              <div class="tag-input">
+                <div class="tag-list">
+                  <span v-for="(w, i) in planForm.relapse_prevention.warning_signs" :key="i" class="tag tag--removable">
+                    {{ w }} <button @click="planForm.relapse_prevention.warning_signs.splice(i, 1)">&times;</button>
+                  </span>
+                </div>
+                <input v-model="warningInput" type="text" placeholder="Type and press Enter" @keydown.enter.prevent="addWarning" />
+              </div>
+            </div>
+
+            <div class="plan-builder__field">
+              <label class="plan-builder__sublabel">Coping Strategies</label>
+              <div class="tag-input">
+                <div class="tag-list">
+                  <span v-for="(c, i) in planForm.relapse_prevention.coping_strategies" :key="i" class="tag tag--removable">
+                    {{ c }} <button @click="planForm.relapse_prevention.coping_strategies.splice(i, 1)">&times;</button>
+                  </span>
+                </div>
+                <input v-model="copingInput" type="text" placeholder="Type and press Enter" @keydown.enter.prevent="addCoping" />
+              </div>
+            </div>
+
+            <div class="plan-builder__field">
+              <label class="plan-builder__sublabel">Emergency Plan</label>
+              <textarea v-model="planForm.relapse_prevention.emergency_plan" rows="3" placeholder="Describe the emergency plan for crisis situations..."></textarea>
+            </div>
+          </div>
+
+          <!-- Submit -->
+          <div class="plan-builder__actions">
+            <button class="btn-action btn-action--outline" @click="closePlanBuilder">Cancel</button>
+            <button class="btn-action btn-action--primary" :disabled="planSaving || !planForm.plan_name.trim()" @click="submitPlan">
+              {{ planSaving ? 'Saving...' : (data.recovery_plan ? 'Create Revised Plan' : 'Create Plan') }}
+            </button>
+          </div>
+        </div>
+
+        <!-- No plan yet -->
+        <div v-if="!data.recovery_plan && !showPlanBuilder" class="plan-card plan-card--empty">
+          <p>No recovery plan created yet for this patient.</p>
         </div>
       </div>
 
@@ -174,6 +361,153 @@ const loading = ref(true)
 const data = ref(null)
 const riskHistory = ref([])
 const historyPeriod = ref('30d')
+
+// Plan Builder State
+const showPlanBuilder = ref(false)
+const planSaving = ref(false)
+const triggerInput = ref('')
+const warningInput = ref('')
+const copingInput = ref('')
+
+const stageNames = ['assessment', 'detox', 'stabilization', 'active_treatment', 'maintenance', 'aftercare']
+const interventionTypes = ['individual_therapy', 'group_therapy', 'medication', 'peer_support', 'family_therapy', 'psychoeducation', 'harm_reduction']
+
+const createEmptyPlanForm = () => ({
+  plan_name: '',
+  next_review_date: '',
+  stages: [],
+  relapse_prevention: {
+    personal_triggers: [],
+    warning_signs: [],
+    coping_strategies: [],
+    safe_activities: [],
+    emergency_plan: '',
+    high_risk_situations: [],
+  },
+})
+
+const planForm = ref(createEmptyPlanForm())
+
+let stageCounter = 0
+let goalCounter = 0
+
+function addStage() {
+  stageCounter++
+  planForm.value.stages.push({
+    stage_id: `stage_${stageCounter}_${Date.now()}`,
+    name: '',
+    order: planForm.value.stages.length + 1,
+    estimated_duration_weeks: null,
+    goals: [],
+    interventions: [],
+  })
+}
+
+function removeStage(idx) {
+  planForm.value.stages.splice(idx, 1)
+}
+
+function addGoal(stageIdx) {
+  goalCounter++
+  planForm.value.stages[stageIdx].goals.push({
+    goal_id: `goal_${goalCounter}_${Date.now()}`,
+    description: '',
+    measurable_target: '',
+    target_date: '',
+  })
+}
+
+function removeGoal(stageIdx, goalIdx) {
+  planForm.value.stages[stageIdx].goals.splice(goalIdx, 1)
+}
+
+function addIntervention(stageIdx) {
+  planForm.value.stages[stageIdx].interventions.push({
+    type: '',
+    description: '',
+    frequency: '',
+  })
+}
+
+function removeIntervention(stageIdx, intvIdx) {
+  planForm.value.stages[stageIdx].interventions.splice(intvIdx, 1)
+}
+
+function addTrigger() {
+  const val = triggerInput.value.trim()
+  if (val) {
+    planForm.value.relapse_prevention.personal_triggers.push(val)
+    triggerInput.value = ''
+  }
+}
+
+function addWarning() {
+  const val = warningInput.value.trim()
+  if (val) {
+    planForm.value.relapse_prevention.warning_signs.push(val)
+    warningInput.value = ''
+  }
+}
+
+function addCoping() {
+  const val = copingInput.value.trim()
+  if (val) {
+    planForm.value.relapse_prevention.coping_strategies.push(val)
+    copingInput.value = ''
+  }
+}
+
+function formatStageName(name) {
+  if (!name) return ''
+  return name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+}
+
+function formatInterventionType(type) {
+  if (!type) return ''
+  return type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+}
+
+function scrollToPlanBuilder() {
+  setTimeout(() => {
+    const el = document.querySelector('.plan-builder')
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, 100)
+}
+
+function closePlanBuilder() {
+  showPlanBuilder.value = false
+  planForm.value = createEmptyPlanForm()
+  triggerInput.value = ''
+  warningInput.value = ''
+  copingInput.value = ''
+}
+
+async function submitPlan() {
+  if (!planForm.value.plan_name.trim()) return
+  planSaving.value = true
+  try {
+    const payload = {
+      patient_id: props.patientId,
+      plan_name: planForm.value.plan_name,
+      stages: planForm.value.stages.filter(s => s.name).map(s => ({
+        ...s,
+        goals: s.goals.filter(g => g.description.trim()),
+        interventions: s.interventions.filter(i => i.type && i.description.trim()),
+      })),
+      relapse_prevention: planForm.value.relapse_prevention,
+    }
+    if (planForm.value.next_review_date) {
+      payload.next_review_date = planForm.value.next_review_date
+    }
+    await $http.$_createPlanForPatient(payload)
+    closePlanBuilder()
+    await fetchData()
+  } catch (err) {
+    console.error('Error creating recovery plan:', err)
+  } finally {
+    planSaving.value = false
+  }
+}
 
 const chartW = 400
 const chartH = 80
@@ -490,6 +824,85 @@ onMounted(fetchData)
   &__date { display: block; font-size: 11px; color: #94A3B8; margin-top: 4px; }
 }
 
+.quick-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  background: linear-gradient(135deg, #EEF2FF 0%, #F8FAFC 100%);
+  border-radius: 12px;
+  border: 1px solid #C7D2FE;
+
+  &__status {
+    font-size: 13px;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  &__hint {
+    font-size: 13px;
+    color: #94A3B8;
+    font-style: italic;
+  }
+}
+
+.btn-icon {
+  font-size: 16px;
+  margin-right: 4px;
+}
+
+.btn-action {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &--primary {
+    background: #6366F1;
+    color: #FFF;
+    &:hover { background: #4F46E5; }
+    &:disabled { background: #C7D2FE; cursor: not-allowed; }
+  }
+  &--outline {
+    background: transparent;
+    border: 1px solid #CBD5E1;
+    color: #475569;
+    &:hover { background: #F1F5F9; }
+  }
+  &--ghost {
+    background: transparent;
+    color: #64748B;
+    &:hover { color: #1E293B; }
+  }
+  &--lg {
+    font-size: 14px;
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  &--small {
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    background: #6366F1;
+    color: #FFF;
+    &:hover { background: #4F46E5; }
+  }
+  &--danger-small {
+    font-size: 14px;
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: transparent;
+    color: #EF4444;
+    &:hover { background: #FEE2E2; }
+  }
+}
+
 .plan-card {
   padding: 16px;
   background: #F8FAFC;
@@ -501,6 +914,304 @@ onMounted(fetchData)
 
   ul { margin: 4px 0 8px 16px; }
   li { margin-bottom: 4px; }
+
+  &--empty {
+    text-align: center;
+    color: #94A3B8;
+    padding: 24px;
+  }
+
+  &__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  &__name {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1E293B;
+  }
+}
+
+.plan-status {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 10px;
+  text-transform: uppercase;
+
+  &--draft { background: #E2E8F0; color: #475569; }
+  &--active { background: #D1FAE5; color: #065F46; }
+  &--completed { background: #DBEAFE; color: #1E40AF; }
+  &--revised { background: #FEF3C7; color: #92400E; }
+  &--abandoned { background: #FEE2E2; color: #991B1B; }
+}
+
+.plan-stages {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 8px 0;
+}
+
+.plan-stage {
+  padding: 10px 12px;
+  background: #FFF;
+  border-radius: 8px;
+  border: 1px solid #E2E8F0;
+
+  &__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+  &__name {
+    font-weight: 600;
+    color: #1E293B;
+    text-transform: capitalize;
+  }
+  &__status {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 6px;
+
+    &--pending { background: #E2E8F0; color: #64748B; }
+    &--in_progress { background: #DBEAFE; color: #1E40AF; }
+    &--completed { background: #D1FAE5; color: #065F46; }
+    &--skipped { background: #F1F5F9; color: #94A3B8; }
+  }
+  &__goals { display: flex; flex-direction: column; gap: 4px; }
+}
+
+.plan-goal {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+
+  &__check {
+    color: #94A3B8;
+    font-size: 14px;
+    &--done { color: #10B981; }
+  }
+  &__text { color: #475569; }
+}
+
+.plan-relapse-section {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #E2E8F0;
+}
+
+.mt-8 { margin-top: 8px; }
+
+.tag--amber { background: #FEF3C7; color: #92400E; }
+.tag--green { background: #D1FAE5; color: #065F46; }
+
+.plan-builder {
+  padding: 20px;
+  background: #F8FAFC;
+  border-radius: 12px;
+  border: 1px solid #E2E8F0;
+
+  &__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+
+    h4 { font-size: 16px; font-weight: 700; color: #1E293B; margin: 0; }
+  }
+
+  &__field {
+    margin-bottom: 14px;
+
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: #475569;
+      margin-bottom: 4px;
+    }
+
+    input[type="text"],
+    input[type="date"],
+    textarea {
+      width: 100%;
+      padding: 8px 12px;
+      font-size: 13px;
+      border: 1px solid #CBD5E1;
+      border-radius: 8px;
+      background: #FFF;
+      color: #1E293B;
+      outline: none;
+      &:focus { border-color: #6366F1; box-shadow: 0 0 0 2px rgba(99,102,241,.15); }
+    }
+    textarea { resize: vertical; font-family: inherit; }
+  }
+
+  &__sublabel {
+    font-size: 11px !important;
+    color: #64748B !important;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+
+  &__stages {
+    margin-bottom: 20px;
+  }
+
+  &__stages-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+
+    label { font-size: 13px; font-weight: 600; color: #1E293B; }
+  }
+
+  &__relapse {
+    padding-top: 16px;
+    border-top: 1px solid #E2E8F0;
+    margin-bottom: 16px;
+
+    > label {
+      font-size: 14px;
+      font-weight: 700;
+      color: #1E293B;
+      display: block;
+      margin-bottom: 12px;
+    }
+  }
+
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding-top: 16px;
+    border-top: 1px solid #E2E8F0;
+  }
+}
+
+.stage-block {
+  background: #FFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 10px;
+
+  &__top {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 10px;
+
+    select {
+      flex: 1;
+      padding: 8px 12px;
+      font-size: 13px;
+      border: 1px solid #CBD5E1;
+      border-radius: 8px;
+      background: #FFF;
+      color: #1E293B;
+      outline: none;
+      &:focus { border-color: #6366F1; }
+    }
+  }
+
+  &__weeks {
+    width: 80px;
+    padding: 8px 10px;
+    font-size: 13px;
+    border: 1px solid #CBD5E1;
+    border-radius: 8px;
+    background: #FFF;
+    outline: none;
+    &:focus { border-color: #6366F1; }
+  }
+
+  &__goals,
+  &__interventions {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed #E2E8F0;
+  }
+}
+
+.goal-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 6px;
+
+  input {
+    padding: 6px 10px;
+    font-size: 12px;
+    border: 1px solid #CBD5E1;
+    border-radius: 6px;
+    background: #FFF;
+    outline: none;
+    &:focus { border-color: #6366F1; }
+  }
+
+  &__desc { flex: 2; }
+  &__target { flex: 1; }
+  &__date { width: 130px; }
+}
+
+.intervention-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 6px;
+
+  select, input {
+    padding: 6px 10px;
+    font-size: 12px;
+    border: 1px solid #CBD5E1;
+    border-radius: 6px;
+    background: #FFF;
+    outline: none;
+    &:focus { border-color: #6366F1; }
+  }
+
+  &__type { width: 150px; }
+  &__desc { flex: 1; }
+  &__freq { width: 120px; }
+}
+
+.tag-input {
+  input {
+    width: 100%;
+    padding: 6px 10px;
+    font-size: 12px;
+    border: 1px solid #CBD5E1;
+    border-radius: 6px;
+    background: #FFF;
+    margin-top: 6px;
+    outline: none;
+    &:focus { border-color: #6366F1; }
+  }
+}
+
+.tag--removable {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+
+  button {
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 0;
+    opacity: 0.7;
+    &:hover { opacity: 1; }
+  }
 }
 
 .tag-list {
