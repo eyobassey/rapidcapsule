@@ -107,7 +107,7 @@
 
       <!-- Mobile toggle -->
       <button class="eka-sidebar__toggle" @click="sidebarCollapsed = !sidebarCollapsed">
-        <v-icon :name="sidebarCollapsed ? 'io-menu' : 'hi-x'" scale="0.9" />
+        <v-icon :name="sidebarCollapsed ? 'hi-menu-alt-2' : 'hi-x'" scale="0.9" fill="white" />
       </button>
     </div>
 
@@ -116,7 +116,7 @@
       <!-- Mobile header -->
       <div class="eka-main__header-mobile">
         <button @click="sidebarCollapsed = !sidebarCollapsed">
-          <v-icon name="io-menu" scale="0.9" />
+          <v-icon name="hi-menu-alt-2" scale="0.9" fill="white" />
         </button>
         <span>EkaGPT</span>
         <button v-if="artifactOpen" @click="toggleArtifact" class="eka-main__artifact-toggle-mobile">
@@ -133,7 +133,7 @@
             <!-- Welcome screen -->
             <div v-if="messages.length === 0" class="eka-welcome">
               <div class="eka-welcome__avatar">
-                <img src="/RapidCapsule_Logo.png" alt="EkaGPT" />
+                <img src="/eka-rc-logo-icon.png" alt="EkaGPT" />
               </div>
               <h2 class="eka-welcome__title">Hi, I'm Eka!</h2>
               <p class="eka-welcome__subtitle">
@@ -802,6 +802,7 @@ export default {
 
     checkMobile() {
       this.isMobile = window.innerWidth <= 768
+      if (this.isMobile) this.sidebarCollapsed = true
     },
 
     scrollToBottom() {
@@ -818,26 +819,41 @@ export default {
   inset: 0;
   z-index: 1100;
   display: flex;
-  background: #ffffff;
+  background: #0f172a;
 }
 
 // ===== SIDEBAR =====
 .eka-sidebar {
-  width: 260px;
-  min-width: 260px;
-  background: #01579B;
+  width: 280px;
+  min-width: 280px;
+  background: rgba(15, 23, 42, 0.3);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
   color: #ffffff;
   display: flex;
   flex-direction: column;
   transition: transform 0.3s ease;
   position: relative;
 
+  // Force all icons white inside sidebar
+  :deep(svg) {
+    fill: #ffffff !important;
+    color: #ffffff !important;
+    stroke: #ffffff !important;
+
+    path, line, polyline, rect, circle {
+      fill: #ffffff !important;
+      stroke: #ffffff !important;
+    }
+  }
+
   @media (max-width: 768px) {
     position: fixed;
     inset: 0;
     width: 280px;
     z-index: 1200;
-    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5);
 
     &.collapsed {
       transform: translateX(-100%);
@@ -849,7 +865,7 @@ export default {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   }
 
   &__back {
@@ -872,10 +888,9 @@ export default {
       color: #ffffff !important;
     }
 
-    .ov-icon {
-      color: #ffffff;
-      fill: #ffffff;
-      stroke: #ffffff;
+    :deep(svg) {
+      fill: #ffffff !important;
+      color: #ffffff !important;
     }
 
     span {
@@ -901,10 +916,9 @@ export default {
       background: rgba(255, 255, 255, 0.12);
     }
 
-    .ov-icon {
-      color: #ffffff;
-      fill: #ffffff;
-      stroke: #ffffff;
+    :deep(svg) {
+      fill: #ffffff !important;
+      color: #ffffff !important;
     }
 
     span {
@@ -1084,7 +1098,7 @@ export default {
   }
 
   &__actions {
-    border-top: 1px solid rgba(255, 255, 255, 0.15);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
   }
 
   &__actions-toggle {
@@ -1170,7 +1184,7 @@ export default {
     align-items: center;
     gap: 8px;
     padding: 12px 16px;
-    border-top: 1px solid rgba(255, 255, 255, 0.15);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
 
     .ov-icon {
       color: rgba(255, 255, 255, 0.6);
@@ -1206,7 +1220,7 @@ export default {
       }
 
       option {
-        background: #01579B;
+        background: #0f172a;
         color: #ffffff;
       }
     }
@@ -1225,12 +1239,25 @@ export default {
       height: 36px;
       align-items: center;
       justify-content: center;
-      background: #01579B;
+      background: rgba(15, 23, 42, 0.8);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
       color: white;
-      border: none;
+      border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 8px;
       cursor: pointer;
       font-size: 18px;
+
+      :deep(svg) {
+        fill: #ffffff !important;
+        color: #ffffff !important;
+        stroke: #ffffff !important;
+
+        path, line, polyline, rect, circle {
+          fill: #ffffff !important;
+          stroke: #ffffff !important;
+        }
+      }
     }
   }
 }
@@ -1241,7 +1268,7 @@ export default {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  background: #ffffff;
+  background: #0f172a;
 
   &__header-mobile {
     display: none;
@@ -1251,26 +1278,40 @@ export default {
       align-items: center;
       justify-content: space-between;
       padding: 12px 16px;
-      border-bottom: 1px solid #e5e7eb;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(15, 23, 42, 0.8);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
 
       button {
         background: none;
         border: none;
         font-size: 20px;
-        color: #374151;
+        color: #f8fafc;
         cursor: pointer;
+
+        :deep(svg) {
+          fill: #f8fafc !important;
+          color: #f8fafc !important;
+          stroke: #f8fafc !important;
+
+          path, line, polyline, rect, circle {
+            fill: #f8fafc !important;
+            stroke: #f8fafc !important;
+          }
+        }
       }
 
       span {
         font-weight: 600;
         font-size: 16px;
-        color: #1f2937;
+        color: #f8fafc;
       }
     }
   }
 
   &__artifact-toggle-mobile {
-    color: #01579B !important;
+    color: #0ea5e9 !important;
   }
 
   &__row {
@@ -1291,13 +1332,13 @@ export default {
       background: transparent;
     }
     &::-webkit-scrollbar-thumb {
-      background: #d1d5db;
+      background: rgba(255, 255, 255, 0.2);
       border-radius: 3px;
     }
   }
 
   &__chat {
-    max-width: 900px;
+    max-width: 768px;
     margin: 0 auto;
     padding: 24px 16px;
   }
@@ -1309,7 +1350,7 @@ export default {
     gap: 8px;
     padding: 8px 16px 4px;
     flex-wrap: wrap;
-    max-width: 900px;
+    max-width: 768px;
     margin: 0 auto;
     width: 100%;
   }
@@ -1319,10 +1360,10 @@ export default {
     align-items: center;
     gap: 6px;
     padding: 8px 16px;
-    border: 1px solid #e5e7eb;
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 20px;
-    background: white;
-    color: #374151;
+    background: rgba(15, 23, 42, 0.6);
+    color: #f8fafc;
     font-size: 13px;
     cursor: pointer;
     transition: all 0.15s;
@@ -1331,70 +1372,70 @@ export default {
     .ov-icon { flex-shrink: 0; }
 
     &:hover {
-      border-color: #01579B;
-      background: #f0f9ff;
-      color: #01579B;
+      border-color: #0ea5e9;
+      background: rgba(14, 165, 233, 0.15);
+      color: #f8fafc;
     }
 
     &--yes {
-      border-color: #d1fae5;
-      background: #ecfdf5;
-      color: #065f46;
+      border-color: rgba(16, 185, 129, 0.4);
+      background: rgba(16, 185, 129, 0.1);
+      color: #6ee7b7;
       .ov-icon { color: #10b981; fill: #10b981; }
-      &:hover { border-color: #10b981; background: #d1fae5; }
+      &:hover { border-color: #10b981; background: rgba(16, 185, 129, 0.2); }
     }
 
     &--no {
-      border-color: #fecaca;
-      background: #fef2f2;
-      color: #991b1b;
+      border-color: rgba(239, 68, 68, 0.4);
+      background: rgba(239, 68, 68, 0.1);
+      color: #fca5a5;
       .ov-icon { color: #ef4444; fill: #ef4444; }
-      &:hover { border-color: #ef4444; background: #fecaca; }
+      &:hover { border-color: #ef4444; background: rgba(239, 68, 68, 0.2); }
     }
 
     &--unsure {
-      border-color: #e5e7eb;
-      background: #f9fafb;
-      color: #6b7280;
-      &:hover { border-color: #9ca3af; background: #f3f4f6; }
+      border-color: rgba(255, 255, 255, 0.15);
+      background: rgba(255, 255, 255, 0.05);
+      color: #94a3b8;
+      &:hover { border-color: rgba(255, 255, 255, 0.3); background: rgba(255, 255, 255, 0.1); }
     }
 
     &--option {
-      border-color: #dbeafe;
-      background: #eff6ff;
-      color: #1e40af;
-      &:hover { border-color: #3b82f6; background: #dbeafe; }
+      border-color: rgba(14, 165, 233, 0.3);
+      background: rgba(14, 165, 233, 0.1);
+      color: #7dd3fc;
+      &:hover { border-color: #0ea5e9; background: rgba(14, 165, 233, 0.2); }
     }
 
     &--toggle {
-      border-color: #e5e7eb;
-      background: white;
-      color: #374151;
-      .ov-icon { color: #9ca3af; fill: #9ca3af; }
+      border-color: rgba(255, 255, 255, 0.1);
+      background: rgba(15, 23, 42, 0.6);
+      color: #f8fafc;
+      .ov-icon { color: #64748b; fill: #64748b; }
 
       &.selected {
-        border-color: #01579B;
-        background: #e0f2fe;
-        color: #01579B;
+        border-color: #0ea5e9;
+        background: rgba(14, 165, 233, 0.15);
+        color: #7dd3fc;
         font-weight: 600;
-        .ov-icon { color: #01579B; fill: #01579B; }
+        .ov-icon { color: #0ea5e9; fill: #0ea5e9; }
       }
     }
 
     &--submit {
-      border-color: #01579B;
-      background: #01579B;
+      border-color: #FF5C00;
+      background: #FF5C00;
       color: white;
       font-weight: 600;
-      &:hover { background: #014377; }
+      &:hover { background: #E04F00; }
     }
 
     &--none {
-      border-color: #e5e7eb;
-      background: #f9fafb;
-      color: #6b7280;
+      border-color: rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.05);
+      color: #94a3b8;
       font-size: 12px;
-      &:hover { border-color: #9ca3af; }
+      &:hover { border-color: rgba(255, 255, 255, 0.3); }
     }
   }
 
@@ -1408,10 +1449,10 @@ export default {
 
   &__chip {
     padding: 6px 14px;
-    border: 1px solid #e5e7eb;
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 20px;
-    background: white;
-    color: #6b7280;
+    background: rgba(15, 23, 42, 0.6);
+    color: rgba(255, 255, 255, 0.8);
     font-size: 12px;
     cursor: pointer;
     transition: all 0.15s;
@@ -1419,18 +1460,18 @@ export default {
     &:hover {
       border-color: #FF5C00;
       color: #FF5C00;
-      background: #FFF3ED;
+      background: rgba(255, 92, 0, 0.1);
     }
 
     &--contextual {
-      border-color: #FDDCB5;
-      background: #FFF8F0;
-      color: #9A3412;
+      border-color: rgba(255, 92, 0, 0.3);
+      background: rgba(255, 92, 0, 0.1);
+      color: #fb923c;
       font-weight: 500;
 
       &:hover {
         border-color: #FF5C00;
-        background: #FFF3ED;
+        background: rgba(255, 92, 0, 0.15);
         color: #FF5C00;
       }
     }
@@ -1438,7 +1479,7 @@ export default {
 
   &__input-wrapper {
     padding: 12px 16px 16px;
-    max-width: 900px;
+    max-width: 768px;
     margin: 0 auto;
     width: 100%;
   }
@@ -1447,8 +1488,8 @@ export default {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: #f9fafb;
-    border: 1px solid #e5e7eb;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 12px;
     padding: 8px 12px;
     margin-bottom: 8px;
@@ -1470,7 +1511,7 @@ export default {
   }
 
   &__file-icon {
-    color: #6b7280;
+    color: #64748b;
     flex-shrink: 0;
   }
 
@@ -1483,7 +1524,7 @@ export default {
   &__file-name {
     font-size: 13px;
     font-weight: 500;
-    color: #374151;
+    color: #f8fafc;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1491,13 +1532,13 @@ export default {
 
   &__file-size {
     font-size: 11px;
-    color: #9ca3af;
+    color: #64748b;
   }
 
   &__file-remove {
     background: none;
     border: none;
-    color: #9ca3af;
+    color: #64748b;
     cursor: pointer;
     padding: 4px;
     border-radius: 4px;
@@ -1505,14 +1546,14 @@ export default {
 
     &:hover {
       color: #ef4444;
-      background: #fef2f2;
+      background: rgba(239, 68, 68, 0.1);
     }
   }
 
   &__attach {
     background: none;
     border: none;
-    color: #6b7280;
+    color: #94a3b8;
     cursor: pointer;
     padding: 6px;
     border-radius: 50%;
@@ -1522,14 +1563,27 @@ export default {
     flex-shrink: 0;
     transition: all 0.2s;
 
+    :deep(svg) {
+      fill: #94a3b8 !important;
+      transition: fill 0.2s;
+    }
+
     &:hover:not(:disabled) {
       color: #FF5C00;
       background: rgba(255, 92, 0, 0.08);
+
+      :deep(svg) {
+        fill: #FF5C00 !important;
+      }
     }
 
     &:disabled {
-      color: #d1d5db;
+      color: rgba(255, 255, 255, 0.2);
       cursor: not-allowed;
+
+      :deep(svg) {
+        fill: rgba(255, 255, 255, 0.2) !important;
+      }
     }
   }
 
@@ -1537,11 +1591,12 @@ export default {
     display: flex;
     align-items: center;
     gap: 8px;
-    border: 1px solid #d1d5db;
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 24px;
     padding: 4px 4px 4px 20px;
-    background: white;
+    background: rgba(15, 23, 42, 0.8);
     transition: border-color 0.2s, box-shadow 0.2s;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
 
     &:focus-within {
       border-color: #FF5C00;
@@ -1555,13 +1610,14 @@ export default {
       font-size: 15px;
       padding: 10px 0;
       background: transparent;
+      color: #f8fafc;
 
       &::placeholder {
-        color: #9ca3af;
+        color: #64748b;
       }
 
       &:disabled {
-        color: #9ca3af;
+        color: #64748b;
       }
     }
   }
@@ -1586,8 +1642,8 @@ export default {
     }
 
     &:disabled {
-      background: #e5e7eb;
-      color: #9ca3af;
+      background: rgba(255, 255, 255, 0.1);
+      color: #64748b;
       cursor: not-allowed;
     }
   }
@@ -1595,7 +1651,7 @@ export default {
   &__disclaimer {
     text-align: center;
     font-size: 11px;
-    color: #9ca3af;
+    color: #64748b;
     margin: 8px 0 0;
   }
 }
@@ -1610,16 +1666,18 @@ export default {
 
 // ===== ARTIFACT PANEL =====
 .eka-artifact {
-  width: 420px;
-  min-width: 420px;
-  border-left: 1px solid #e5e7eb;
+  width: 400px;
+  min-width: 400px;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
   flex-direction: column;
-  background: #ffffff;
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
 
   @media (max-width: 1024px) {
-    width: 360px;
-    min-width: 360px;
+    width: 400px;
+    min-width: 400px;
   }
 
   &.mobile-overlay {
@@ -1631,7 +1689,8 @@ export default {
     min-width: unset;
     z-index: 1300;
     border-left: none;
-    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15);
+    box-shadow: -20px 0 25px -5px rgba(0, 0, 0, 0.5);
+    background: rgba(15, 23, 42, 0.95);
   }
 
   &__header {
@@ -1639,8 +1698,8 @@ export default {
     align-items: center;
     justify-content: space-between;
     padding: 12px 16px;
-    border-bottom: 1px solid #e5e7eb;
-    background: #f9fafb;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.2);
   }
 
   &__header-title {
@@ -1649,25 +1708,42 @@ export default {
     gap: 8px;
     font-size: 14px;
     font-weight: 600;
-    color: #1f2937;
+    color: #f8fafc;
+
+    span {
+      color: #f8fafc;
+    }
 
     .ov-icon {
-      color: #01579B;
-      fill: #01579B;
+      color: #0ea5e9;
+      fill: #0ea5e9;
+      stroke: #0ea5e9;
     }
   }
 
   &__close {
     background: none;
     border: none;
-    color: #6b7280;
+    color: #64748b;
     cursor: pointer;
     padding: 4px;
     border-radius: 6px;
 
+    .ov-icon {
+      color: #64748b;
+      fill: #64748b;
+      stroke: #64748b;
+    }
+
     &:hover {
-      background: #f3f4f6;
-      color: #374151;
+      background: rgba(255, 255, 255, 0.1);
+      color: #f8fafc;
+
+      .ov-icon {
+        color: #f8fafc;
+        fill: #f8fafc;
+        stroke: #f8fafc;
+      }
     }
   }
 
@@ -1717,13 +1793,13 @@ export default {
   &__title {
     font-size: 28px;
     font-weight: 700;
-    color: #1f2937;
+    color: #f8fafc;
     margin: 0 0 8px;
   }
 
   &__subtitle {
     font-size: 15px;
-    color: #6b7280;
+    color: #64748b;
     line-height: 1.6;
     margin: 0 0 32px;
     max-width: 480px;
@@ -1746,25 +1822,31 @@ export default {
     align-items: center;
     gap: 10px;
     padding: 14px 16px;
-    border: 1px solid #e5e7eb;
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 12px;
-    background: white;
-    color: #374151;
+    background: rgba(15, 23, 42, 0.6);
+    color: rgba(255, 255, 255, 0.8);
     font-size: 14px;
     cursor: pointer;
     text-align: left;
     transition: all 0.2s;
 
+    span {
+      color: #ffffff;
+    }
+
     .ov-icon {
-      color: #FF5C00;
+      color: #ffffff;
+      fill: #ffffff;
+      stroke: #ffffff;
       flex-shrink: 0;
     }
 
     &:hover {
-      border-color: #FF5C00;
-      background: #FFF3ED;
+      border-color: rgba(14, 165, 233, 0.3);
+      background: rgba(14, 165, 233, 0.05);
       transform: translateY(-1px);
-      box-shadow: 0 2px 8px rgba(255, 92, 0, 0.1);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
     }
   }
 }
