@@ -114,8 +114,8 @@ function toggleStep(idx) {
     display: flex;
     gap: 12px;
     padding: 16px;
-    background: linear-gradient(135deg, #FEE2E2, #FECACA);
-    border: 1px solid #FCA5A5;
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.08));
+    border: 1px solid rgba(252, 165, 165, 0.3);
     border-radius: 12px;
     margin-bottom: 16px;
   }
@@ -135,7 +135,7 @@ function toggleStep(idx) {
 
     strong {
       font-size: 14px;
-      color: #991B1B;
+      color: #fca5a5;
     }
   }
 
@@ -167,7 +167,7 @@ function toggleStep(idx) {
   &__section-heading {
     font-size: 13px;
     font-weight: 700;
-    color: #01579B;
+    color: #0ea5e9;
     text-transform: uppercase;
     letter-spacing: 0.3px;
     margin: 0 0 10px;
@@ -188,8 +188,8 @@ function toggleStep(idx) {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: #F8FAFC;
-    border: 1px solid #E2E8F0;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 10px;
     padding: 12px 14px;
   }
@@ -202,12 +202,12 @@ function toggleStep(idx) {
   &__crisis-name {
     font-size: 13px;
     font-weight: 600;
-    color: #0F172A;
+    color: #f8fafc;
   }
 
   &__crisis-available {
     font-size: 11px;
-    color: #64748B;
+    color: #94a3b8;
     margin-top: 2px;
   }
 
@@ -226,7 +226,7 @@ function toggleStep(idx) {
     white-space: nowrap;
 
     &:hover {
-      background: #0288D1;
+      background: #0ea5e9;
     }
   }
 
@@ -241,14 +241,14 @@ function toggleStep(idx) {
   }
 
   &__step {
-    border: 1px solid #E2E8F0;
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 10px;
     margin-bottom: 6px;
     overflow: hidden;
     transition: box-shadow 0.2s;
 
     &--open {
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
     }
   }
 
@@ -265,7 +265,7 @@ function toggleStep(idx) {
     transition: background 0.15s;
 
     &:hover {
-      background: #F8FAFC;
+      background: rgba(14, 165, 233, 0.1);
     }
   }
 
@@ -277,8 +277,8 @@ function toggleStep(idx) {
     height: 26px;
     min-width: 26px;
     border-radius: 50%;
-    background: #E0F7FA;
-    color: #0288D1;
+    background: rgba(14, 165, 233, 0.15);
+    color: #0ea5e9;
     font-size: 12px;
     font-weight: 700;
   }
@@ -287,13 +287,13 @@ function toggleStep(idx) {
     flex: 1;
     font-size: 13px;
     font-weight: 600;
-    color: #0F172A;
+    color: #f8fafc;
   }
 
   &__step-chevron {
     width: 18px;
     height: 18px;
-    color: #94A3B8;
+    color: #64748b;
     transition: transform 0.2s;
     flex-shrink: 0;
 
@@ -308,7 +308,7 @@ function toggleStep(idx) {
 
     p {
       font-size: 13px;
-      color: #334155;
+      color: #f8fafc;
       line-height: 1.6;
       margin: 0;
     }
@@ -317,12 +317,12 @@ function toggleStep(idx) {
   /* Footer */
   &__footer {
     padding: 12px;
-    border-top: 1px solid #E2E8F0;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
     text-align: center;
 
     p {
       font-size: 11px;
-      color: #94A3B8;
+      color: #64748b;
       margin: 0;
       line-height: 1.5;
     }

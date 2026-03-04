@@ -72,7 +72,7 @@ const routes = [
   {
     path: "/try-eka",
     name: "Try Eka",
-    component: () => import("../views/Website/EkaChat.vue"),
+    component: () => import("../views/Website/EkaTrialOnboarding.vue"),
   },
 
   {

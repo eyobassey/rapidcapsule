@@ -317,21 +317,21 @@ export default {
     margin-bottom: 16px;
 
     .ov-icon {
-      color: #01579B;
-      fill: #01579B;
+      color: #0ea5e9;
+      fill: #0ea5e9;
     }
 
     h2 {
       font-size: 17px;
       font-weight: 700;
-      color: #0F172A;
+      color: #f8fafc;
       flex: 1;
     }
   }
 
   &__badge {
-    background: #E0F2FE;
-    color: #0284C7;
+    background: rgba(14, 165, 233, 0.1);
+    color: #0ea5e9;
     font-size: 11px;
     font-weight: 600;
     padding: 3px 10px;
@@ -346,18 +346,18 @@ export default {
   }
 
   &__drug-tag {
-    background: #F1F5F9;
-    color: #334155;
+    background: rgba(255, 255, 255, 0.05);
+    color: #f8fafc;
     font-size: 12px;
     font-weight: 500;
     padding: 4px 10px;
     border-radius: 6px;
-    border: 1px solid #E2E8F0;
+    border: 1px solid rgba(255, 255, 255, 0.1);
   }
 
   &__safe {
-    background: linear-gradient(135deg, #D1FAE5, #ECFDF5);
-    border: 1px solid #A7F3D0;
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(167, 243, 208, 0.3);
     border-radius: 12px;
     padding: 24px;
     text-align: center;
@@ -372,20 +372,20 @@ export default {
     h3 {
       font-size: 15px;
       font-weight: 700;
-      color: #065F46;
+      color: #6ee7b7;
       margin-bottom: 6px;
     }
 
     p {
       font-size: 13px;
-      color: #047857;
+      color: #6ee7b7;
       line-height: 1.5;
     }
   }
 
   &__interaction {
     margin-bottom: 20px;
-    border: 1px solid #E2E8F0;
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 12px;
     overflow: hidden;
   }
@@ -437,9 +437,9 @@ export default {
   &__description {
     padding: 12px 16px;
     font-size: 13px;
-    color: #334155;
+    color: #f8fafc;
     line-height: 1.6;
-    border-bottom: 1px solid #F1F5F9;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   }
 
   &__enzyme {
@@ -447,22 +447,22 @@ export default {
     align-items: center;
     gap: 5px;
     margin: 8px 16px;
-    background: #EDE9FE;
-    color: #7C3AED;
+    background: rgba(124, 58, 237, 0.1);
+    color: #a78bfa;
     font-size: 11px;
     font-weight: 600;
     padding: 3px 10px;
     border-radius: 6px;
 
     .ov-icon {
-      color: #7C3AED;
-      fill: #7C3AED;
+      color: #a78bfa;
+      fill: #a78bfa;
     }
   }
 
   &__section {
     padding: 12px 16px;
-    border-top: 1px solid #F1F5F9;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
 
     h4 {
       display: flex;
@@ -470,12 +470,12 @@ export default {
       gap: 6px;
       font-size: 13px;
       font-weight: 700;
-      color: #0F172A;
+      color: #f8fafc;
       margin-bottom: 10px;
 
       .ov-icon {
-        color: #0284C7;
-        fill: #0284C7;
+        color: #0ea5e9;
+        fill: #0ea5e9;
       }
     }
   }
@@ -484,27 +484,27 @@ export default {
     display: flex;
     gap: 8px;
     padding: 8px 0;
-    border-bottom: 1px solid #F8FAFC;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 
     &:last-child { border-bottom: none; }
 
     .ov-icon {
-      color: #64748B;
-      fill: #64748B;
+      color: #94a3b8;
+      fill: #94a3b8;
       flex-shrink: 0;
       margin-top: 2px;
     }
 
     strong {
       font-size: 12px;
-      color: #0F172A;
+      color: #f8fafc;
       display: block;
       margin-bottom: 2px;
     }
 
     p {
       font-size: 12px;
-      color: #64748B;
+      color: #94a3b8;
       line-height: 1.4;
       margin: 0;
     }
@@ -522,8 +522,8 @@ export default {
   }
 
   &__card {
-    background: #F8FAFC;
-    border: 1px solid #E2E8F0;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 8px;
     padding: 10px 12px;
 
@@ -533,20 +533,20 @@ export default {
       gap: 5px;
       font-size: 11px;
       font-weight: 700;
-      color: #64748B;
+      color: #94a3b8;
       text-transform: uppercase;
       letter-spacing: 0.3px;
       margin-bottom: 6px;
 
       .ov-icon {
-        color: #94A3B8;
-        fill: #94A3B8;
+        color: #64748b;
+        fill: #64748b;
       }
     }
 
     p {
       font-size: 12px;
-      color: #334155;
+      color: #f8fafc;
       line-height: 1.5;
       margin: 0;
     }
@@ -559,12 +559,12 @@ export default {
     font-size: 11px;
 
     .label {
-      color: #94A3B8;
+      color: #64748b;
       font-weight: 500;
     }
 
     .value {
-      color: #334155;
+      color: #f8fafc;
       font-weight: 600;
 
       &.risk-major { color: #EF4444; }
@@ -581,21 +581,21 @@ export default {
 
     strong {
       font-size: 11px;
-      color: #0F172A;
+      color: #f8fafc;
       display: block;
     }
 
     p {
       font-size: 11px;
-      color: #64748B;
+      color: #94a3b8;
       line-height: 1.4;
       margin: 0;
     }
   }
 
   &__summary {
-    background: #F8FAFC;
-    border: 1px solid #E2E8F0;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 10px;
     padding: 14px 16px;
     margin-bottom: 12px;
@@ -606,18 +606,18 @@ export default {
       gap: 6px;
       font-size: 13px;
       font-weight: 700;
-      color: #0F172A;
+      color: #f8fafc;
       margin-bottom: 8px;
 
       .ov-icon {
-        color: #0284C7;
-        fill: #0284C7;
+        color: #0ea5e9;
+        fill: #0ea5e9;
       }
     }
 
     p {
       font-size: 13px;
-      color: #334155;
+      color: #f8fafc;
       line-height: 1.6;
       margin: 0;
     }
@@ -627,21 +627,21 @@ export default {
     display: flex;
     gap: 8px;
     padding: 10px 12px;
-    background: #FFFBEB;
-    border: 1px solid #FDE68A;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 8px;
     margin-bottom: 12px;
 
     .ov-icon {
-      color: #D97706;
-      fill: #D97706;
+      color: #64748b;
+      fill: #64748b;
       flex-shrink: 0;
       margin-top: 1px;
     }
 
     p {
       font-size: 11px;
-      color: #92400E;
+      color: #64748b;
       line-height: 1.5;
       margin: 0;
     }
@@ -654,7 +654,7 @@ export default {
     gap: 8px;
     width: 100%;
     padding: 10px;
-    background: #01579B;
+    background: #0ea5e9;
     color: #fff;
     border: none;
     border-radius: 8px;
@@ -669,7 +669,7 @@ export default {
     }
 
     &:hover {
-      background: #014882;
+      background: #0284c7;
     }
   }
 }

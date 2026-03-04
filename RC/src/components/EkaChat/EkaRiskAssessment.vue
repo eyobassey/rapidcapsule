@@ -338,7 +338,7 @@ function stripEmoji(text) {
 
 async function loadLogo() {
   try {
-    const res = await fetch('/RapidCapsule_Logo.png')
+    const res = await fetch('/eka-rc-logo-icon.png')
     const blob = await res.blob()
     return new Promise((resolve) => {
       const reader = new FileReader()
@@ -589,11 +589,11 @@ async function downloadPdf() {
 
 <style lang="scss" scoped>
 @mixin glass-card {
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(15, 23, 42, 0.6);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .risk-assess {
@@ -648,16 +648,16 @@ async function downloadPdf() {
     margin-bottom: 4px;
 
     &--low {
-      background: #D1FAE5;
-      color: #065F46;
+      background: rgba(16, 185, 129, 0.15);
+      color: #6ee7b7;
     }
     &--moderate {
-      background: #FEF3C7;
-      color: #92400E;
+      background: rgba(245, 158, 11, 0.15);
+      color: #fbbf24;
     }
     &--high {
-      background: #FEE2E2;
-      color: #991B1B;
+      background: rgba(239, 68, 68, 0.15);
+      color: #fca5a5;
     }
     &--critical {
       background: #991B1B;
@@ -667,7 +667,7 @@ async function downloadPdf() {
 
   &__updated {
     font-size: 11px;
-    color: #64748B;
+    color: #94a3b8;
     margin-top: 4px;
   }
 
@@ -676,7 +676,7 @@ async function downloadPdf() {
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.3px;
-    color: #01579B;
+    color: #0ea5e9;
     margin: 0 0 10px 0;
     display: flex;
     align-items: center;
@@ -705,19 +705,19 @@ async function downloadPdf() {
   &__category-name {
     font-size: 12px;
     font-weight: 600;
-    color: #334155;
+    color: #f8fafc;
   }
 
   &__category-score {
     font-size: 11px;
     font-weight: 700;
-    color: #0F172A;
+    color: #f8fafc;
     font-family: 'Inter', monospace;
   }
 
   &__category-bar {
     height: 6px;
-    background: #E2E8F0;
+    background: rgba(255, 255, 255, 0.1);
     border-radius: 3px;
     overflow: hidden;
   }
@@ -730,7 +730,7 @@ async function downloadPdf() {
 
   &__category-weight {
     font-size: 10px;
-    color: #64748B;
+    color: #94a3b8;
     margin-top: 2px;
     display: block;
   }
@@ -753,7 +753,7 @@ async function downloadPdf() {
 
   &__factor-bar {
     height: 8px;
-    background: #E2E8F0;
+    background: rgba(255, 255, 255, 0.1);
     border-radius: 4px;
     overflow: hidden;
     min-width: 60px;
@@ -767,7 +767,7 @@ async function downloadPdf() {
 
   &__factor-name {
     font-size: 11px;
-    color: #334155;
+    color: #f8fafc;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -776,7 +776,7 @@ async function downloadPdf() {
   &__factor-value {
     font-size: 11px;
     font-weight: 700;
-    color: #0F172A;
+    color: #f8fafc;
     font-family: 'Inter', monospace;
     min-width: 20px;
     text-align: right;
@@ -797,13 +797,13 @@ async function downloadPdf() {
 
     &--increasing { color: #EF4444; }
     &--decreasing { color: #10B981; }
-    &--stable { color: #94A3B8; }
+    &--stable { color: #64748b; }
   }
 
   &__sparkline {
     width: 100%;
     height: 60px;
-    background: #F1F5F9;
+    background: rgba(255, 255, 255, 0.05);
     border-radius: 8px;
   }
 
@@ -811,7 +811,7 @@ async function downloadPdf() {
     display: flex;
     justify-content: space-between;
     font-size: 10px;
-    color: #64748B;
+    color: #94a3b8;
     margin-top: 4px;
   }
 
@@ -828,17 +828,17 @@ async function downloadPdf() {
     align-items: center;
     gap: 8px;
     padding: 8px 10px;
-    background: #F8FAFC;
-    border: 1px solid #F1F5F9;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 10px;
     margin-bottom: 6px;
     font-size: 12px;
-    color: #334155;
+    color: #f8fafc;
     cursor: pointer;
     transition: background 0.15s;
 
     &:hover {
-      background: #F1F5F9;
+      background: rgba(14, 165, 233, 0.1);
     }
   }
 
@@ -846,7 +846,7 @@ async function downloadPdf() {
     width: 16px;
     height: 16px;
     flex-shrink: 0;
-    color: #64748B;
+    color: #94a3b8;
   }
 
   // Patient Responses
@@ -863,13 +863,13 @@ async function downloadPdf() {
     margin-bottom: 6px;
 
     &--eka {
-      background: #F0F7FF;
-      border-left: 3px solid #0288D1;
+      background: rgba(14, 165, 233, 0.08);
+      border-left: 3px solid #0ea5e9;
     }
 
     &--patient {
-      background: #F8FAFC;
-      border-left: 3px solid #64748B;
+      background: rgba(255, 255, 255, 0.05);
+      border-left: 3px solid #64748b;
     }
   }
 
@@ -882,17 +882,17 @@ async function downloadPdf() {
     margin-bottom: 4px;
 
     .risk-assess__response-item--eka & {
-      color: #0288D1;
+      color: #0ea5e9;
     }
 
     .risk-assess__response-item--patient & {
-      color: #64748B;
+      color: #94a3b8;
     }
   }
 
   &__response-text {
     font-size: 13px;
-    color: #334155;
+    color: #f8fafc;
     line-height: 1.6;
     margin: 0;
     white-space: pre-wrap;
@@ -904,13 +904,13 @@ async function downloadPdf() {
     display: flex;
     gap: 8px;
     padding: 16px 20px;
-    background: rgba(255, 251, 235, 0.85);
-    border: 1px solid #FDE68A;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 20px;
 
     p {
       font-size: 11px;
-      color: #92400E;
+      color: #64748b;
       line-height: 1.5;
       margin: 0;
     }
@@ -920,7 +920,7 @@ async function downloadPdf() {
     width: 16px;
     height: 16px;
     flex-shrink: 0;
-    color: #D97706;
+    color: #64748b;
     margin-top: 1px;
   }
 
@@ -934,7 +934,7 @@ async function downloadPdf() {
     align-items: center;
     gap: 8px;
     padding: 12px 24px;
-    background: linear-gradient(135deg, #01579B, #0288D1);
+    background: linear-gradient(135deg, #0ea5e9, #0284c7);
     color: #FFFFFF;
     border: none;
     border-radius: 12px;
@@ -944,7 +944,7 @@ async function downloadPdf() {
     transition: all 0.2s;
 
     &:hover {
-      box-shadow: 0 4px 16px rgba(1, 87, 155, 0.3);
+      box-shadow: 0 4px 16px rgba(14, 165, 233, 0.3);
       transform: translateY(-1px);
     }
 

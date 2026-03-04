@@ -2,6 +2,8 @@ import {
   Controller,
   Post,
   Get,
+  Patch,
+  Delete,
   Body,
   Param,
   Query,
@@ -27,6 +29,9 @@ import { TrialService } from './trial.service';
 import { TrialGuard } from './trial.guard';
 import {
   RequestTrialDto,
+  RequestTrialWithOtpDto,
+  VerifyOtpDto,
+  ResendOtpDto,
   TrialBeginCheckupDto,
   TrialParseTextDto,
   TrialDiagnosisDto,
@@ -81,6 +86,53 @@ export class TrialController {
   async verifyToken(@Param('token') token: string) {
     const result = await this.trialService.verifyToken(token);
     return sendSuccessResponse('Trial verified successfully', result);
+  }
+
+  // ============ CONVERSATIONAL OTP ONBOARDING ============
+
+  @Post('request-with-otp')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Request trial with OTP verification',
+    description:
+      'Creates a trial session and sends a 6-digit OTP code via email for conversational onboarding through Eka. Also includes a magic link as fallback.',
+  })
+  @ApiResponse({ status: 200, description: 'OTP sent to email' })
+  @ApiResponse({ status: 400, description: 'Disposable email or invalid input' })
+  @ApiResponse({ status: 403, description: 'IP rate limited' })
+  @ApiResponse({ status: 409, description: 'Active trial already exists' })
+  async requestTrialWithOtp(@Body() dto: RequestTrialWithOtpDto, @Request() req: any) {
+    const result = await this.trialService.requestTrialWithOtp(dto, req);
+    return sendSuccessResponse(result.message, { success: true });
+  }
+
+  @Post('verify-otp')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Verify OTP code',
+    description:
+      'Verifies the 6-digit OTP code submitted during conversational onboarding. On success, returns a fresh trial token for subsequent API calls.',
+  })
+  @ApiResponse({ status: 200, description: 'OTP verified, trial token returned' })
+  @ApiResponse({ status: 400, description: 'Invalid or expired OTP' })
+  @ApiResponse({ status: 403, description: 'Too many incorrect attempts' })
+  async verifyOtp(@Body() dto: VerifyOtpDto, @Request() req: any) {
+    const result = await this.trialService.verifyOtp(dto, req);
+    return sendSuccessResponse('Email verified successfully!', result);
+  }
+
+  @Post('resend-otp')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Resend OTP code',
+    description:
+      'Generates and sends a new OTP code to the email address associated with a pending trial session. Resets the attempt counter.',
+  })
+  @ApiResponse({ status: 200, description: 'New OTP sent' })
+  @ApiResponse({ status: 400, description: 'No pending trial found' })
+  async resendOtp(@Body() dto: ResendOtpDto, @Request() req: any) {
+    const result = await this.trialService.resendOtp(dto, req);
+    return sendSuccessResponse(result.message, { success: true });
   }
 
   // ============ TRIAL-GUARDED ENDPOINTS ============
@@ -334,7 +386,7 @@ export class TrialController {
   @ApiResponse({ status: 200, description: 'SSE stream of Eka AI chat response chunks' })
   @ApiResponse({ status: 401, description: 'Invalid or missing trial token' })
   @ApiResponse({ status: 429, description: 'Eka AI usage limit reached' })
-  async ekaChat(@Body() body: { message: string; language?: string }, @Request() req: any, @Res() res: any) {
+  async ekaChat(@Body() body: { message: string; language?: string; conversation_id?: string }, @Request() req: any, @Res() res: any) {
     const token = req.headers['x-trial-token'];
 
     res.setHeader('Content-Type', 'text/event-stream');
@@ -344,7 +396,7 @@ export class TrialController {
     res.flushHeaders();
 
     try {
-      for await (const chunk of this.trialService.trialEkaChat(token, body.message, body.language)) {
+      for await (const chunk of this.trialService.trialEkaChat(token, body.message, body.language, body.conversation_id)) {
         res.write(`data: ${JSON.stringify(chunk)}\n\n`);
       }
     } catch (error) {
@@ -365,10 +417,61 @@ export class TrialController {
   })
   @ApiResponse({ status: 200, description: 'Eka status retrieved successfully' })
   @ApiResponse({ status: 401, description: 'Invalid or missing trial token' })
-  async getEkaStatus(@Request() req: any) {
+  async getEkaStatus(@Request() req: any, @Query('conversation_id') conversationId?: string) {
     const token = req.headers['x-trial-token'];
-    const result = await this.trialService.getEkaStatus(token);
+    const result = await this.trialService.getEkaStatus(token, conversationId);
     return sendSuccessResponse('Eka status retrieved', result);
+  }
+
+  // ---- Eka Conversation CRUD ----
+
+  @ApiSecurity('Trial-token')
+  @UseGuards(TrialGuard)
+  @Get('eka/conversations')
+  @ApiOperation({ summary: 'List trial conversations', description: 'Returns all active conversations for the trial session.' })
+  @ApiResponse({ status: 200, description: 'Conversations listed' })
+  async getEkaConversations(@Request() req: any) {
+    const token = req.headers['x-trial-token'];
+    const result = await this.trialService.getTrialConversations(token);
+    return sendSuccessResponse('Conversations retrieved', result);
+  }
+
+  @ApiSecurity('Trial-token')
+  @UseGuards(TrialGuard)
+  @Post('eka/conversations')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Create new trial conversation', description: 'Creates a new empty conversation for the trial session.' })
+  @ApiResponse({ status: 201, description: 'Conversation created' })
+  async createEkaConversation(@Request() req: any) {
+    const token = req.headers['x-trial-token'];
+    const result = await this.trialService.createTrialConversation(token);
+    return sendSuccessResponse('Conversation created', result);
+  }
+
+  @ApiSecurity('Trial-token')
+  @UseGuards(TrialGuard)
+  @Patch('eka/conversations/:id')
+  @ApiOperation({ summary: 'Rename trial conversation', description: 'Updates the title of a trial conversation.' })
+  @ApiParam({ name: 'id', description: 'Conversation ID' })
+  @ApiResponse({ status: 200, description: 'Conversation renamed' })
+  @ApiResponse({ status: 404, description: 'Conversation not found' })
+  async renameEkaConversation(@Param('id') id: string, @Body() body: { title: string }, @Request() req: any) {
+    const token = req.headers['x-trial-token'];
+    const result = await this.trialService.renameTrialConversation(token, id, body.title);
+    return sendSuccessResponse('Conversation renamed', result);
+  }
+
+  @ApiSecurity('Trial-token')
+  @UseGuards(TrialGuard)
+  @Delete('eka/conversations/:id')
+  @ApiOperation({ summary: 'Delete trial conversation', description: 'Soft-deletes a trial conversation.' })
+  @ApiParam({ name: 'id', description: 'Conversation ID' })
+  @ApiResponse({ status: 200, description: 'Conversation deleted' })
+  @ApiResponse({ status: 404, description: 'Conversation not found' })
+  async deleteEkaConversation(@Param('id') id: string, @Request() req: any) {
+    const token = req.headers['x-trial-token'];
+    const result = await this.trialService.deleteTrialConversation(token, id);
+    return sendSuccessResponse('Conversation deleted', result);
   }
 
   // ---- Trial Analytics (public for admin use) ----

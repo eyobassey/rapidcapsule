@@ -3142,15 +3142,27 @@ export class EkaService {
       role: m.role as 'user' | 'assistant',
       content: m.content,
     }));
-    claudeMessages.push({ role: 'user', content: message });
 
-    this.logger.log(`[Trial Chat] user=${firstName}, messages_in_context=${claudeMessages.length}, msg="${message}"`);
+    this.logger.log(`[Trial Chat] user=${firstName}, messages_in_context=${claudeMessages.length + 1}, msg="${message}"`);
+
+    // Detect if user wants a health checkup
+    const lastUserMessage = (message || '').toLowerCase();
+    const isStartingNewCheckup = /\b(start|begin|new|do|want)\b.*\b(checkup|check[\s-]?up|health check)\b/.test(lastUserMessage)
+      || /health\s*check\s*-?\s*up/i.test(lastUserMessage)
+      || /\bcheckup\b/.test(lastUserMessage);
+
+    // For checkup requests: augment the user message so the AI knows to call the tool
+    if (isStartingNewCheckup) {
+      claudeMessages.push({
+        role: 'user',
+        content: `${message}\n\n[SYSTEM OVERRIDE: Any previous health checkup session has been CANCELLED and DELETED. There is NO active checkup. The patient wants to start a BRAND NEW health checkup from scratch. You MUST: (1) Ask for their age and biological sex if not known. (2) Once you have both, call the start_health_checkup tool IMMEDIATELY. Do NOT ask about symptoms, do NOT give lists of symptom categories — the body diagram tool handles symptom selection. Just get age + gender → call the tool.]`,
+      });
+    } else {
+      claudeMessages.push({ role: 'user', content: message });
+    }
 
     // Detect active health checkup for the system user
     const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
-    const lastUserMessage = (message || '').toLowerCase();
-    const isStartingNewCheckup = /\b(start|begin|new|do|want)\b.*\b(checkup|check[\s-]?up|health check)\b/.test(lastUserMessage)
-      || /\bhealth checkup\b/.test(lastUserMessage);
 
     const uid = new Types.ObjectId(systemUserId);
     if (isStartingNewCheckup) {
@@ -3176,7 +3188,7 @@ export class EkaService {
       try {
         fullResponse = yield* this.streamWithToolsTrial(
           claudeMessages, firstName, systemUserId, toolsUsed,
-          messagesUsed, messageLimit, language, activeCheckupPhase,
+          messagesUsed, messageLimit, language, activeCheckupPhase, isStartingNewCheckup,
         );
         break;
       } catch (error: any) {
@@ -3204,6 +3216,7 @@ export class EkaService {
     messageLimit: number,
     language?: string,
     activeCheckupPhase?: string | null,
+    isStartingNewCheckup?: boolean,
   ): AsyncGenerator<any, string> {
     let currentMessages = [...messages];
     let fullResponse = '';
@@ -3211,10 +3224,17 @@ export class EkaService {
     let forceToolNextRound: string | null = null;
 
     for (let round = 0; round < 5; round++) {
+      let systemPrompt = buildTrialSystemPrompt(firstName, messagesUsed, messageLimit, language);
+
+      // Inject strong hint when user is requesting a health checkup
+      if (isStartingNewCheckup && round === 0) {
+        systemPrompt += `\n\nURGENT — HEALTH CHECKUP REQUESTED:\n${firstName} wants to do a health checkup RIGHT NOW. You MUST:\n1. Ask for their age and gender (two quick questions) if not already known from the conversation.\n2. As soon as you have age and gender, call the start_health_checkup tool IMMEDIATELY.\nDo NOT ask about symptoms, do NOT give a list of symptom categories. Just get age + gender → call the tool.`;
+      }
+
       const apiParams: any = {
         model: MODEL,
         max_tokens: MAX_TOKENS,
-        system: buildTrialSystemPrompt(firstName, messagesUsed, messageLimit, language),
+        system: systemPrompt,
         messages: currentMessages,
       };
 

@@ -4,6 +4,7 @@ import {
   ConflictException,
   UnauthorizedException,
   ForbiddenException,
+  NotFoundException,
   Logger,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
@@ -12,8 +13,12 @@ import { v4 as uuidv4 } from 'uuid';
 import * as crypto from 'crypto';
 import * as AWS from 'aws-sdk';
 import { TrialSession, TrialSessionDocument, TrialStatus } from './trial.entity';
+import { TrialConversation, TrialConversationDocument } from './trial-conversation.entity';
 import {
   RequestTrialDto,
+  RequestTrialWithOtpDto,
+  VerifyOtpDto,
+  ResendOtpDto,
   TrialBeginCheckupDto,
   TrialParseTextDto,
   TrialDiagnosisDto,
@@ -37,6 +42,7 @@ import {
 import { ClaudeHealthSummaryService } from '../health-checkup/services/claude-health-summary.service';
 import { GeneralHelpers } from '../../common/helpers/general.helpers';
 import { trialEmail } from '../../core/emails/mails/trialEmail';
+import { trialOtpEmail } from '../../core/emails/mails/trialOtpEmail';
 import { CheckupOwner } from '../health-checkup/entities/health-checkup.entity';
 import { EkaService } from '../eka/eka.service';
 import { TrialSettings, TrialSettingsDocument } from './trial-settings.entity';
@@ -83,6 +89,8 @@ export class TrialService {
     private uploadModel: Model<PatientPrescriptionUploadDocument>,
     @InjectModel(TrialSettings.name)
     private trialSettingsModel: Model<TrialSettingsDocument>,
+    @InjectModel(TrialConversation.name)
+    private trialConversationModel: Model<TrialConversationDocument>,
     private readonly healthCheckupService: HealthCheckupService,
     private readonly rxgptService: RxGPTService,
     private readonly prescriptionVerificationService: PrescriptionVerificationService,
@@ -116,6 +124,13 @@ export class TrialService {
       email: email.toLowerCase(),
       status: { $in: [TrialStatus.PENDING, TrialStatus.VERIFIED] },
       expires_at: { $gt: new Date() },
+    });
+    return !!existing;
+  }
+
+  private async hasEverHadTrial(email: string): Promise<boolean> {
+    const existing = await this.trialSessionModel.findOne({
+      email: email.toLowerCase(),
     });
     return !!existing;
   }
@@ -162,6 +177,13 @@ export class TrialService {
     if (!isWhitelisted && await this.hasActiveTrialForEmail(email)) {
       throw new ConflictException(
         'A trial link has already been sent to this email address. Please check your inbox.',
+      );
+    }
+
+    // 2b. Check if email has ever had a trial (prevent re-use after expiry)
+    if (!isWhitelisted && await this.hasEverHadTrial(email)) {
+      throw new ConflictException(
+        'This email has already been used for a free trial. Sign up at rapidcapsule.com to continue enjoying Eka and all our features — it\'s free!',
       );
     }
 
@@ -216,6 +238,239 @@ export class TrialService {
     return {
       success: true,
       message: 'A magic link has been sent to your email address. Please check your inbox.',
+    };
+  }
+
+  // ============ CONVERSATIONAL OTP ONBOARDING ============
+
+  async requestTrialWithOtp(
+    dto: RequestTrialWithOtpDto,
+    req: any,
+  ): Promise<{ success: boolean; message: string }> {
+    const email = dto.email.toLowerCase().trim();
+    const ip = this.getClientIP(req);
+    const userAgent = req.headers['user-agent'] || '';
+    const isWhitelisted = WHITELISTED_EMAILS.includes(email);
+
+    // 1. Check disposable email
+    if (!isWhitelisted && this.isDisposableEmail(email)) {
+      throw new BadRequestException(
+        'That email provider isn\'t supported. Please use a personal or work email address.',
+      );
+    }
+
+    // 2. Check if email already has active trial
+    if (!isWhitelisted && await this.hasActiveTrialForEmail(email)) {
+      throw new ConflictException(
+        'You already have an active trial! Check your inbox for the verification code, or type "resend" for a new one.',
+      );
+    }
+
+    // 2b. Check if email has ever had a trial (prevent re-use after expiry)
+    if (!isWhitelisted && await this.hasEverHadTrial(email)) {
+      throw new ConflictException(
+        'This email has already been used for a free trial. Sign up at rapidcapsule.com to continue enjoying Eka and all our features — it\'s free!',
+      );
+    }
+
+    // 3. Check IP rate limit
+    if (!isWhitelisted && await this.isIPRateLimited(ip)) {
+      throw new ForbiddenException(
+        'Several trial requests have come from your network today. Please try again tomorrow.',
+      );
+    }
+
+    // For whitelisted emails, expire previous sessions
+    if (isWhitelisted) {
+      await this.trialSessionModel.updateMany(
+        { email, status: { $in: [TrialStatus.PENDING, TrialStatus.VERIFIED] } },
+        { status: TrialStatus.EXPIRED },
+      );
+    }
+
+    // 4. Generate token + OTP
+    const rawToken = uuidv4();
+    const tokenHash = this.hashToken(rawToken);
+    const expiresAt = new Date(Date.now() + TRIAL_EXPIRY_HOURS * 60 * 60 * 1000);
+
+    const otpCode = String(this.generalHelpers.generateRandomNumbers(6));
+    const otpHash = this.hashToken(otpCode);
+    const otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+    // 5. Create trial session
+    await this.trialSessionModel.create({
+      email,
+      first_name: dto.first_name.trim(),
+      last_name: dto.last_name.trim(),
+      token_hash: tokenHash,
+      ip_address: ip,
+      user_agent: userAgent,
+      otp_code: otpHash,
+      otp_expires_at: otpExpiresAt,
+      otp_attempts: 0,
+      status: TrialStatus.PENDING,
+      expires_at: expiresAt,
+    });
+
+    // 6. Send OTP email (with magic link fallback)
+    const magicLink = `https://rapidcapsule.com/trial/verify/${rawToken}`;
+    const emailBody = trialOtpEmail(dto.first_name.trim(), otpCode, magicLink);
+
+    try {
+      await this.generalHelpers.sendEmail(
+        email,
+        'Your Rapid Capsule Verification Code',
+        emailBody,
+      );
+      this.logger.log(`Trial OTP email sent to ${email} from IP ${ip}`);
+    } catch (error) {
+      this.logger.error(`Failed to send trial OTP email to ${email}`, error);
+    }
+
+    return {
+      success: true,
+      message: `I've sent a 6-digit verification code to ${email}. Enter it here to get started!`,
+    };
+  }
+
+  async verifyOtp(
+    dto: VerifyOtpDto,
+    req: any,
+  ): Promise<{
+    valid: boolean;
+    trial_token: string;
+    first_name: string;
+    eka_message_limit: number;
+    eka_messages_used: number;
+  }> {
+    const email = dto.email.toLowerCase().trim();
+    const otpCode = dto.otp_code.trim();
+
+    // Find the most recent PENDING session for this email
+    const session = await this.trialSessionModel.findOne({
+      email,
+      status: TrialStatus.PENDING,
+      expires_at: { $gt: new Date() },
+    }).sort({ created_at: -1 });
+
+    if (!session) {
+      throw new BadRequestException(
+        'No pending trial found for this email. Please start over.',
+      );
+    }
+
+    // Check OTP expiry
+    if (!session.otp_expires_at || session.otp_expires_at < new Date()) {
+      throw new BadRequestException(
+        'Your verification code has expired. Type "resend" to get a new one.',
+      );
+    }
+
+    // Check max attempts
+    if (session.otp_attempts >= 5) {
+      throw new ForbiddenException(
+        'Too many incorrect attempts. Type "resend" to get a fresh code.',
+      );
+    }
+
+    // Increment attempts
+    await this.trialSessionModel.updateOne(
+      { _id: session._id },
+      { $inc: { otp_attempts: 1 } },
+    );
+
+    // Verify OTP
+    const otpHash = this.hashToken(otpCode);
+    if (otpHash !== session.otp_code) {
+      const attemptsLeft = 5 - (session.otp_attempts + 1);
+      throw new BadRequestException(
+        `That code doesn't match. You have ${attemptsLeft} attempt${attemptsLeft !== 1 ? 's' : ''} left.`,
+      );
+    }
+
+    // OTP matches — generate a new token for the frontend to use
+    const newRawToken = uuidv4();
+    const newTokenHash = this.hashToken(newRawToken);
+
+    await this.trialSessionModel.updateOne(
+      { _id: session._id },
+      {
+        status: TrialStatus.VERIFIED,
+        verified_at: new Date(),
+        last_activity_at: new Date(),
+        token_hash: newTokenHash,
+        otp_code: null,
+        otp_expires_at: null,
+        otp_attempts: 0,
+      },
+    );
+
+    const settings = await this.getTrialSettings();
+
+    return {
+      valid: true,
+      trial_token: newRawToken,
+      first_name: session.first_name,
+      eka_message_limit: settings.eka_message_limit,
+      eka_messages_used: (session as any).eka_message_count || 0,
+    };
+  }
+
+  async resendOtp(
+    dto: ResendOtpDto,
+    req: any,
+  ): Promise<{ success: boolean; message: string }> {
+    const email = dto.email.toLowerCase().trim();
+
+    // Find the most recent PENDING session for this email
+    const session = await this.trialSessionModel.findOne({
+      email,
+      status: TrialStatus.PENDING,
+      expires_at: { $gt: new Date() },
+    }).sort({ created_at: -1 });
+
+    if (!session) {
+      throw new BadRequestException(
+        'No pending trial found for this email. Please start over.',
+      );
+    }
+
+    // Generate new OTP + new token
+    const otpCode = String(this.generalHelpers.generateRandomNumbers(6));
+    const otpHash = this.hashToken(otpCode);
+    const otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
+    const newRawToken = uuidv4();
+    const newTokenHash = this.hashToken(newRawToken);
+
+    await this.trialSessionModel.updateOne(
+      { _id: session._id },
+      {
+        otp_code: otpHash,
+        otp_expires_at: otpExpiresAt,
+        otp_attempts: 0,
+        token_hash: newTokenHash,
+      },
+    );
+
+    // Send new email
+    const magicLink = `https://rapidcapsule.com/trial/verify/${newRawToken}`;
+    const emailBody = trialOtpEmail(session.first_name, otpCode, magicLink);
+
+    try {
+      await this.generalHelpers.sendEmail(
+        email,
+        'Your New Rapid Capsule Verification Code',
+        emailBody,
+      );
+      this.logger.log(`Trial OTP resent to ${email}`);
+    } catch (error) {
+      this.logger.error(`Failed to resend trial OTP to ${email}`, error);
+    }
+
+    return {
+      success: true,
+      message: `I've sent a new code to ${email}. Check your inbox!`,
     };
   }
 
@@ -808,7 +1063,7 @@ export class TrialService {
 
   // ============ EKA AI CHAT ============
 
-  async *trialEkaChat(token: string, message: string, language?: string): AsyncGenerator<any> {
+  async *trialEkaChat(token: string, message: string, language?: string, conversationId?: string): AsyncGenerator<any> {
     const session = await this.validateTrialSession(token);
     const settings = await this.getTrialSettings();
 
@@ -826,25 +1081,54 @@ export class TrialService {
     const messageLimit = settings.eka_message_limit;
 
     if (messageCount >= messageLimit) {
-      // Mark as used + check exhaustion
       await this.markEkaChatUsed(session);
       yield { type: 'exhausted', content: 'You have used all your trial messages. Sign up for unlimited access!' };
       return;
     }
 
-    // Append user message + increment count
+    // Load or create conversation
+    let conversation: TrialConversationDocument | null = null;
+    if (conversationId) {
+      conversation = await this.trialConversationModel.findOne({
+        _id: conversationId,
+        trial_session: session._id,
+        is_active: true,
+      });
+    }
+    if (!conversation) {
+      conversation = await this.trialConversationModel.create({
+        trial_session: session._id,
+        messages: [],
+        title: '',
+        is_active: true,
+      });
+    }
+
+    // Auto-title from first user message
+    if (!conversation.title && message) {
+      const autoTitle = message.length > 60 ? message.slice(0, 57) + '...' : message;
+      conversation.title = autoTitle;
+      await this.trialConversationModel.updateOne({ _id: conversation._id }, { title: autoTitle });
+    }
+
+    // Append user message to conversation + increment global count
     const newCount = messageCount + 1;
-    await this.trialSessionModel.updateOne(
-      { _id: session._id },
+    await this.trialConversationModel.updateOne(
+      { _id: conversation._id },
       {
         $push: {
-          eka_messages: {
+          messages: {
             role: 'user',
             content: message,
             tools_used: [],
             created_at: new Date(),
           },
         },
+      },
+    );
+    await this.trialSessionModel.updateOne(
+      { _id: session._id },
+      {
         $set: {
           eka_message_count: newCount,
           last_activity_at: new Date(),
@@ -860,8 +1144,8 @@ export class TrialService {
       messages_remaining: messageLimit - newCount,
     };
 
-    // Build existing messages for context
-    const existingMessages = ((session as any).eka_messages || []).map((m: any) => ({
+    // Build existing messages for context from this conversation
+    const existingMessages = (conversation.messages || []).map((m: any) => ({
       role: m.role,
       content: m.content,
     }));
@@ -887,13 +1171,13 @@ export class TrialService {
       }
     }
 
-    // Save assistant response
+    // Save assistant response to conversation
     if (assistantText) {
-      await this.trialSessionModel.updateOne(
-        { _id: session._id },
+      await this.trialConversationModel.updateOne(
+        { _id: conversation._id },
         {
           $push: {
-            eka_messages: {
+            messages: {
               role: 'assistant',
               content: assistantText,
               tools_used: toolsUsed.length > 0 ? toolsUsed : [],
@@ -913,15 +1197,40 @@ export class TrialService {
       };
     }
 
-    yield { type: 'done' };
+    yield { type: 'done', conversation_id: conversation._id.toString() };
   }
 
-  async getEkaStatus(token: string) {
+  async getEkaStatus(token: string, conversationId?: string) {
     const session = await this.validateTrialSession(token);
     const settings = await this.getTrialSettings();
 
     const messageCount = (session as any).eka_message_count || 0;
     const messageLimit = settings.eka_message_limit;
+
+    // Load conversations list
+    const conversations = await this.trialConversationModel
+      .find({ trial_session: session._id, is_active: true })
+      .sort({ updated_at: -1 })
+      .select('_id title updated_at')
+      .lean();
+
+    // Load specific conversation's messages if requested
+    let messages: any[] = [];
+    if (conversationId) {
+      const conversation = await this.trialConversationModel.findOne({
+        _id: conversationId,
+        trial_session: session._id,
+        is_active: true,
+      });
+      if (conversation) {
+        messages = (conversation.messages || []).map((m: any) => ({
+          role: m.role,
+          content: m.content,
+          tools_used: m.tools_used || [],
+          created_at: m.created_at,
+        }));
+      }
+    }
 
     return {
       first_name: session.first_name,
@@ -930,13 +1239,53 @@ export class TrialService {
       messages_remaining: Math.max(0, messageLimit - messageCount),
       eka_enabled: settings.eka_enabled,
       eka_exhausted: (session as any).eka_chat_used || false,
-      messages: ((session as any).eka_messages || []).map((m: any) => ({
-        role: m.role,
-        content: m.content,
-        tools_used: m.tools_used || [],
-        created_at: m.created_at,
-      })),
+      conversations,
+      messages,
     };
+  }
+
+  // ============ TRIAL CONVERSATION CRUD ============
+
+  async getTrialConversations(token: string) {
+    const session = await this.validateTrialSession(token);
+    return this.trialConversationModel
+      .find({ trial_session: session._id, is_active: true })
+      .sort({ updated_at: -1 })
+      .select('_id title updated_at')
+      .lean();
+  }
+
+  async createTrialConversation(token: string) {
+    const session = await this.validateTrialSession(token);
+    const conversation = await this.trialConversationModel.create({
+      trial_session: session._id,
+      messages: [],
+      title: '',
+      is_active: true,
+    });
+    return { _id: conversation._id, title: conversation.title };
+  }
+
+  async renameTrialConversation(token: string, conversationId: string, title: string) {
+    const session = await this.validateTrialSession(token);
+    const conversation = await this.trialConversationModel.findOneAndUpdate(
+      { _id: conversationId, trial_session: session._id, is_active: true },
+      { title: (title || '').trim().slice(0, 100) },
+      { new: true },
+    );
+    if (!conversation) throw new NotFoundException('Conversation not found');
+    return { _id: conversation._id, title: conversation.title };
+  }
+
+  async deleteTrialConversation(token: string, conversationId: string) {
+    const session = await this.validateTrialSession(token);
+    const conversation = await this.trialConversationModel.findOneAndUpdate(
+      { _id: conversationId, trial_session: session._id, is_active: true },
+      { is_active: false },
+      { new: true },
+    );
+    if (!conversation) throw new NotFoundException('Conversation not found');
+    return { deleted: true };
   }
 
   private async markEkaChatUsed(session: TrialSessionDocument) {

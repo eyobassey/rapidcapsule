@@ -1518,6 +1518,17 @@ const apiFactory = {
     });
   },
 
+  // ─── Trial Conversational OTP ────────────────────────────────────
+  $_trialRequestWithOtp(data) {
+    return http.post('/trial/request-with-otp', data);
+  },
+  $_trialVerifyOtp(data) {
+    return http.post('/trial/verify-otp', data);
+  },
+  $_trialResendOtp(data) {
+    return http.post('/trial/resend-otp', data);
+  },
+
   // ─── Recovery Module ──────────────────────────────────────────────
   $_getRecoveryDashboard() {
     return http.get("/recovery/profile/dashboard");

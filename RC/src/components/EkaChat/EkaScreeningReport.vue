@@ -239,7 +239,7 @@ function subscalePercent(value) {
 async function loadLogo() {
   if (logoBase64) return logoBase64
   try {
-    const res = await fetch('/RapidCapsule_Logo.png')
+    const res = await fetch('/eka-rc-logo-icon.png')
     const blob = await res.blob()
     return new Promise((resolve) => {
       const reader = new FileReader()
@@ -494,18 +494,18 @@ async function downloadPdf() {
 
 <style scoped lang="scss">
 $sky: #4FC3F7;
-$sky-dark: #0288D1;
-$sky-darker: #01579B;
-$navy: #0F172A;
-$slate: #334155;
-$gray: #64748B;
-$light-gray: #94A3B8;
-$bg: #F8FAFC;
+$sky-dark: #0ea5e9;
+$sky-darker: #0ea5e9;
+$navy: #f8fafc;
+$slate: #f8fafc;
+$gray: #94a3b8;
+$light-gray: #64748b;
+$bg: rgba(15, 23, 42, 0.4);
 
 @mixin glass-card {
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(15, 23, 42, 0.6);
   backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
 }
 
@@ -541,7 +541,7 @@ $bg: #F8FAFC;
     font-weight: 700;
     padding: 2px 8px;
     border-radius: 8px;
-    background: #E0F7FA;
+    background: rgba(14, 165, 233, 0.1);
     color: $sky-dark;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -621,7 +621,7 @@ $bg: #F8FAFC;
     font-size: 12px;
     font-weight: 800;
     color: $navy;
-    background: #FFFFFF;
+    background: rgba(15, 23, 42, 0.6);
     border: 2px solid $sky-darker;
     border-radius: 8px;
     padding: 1px 8px;
@@ -715,7 +715,7 @@ $bg: #F8FAFC;
 
   &__subscale-bar {
     height: 6px;
-    background: #E2E8F0;
+    background: rgba(255, 255, 255, 0.1);
     border-radius: 3px;
     overflow: hidden;
   }
@@ -736,8 +736,8 @@ $bg: #F8FAFC;
   }
 
   &__ai-block {
-    background: rgba(0, 0, 0, 0.02);
-    border: 1px solid rgba(0, 0, 0, 0.04);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 16px;
     padding: 14px;
     margin-bottom: 10px;
@@ -784,7 +784,7 @@ $bg: #F8FAFC;
     display: flex;
     gap: 10px;
     padding: 14px;
-    background: linear-gradient(135deg, #E0F7FA, #B3E5FC);
+    background: linear-gradient(135deg, rgba(14, 165, 233, 0.1), rgba(14, 165, 233, 0.15));
     border-radius: 16px;
     margin-bottom: 10px;
 
@@ -818,8 +818,8 @@ $bg: #F8FAFC;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: rgba(0, 0, 0, 0.02);
-    border: 1px solid rgba(0, 0, 0, 0.04);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 16px;
     padding: 14px;
   }
@@ -863,12 +863,12 @@ $bg: #F8FAFC;
     gap: 8px;
     padding: 14px 16px;
     border-radius: 16px;
-    border: 1px solid #FDE68A;
-    background: rgba(255, 251, 235, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.05);
 
     p {
       font-size: 11px;
-      color: #92400E;
+      color: #64748b;
       line-height: 1.5;
       margin: 0;
     }
@@ -878,7 +878,7 @@ $bg: #F8FAFC;
     width: 16px;
     height: 16px;
     flex-shrink: 0;
-    color: #D97706;
+    color: #64748b;
     margin-top: 1px;
   }
 
@@ -902,8 +902,10 @@ $bg: #F8FAFC;
     cursor: pointer;
     transition: all 0.2s;
 
+    .ov-icon { color: #FFFFFF; fill: #FFFFFF; }
+
     &:hover {
-      box-shadow: 0 4px 16px rgba(1, 87, 155, 0.3);
+      box-shadow: 0 4px 16px rgba(14, 165, 233, 0.3);
       transform: translateY(-1px);
     }
   }

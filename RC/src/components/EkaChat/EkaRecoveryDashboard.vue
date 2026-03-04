@@ -270,7 +270,7 @@ function formatDate(dateStr) {
 async function loadLogo() {
   if (logoBase64) return logoBase64
   try {
-    const res = await fetch('/RapidCapsule_Logo.png')
+    const res = await fetch('/eka-rc-logo-icon.png')
     const blob = await res.blob()
     return new Promise((resolve) => {
       const reader = new FileReader()
@@ -476,7 +476,7 @@ async function downloadPdf() {
   &__hero {
     text-align: center;
     padding: 24px 16px;
-    background: linear-gradient(135deg, #E0F7FA, #B3E5FC);
+    background: linear-gradient(135deg, rgba(14, 165, 233, 0.15), rgba(14, 165, 233, 0.05));
     border-radius: 12px;
     margin-bottom: 16px;
   }
@@ -491,7 +491,7 @@ async function downloadPdf() {
   &__hero-day-label {
     font-size: 13px;
     font-weight: 600;
-    color: #0288D1;
+    color: #0ea5e9;
     text-transform: uppercase;
     letter-spacing: 1px;
   }
@@ -499,13 +499,13 @@ async function downloadPdf() {
   &__hero-day-count {
     font-size: 56px;
     font-weight: 800;
-    color: #01579B;
+    color: #0ea5e9;
     line-height: 1.1;
   }
 
   &__hero-since {
     font-size: 12px;
-    color: #0277BD;
+    color: #94a3b8;
     margin-top: 4px;
   }
 
@@ -525,18 +525,18 @@ async function downloadPdf() {
     letter-spacing: 0.3px;
 
     &--low {
-      background: #D1FAE5;
-      color: #065F46;
+      background: rgba(16, 185, 129, 0.15);
+      color: #6ee7b7;
     }
 
     &--moderate {
-      background: #FEF3C7;
-      color: #92400E;
+      background: rgba(245, 158, 11, 0.15);
+      color: #fbbf24;
     }
 
     &--high {
-      background: #FEE2E2;
-      color: #991B1B;
+      background: rgba(239, 68, 68, 0.15);
+      color: #fca5a5;
     }
 
     &--critical {
@@ -551,9 +551,9 @@ async function downloadPdf() {
     font-weight: 500;
     padding: 3px 10px;
     border-radius: 12px;
-    background: #F1F5F9;
-    color: #334155;
-    border: 1px solid #E2E8F0;
+    background: rgba(255, 255, 255, 0.05);
+    color: #f8fafc;
+    border: 1px solid rgba(255, 255, 255, 0.1);
   }
 
   /* Check-in status */
@@ -566,13 +566,13 @@ async function downloadPdf() {
     margin-bottom: 16px;
 
     &--done {
-      background: #ECFDF5;
-      color: #065F46;
+      background: rgba(16, 185, 129, 0.1);
+      color: #6ee7b7;
     }
 
     &--pending {
-      background: #FFFBEB;
-      color: #92400E;
+      background: rgba(245, 158, 11, 0.1);
+      color: #fbbf24;
     }
   }
 
@@ -600,8 +600,8 @@ async function downloadPdf() {
   }
 
   &__trend-card {
-    background: #F8FAFC;
-    border: 1px solid #E2E8F0;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 12px;
     padding: 12px;
     display: flex;
@@ -612,7 +612,7 @@ async function downloadPdf() {
   &__trend-title {
     font-size: 11px;
     font-weight: 700;
-    color: #64748B;
+    color: #94a3b8;
     text-transform: uppercase;
     letter-spacing: 0.3px;
     margin: 0 0 8px;
@@ -626,7 +626,7 @@ async function downloadPdf() {
   &__trend-latest {
     font-size: 12px;
     font-weight: 600;
-    color: #334155;
+    color: #f8fafc;
     margin-top: 6px;
   }
 
@@ -634,7 +634,7 @@ async function downloadPdf() {
   &__section-heading {
     font-size: 13px;
     font-weight: 700;
-    color: #01579B;
+    color: #0ea5e9;
     text-transform: uppercase;
     letter-spacing: 0.3px;
     margin: 0 0 10px;
@@ -646,8 +646,8 @@ async function downloadPdf() {
   }
 
   &__milestone-card {
-    background: #F8FAFC;
-    border: 1px solid #E2E8F0;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 12px;
     padding: 14px;
   }
@@ -662,17 +662,17 @@ async function downloadPdf() {
   &__milestone-name {
     font-size: 13px;
     font-weight: 600;
-    color: #0F172A;
+    color: #f8fafc;
   }
 
   &__milestone-remaining {
     font-size: 12px;
-    color: #64748B;
+    color: #94a3b8;
   }
 
   &__milestone-bar {
     height: 8px;
-    background: #E2E8F0;
+    background: rgba(255, 255, 255, 0.1);
     border-radius: 4px;
     overflow: hidden;
     margin-bottom: 4px;
@@ -688,7 +688,7 @@ async function downloadPdf() {
   &__milestone-pct {
     font-size: 11px;
     font-weight: 600;
-    color: #0288D1;
+    color: #0ea5e9;
   }
 
   /* Recent milestones */
@@ -701,7 +701,7 @@ async function downloadPdf() {
     align-items: center;
     gap: 10px;
     padding: 10px 0;
-    border-bottom: 1px solid #F1F5F9;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 
     &:last-child {
       border-bottom: none;
@@ -724,19 +724,19 @@ async function downloadPdf() {
   &__milestone-item-name {
     font-size: 13px;
     font-weight: 600;
-    color: #0F172A;
+    color: #f8fafc;
   }
 
   &__milestone-item-date {
     font-size: 11px;
-    color: #94A3B8;
+    color: #64748b;
   }
 
   &__milestone-points {
     font-size: 12px;
     font-weight: 700;
-    color: #0288D1;
-    background: #E0F7FA;
+    color: #0ea5e9;
+    background: rgba(14, 165, 233, 0.1);
     padding: 2px 8px;
     border-radius: 8px;
   }
@@ -747,8 +747,8 @@ async function downloadPdf() {
   }
 
   &__screening-card {
-    background: #F8FAFC;
-    border: 1px solid #E2E8F0;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 12px;
     padding: 14px;
   }
@@ -763,7 +763,7 @@ async function downloadPdf() {
   &__screening-instrument {
     font-size: 14px;
     font-weight: 700;
-    color: #0F172A;
+    color: #f8fafc;
   }
 
   &__screening-risk {
@@ -774,18 +774,18 @@ async function downloadPdf() {
     text-transform: uppercase;
 
     &--low {
-      background: #D1FAE5;
-      color: #065F46;
+      background: rgba(16, 185, 129, 0.15);
+      color: #6ee7b7;
     }
 
     &--moderate {
-      background: #FEF3C7;
-      color: #92400E;
+      background: rgba(245, 158, 11, 0.15);
+      color: #fbbf24;
     }
 
     &--high {
-      background: #FEE2E2;
-      color: #991B1B;
+      background: rgba(239, 68, 68, 0.15);
+      color: #fca5a5;
     }
 
     &--critical {
@@ -801,18 +801,18 @@ async function downloadPdf() {
   &__screening-value {
     font-size: 28px;
     font-weight: 800;
-    color: #01579B;
+    color: #0ea5e9;
   }
 
   &__screening-max {
     font-size: 16px;
     font-weight: 500;
-    color: #94A3B8;
+    color: #64748b;
   }
 
   &__screening-date {
     font-size: 11px;
-    color: #94A3B8;
+    color: #64748b;
   }
 
   /* Disclaimer */
@@ -820,14 +820,14 @@ async function downloadPdf() {
     display: flex;
     gap: 8px;
     padding: 10px 12px;
-    background: #FFFBEB;
-    border: 1px solid #FDE68A;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 8px;
     margin-top: 16px;
 
     p {
       font-size: 11px;
-      color: #92400E;
+      color: #64748b;
       line-height: 1.5;
       margin: 0;
     }
@@ -837,7 +837,7 @@ async function downloadPdf() {
     width: 16px;
     height: 16px;
     flex-shrink: 0;
-    color: #D97706;
+    color: #64748b;
     margin-top: 1px;
   }
 
@@ -852,7 +852,7 @@ async function downloadPdf() {
     align-items: center;
     gap: 8px;
     padding: 12px 24px;
-    background: linear-gradient(135deg, #01579B, #0288D1);
+    background: linear-gradient(135deg, #0ea5e9, #0284c7);
     color: #FFFFFF;
     border: none;
     border-radius: 12px;
@@ -861,8 +861,10 @@ async function downloadPdf() {
     cursor: pointer;
     transition: all 0.2s;
 
+    .ov-icon { color: #FFFFFF; fill: #FFFFFF; }
+
     &:hover {
-      box-shadow: 0 4px 16px rgba(1, 87, 155, 0.3);
+      box-shadow: 0 4px 16px rgba(14, 165, 233, 0.3);
       transform: translateY(-1px);
     }
   }

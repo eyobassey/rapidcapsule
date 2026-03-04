@@ -33,6 +33,16 @@ export class TrialSession {
   @Prop({ default: '' })
   device_fingerprint: string;
 
+  // OTP verification (conversational onboarding)
+  @Prop({ default: null })
+  otp_code: string;
+
+  @Prop({ default: null })
+  otp_expires_at: Date;
+
+  @Prop({ default: 0 })
+  otp_attempts: number;
+
   @Prop({ required: true, enum: TrialStatus, default: TrialStatus.PENDING })
   status: TrialStatus;
 

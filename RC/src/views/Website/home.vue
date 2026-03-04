@@ -115,12 +115,12 @@
         <h2 class="section-kicker text-primary">Meet Eka</h2>
         <h3 class="section-heading">Your personal 24/7 <br/>AI health companion.</h3>
         <p class="section-subheading mb-large">
-          Experience the power of Eka right here. Try selecting "I want a health checkup" to see the dynamic body avatar artifact and simulated AI flow.
+          Watch Eka conduct an AI-powered health checkup in real time — from symptom selection to a personalized health report in seconds.
         </p>
 
         <div class="eka-chat-container">
            <div class="eka-chat-glow"></div>
-           <EkaChat :embedded="true" />
+           <EkaChat :embedded="true" :autoplay="true" />
         </div>
       </div>
     </section>
@@ -553,20 +553,30 @@
         </div>
         <div class="footer-bottom">
           <p>&copy; 2026 Rapid Capsule. All rights reserved.</p>
-          <p class="flex-align"><v-icon name="md-verifieduser" scale="0.8" class="mr-2"/> HIPAA Compliant</p>
+          <p class="flex-align"><v-icon name="md-verifieduser" scale="0.8" class="mr-2"/> HIPAA &amp; GDPR Compliant</p>
         </div>
       </div>
     </footer>
+
+    <!-- Trial Request Modal -->
+    <TrialRequestModal
+      :visible="showTrialModal"
+      :selectedFeature="trialFeature"
+      @close="showTrialModal = false"
+    />
   </div>
 </template>
 
 <script setup>
 import EkaChat from "./EkaChat.vue";
+import TrialRequestModal from "./components/TrialRequestModal.vue";
 import { ref, onMounted, onUnmounted } from 'vue';
 
 const scrolled = ref(false);
 const mobileMenuOpen = ref(false);
 const openFaq = ref(0);
+const showTrialModal = ref(false);
+const trialFeature = ref('eka');
 
 const handleScroll = () => {
   scrolled.value = window.scrollY > 50;
@@ -589,7 +599,7 @@ const prescriptionFeatures = [
 ];
 
 const rxgptList = [
-  "Real-time Claude Sonnet 4 Analysis",
+  "Real-time Advance AI Analysis",
   "OpenFDA Drug Label Verification",
   "NICE Guidelines Compliance Check"
 ];
@@ -625,7 +635,10 @@ const faqs = [
   { q: "What is Eka and how does it work?", a: "Eka is our AI health assistant that conducts intelligent symptom interviews, provides triage assessments, checks drug interactions, and connects you with the right specialist — all through natural conversation available 24/7." },
   { q: "How accurate is RxGPT's prescription verification?", a: "RxGPT verifies prescriptions against 6 clinical databases including PubMed, WHO Essential Medicines, and OpenFDA. Our 7-layer hallucination detection pipeline ensures clinical accuracy with full traceability." },
   { q: "How do video consultations work?", a: "Book a consultation with a verified specialist, connect via HD video in-app, and receive prescriptions, clinical notes, and follow-up plans — all in one seamless experience." },
-  { q: "Is my health data secure?", a: "Absolutely. We use end-to-end encryption, HIPAA-aware infrastructure, and verify every specialist's license before activation." }
+  { q: "Is my health data secure?", a: "Absolutely. We use end-to-end encryption, HIPAA and GDPR-compliant infrastructure, and verify every specialist's license before activation. Your data is encrypted in transit and at rest." },
+  { q: "What payment methods are accepted?", a: "We support credit/debit cards, mobile wallets, and in-app wallet credits with multi-currency support for a seamless payment experience worldwide." },
+  { q: "Can I connect my wearable devices?", a: "Yes! Connect Apple Watch, Fitbit, Garmin, and other popular wearables to automatically track vitals with charts, trends, and health alerts built in." },
+  { q: "How do I verify my prescription?", a: "Simply upload a photo or PDF of your prescription. Our 3-tier AI system verifies document quality, performs clinical validation, and checks for fraud — all in seconds." }
 ];
 </script>
 

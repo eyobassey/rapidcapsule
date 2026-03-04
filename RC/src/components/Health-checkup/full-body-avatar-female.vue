@@ -440,6 +440,10 @@ export default {
 			required: true,
 			default: "25",
 		},
+		externalSearch: {
+			type: Boolean,
+			default: false,
+		},
 	},
 
 	data() {
@@ -545,6 +549,7 @@ export default {
 
 		// Function to get list of symptoms for a selected body part
 		async getSymptoms(part) {
+			if (this.externalSearch) return; // Parent handles search
 			this.isloading = true; // Set system status to loading
 
 			let res = await axios.get("health-checkup/search", {

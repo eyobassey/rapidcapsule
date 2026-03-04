@@ -375,6 +375,68 @@ export class TrialRxGPTDto {
   symptoms?: string[];
 }
 
+// ============ CONVERSATIONAL OTP ONBOARDING ============
+
+export class RequestTrialWithOtpDto {
+  @ApiProperty({
+    description: 'Email address for the trial account',
+    example: 'john.doe@example.com',
+  })
+  @IsEmail()
+  @IsNotEmpty()
+  email: string;
+
+  @ApiProperty({
+    description: 'First name of the trial user',
+    example: 'John',
+  })
+  @IsString()
+  @IsNotEmpty()
+  @MinLength(1)
+  @MaxLength(50)
+  first_name: string;
+
+  @ApiProperty({
+    description: 'Last name of the trial user',
+    example: 'Doe',
+  })
+  @IsString()
+  @IsNotEmpty()
+  @MinLength(1)
+  @MaxLength(50)
+  last_name: string;
+}
+
+export class VerifyOtpDto {
+  @ApiProperty({
+    description: 'Email address the OTP was sent to',
+    example: 'john.doe@example.com',
+  })
+  @IsEmail()
+  @IsNotEmpty()
+  email: string;
+
+  @ApiProperty({
+    description: '6-digit OTP code received via email',
+    example: '482901',
+  })
+  @IsString()
+  @IsNotEmpty()
+  @MinLength(6)
+  @MaxLength(6)
+  otp_code: string;
+}
+
+export class ResendOtpDto {
+  @ApiProperty({
+    description: 'Email address to resend the OTP to',
+    example: 'john.doe@example.com',
+  })
+  @IsEmail()
+  @IsNotEmpty()
+  email: string;
+}
+
 // ============ TRIAL PRESCRIPTION UPLOAD ============
 
 export class TrialPrescriptionUploadDto {

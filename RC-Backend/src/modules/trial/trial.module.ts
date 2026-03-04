@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { TrialSession, TrialSessionSchema } from './trial.entity';
 import { TrialSettings, TrialSettingsSchema } from './trial-settings.entity';
+import { TrialConversation, TrialConversationSchema } from './trial-conversation.entity';
 import {
   PatientPrescriptionUpload,
   PatientPrescriptionUploadSchema,
@@ -21,6 +22,7 @@ import { ClaudeHealthSummaryService } from '../health-checkup/services/claude-he
       { name: TrialSession.name, schema: TrialSessionSchema },
       { name: TrialSettings.name, schema: TrialSettingsSchema },
       { name: PatientPrescriptionUpload.name, schema: PatientPrescriptionUploadSchema },
+      { name: TrialConversation.name, schema: TrialConversationSchema },
     ]),
     HealthCheckupModule,
     PharmacyModule,

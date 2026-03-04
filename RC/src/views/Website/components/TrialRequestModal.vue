@@ -25,7 +25,8 @@
 					<div v-else>
 						<div class="trial-modal__header">
 							<div class="trial-modal__icon-box" :class="featureClass">
-								<v-icon :name="featureIcon" scale="1.2" />
+								<img v-if="selectedFeature === 'eka'" src="/eka-rc-logo-icon.png" alt="Eka" class="trial-modal__eka-logo" />
+								<v-icon v-else :name="featureIcon" scale="1.2" />
 							</div>
 							<h3 class="trial-modal__title">{{ featureTitle }}</h3>
 							<p class="trial-modal__subtitle">Enter your details to receive a free trial link</p>
@@ -109,18 +110,21 @@ const state = ref('idle'); // idle | loading | success
 const errorMessage = ref('');
 
 const featureIcon = computed(() => {
+	if (props.selectedFeature === 'eka') return 'bi-robot';
 	if (props.selectedFeature === 'symptom-checker') return 'hi-heart';
 	if (props.selectedFeature === 'prescription') return 'hi-document-search';
 	return 'ri-capsule-line';
 });
 
 const featureTitle = computed(() => {
+	if (props.selectedFeature === 'eka') return 'Try Eka AI Companion';
 	if (props.selectedFeature === 'symptom-checker') return 'Try AI Symptom Checker';
 	if (props.selectedFeature === 'prescription') return 'Try Prescription Verifier';
 	return 'Try RxGPT Verifier';
 });
 
 const featureClass = computed(() => {
+	if (props.selectedFeature === 'eka') return 'trial-modal--eka';
 	if (props.selectedFeature === 'symptom-checker') return 'trial-modal--symptom';
 	if (props.selectedFeature === 'prescription') return 'trial-modal--prescription';
 	return 'trial-modal--rxgpt';
@@ -242,6 +246,18 @@ $emerald: #10b981;
 	justify-content: center;
 	margin: 0 auto 16px;
 
+	&.trial-modal--eka {
+		background: #e0f2fe;
+		color: #0284c7;
+	}
+
+	.trial-modal__eka-logo {
+		width: 36px;
+		height: 36px;
+		object-fit: contain;
+		border-radius: 8px;
+	}
+
 	&.trial-modal--symptom {
 		background: $primary-light;
 		color: $primary-dark;
@@ -361,6 +377,16 @@ $emerald: #10b981;
 
 	&--primary {
 		color: #fff;
+
+		&.trial-modal--eka {
+			background: #0284c7;
+			box-shadow: 0 4px 16px rgba(#0284c7, 0.3);
+
+			&:hover:not(:disabled) {
+				background: darken(#0284c7, 5%);
+				transform: translateY(-1px);
+			}
+		}
 
 		&.trial-modal--symptom {
 			background: $primary-dark;

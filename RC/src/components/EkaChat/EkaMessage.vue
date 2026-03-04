@@ -1,7 +1,7 @@
 <template>
   <div class="eka-msg" :class="[msg.role]">
     <div v-if="msg.role === 'assistant'" class="eka-avatar">
-      <img src="/RapidCapsule_Logo.png" alt="EkaGPT" />
+      <img src="/eka-rc-logo-icon.png" alt="EkaGPT" />
     </div>
     <div class="eka-msg__body" :class="[msg.role]">
       <div class="eka-bubble" :class="[msg.role]">
@@ -186,7 +186,7 @@ export default {
     async loadLogo() {
       if (logoBase64) return logoBase64
       try {
-        const res = await fetch('/RapidCapsule_Logo.png')
+        const res = await fetch('/eka-rc-logo-icon.png')
         const blob = await res.blob()
         return new Promise((resolve) => {
           const reader = new FileReader()
@@ -311,7 +311,7 @@ export default {
 }
 
 .eka-msg__body {
-  max-width: 85%;
+  max-width: 80%;
 
   &.user {
     display: flex;
@@ -337,27 +337,43 @@ export default {
 }
 
 .eka-bubble {
-  padding: 10px 14px;
-  border-radius: 16px;
-  font-size: 14px;
-  line-height: 1.5;
+  padding: 0.875rem 1.25rem;
+  border-radius: 1rem;
+  font-size: 0.9375rem;
+  line-height: 1.6;
   word-wrap: break-word;
 
   &.user {
-    background: #0288D1;
-    color: #ffffff;
-    border-bottom-right-radius: 4px;
+    background: #f8fafc;
+    color: #0f172a;
+    border-top-right-radius: 0.25rem;
 
     .eka-bubble__text,
     :deep(*) {
-      color: #ffffff;
+      color: #0f172a;
     }
   }
 
   &.assistant {
-    background: #f3f4f6;
-    color: #1f2937;
-    border-bottom-left-radius: 4px;
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #f8fafc;
+    border-top-left-radius: 0.25rem;
+
+    .eka-bubble__text,
+    :deep(*) {
+      color: #f8fafc;
+    }
+
+    :deep(strong) {
+      color: #ffffff;
+    }
+
+    :deep(li) {
+      color: #f8fafc;
+    }
   }
 
   &__attachment {
@@ -398,10 +414,10 @@ export default {
       font-weight: 600;
     }
     :deep(.eka-action-link) {
-      color: #0288D1;
+      color: #0ea5e9;
       text-decoration: none;
       font-weight: 600;
-      border-bottom: 1px dashed #0288D1;
+      border-bottom: 1px dashed #0ea5e9;
       cursor: pointer;
       transition: all 0.15s;
       padding-bottom: 1px;
@@ -446,7 +462,7 @@ export default {
 
   &__time {
     font-size: 11px;
-    color: #9ca3af;
+    color: #64748b;
     margin-right: 4px;
     white-space: nowrap;
   }
@@ -460,13 +476,25 @@ export default {
     border: none;
     border-radius: 6px;
     background: transparent;
-    color: #9ca3af;
+    color: #64748b;
     cursor: pointer;
     transition: all 0.15s;
 
+    .ov-icon {
+      color: #64748b;
+      fill: #64748b;
+      stroke: #64748b;
+    }
+
     &:hover {
-      background: #f3f4f6;
-      color: #374151;
+      background: rgba(255, 255, 255, 0.1);
+      color: #f8fafc;
+
+      .ov-icon {
+        color: #f8fafc;
+        fill: #f8fafc;
+        stroke: #f8fafc;
+      }
     }
   }
 }
@@ -474,7 +502,7 @@ export default {
 .eka-cursor {
   animation: blink 0.8s infinite;
   font-weight: 300;
-  color: #0288D1;
+  color: #0ea5e9;
 }
 
 @keyframes blink {

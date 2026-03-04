@@ -252,7 +252,7 @@ function stopBreathing() {
 async function loadLogo() {
   if (logoBase64) return logoBase64
   try {
-    const res = await fetch('/RapidCapsule_Logo.png')
+    const res = await fetch('/eka-rc-logo-icon.png')
     const blob = await res.blob()
     return new Promise((resolve) => {
       const reader = new FileReader()
@@ -534,10 +534,10 @@ onBeforeUnmount(() => {
 
 <style scoped lang="scss">
 @mixin glass-card {
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(15, 23, 42, 0.6);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
 }
 
@@ -559,7 +559,7 @@ onBeforeUnmount(() => {
   &__name {
     font-size: 17px;
     font-weight: 700;
-    color: #0F172A;
+    color: #f8fafc;
     margin: 0 0 8px;
   }
 
@@ -575,8 +575,8 @@ onBeforeUnmount(() => {
     font-weight: 600;
     padding: 3px 10px;
     border-radius: 12px;
-    background: #E0F7FA;
-    color: #0288D1;
+    background: rgba(14, 165, 233, 0.1);
+    color: #0ea5e9;
     text-transform: uppercase;
     letter-spacing: 0.3px;
   }
@@ -586,7 +586,7 @@ onBeforeUnmount(() => {
     align-items: center;
     gap: 4px;
     font-size: 12px;
-    color: #64748B;
+    color: #94a3b8;
     font-weight: 500;
   }
 
@@ -597,7 +597,7 @@ onBeforeUnmount(() => {
 
   &__description {
     font-size: 13px;
-    color: #334155;
+    color: #f8fafc;
     line-height: 1.6;
     margin: 0;
   }
@@ -606,7 +606,7 @@ onBeforeUnmount(() => {
   &__section-heading {
     font-size: 13px;
     font-weight: 700;
-    color: #01579B;
+    color: #0ea5e9;
     text-transform: uppercase;
     letter-spacing: 0.3px;
     margin: 0 0 8px;
@@ -614,7 +614,7 @@ onBeforeUnmount(() => {
 
   &__hint {
     font-size: 12px;
-    color: #94A3B8;
+    color: #64748b;
     margin-bottom: 12px;
     font-style: italic;
   }
@@ -636,21 +636,21 @@ onBeforeUnmount(() => {
     margin-bottom: 6px;
     cursor: pointer;
     transition: all 0.2s;
-    border: 1px solid #F1F5F9;
-    background: #FAFBFC;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.03);
 
     &:hover {
-      background: #F1F5F9;
+      background: rgba(14, 165, 233, 0.1);
     }
 
     &--done {
-      background: #ECFDF5;
-      border-color: #A7F3D0;
+      background: rgba(16, 185, 129, 0.1);
+      border-color: rgba(16, 185, 129, 0.3);
 
       .coping-exercise__step-text {
-        color: #6B7280;
+        color: #94a3b8;
         text-decoration: line-through;
-        text-decoration-color: #A7F3D0;
+        text-decoration-color: rgba(16, 185, 129, 0.3);
       }
     }
   }
@@ -663,8 +663,8 @@ onBeforeUnmount(() => {
     height: 28px;
     min-width: 28px;
     border-radius: 50%;
-    background: #E2E8F0;
-    color: #475569;
+    background: rgba(14, 165, 233, 0.15);
+    color: #94a3b8;
     font-size: 13px;
     font-weight: 700;
     transition: all 0.2s;
@@ -682,7 +682,7 @@ onBeforeUnmount(() => {
 
   &__step-text {
     font-size: 13px;
-    color: #0F172A;
+    color: #f8fafc;
     line-height: 1.5;
     margin: 0;
     padding-top: 3px;
@@ -700,7 +700,7 @@ onBeforeUnmount(() => {
   &__progress-bar {
     flex: 1;
     height: 6px;
-    background: #E2E8F0;
+    background: rgba(255, 255, 255, 0.1);
     border-radius: 3px;
     overflow: hidden;
   }
@@ -715,15 +715,15 @@ onBeforeUnmount(() => {
   &__progress-label {
     font-size: 12px;
     font-weight: 600;
-    color: #64748B;
+    color: #94a3b8;
     white-space: nowrap;
   }
 
   /* Completion report */
   &__completed {
     @include glass-card;
-    background: linear-gradient(135deg, rgba(236, 253, 245, 0.9), rgba(209, 250, 229, 0.85));
-    border: 1px solid #A7F3D0;
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.15));
+    border: 1px solid rgba(16, 185, 129, 0.3);
     border-radius: 20px;
     padding: 16px;
     margin-bottom: 16px;
@@ -748,14 +748,14 @@ onBeforeUnmount(() => {
 
   &__outcome {
     font-size: 13px;
-    color: #334155;
+    color: #f8fafc;
     line-height: 1.6;
     margin: 0 0 6px;
   }
 
   &__completed-time {
     font-size: 11px;
-    color: #64748B;
+    color: #94a3b8;
   }
 
   /* Box breathing visual */
@@ -773,7 +773,7 @@ onBeforeUnmount(() => {
     width: 120px;
     height: 120px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #E0F7FA, #B3E5FC);
+    background: linear-gradient(135deg, rgba(14, 165, 233, 0.1), rgba(14, 165, 233, 0.15));
     border: 3px solid #4FC3F7;
     display: flex;
     align-items: center;
@@ -789,14 +789,14 @@ onBeforeUnmount(() => {
   &__breathing-label {
     font-size: 14px;
     font-weight: 700;
-    color: #0288D1;
+    color: #0ea5e9;
     text-align: center;
   }
 
   &__breathing-count {
     font-size: 13px;
     font-weight: 600;
-    color: #0288D1;
+    color: #0ea5e9;
     margin-bottom: 12px;
   }
 
@@ -805,8 +805,8 @@ onBeforeUnmount(() => {
     align-items: center;
     gap: 8px;
     padding: 10px 18px;
-    background: #ECFDF5;
-    border: 1px solid #A7F3D0;
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.3);
     border-radius: 10px;
     font-size: 14px;
     font-weight: 600;
@@ -823,11 +823,11 @@ onBeforeUnmount(() => {
     border: none;
 
     &--primary {
-      background: #0288D1;
+      background: #0ea5e9;
       color: #FFFFFF;
 
       &:hover {
-        background: #01579B;
+        background: #0ea5e9;
       }
     }
   }
@@ -846,13 +846,13 @@ onBeforeUnmount(() => {
     margin-bottom: 6px;
 
     &--eka {
-      background: #F0F7FF;
-      border-left: 3px solid #0288D1;
+      background: rgba(14, 165, 233, 0.1);
+      border-left: 3px solid #0ea5e9;
     }
 
     &--patient {
-      background: #F8FAFC;
-      border-left: 3px solid #64748B;
+      background: rgba(255, 255, 255, 0.05);
+      border-left: 3px solid #94a3b8;
     }
   }
 
@@ -865,17 +865,17 @@ onBeforeUnmount(() => {
     margin-bottom: 4px;
 
     .coping-exercise__response-item--eka & {
-      color: #0288D1;
+      color: #0ea5e9;
     }
 
     .coping-exercise__response-item--patient & {
-      color: #64748B;
+      color: #94a3b8;
     }
   }
 
   &__response-text {
     font-size: 13px;
-    color: #334155;
+    color: #f8fafc;
     line-height: 1.6;
     margin: 0;
     white-space: pre-wrap;
@@ -890,7 +890,7 @@ onBeforeUnmount(() => {
 
     p {
       font-size: 12px;
-      color: #475569;
+      color: #94a3b8;
       line-height: 1.5;
       margin: 0;
     }
@@ -902,13 +902,13 @@ onBeforeUnmount(() => {
     display: flex;
     gap: 8px;
     padding: 16px 20px;
-    background: rgba(255, 251, 235, 0.85);
-    border: 1px solid #FDE68A;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 20px;
 
     p {
       font-size: 11px;
-      color: #92400E;
+      color: #64748b;
       line-height: 1.5;
       margin: 0;
     }
@@ -918,7 +918,7 @@ onBeforeUnmount(() => {
     width: 16px;
     height: 16px;
     flex-shrink: 0;
-    color: #D97706;
+    color: #64748b;
     margin-top: 1px;
   }
 
@@ -933,7 +933,7 @@ onBeforeUnmount(() => {
     align-items: center;
     gap: 8px;
     padding: 12px 24px;
-    background: linear-gradient(135deg, #01579B, #0288D1);
+    background: linear-gradient(135deg, #0ea5e9, #0ea5e9);
     color: #FFFFFF;
     border: none;
     border-radius: 12px;
@@ -942,8 +942,10 @@ onBeforeUnmount(() => {
     cursor: pointer;
     transition: all 0.2s;
 
+    .ov-icon { color: #FFFFFF; fill: #FFFFFF; }
+
     &:hover {
-      box-shadow: 0 4px 16px rgba(1, 87, 155, 0.3);
+      box-shadow: 0 4px 16px rgba(14, 165, 233, 0.3);
       transform: translateY(-1px);
     }
   }

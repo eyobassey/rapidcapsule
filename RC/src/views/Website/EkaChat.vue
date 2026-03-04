@@ -1,5 +1,9 @@
 <template>
-  <div class="eka-chat-wrapper" :class="{ 'is-embedded': embedded }">
+  <div
+    class="eka-chat-wrapper"
+    :class="{ 'is-embedded': embedded, 'is-autoplay': autoplay }"
+    ref="demoContainerRef"
+  >
 
     <!-- LEFT SIDEBAR (Hidden on mobile) -->
     <div class="sidebar">
@@ -97,26 +101,29 @@
                 :key="idx"
                 @click="handleSend(sug)"
                 class="suggestion-btn"
+                :class="{ 'chip-highlighted': idx === highlightedChip }"
+                :disabled="autoplay"
               >
                 {{ sug }}
               </button>
             </div>
           </transition>
 
-          <div class="input-box-wrapper">
+          <div class="input-box-wrapper" :class="{ 'is-decorative': autoplay }">
             <div class="input-glow"></div>
             <div class="input-box">
-              <button class="btn-icon text-muted hover-primary"><v-icon name="md-add" /></button>
+              <button class="btn-icon text-muted hover-primary" :disabled="autoplay"><v-icon name="md-add" /></button>
               <textarea
                 v-model="input"
                 @keydown.enter.prevent="handleSend(input)"
                 placeholder="Message Eka or describe your symptoms..."
                 class="chat-input"
+                :disabled="autoplay"
                 rows="1"
               ></textarea>
               <button
                 @click="handleSend(input)"
-                :disabled="!input.trim() || isTyping"
+                :disabled="autoplay || !input.trim() || isTyping"
                 class="btn-send"
               >
                 <v-icon name="md-send" scale="0.8" />
@@ -136,7 +143,7 @@
             <v-icon :name="activeArtifact === 'body-avatar' ? 'md-person' : 'md-description'" class="text-primary mr-2" />
             {{ activeArtifact === 'body-avatar' ? 'Symptom Locator' : 'Health Report' }}
           </span>
-          <div class="flex-align">
+          <div v-if="!autoplay" class="flex-align">
             <button v-if="activeArtifact === 'health-report'" class="btn-icon"><v-icon name="md-filedownload" /></button>
             <button class="btn-icon" @click="activeArtifact = 'none'"><v-icon name="md-chevronright" /></button>
           </div>
@@ -150,13 +157,13 @@
               <p class="text-muted text-center text-sm mb-6">Select the area where you are experiencing discomfort.</p>
 
               <div class="body-model">
-                <button class="body-part head" @click="handleBodyPartSelect('Head')"><span>Head</span></button>
-                <button class="body-part chest" @click="handleBodyPartSelect('Chest')"><span>Chest</span></button>
-                <button class="body-part abdomen" @click="handleBodyPartSelect('Abdomen')"><span>Abdomen</span></button>
-                <button class="body-part arm-l" @click="handleBodyPartSelect('Left Arm')"></button>
-                <button class="body-part arm-r" @click="handleBodyPartSelect('Right Arm')"></button>
-                <button class="body-part leg-l" @click="handleBodyPartSelect('Left Leg')"></button>
-                <button class="body-part leg-r" @click="handleBodyPartSelect('Right Leg')"></button>
+                <button class="body-part head" :class="{ 'part-highlighted': highlightedBodyPart === 'head' }" @click="handleBodyPartSelect('Head')"><span>Head</span></button>
+                <button class="body-part chest" :class="{ 'part-highlighted': highlightedBodyPart === 'chest' }" @click="handleBodyPartSelect('Chest')"><span>Chest</span></button>
+                <button class="body-part abdomen" :class="{ 'part-highlighted': highlightedBodyPart === 'abdomen' }" @click="handleBodyPartSelect('Abdomen')"><span>Abdomen</span></button>
+                <button class="body-part arm-l" :class="{ 'part-highlighted': highlightedBodyPart === 'arm-l' }" @click="handleBodyPartSelect('Left Arm')"></button>
+                <button class="body-part arm-r" :class="{ 'part-highlighted': highlightedBodyPart === 'arm-r' }" @click="handleBodyPartSelect('Right Arm')"></button>
+                <button class="body-part leg-l" :class="{ 'part-highlighted': highlightedBodyPart === 'leg-l' }" @click="handleBodyPartSelect('Left Leg')"></button>
+                <button class="body-part leg-r" :class="{ 'part-highlighted': highlightedBodyPart === 'leg-r' }" @click="handleBodyPartSelect('Right Leg')"></button>
               </div>
             </div>
 
@@ -207,34 +214,68 @@
       </div>
     </transition>
 
+    <!-- CTA Overlay -->
+    <transition name="fade">
+      <div v-if="showCta" class="cta-overlay">
+        <div class="cta-content">
+          <div class="cta-icon">
+            <v-icon name="gi-brain" scale="2" class="text-white" />
+          </div>
+          <h3 class="cta-heading">Experience Eka Yourself</h3>
+          <p class="cta-sub">No signup required for your first 15 messages</p>
+          <router-link to="/try-eka" class="btn-cta">
+            Try Eka Free
+            <v-icon name="md-arrowforward" scale="0.8" />
+          </router-link>
+        </div>
+      </div>
+    </transition>
+
   </div>
 </template>
 
 <script setup>
-import { ref, watch, nextTick } from 'vue';
+import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue';
 
 const props = defineProps({
-  embedded: {
-    type: Boolean,
-    default: false
-  }
+  embedded: { type: Boolean, default: false },
+  autoplay: { type: Boolean, default: false },
 });
 
-const messages = ref([
-  {
-    id: "1",
-    role: "assistant",
-    content: "Hello. I am Eka, your AI health companion. How can I support you today?",
-  }
-]);
+// ============ TIMELINE ============
+const DEMO_TIMELINE = [
+  { delay: 1500, action: 'show-suggestions', suggestions: ['Health Checkup', 'Check Drug Interactions', 'Search Pharmacy'] },
+  { delay: 1500, action: 'select-suggestion', chipIndex: 0, userMessage: 'I want a health checkup' },
+  { delay: 1500, action: 'bot-message', typingDuration: 1200, content: "Let's get started! I've opened the body diagram — tap where you're feeling discomfort, or describe your symptoms." },
+  { delay: 1500, action: 'show-artifact', artifact: 'body-avatar' },
+  { delay: 2000, action: 'highlight-body-part', part: 'head' },
+  { delay: 1000, action: 'user-message', content: "I've been having headaches and neck pain" },
+  { delay: 1500, action: 'bot-message', typingDuration: 1200, content: "I've noted your symptoms. Let me run the analysis..." },
+  { delay: 1500, action: 'show-artifact', artifact: 'health-report' },
+  { delay: 2000, action: 'bot-message', typingDuration: 1500, content: 'Based on your symptoms, I recommend a consultation within 24 hours. You can book a specialist right from Rapid Capsule.' },
+  { delay: 3000, action: 'show-cta' },
+  { delay: 6000, action: 'reset-loop' },
+];
 
-const input = ref("");
+// ============ STATE ============
+const messages = ref([]);
+const input = ref('');
 const isTyping = ref(false);
-const activeArtifact = ref("none"); // "none" | "body-avatar" | "health-report"
-const suggestions = ref(["I want a health checkup", "Check my latest vitals", "Analyze a prescription"]);
+const activeArtifact = ref('none');
+const suggestions = ref([]);
 const scrollRef = ref(null);
 
-// Auto-scroll to bottom
+// Autoplay state
+const isAutoPlaying = ref(false);
+const showCta = ref(false);
+const highlightedChip = ref(-1);
+const highlightedBodyPart = ref('');
+const demoContainerRef = ref(null);
+const timeoutIds = ref([]);
+let loopCount = 0;
+let observer = null;
+
+// ============ SCROLL ============
 const scrollToBottom = async () => {
   await nextTick();
   if (scrollRef.value) {
@@ -246,66 +287,206 @@ watch([messages, isTyping], () => {
   scrollToBottom();
 }, { deep: true });
 
+// ============ INTERACTIVE MODE (non-autoplay) ============
 const handleSend = (text) => {
+  if (props.autoplay) return;
   if (!text.trim()) return;
 
-  const newUserMsg = { id: Date.now().toString(), role: "user", content: text };
-  messages.value.push(newUserMsg);
-  input.value = "";
+  messages.value.push({ id: Date.now().toString(), role: 'user', content: text });
+  input.value = '';
   suggestions.value = [];
   isTyping.value = true;
 
   const lowerText = text.toLowerCase();
 
-  // Simulated Flow
-  if (lowerText.includes("checkup") || lowerText.includes("head")) {
+  if (lowerText.includes('checkup') || lowerText.includes('head')) {
     setTimeout(() => {
       isTyping.value = false;
       messages.value.push({
         id: Date.now().toString(),
-        role: "assistant",
+        role: 'assistant',
         content: "I can help with that. Let's start by identifying where you're feeling discomfort. Please select the area on the body model on the right.",
       });
-      activeArtifact.value = "body-avatar";
+      activeArtifact.value = 'body-avatar';
     }, 1500);
-  } else if (lowerText.includes("sharp pain")) {
+  } else if (lowerText.includes('sharp pain')) {
     setTimeout(() => {
       isTyping.value = false;
       messages.value.push({
         id: Date.now().toString(),
-        role: "assistant",
-        content: "Thank you for sharing those details. Based on your symptoms, I have generated a preliminary health report. Please note that this is not a clinical diagnosis, but it will help guide your next steps.",
+        role: 'assistant',
+        content: 'Thank you for sharing those details. Based on your symptoms, I have generated a preliminary health report.',
       });
-      activeArtifact.value = "health-report";
-      suggestions.value = ["Book a consultation", "Home care tips", "Speak to a human agent"];
+      activeArtifact.value = 'health-report';
+      suggestions.value = ['Book a consultation', 'Home care tips', 'Speak to a human agent'];
     }, 2000);
   } else {
     setTimeout(() => {
       isTyping.value = false;
       messages.value.push({
         id: Date.now().toString(),
-        role: "assistant",
-        content: "I understand. To give you the best advice, could you provide a bit more context?",
+        role: 'assistant',
+        content: 'I understand. To give you the best advice, could you provide a bit more context?',
       });
     }, 1000);
   }
 };
 
 const handleBodyPartSelect = (part) => {
-  const newUserMsg = { id: Date.now().toString(), role: "user", content: `I'm having issues with my ${part}` };
-  messages.value.push(newUserMsg);
+  if (props.autoplay) return;
+  messages.value.push({ id: Date.now().toString(), role: 'user', content: `I'm having issues with my ${part}` });
   isTyping.value = true;
 
   setTimeout(() => {
     isTyping.value = false;
     messages.value.push({
       id: Date.now().toString(),
-      role: "assistant",
-      content: `I understand you're experiencing discomfort in your ${part}. Could you describe the type of pain and if you have any other symptoms like nausea or lightheadedness?`,
+      role: 'assistant',
+      content: `I understand you're experiencing discomfort in your ${part}. Could you describe the type of pain?`,
     });
-    suggestions.value = ["Sharp pain with nausea", "Throbbing ache", "Dull, constant pressure"];
+    suggestions.value = ['Sharp pain with nausea', 'Throbbing ache', 'Dull, constant pressure'];
   }, 1500);
 };
+
+// ============ AUTOPLAY ENGINE ============
+function resetDemoState() {
+  loopCount++;
+  messages.value = [
+    { id: `welcome-${loopCount}`, role: 'assistant', content: "Hello! I'm Eka, your AI health companion. How can I help you today?" },
+  ];
+  suggestions.value = [];
+  isTyping.value = false;
+  activeArtifact.value = 'none';
+  showCta.value = false;
+  highlightedChip.value = -1;
+  highlightedBodyPart.value = '';
+  input.value = '';
+}
+
+function startDemo() {
+  resetDemoState();
+  isAutoPlaying.value = true;
+  runTimeline(0);
+}
+
+function stopDemo() {
+  isAutoPlaying.value = false;
+  timeoutIds.value.forEach((id) => clearTimeout(id));
+  timeoutIds.value = [];
+}
+
+function scheduleTimeout(fn, delay) {
+  const tid = setTimeout(fn, delay);
+  timeoutIds.value.push(tid);
+  return tid;
+}
+
+function runTimeline(stepIndex) {
+  if (stepIndex >= DEMO_TIMELINE.length || !isAutoPlaying.value) return;
+  const step = DEMO_TIMELINE[stepIndex];
+  scheduleTimeout(() => {
+    if (!isAutoPlaying.value) return;
+    executeStep(step, () => runTimeline(stepIndex + 1));
+  }, step.delay);
+}
+
+function executeStep(step, next) {
+  const prefix = `${loopCount}-${Date.now()}`;
+
+  switch (step.action) {
+    case 'show-suggestions':
+      suggestions.value = step.suggestions;
+      next();
+      break;
+
+    case 'select-suggestion':
+      highlightedChip.value = step.chipIndex;
+      scheduleTimeout(() => {
+        suggestions.value = [];
+        highlightedChip.value = -1;
+        messages.value.push({ id: `user-${prefix}`, role: 'user', content: step.userMessage });
+        next();
+      }, 600);
+      break;
+
+    case 'user-message':
+      messages.value.push({ id: `user-${prefix}`, role: 'user', content: step.content });
+      next();
+      break;
+
+    case 'bot-message':
+      isTyping.value = true;
+      scheduleTimeout(() => {
+        isTyping.value = false;
+        messages.value.push({ id: `bot-${prefix}`, role: 'assistant', content: step.content });
+        next();
+      }, step.typingDuration);
+      break;
+
+    case 'show-artifact':
+      activeArtifact.value = step.artifact;
+      highlightedBodyPart.value = '';
+      next();
+      break;
+
+    case 'highlight-body-part':
+      highlightedBodyPart.value = step.part;
+      next();
+      break;
+
+    case 'show-cta':
+      showCta.value = true;
+      next();
+      break;
+
+    case 'reset-loop':
+      stopDemo();
+      startDemo();
+      break;
+
+    default:
+      next();
+  }
+}
+
+// ============ LIFECYCLE ============
+onMounted(() => {
+  if (!props.autoplay) {
+    // Interactive mode: show initial message + suggestions
+    messages.value = [
+      { id: '1', role: 'assistant', content: 'Hello. I am Eka, your AI health companion. How can I support you today?' },
+    ];
+    suggestions.value = ['I want a health checkup', 'Check my latest vitals', 'Analyze a prescription'];
+    return;
+  }
+
+  // Autoplay mode: start when visible
+  resetDemoState();
+
+  observer = new IntersectionObserver(
+    ([entry]) => {
+      if (entry.isIntersecting && !isAutoPlaying.value) {
+        startDemo();
+      } else if (!entry.isIntersecting && isAutoPlaying.value) {
+        stopDemo();
+        resetDemoState();
+      }
+    },
+    { threshold: 0.3 },
+  );
+
+  if (demoContainerRef.value) {
+    observer.observe(demoContainerRef.value);
+  }
+});
+
+onUnmounted(() => {
+  if (observer) {
+    observer.disconnect();
+    observer = null;
+  }
+  stopDemo();
+});
 </script>
 
 <style lang="scss">
@@ -335,6 +516,9 @@ const handleBodyPartSelect = (part) => {
 .eka-chat-wrapper .btn-primary { color: #fff; }
 .eka-chat-wrapper .btn-send { color: #fff; }
 .eka-chat-wrapper .bubble-user { color: #0f172a; }
+.eka-chat-wrapper .btn-cta { color: #fff; }
+.eka-chat-wrapper .cta-heading { color: #f8fafc; }
+.eka-chat-wrapper .cta-sub { color: #64748b; }
 </style>
 
 <style scoped lang="scss">
@@ -356,8 +540,8 @@ const handleBodyPartSelect = (part) => {
   color: var(--text-main);
   overflow: hidden;
   font-family: 'Plus Jakarta Sans', sans-serif;
-  height: 100vh; /* Default full screen */
-
+  height: 100vh;
+  position: relative;
 
   &.is-embedded {
     height: 100%;
@@ -457,7 +641,7 @@ const handleBodyPartSelect = (part) => {
 .input-area { position: absolute; bottom: 0; left: 0; width: 100%; padding: 1rem; background: linear-gradient(to top, var(--bg-color) 70%, transparent); z-index: 20; }
 .input-container { max-width: 48rem; margin: 0 auto; position: relative; }
 .suggestions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
-.suggestion-btn { padding: 0.5rem 1rem; border-radius: 999px; background-color: var(--panel-bg); border: 1px solid var(--border); color: rgba(255,255,255,0.8); font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: all 0.2s; &:hover { background-color: rgba(14,165,233,0.05); border-color: rgba(14,165,233,0.3); } }
+.suggestion-btn { padding: 0.5rem 1rem; border-radius: 999px; background-color: var(--panel-bg); border: 1px solid var(--border); color: rgba(255,255,255,0.8); font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: all 0.3s; &:hover { background-color: rgba(14,165,233,0.05); border-color: rgba(14,165,233,0.3); } }
 .input-box-wrapper { position: relative; }
 .input-glow { position: absolute; inset: -0.25rem; background: linear-gradient(to right, rgba(14,165,233,0.3), rgba(249,115,22,0.3)); border-radius: 1.5rem; filter: blur(8px); opacity: 0.25; transition: opacity 0.5s; }
 .input-box-wrapper:hover .input-glow { opacity: 0.5; }
@@ -475,7 +659,7 @@ const handleBodyPartSelect = (part) => {
 /* Slide Transitions */
 .slide-right-enter-active, .slide-right-leave-active { transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
 .slide-right-enter-from, .slide-right-leave-to { opacity: 0; transform: translateX(100px); }
-.fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
+.fade-enter-active, .fade-leave-active { transition: opacity 0.5s ease; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
 .fade-up-enter-active, .fade-up-leave-active { transition: all 0.3s ease; }
 .fade-up-enter-from, .fade-up-leave-to { opacity: 0; transform: translateY(10px); }
@@ -502,4 +686,116 @@ const handleBodyPartSelect = (part) => {
 .report-section { margin-top: 1.5rem; }
 .recommendation { display: flex; gap: 0.75rem; margin-bottom: 1rem; p { font-size: 0.875rem; color: rgba(255,255,255,0.8); line-height: 1.6; } }
 .rec-number { width: 1.5rem; height: 1.5rem; border-radius: 50%; background-color: rgba(14,165,233,0.1); color: var(--primary); font-size: 0.75rem; font-weight: bold; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 0.125rem; }
+
+/* ============ AUTOPLAY-SPECIFIC ============ */
+
+/* Chip highlight animation */
+.suggestion-btn.chip-highlighted {
+  background-color: rgba(14, 165, 233, 0.15);
+  border-color: var(--primary);
+  color: var(--primary);
+  transform: scale(1.05);
+  box-shadow: 0 0 20px rgba(14, 165, 233, 0.3);
+}
+
+/* Body part pulse animation */
+.body-part.part-highlighted {
+  background-color: rgba(14, 165, 233, 0.3);
+  border-color: var(--primary);
+  animation: bodyPartPulse 1.5s ease-in-out infinite;
+  span { opacity: 1; }
+}
+
+@keyframes bodyPartPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(14, 165, 233, 0.4);
+    background-color: rgba(14, 165, 233, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 20px 8px rgba(14, 165, 233, 0.2);
+    background-color: rgba(14, 165, 233, 0.35);
+  }
+}
+
+/* Decorative input (autoplay mode) */
+.input-box-wrapper.is-decorative {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* Autoplay overrides */
+.is-autoplay {
+  .sidebar .action-btn,
+  .sidebar .btn-new-chat {
+    pointer-events: none;
+    cursor: default;
+  }
+}
+
+/* CTA Overlay */
+.cta-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.88);
+  backdrop-filter: blur(8px);
+  border-radius: inherit;
+}
+
+.cta-content {
+  text-align: center;
+  max-width: 400px;
+  padding: 2rem;
+}
+
+.cta-icon {
+  width: 4rem;
+  height: 4rem;
+  border-radius: 1rem;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.5rem;
+  box-shadow: 0 10px 25px rgba(14, 165, 233, 0.3);
+}
+
+.cta-heading {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  color: var(--text-main);
+}
+
+.cta-sub {
+  font-size: 0.9375rem;
+  color: var(--text-muted);
+  margin-bottom: 2rem;
+}
+
+.btn-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem 2.5rem;
+  background: linear-gradient(135deg, var(--primary), #0284c7);
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  font-size: 1.125rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  box-shadow: 0 10px 25px rgba(14, 165, 233, 0.3);
+  transition: transform 0.2s, box-shadow 0.2s;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 15px 30px rgba(14, 165, 233, 0.4);
+  }
+}
 </style>

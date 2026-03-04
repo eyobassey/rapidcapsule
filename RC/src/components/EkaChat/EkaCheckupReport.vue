@@ -143,7 +143,7 @@ export default {
     async loadLogo() {
       if (logoBase64) return logoBase64
       try {
-        const res = await fetch('/RapidCapsule_Logo.png')
+        const res = await fetch('/eka-rc-logo-icon.png')
         const blob = await res.blob()
         return new Promise((resolve) => {
           const reader = new FileReader()
@@ -301,18 +301,18 @@ export default {
     margin-bottom: 20px;
 
     &.self-care {
-      background: #ecfdf5;
-      color: #065f46;
+      background: rgba(16, 185, 129, 0.1);
+      color: #6ee7b7;
       .ov-icon { color: #10b981; fill: #10b981; }
     }
     &.consultation {
-      background: #fffbeb;
-      color: #92400e;
+      background: rgba(245, 158, 11, 0.1);
+      color: #fbbf24;
       .ov-icon { color: #f59e0b; fill: #f59e0b; }
     }
     &.emergency {
-      background: #fef2f2;
-      color: #991b1b;
+      background: rgba(239, 68, 68, 0.1);
+      color: #fca5a5;
       .ov-icon { color: #ef4444; fill: #ef4444; }
     }
   }
@@ -336,20 +336,20 @@ export default {
     margin-bottom: 20px;
 
     &--alert {
-      background: #fff7ed;
-      border: 1px solid #fed7aa;
+      background: rgba(251, 146, 60, 0.1);
+      border: 1px solid rgba(251, 146, 60, 0.3);
       border-radius: 10px;
       padding: 14px;
 
-      .eka-report__heading { color: #c2410c; }
-      p { color: #9a3412; font-size: 13px; line-height: 1.6; margin: 0; }
+      .eka-report__heading { color: #fb923c; }
+      p { color: #fdba74; font-size: 13px; line-height: 1.6; margin: 0; }
     }
   }
 
   &__heading {
     font-size: 14px;
     font-weight: 700;
-    color: #01579B;
+    color: #0ea5e9;
     margin: 0 0 8px;
     text-transform: uppercase;
     letter-spacing: 0.3px;
@@ -358,7 +358,7 @@ export default {
   &__overview {
     font-size: 14px;
     line-height: 1.6;
-    color: #374151;
+    color: #f8fafc;
     margin: 0;
   }
 
@@ -376,18 +376,18 @@ export default {
   &__condition-name {
     font-size: 13px;
     font-weight: 600;
-    color: #1f2937;
+    color: #f8fafc;
   }
 
   &__condition-pct {
     font-size: 13px;
     font-weight: 700;
-    color: #6b7280;
+    color: #94a3b8;
   }
 
   &__condition-bar {
     height: 6px;
-    background: #e5e7eb;
+    background: rgba(255, 255, 255, 0.1);
     border-radius: 3px;
     overflow: hidden;
   }
@@ -404,7 +404,7 @@ export default {
 
   &__condition-explain {
     font-size: 12px;
-    color: #6b7280;
+    color: #94a3b8;
     line-height: 1.5;
     margin: 4px 0 0;
   }
@@ -420,7 +420,7 @@ export default {
       margin-bottom: 6px;
       font-size: 13px;
       line-height: 1.5;
-      color: #374151;
+      color: #f8fafc;
 
       &::before {
         content: '\2022';
@@ -438,7 +438,7 @@ export default {
   &__footer {
     margin-top: 24px;
     padding-top: 16px;
-    border-top: 1px solid #e5e7eb;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
     text-align: center;
   }
 
@@ -449,7 +449,7 @@ export default {
     padding: 10px 24px;
     border: none;
     border-radius: 10px;
-    background: #01579B;
+    background: #0ea5e9;
     color: white;
     font-size: 14px;
     font-weight: 600;
@@ -459,15 +459,15 @@ export default {
     .ov-icon { color: white; fill: white; }
 
     &:hover {
-      background: #014377;
+      background: #0284c7;
       transform: translateY(-1px);
-      box-shadow: 0 2px 8px rgba(1, 87, 155, 0.3);
+      box-shadow: 0 2px 8px rgba(14, 165, 233, 0.3);
     }
   }
 
   &__disclaimer {
     font-size: 11px;
-    color: #9ca3af;
+    color: #64748b;
     margin: 10px 0 0;
   }
 }

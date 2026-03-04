@@ -213,13 +213,15 @@ export default {
 .rx-analysis {
   padding: 20px;
   font-size: 14px;
-  color: #1f2937;
+  color: #f8fafc;
 
   &__header {
     display: flex;
     align-items: center;
     gap: 10px;
     margin-bottom: 16px;
+
+    .ov-icon { color: #0ea5e9; fill: #0ea5e9; }
 
     h2 {
       font-size: 18px;
@@ -230,8 +232,8 @@ export default {
   }
 
   &__badge {
-    background: #f3f4f6;
-    color: #6b7280;
+    background: rgba(255, 255, 255, 0.05);
+    color: #94a3b8;
     font-size: 11px;
     font-weight: 600;
     padding: 3px 8px;
@@ -239,7 +241,7 @@ export default {
   }
 
   &__info {
-    background: #f9fafb;
+    background: rgba(255, 255, 255, 0.05);
     border-radius: 10px;
     padding: 12px;
     margin-bottom: 16px;
@@ -253,15 +255,18 @@ export default {
     align-items: center;
     gap: 6px;
     font-size: 13px;
-    color: #4b5563;
+    color: #f8fafc;
+
+    .ov-icon { color: #94a3b8; fill: #94a3b8; }
   }
 
   &__empty {
     text-align: center;
     padding: 24px 16px;
-    color: #9ca3af;
+    color: #64748b;
 
-    h3 { font-size: 15px; margin: 8px 0 4px; color: #6b7280; }
+    .ov-icon { color: #64748b; fill: #64748b; }
+    h3 { font-size: 15px; margin: 8px 0 4px; color: #94a3b8; }
     p { font-size: 13px; }
   }
 
@@ -269,7 +274,7 @@ export default {
     font-size: 14px;
     font-weight: 600;
     margin: 0 0 10px;
-    color: #374151;
+    color: #f8fafc;
   }
 
   &__meds {
@@ -277,8 +282,8 @@ export default {
   }
 
   &__med-card {
-    background: white;
-    border: 1px solid #e5e7eb;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 10px;
     padding: 12px;
     margin-bottom: 8px;
@@ -306,8 +311,8 @@ export default {
 
   &__med-dosage {
     font-size: 12px;
-    color: #6b7280;
-    background: #f3f4f6;
+    color: #94a3b8;
+    background: rgba(255, 255, 255, 0.05);
     padding: 1px 6px;
     border-radius: 4px;
   }
@@ -330,14 +335,16 @@ export default {
     align-items: center;
     gap: 6px;
     font-size: 13px;
-    color: #374151;
+    color: #f8fafc;
     margin-bottom: 4px;
+
+    .ov-icon { color: #16a34a; fill: #16a34a; }
   }
 
   &__med-form {
     font-size: 11px;
-    color: #6b7280;
-    background: #f3f4f6;
+    color: #94a3b8;
+    background: rgba(255, 255, 255, 0.05);
     padding: 1px 5px;
     border-radius: 3px;
   }
@@ -351,20 +358,22 @@ export default {
 
   &__price {
     font-size: 12px;
-    color: #374151;
+    color: #6ee7b7;
     font-weight: 500;
-    background: #f0fdf4;
+    background: rgba(16, 185, 129, 0.1);
     padding: 2px 6px;
     border-radius: 4px;
   }
 
   &__med-instructions {
     font-size: 12px;
-    color: #6b7280;
+    color: #94a3b8;
     display: flex;
     align-items: flex-start;
     gap: 4px;
     margin-top: 4px;
+
+    .ov-icon { color: #94a3b8; fill: #94a3b8; }
   }
 
   &__med-notfound {
@@ -372,13 +381,15 @@ export default {
     align-items: center;
     gap: 6px;
     font-size: 13px;
-    color: #9ca3af;
+    color: #64748b;
     margin-top: 4px;
+
+    .ov-icon { color: #64748b; fill: #64748b; }
   }
 
   &__cost {
-    background: #f0fdf4;
-    border: 1px solid #bbf7d0;
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(187, 247, 208, 0.3);
     border-radius: 10px;
     padding: 14px;
     margin-bottom: 16px;
@@ -400,30 +411,30 @@ export default {
     &--primary {
       font-weight: 700;
       font-size: 15px;
-      border-bottom: 1px solid #bbf7d0;
+      border-bottom: 1px solid rgba(187, 247, 208, 0.3);
       padding-bottom: 8px;
       margin-bottom: 2px;
     }
   }
 
   &__cost-currency {
-    color: #6b7280;
+    color: #94a3b8;
     font-weight: 500;
   }
 
   &__cost-amount {
-    color: #166534;
+    color: #6ee7b7;
   }
 
   &__cost-note {
     font-size: 11px;
-    color: #9ca3af;
+    color: #64748b;
     margin: 8px 0 0;
   }
 
   &__readiness {
-    background: #f9fafb;
-    border: 1px solid #e5e7eb;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 10px;
     padding: 14px;
     margin-bottom: 16px;
@@ -454,8 +465,10 @@ export default {
     margin-bottom: 10px;
 
     &--ready {
-      background: #dcfce7;
-      color: #166534;
+      background: rgba(16, 185, 129, 0.1);
+      color: #6ee7b7;
+
+      .ov-icon { color: #6ee7b7; fill: #6ee7b7; }
     }
   }
 
@@ -479,20 +492,20 @@ export default {
   &__check-name {
     font-size: 13px;
     font-weight: 600;
-    color: #374151;
+    color: #f8fafc;
   }
 
   &__check-msg {
     font-size: 12px;
-    color: #6b7280;
+    color: #94a3b8;
   }
 
   &__readiness-summary {
     font-size: 12px;
-    color: #6b7280;
+    color: #94a3b8;
     margin: 10px 0 0;
     padding-top: 8px;
-    border-top: 1px solid #e5e7eb;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
   }
 
   &__actions {
@@ -517,6 +530,8 @@ export default {
       background: #FF5C00;
       color: white;
 
+      .ov-icon { color: white; fill: white; }
+
       &:hover { background: #E04F00; }
     }
   }
@@ -525,38 +540,40 @@ export default {
     display: flex;
     align-items: flex-start;
     gap: 6px;
-    background: #fffbeb;
-    border: 1px solid #fde68a;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 8px;
     padding: 10px 12px;
     font-size: 11px;
-    color: #92400e;
+    color: #64748b;
     line-height: 1.4;
+
+    .ov-icon { color: #64748b; fill: #64748b; flex-shrink: 0; }
   }
 }
 
 // Status badge colors
 .rx-status {
-  &--instock { background: #dcfce7; color: #166534; }
-  &--rx { background: #fef3c7; color: #92400e; }
-  &--controlled { background: #fed7aa; color: #9a3412; }
-  &--unavailable { background: #fee2e2; color: #991b1b; }
-  &--outofstock { background: #f3f4f6; color: #6b7280; }
+  &--instock { background: rgba(16, 185, 129, 0.1); color: #6ee7b7; }
+  &--rx { background: rgba(245, 158, 11, 0.1); color: #fbbf24; }
+  &--controlled { background: rgba(251, 146, 60, 0.15); color: #fb923c; }
+  &--unavailable { background: rgba(239, 68, 68, 0.1); color: #fca5a5; }
+  &--outofstock { background: rgba(255, 255, 255, 0.05); color: #94a3b8; }
 }
 
 // Readiness score colors
 .rx-score {
-  &--green { background: #dcfce7; color: #166534; }
-  &--yellow { background: #fef3c7; color: #92400e; }
-  &--red { background: #fee2e2; color: #991b1b; }
+  &--green { background: rgba(16, 185, 129, 0.1); color: #6ee7b7; }
+  &--yellow { background: rgba(245, 158, 11, 0.1); color: #fbbf24; }
+  &--red { background: rgba(239, 68, 68, 0.1); color: #fca5a5; }
 }
 
 // Check icons
 .rx-check {
-  &--passed { color: #16a34a; }
-  &--warning { color: #d97706; }
-  &--failed { color: #dc2626; }
+  &--passed { color: #16a34a; &.ov-icon { color: #16a34a; fill: #16a34a; } }
+  &--warning { color: #d97706; &.ov-icon { color: #d97706; fill: #d97706; } }
+  &--failed { color: #dc2626; &.ov-icon { color: #dc2626; fill: #dc2626; } }
 }
 
-.text-green { color: #16a34a; }
+.text-green { color: #16a34a; &.ov-icon { color: #16a34a; fill: #16a34a; } }
 </style>
