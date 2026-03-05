@@ -20,6 +20,7 @@ import {
 import { GeneralHelpers } from '../../common/helpers/general.helpers';
 import { PaymentHandler } from '../../common/external/payment/payment.handler';
 import { BanksModule } from '../banks/banks.module';
+import { UsersModule } from '../users/users.module';
 import { AdminSettingsModule } from '../admin-settings/admin-settings.module';
 import { Paystack } from '../../common/external/payment/providers/paystack';
 import { AccountingModule } from '../accounting/accounting.module';
@@ -27,6 +28,7 @@ import { AccountingModule } from '../accounting/accounting.module';
 @Module({
   imports: [
     BanksModule,
+    UsersModule,
     AdminSettingsModule,
     AccountingModule,
     MongooseModule.forFeature([

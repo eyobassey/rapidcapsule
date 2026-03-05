@@ -21,6 +21,7 @@ import {
 import currency = require('currency.js');
 import { PaymentHandler } from '../../common/external/payment/payment.handler';
 import { BanksService } from '../banks/banks.service';
+import { UsersService } from '../users/users.service';
 import { SUCCESS } from '../../core/constants';
 import * as moment from 'moment/moment';
 import { UnifiedWalletService } from '../accounting/services/unified-wallet.service';
@@ -37,6 +38,7 @@ export class WalletsService {
     private readonly generalHelpers: GeneralHelpers,
     private readonly paymentHandler: PaymentHandler,
     private readonly bankService: BanksService,
+    private readonly usersService: UsersService,
     private readonly unifiedWalletService: UnifiedWalletService,
   ) {}
   async create(userId: Types.ObjectId) {
@@ -574,12 +576,22 @@ export class WalletsService {
     email: string,
     dto: FundWalletDto,
   ) {
+    // Ensure we have a valid email for Paystack
+    let userEmail = email;
+    if (!userEmail) {
+      const user = await this.usersService.findById(userId);
+      userEmail = (user as any)?.profile?.contact?.email || (user as any)?.email;
+      if (!userEmail) {
+        throw new BadRequestException('User email not found. Please update your profile.');
+      }
+    }
+
     const reference = this.generalHelpers.genTxReference();
 
     // Initialize payment with Paystack
     // Note: Paystack provider already converts to kobo, so pass amount in Naira
     const paymentResponse = await this.paymentHandler.initializeTransaction(
-      email,
+      userEmail,
       dto.amount,
       reference,
       {
