@@ -106,8 +106,8 @@
       </div>
 
       <!-- Mobile toggle -->
-      <button class="eka-sidebar__toggle" @click="sidebarCollapsed = !sidebarCollapsed">
-        <v-icon :name="sidebarCollapsed ? 'hi-menu-alt-2' : 'hi-x'" scale="0.9" fill="white" />
+      <button v-if="!sidebarCollapsed" class="eka-sidebar__toggle" @click="sidebarCollapsed = true">
+        <v-icon name="hi-x" scale="0.9" fill="white" />
       </button>
     </div>
 
@@ -1565,7 +1565,11 @@ export default {
 
     :deep(svg) {
       fill: #94a3b8 !important;
-      transition: fill 0.2s;
+      stroke: #94a3b8 !important;
+      color: #94a3b8 !important;
+      transition: all 0.2s;
+
+      path, line, polyline { fill: #94a3b8 !important; stroke: #94a3b8 !important; }
     }
 
     &:hover:not(:disabled) {
@@ -1574,6 +1578,10 @@ export default {
 
       :deep(svg) {
         fill: #FF5C00 !important;
+        stroke: #FF5C00 !important;
+        color: #FF5C00 !important;
+
+        path, line, polyline { fill: #FF5C00 !important; stroke: #FF5C00 !important; }
       }
     }
 
@@ -1583,6 +1591,9 @@ export default {
 
       :deep(svg) {
         fill: rgba(255, 255, 255, 0.2) !important;
+        stroke: rgba(255, 255, 255, 0.2) !important;
+
+        path, line, polyline { fill: rgba(255, 255, 255, 0.2) !important; stroke: rgba(255, 255, 255, 0.2) !important; }
       }
     }
   }

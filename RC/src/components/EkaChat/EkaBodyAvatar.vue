@@ -2,7 +2,41 @@
   <div class="eka-avatar-panel">
     <div class="eka-avatar-panel__header">
       <h3>Select Symptoms</h3>
-      <p>Tap body parts to add symptoms, then continue below</p>
+      <p>Search or tap body parts to add symptoms</p>
+    </div>
+
+    <!-- Global symptom search -->
+    <div class="eka-avatar-panel__search">
+      <div class="eka-avatar-panel__search-box">
+        <v-icon name="hi-search" scale="0.75" />
+        <input
+          v-model="globalSearch"
+          type="text"
+          placeholder="Search all symptoms..."
+          @input="onGlobalSearch"
+        />
+        <button v-if="globalSearch" @click="clearGlobalSearch">
+          <v-icon name="hi-x" scale="0.65" />
+        </button>
+      </div>
+      <div v-if="globalSearchResults.length" class="eka-avatar-panel__search-results">
+        <div
+          v-for="sym in globalSearchResults"
+          :key="sym.id"
+          class="eka-avatar-panel__search-item"
+          :class="{ selected: isSymptomSelected(sym.id) }"
+          @click="selectFromGlobalSearch(sym)"
+        >
+          <span>{{ sym.label || sym.common_name }}</span>
+          <v-icon
+            :name="isSymptomSelected(sym.id) ? 'hi-check' : 'hi-plus'"
+            scale="0.7"
+          />
+        </div>
+      </div>
+      <div v-if="globalSearchLoading" class="eka-avatar-panel__search-loading">
+        Searching...
+      </div>
     </div>
 
     <div class="eka-avatar-panel__body" @click="onBodyPartClick">
@@ -101,6 +135,10 @@ export default {
       pickerSymptoms: [],
       pickerLoading: false,
       pickerSearch: '',
+      globalSearch: '',
+      globalSearchResults: [],
+      globalSearchLoading: false,
+      globalSearchTimer: null,
     }
   },
   computed: {
@@ -116,6 +154,56 @@ export default {
   methods: {
     isSymptomSelected(id) {
       return !!this.selectedSymptoms.find((s) => s.id === id)
+    },
+
+    onGlobalSearch() {
+      clearTimeout(this.globalSearchTimer)
+      const query = this.globalSearch.trim()
+      if (!query || query.length < 2) {
+        this.globalSearchResults = []
+        this.globalSearchLoading = false
+        return
+      }
+      this.globalSearchLoading = true
+      this.globalSearchTimer = setTimeout(() => this.doGlobalSearch(query), 350)
+    },
+
+    async doGlobalSearch(phrase) {
+      try {
+        const sex = this.session.patient_gender === 'female' ? 'female' : 'male'
+        const age = this.session.patient_age || 25
+
+        if (this.trialToken) {
+          const params = new URLSearchParams({ phrase, age: String(age), sex })
+          const resp = await fetch(`/api/trial/symptom-checker/search?${params}`, {
+            headers: { 'x-trial-token': this.trialToken },
+          })
+          const json = await resp.json()
+          this.globalSearchResults = json?.data || json?.result || []
+        } else {
+          const res = await http.get('/health-checkup/search', {
+            params: { phrase, age, sex },
+          })
+          this.globalSearchResults = res.data?.data || res.data?.result || []
+        }
+      } catch (e) {
+        console.error('Global symptom search failed:', e)
+        this.globalSearchResults = []
+      } finally {
+        this.globalSearchLoading = false
+      }
+    },
+
+    clearGlobalSearch() {
+      this.globalSearch = ''
+      this.globalSearchResults = []
+      this.globalSearchLoading = false
+      clearTimeout(this.globalSearchTimer)
+    },
+
+    async selectFromGlobalSearch(symptom) {
+      if (this.isSymptomSelected(symptom.id)) return
+      await this.onSymptomSelected(symptom)
     },
 
     onBodyPartClick(evt) {
@@ -230,6 +318,106 @@ export default {
       font-size: 12px;
       color: #64748b;
     }
+  }
+
+  &__search {
+    padding: 8px 12px;
+    flex-shrink: 0;
+  }
+
+  &__search-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    padding: 8px 10px;
+
+    .ov-icon {
+      color: #64748b;
+      fill: #64748b;
+      flex-shrink: 0;
+    }
+
+    input {
+      flex: 1;
+      border: none;
+      background: none;
+      outline: none;
+      font-size: 13px;
+      color: #f8fafc;
+      min-width: 0;
+
+      &::placeholder { color: #64748b; }
+    }
+
+    button {
+      background: none;
+      border: none;
+      color: #64748b;
+      cursor: pointer;
+      padding: 2px;
+      border-radius: 4px;
+      flex-shrink: 0;
+
+      .ov-icon { color: #64748b; fill: #64748b; stroke: #64748b; }
+
+      &:hover {
+        color: #f8fafc;
+        background: rgba(255, 255, 255, 0.1);
+        .ov-icon { color: #f8fafc; fill: #f8fafc; stroke: #f8fafc; }
+      }
+    }
+  }
+
+  &__search-results {
+    margin-top: 6px;
+    max-height: 180px;
+    overflow-y: auto;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    background: rgba(15, 23, 42, 0.8);
+  }
+
+  &__search-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 10px;
+    font-size: 13px;
+    color: #f8fafc;
+    cursor: pointer;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    transition: background 0.1s;
+
+    span { color: #f8fafc; }
+
+    .ov-icon {
+      color: #64748b;
+      fill: #64748b;
+      stroke: #64748b;
+      flex-shrink: 0;
+    }
+
+    &:hover { background: rgba(14, 165, 233, 0.1); }
+
+    &:last-child { border-bottom: none; }
+
+    &.selected {
+      background: rgba(16, 185, 129, 0.1);
+      color: #6ee7b7;
+      span { color: #6ee7b7; }
+      .ov-icon { color: #10b981; fill: #10b981; stroke: #10b981; }
+    }
+  }
+
+  &__search-loading {
+    margin-top: 6px;
+    text-align: center;
+    font-size: 12px;
+    color: #64748b;
+    padding: 8px;
   }
 
   &__body {
