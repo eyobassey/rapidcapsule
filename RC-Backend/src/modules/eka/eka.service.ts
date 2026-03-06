@@ -342,11 +342,12 @@ export class EkaService {
     // Stream with tool loop
     let fullResponse = '';
     const toolsUsed: string[] = [];
+    const lastArtifact: { value: any } = { value: null };
 
     // Retry up to 2 times on overloaded/transient errors
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
-        fullResponse = yield* this.streamWithTools(claudeMessages, patientName, userId, toolsUsed, dto.language, activeCheckupPhase, recoveryContext, conversation._id, patientMemory);
+        fullResponse = yield* this.streamWithTools(claudeMessages, patientName, userId, toolsUsed, dto.language, activeCheckupPhase, recoveryContext, conversation._id, patientMemory, lastArtifact);
         break; // Success
       } catch (error: any) {
         const isOverloaded = error?.message?.includes('overloaded') || error?.message?.includes('Overloaded') || error?.error?.type === 'overloaded_error';
@@ -361,13 +362,14 @@ export class EkaService {
       }
     }
 
-    // Save assistant message
+    // Save assistant message (with artifact if any)
     conversation.messages.push({
       role: 'assistant',
       content: fullResponse,
       tools_used: toolsUsed.length > 0 ? toolsUsed : undefined,
+      artifact: lastArtifact.value || undefined,
       created_at: new Date(),
-    });
+    } as any);
     await conversation.save();
 
     // Trigger async memory update if enough new messages have accumulated
@@ -394,6 +396,7 @@ export class EkaService {
     recoveryContext?: RecoveryContext | null,
     conversationId?: Types.ObjectId,
     patientMemory?: any | null,
+    lastArtifact?: { value: any },
   ): AsyncGenerator<any, string> {
     let currentMessages = [...messages];
     let fullResponse = '';
@@ -546,7 +549,9 @@ export class EkaService {
       for (const tr of toolResults) {
         yield { type: 'tool_done', tool: tr.name };
         if (tr.result?.__artifact) {
-          yield { type: 'artifact', artifact_type: tr.result.__artifact.type, data: tr.result.__artifact.data };
+          const artifact = { type: tr.result.__artifact.type, data: tr.result.__artifact.data };
+          yield { type: 'artifact', artifact_type: artifact.type, data: artifact.data };
+          if (lastArtifact) lastArtifact.value = artifact;
         }
         // Emit interactive question data for frontend answer buttons
         if (tr.name === 'run_checkup_interview' && tr.result?.status === 'in_progress' && tr.result?.question) {

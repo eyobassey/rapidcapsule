@@ -18,6 +18,7 @@ export class EkaConversation {
         role: { type: String, enum: ['user', 'assistant'], required: true },
         content: { type: String, required: true },
         tools_used: [{ type: String }],
+        artifact: { type: mongoose.Schema.Types.Mixed },
         created_at: { type: Date, default: Date.now },
       },
     ]),
@@ -26,6 +27,7 @@ export class EkaConversation {
     role: 'user' | 'assistant';
     content: string;
     tools_used?: string[];
+    artifact?: { type: string; data: any };
     created_at: Date;
   }[];
 
