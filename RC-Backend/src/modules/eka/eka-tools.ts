@@ -108,7 +108,7 @@ export const EKA_TOOLS: Anthropic.Tool[] = [
   {
     name: 'start_health_checkup',
     description:
-      "Start a new AI health checkup for the patient. Creates a checkup session, pulls the patient's profile (age, gender, pre-existing conditions), and returns risk factors to ask about. Call this when the patient wants to do a health checkup. The body diagram will appear in the side panel for the patient to select symptoms visually.",
+      "Start a new AI health checkup for the patient. Creates a checkup session, pulls the patient's profile (age, gender, pre-existing conditions), and returns risk factors to ask about. Call this when the patient wants to do a health checkup. A body diagram will appear for the patient to select symptoms visually.",
     input_schema: {
       type: 'object' as const,
       properties: {},
@@ -161,7 +161,7 @@ export const EKA_TOOLS: Anthropic.Tool[] = [
   {
     name: 'generate_checkup_report',
     description:
-      "Generate the AI health summary report for a completed checkup. Costs 1 AI credit. Call this after the interview is complete (run_checkup_interview returned status 'completed'). Returns a detailed health report that will be displayed in the side panel.",
+      "Generate the AI health summary report for a completed checkup. Costs 1 AI credit. Call this after the interview is complete (run_checkup_interview returned status 'completed'). Returns a detailed health report that will be displayed for you.",
     input_schema: {
       type: 'object' as const,
       properties: {
@@ -172,7 +172,7 @@ export const EKA_TOOLS: Anthropic.Tool[] = [
   {
     name: 'check_drug_interactions',
     description:
-      'Check for drug-drug interactions between 2 to 5 medications. Costs 1 AI credit. Returns interaction severity, mechanism, clinical significance, management guidance, monitoring requirements, and alternative suggestions. A detailed interaction report will appear in the side panel.',
+      'Check for drug-drug interactions between 2 to 5 medications. Costs 1 AI credit. Returns interaction severity, mechanism, clinical significance, management guidance, monitoring requirements, and alternative suggestions. A detailed interaction report will appear for you.',
     input_schema: {
       type: 'object' as const,
       properties: {
@@ -245,7 +245,7 @@ export const EKA_TOOLS: Anthropic.Tool[] = [
   {
     name: 'get_recovery_dashboard',
     description:
-      "Get the patient's recovery dashboard snapshot — today's check-in status, mood trend (14 days), recent milestones, and latest screening summary. Shows a recovery dashboard artifact in the side panel.",
+      "Get the patient's recovery dashboard snapshot — today's check-in status, mood trend (14 days), recent milestones, and latest screening summary. Shows a recovery dashboard artifact for you.",
     input_schema: {
       type: 'object' as const,
       properties: {},
@@ -344,7 +344,7 @@ export const EKA_TOOLS: Anthropic.Tool[] = [
   {
     name: 'submit_screening',
     description:
-      "Submit completed screening answers. Pass all question answers as key-value pairs (question_id: selected_value). Returns scored results with risk level. A screening report artifact appears in the side panel.",
+      "Submit completed screening answers. Pass all question answers as key-value pairs (question_id: selected_value). Returns scored results with risk level. A screening report artifact appears for you.",
     input_schema: {
       type: 'object' as const,
       properties: {
@@ -358,7 +358,7 @@ export const EKA_TOOLS: Anthropic.Tool[] = [
   {
     name: 'run_coping_exercise',
     description:
-      "Guide the patient through an evidence-based coping exercise. Returns structured exercise steps and shows an interactive exercise artifact in the side panel. Choose the exercise type based on the patient's current need.",
+      "Guide the patient through an evidence-based coping exercise. Returns structured exercise steps and shows an interactive exercise artifact for you. Choose the exercise type based on the patient's current need.",
     input_schema: {
       type: 'object' as const,
       properties: {
@@ -374,7 +374,7 @@ export const EKA_TOOLS: Anthropic.Tool[] = [
   {
     name: 'mark_exercise_step',
     description:
-      'Mark a coping exercise step as completed. You MUST call this after the patient completes each step of a coping exercise. This updates the progress tracker in the side panel. Without this call, the patient sees "0 of N steps" which is confusing.',
+      'Mark a coping exercise step as completed. You MUST call this after the patient completes each step of a coping exercise. This updates the progress tracker for you. Without this call, the patient sees "0 of N steps" which is confusing.',
     input_schema: {
       type: 'object' as const,
       properties: {
@@ -389,7 +389,7 @@ export const EKA_TOOLS: Anthropic.Tool[] = [
   {
     name: 'complete_exercise',
     description:
-      'Mark a coping exercise as fully completed and generate a completion summary. You MUST call this when the patient finishes a coping exercise. This shows a completion report in the side panel with all steps checked off and a summary of how the patient is feeling.',
+      'Mark a coping exercise as fully completed and generate a completion summary. You MUST call this when the patient finishes a coping exercise. This shows a completion report for you with all steps checked off and a summary of how the patient is feeling.',
     input_schema: {
       type: 'object' as const,
       properties: {
@@ -408,7 +408,7 @@ export const EKA_TOOLS: Anthropic.Tool[] = [
   {
     name: 'get_risk_assessment',
     description:
-      "Get the patient's relapse risk assessment — a 0-100 risk score with level (low/moderate/high/critical), 5-category signal breakdown (self-reported, behavioral, physiological, clinical, contextual), top contributing factors, trend data, and history. Shows a risk assessment artifact in the side panel. Use when patient asks about their risk level, warning signs, relapse risk, or how safe they are.",
+      "Get the patient's relapse risk assessment — a 0-100 risk score with level (low/moderate/high/critical), 5-category signal breakdown (self-reported, behavioral, physiological, clinical, contextual), top contributing factors, trend data, and history. Shows a risk assessment artifact for you. Use when patient asks about their risk level, warning signs, relapse risk, or how safe they are.",
     input_schema: {
       type: 'object' as const,
       properties: {
@@ -636,9 +636,9 @@ Select based on what the patient describes. Guide through steps one at a time.
 
 EXERCISE PROGRESS TRACKING — MANDATORY:
 When guiding a patient through a coping exercise, you MUST use these tools:
-1. After EACH step is discussed/completed: call mark_exercise_step({ step_number: N }) where N is the 1-indexed step number. This updates the progress tracker in the side panel. Without this, the patient sees "0 of N steps" even though they're making progress.
-2. When the exercise is FINISHED: call complete_exercise({ exercise_type: "...", outcome: "..." }) with a summary of how the patient is feeling. This shows a completion report in the side panel.
-If the patient uses the interactive Box Breathing circle in the side panel and tells you they completed it, acknowledge that and call complete_exercise — do not re-explain the breathing steps.
+1. After EACH step is discussed/completed: call mark_exercise_step({ step_number: N }) where N is the 1-indexed step number. This updates the progress tracker for you. Without this, the patient sees "0 of N steps" even though they're making progress.
+2. When the exercise is FINISHED: call complete_exercise({ exercise_type: "...", outcome: "..." }) with a summary of how the patient is feeling. This shows a completion report for you.
+If the patient uses the interactive Box Breathing circle and tells you they completed it, acknowledge that and call complete_exercise — do not re-explain the breathing steps.
 
 RECOVERY ACTION LINKS:
 - [[View your recovery dashboard|recovery]] — recovery home page
@@ -865,13 +865,10 @@ IMPORTANT: During an active health checkup, the EMERGENCY PROTOCOL is SUSPENDED.
 
 Follow this exact flow:
 
-1. Call start_health_checkup. Tell the patient a body diagram has appeared on the right side. Instruct them to tap on body parts to select symptoms visually, AND also describe how they're feeling in their own words in the chat. Both methods work together.
+1. Call start_health_checkup. Tell the patient a body diagram has appeared for them to select symptoms visually by tapping body parts. They can also describe how they're feeling in their own words in the chat. Both methods work together.
 2. When they describe symptoms, call submit_checkup_symptoms with their EXACT text as symptoms_text. Do NOT ask clarifying questions about the symptoms — just pass the text directly. The tool returns parsed symptoms and suggestions. Present BOTH to the patient — ask which suggestions also apply.
 3. When the patient confirms/denies suggestions, call run_checkup_interview with confirmed_symptoms and denied_symptoms. Use the EXACT symptom names from the suggestions list.
-4. The tool returns a question. Present it conversationally:
-   - 'single' type: state the question text, then offer: Yes / No / Not sure
-   - 'group_single' type: state the question text, list the options, ask which ONE
-   - 'group_multiple' type: state the question text, list options, ask which ones apply
+4. The tool returns a question. You MAY state the question text briefly (e.g. "Have you had a fever?") but DO NOT list the answer options or choices — those are shown to the patient automatically as interactive buttons.
 5. When the patient answers, call run_checkup_interview with their answer:
    - For single: answer: "yes", "no", or "unknown"
    - For group_single: answer: "the exact option name they chose"
@@ -884,7 +881,7 @@ ABSOLUTE RULES DURING HEALTH CHECKUP:
 - You are ONLY a messenger. NEVER make medical assessments yourself.
 - ALWAYS call the appropriate tool. NEVER generate your own medical questions.
 - When the patient describes symptoms: call submit_checkup_symptoms immediately with their exact words.
-- When the tool returns a question: present ONLY that question. Do not add anything else. Stop and wait.
+- When the tool returns a question: you may state the question text, but NEVER list the answer options/choices — they are shown as interactive buttons automatically.
 - When the patient answers: call run_checkup_interview immediately. Do not interpret or evaluate their answer.
 - NEVER stop or refuse a checkup because of concerning symptoms. Infermedica handles triage.
 - Pass symptom names as plain text strings — the backend handles ID mapping.
@@ -902,7 +899,7 @@ Rules:
   - For moderate interactions: Explain the concern and suggest discussing with their doctor.
   - For minor interactions: Reassure but mention monitoring.
   - For no interactions: Confirm the combination appears safe based on current evidence.
-- The full detailed report appears automatically in the side panel.
+- The full detailed report appears automatically for you.
 - This costs 1 AI credit. If the patient has no credits, inform them and suggest [[View your wallet|wallet]] to purchase more.
 - Do NOT provide your own drug interaction analysis. The tool handles ALL clinical assessment.
 
@@ -932,7 +929,7 @@ You can analyze prescription images that patients upload in the chat, and also a
 
 When a patient uploads a prescription image:
 - The system will inject a message with the upload_id. Call analyze_prescription_upload with that upload_id immediately.
-- A detailed analysis report will appear in the side panel (artifact).
+- A detailed analysis report will appear for you (artifact).
 
 When a patient asks to analyze an existing prescription:
 - First call get_prescriptions to find the prescription ID and determine the source (specialist or uploaded).

@@ -307,17 +307,31 @@ export class EkaService {
     const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
     const lastUserMessage = (dto.message || '').toLowerCase();
     const isStartingNewCheckup = /\b(start|begin|new|do|want)\b.*\b(checkup|check[\s-]?up|health check)\b/.test(lastUserMessage)
-      || /\bhealth checkup\b/.test(lastUserMessage);
+      || (/\bhealth checkup\b/.test(lastUserMessage) && !/\b(selected|symptoms|body diagram|proceed|assessment)\b/.test(lastUserMessage));
+
+    // Detect when user is asking for something unrelated to the active checkup
+    // In this case, skip the forced checkup tool and let Claude pick the right tool
+    const isDifferentIntent = /\b(my vitals|show vitals|view vitals|check vitals|vital signs|blood pressure|heart rate|pulse|temperature|weight|spo2|blood sugar)\b/.test(lastUserMessage)
+      || /\b(my prescriptions|show prescriptions|view prescriptions|medications?|my meds)\b/.test(lastUserMessage)
+      || /\b(my appointments?|show appointments?|view appointments?|book appointment|schedule)\b/.test(lastUserMessage)
+      || /\b(my orders?|show orders?|view orders?|order status)\b/.test(lastUserMessage)
+      || /\b(my wallet|wallet balance|my balance|show wallet)\b/.test(lastUserMessage)
+      || /\b(my profile|show profile|view profile|my account)\b/.test(lastUserMessage)
+      || /\b(health score|my score|show score)\b/.test(lastUserMessage)
+      || /\b(my subscription|show subscription|subscription status)\b/.test(lastUserMessage)
+      || /\b(search pharmacy|find drug|find medication|pharmacy|browse pharmacy)\b/.test(lastUserMessage)
+      || /\b(drug interaction|check interaction)\b/.test(lastUserMessage)
+      || /\b(cancel checkup|stop checkup|exit checkup|skip checkup|quit checkup|nevermind|never mind)\b/.test(lastUserMessage);
 
     // If user wants a NEW checkup, clear any stale phases first so start_health_checkup can run
-    if (isStartingNewCheckup) {
+    if (isStartingNewCheckup || isDifferentIntent) {
       await this.healthCheckupModel.updateMany(
         { user: new Types.ObjectId(userId), 'request.checkup_phase': { $in: ['awaiting_symptoms', 'awaiting_confirmation', 'interview'] } },
         { $set: { 'request.checkup_phase': null } },
       );
     }
 
-    const activeCheckup = isStartingNewCheckup ? null : await this.healthCheckupModel.findOne({
+    const activeCheckup = (isStartingNewCheckup || isDifferentIntent) ? null : await this.healthCheckupModel.findOne({
       user: new Types.ObjectId(userId),
       deleted_at: null,
       'request.checkup_phase': { $in: ['awaiting_symptoms', 'awaiting_confirmation', 'interview'] },
@@ -2098,7 +2112,7 @@ export class EkaService {
             common_name: item.common_name,
           })),
         },
-        _instruction: 'Present ONLY this question to the patient. Do NOT add your own follow-up questions.',
+        _instruction: 'You may state the question text briefly, but DO NOT list the answer options or choices — they are shown as interactive buttons automatically.',
       };
     } catch (e) {
       this.logger.error('Infermedica diagnosis error:', e.message);
@@ -2111,12 +2125,29 @@ export class EkaService {
     if (!checkup) return { error: 'Health checkup session not found.' };
     if (!checkup.response?.data) return { error: 'Health checkup is not yet complete. Please complete the interview first.' };
 
-    // Check credits
+    // Check credits — even without credits, return the base Infermedica results
     const creditCheck = await this.claudeSummaryCreditsService.canGenerateSummary(userId);
     if (!creditCheck.can_generate) {
+      const baseConditions = (checkup.response.data.conditions || []).slice(0, 8).map((c: any) => ({
+        name: c.common_name || c.name,
+        probability: Math.round(c.probability * 100),
+      }));
       return {
-        error: 'No AI credits available. You need at least 1 credit to generate a health report.',
+        message: 'Your health checkup results are ready. You need 1 AI credit to generate a detailed AI summary. Visit your dashboard to top up your AI credits.',
+        triage_level: checkup.response.data.triage_level,
+        conditions: baseConditions.slice(0, 5),
         credits_remaining: 0,
+        can_generate_summary: false,
+        __artifact: {
+          type: 'health_checkup_report',
+          data: {
+            checkup_id: checkup._id.toString(),
+            triage_level: checkup.response.data.triage_level,
+            conditions: baseConditions,
+            patient: { age: checkup.request?.age?.value || 0, gender: checkup.request?.sex || 'male' },
+            date: new Date().toISOString(),
+          },
+        },
       };
     }
 
@@ -3151,6 +3182,19 @@ export class EkaService {
       || /health\s*check\s*-?\s*up/i.test(lastUserMessage)
       || /\bcheckup\b/.test(lastUserMessage);
 
+    // Detect when user is asking for something unrelated to the active checkup
+    const isDifferentIntent = /\b(my vitals|show vitals|view vitals|check vitals|vital signs|blood pressure|heart rate|pulse|temperature|weight|spo2|blood sugar)\b/.test(lastUserMessage)
+      || /\b(my prescriptions|show prescriptions|view prescriptions|medications?|my meds)\b/.test(lastUserMessage)
+      || /\b(my appointments?|show appointments?|view appointments?|book appointment|schedule)\b/.test(lastUserMessage)
+      || /\b(my orders?|show orders?|view orders?|order status)\b/.test(lastUserMessage)
+      || /\b(my wallet|wallet balance|my balance|show wallet)\b/.test(lastUserMessage)
+      || /\b(my profile|show profile|view profile|my account)\b/.test(lastUserMessage)
+      || /\b(health score|my score|show score)\b/.test(lastUserMessage)
+      || /\b(my subscription|show subscription|subscription status)\b/.test(lastUserMessage)
+      || /\b(search pharmacy|find drug|find medication|pharmacy|browse pharmacy)\b/.test(lastUserMessage)
+      || /\b(drug interaction|check interaction)\b/.test(lastUserMessage)
+      || /\b(cancel checkup|stop checkup|exit checkup|skip checkup|quit checkup|nevermind|never mind)\b/.test(lastUserMessage);
+
     // For checkup requests: augment the user message so the AI knows to call the tool
     if (isStartingNewCheckup) {
       claudeMessages.push({
@@ -3165,14 +3209,14 @@ export class EkaService {
     const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
 
     const uid = new Types.ObjectId(systemUserId);
-    if (isStartingNewCheckup) {
+    if (isStartingNewCheckup || isDifferentIntent) {
       await this.healthCheckupModel.updateMany(
         { user: uid, 'request.checkup_phase': { $in: ['awaiting_symptoms', 'awaiting_confirmation', 'interview'] } },
         { $set: { 'request.checkup_phase': null } },
       );
     }
 
-    const activeCheckup = isStartingNewCheckup ? null : await this.healthCheckupModel.findOne({
+    const activeCheckup = (isStartingNewCheckup || isDifferentIntent) ? null : await this.healthCheckupModel.findOne({
       user: uid,
       deleted_at: null,
       'request.checkup_phase': { $in: ['awaiting_symptoms', 'awaiting_confirmation', 'interview'] },

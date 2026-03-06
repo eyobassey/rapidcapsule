@@ -49,14 +49,14 @@ export const EKA_TRIAL_TOOLS: Anthropic.Tool[] = EKA_TOOLS
       return {
         ...tool,
         description:
-          'Check for drug-drug interactions between 2 to 5 medications. FREE in trial mode. Returns interaction severity, mechanism, clinical significance, and management guidance. A detailed interaction report will appear in the side panel.',
+          'Check for drug-drug interactions between 2 to 5 medications. FREE in trial mode. Returns interaction severity, mechanism, clinical significance, and management guidance. A detailed interaction report will appear for you.',
       };
     }
     if (tool.name === 'generate_checkup_report') {
       return {
         ...tool,
         description:
-          'Generate the AI health summary report for a completed checkup. FREE in trial mode. Call this after the interview is complete. Returns a detailed health report displayed in the side panel.',
+          'Generate the AI health summary report for a completed checkup. FREE in trial mode. Call this after the interview is complete. Returns a detailed health report displayed for you.',
       };
     }
     if (tool.name === 'start_screening') {
@@ -70,14 +70,14 @@ export const EKA_TRIAL_TOOLS: Anthropic.Tool[] = EKA_TOOLS
       return {
         ...tool,
         description:
-          'Score a completed screening assessment. FREE in trial mode. Returns risk level, subscale scores, and AI interpretation. Note: results are not saved in trial mode — sign up to track screening history over time. A screening report will appear in the side panel.',
+          'Score a completed screening assessment. FREE in trial mode. Returns risk level, subscale scores, and AI interpretation. Note: results are not saved in trial mode — sign up to track screening history over time. A screening report will appear for you.',
       };
     }
     if (tool.name === 'run_coping_exercise') {
       return {
         ...tool,
         description:
-          'Guide the patient through an evidence-based coping exercise. Available: urge_surfing, grounding_5_4_3_2_1, box_breathing, thought_record, pros_cons_analysis, halt_check, safety_plan. FREE in trial mode. An interactive exercise will appear in the side panel.',
+          'Guide the patient through an evidence-based coping exercise. Available: urge_surfing, grounding_5_4_3_2_1, box_breathing, thought_record, pros_cons_analysis, halt_check, safety_plan. FREE in trial mode. An interactive exercise will appear for you.',
       };
     }
     return tool;
@@ -163,11 +163,11 @@ IMPORTANT: Before starting a checkup, you MUST ask the patient for their age and
 Follow this flow:
 1. Ask for age and gender if not already known.
 2. Call start_health_checkup with the age and gender.
-3. Tell the patient a body diagram has appeared on the right side. Ask them to describe how they're feeling.
+3. Tell the patient a body diagram has appeared for them to select symptoms visually. Ask them to describe how they're feeling.
 4. When they describe symptoms, call submit_checkup_symptoms with their EXACT text.
 5. Present parsed symptoms and suggestions. Ask which suggestions also apply.
 6. Call run_checkup_interview with confirmed_symptoms and denied_symptoms.
-7. Present each follow-up question conversationally. Wait for the patient's answer.
+7. You may state the follow-up question text briefly, but DO NOT list the answer options — they are shown as interactive buttons automatically. Wait for the patient's answer.
 8. Continue calling run_checkup_interview until status is 'completed'.
 9. Call generate_checkup_report (free in trial).
 10. Summarize triage level and top conditions. Recommend signing up to book a specialist appointment.
@@ -181,7 +181,7 @@ DRUG INTERACTION CHECKER:
 When a patient asks about drug interactions, use check_drug_interactions immediately.
 - Extract drug names from the patient's message.
 - After results, present a brief summary. For major interactions, strongly recommend consulting a doctor.
-- The full report appears in the side panel automatically.
+- The full report appears for you automatically.
 
 PHARMACY SEARCH:
 When a patient asks about a medication, ALWAYS use search_pharmacy first.
