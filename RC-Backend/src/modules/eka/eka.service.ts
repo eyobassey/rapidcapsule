@@ -596,11 +596,10 @@ export class EkaService {
         if (tr.name === 'run_checkup_interview' && tr.result?.status === 'in_progress') {
           textOnlyNextRound = true; // Present interview question as text
         }
-        // Interview complete → auto-chain generate_checkup_report
+        // Interview complete → present base results (user can opt-in to AI summary)
         if (tr.name === 'run_checkup_interview' && tr.result?.status === 'completed') {
-          textOnlyNextRound = false;
-          forceToolNextRound = 'generate_checkup_report';
-          this.logger.log('Interview completed — will auto-chain generate_checkup_report');
+          textOnlyNextRound = true;
+          this.logger.log('Interview completed — base Infermedica results returned with artifact');
         }
         // Report generated → text-only to present summary
         if (tr.name === 'generate_checkup_report' && !tr.result?.error) {
@@ -2067,13 +2066,25 @@ export class EkaService {
         checkup.markModified('response');
         await checkup.save();
 
+        const baseConditions = (response.data.conditions || []).slice(0, 8).map((c: any) => ({
+          name: c.common_name || c.name,
+          probability: Math.round(c.probability * 100),
+        }));
+
         return {
           status: 'completed',
           triage_level: triageData?.triage_level || 'unknown',
-          conditions: (response.data.conditions || []).slice(0, 8).map((c: any) => ({
-            name: c.common_name || c.name,
-            probability: Math.round(c.probability * 100),
-          })),
+          conditions: baseConditions,
+          __artifact: {
+            type: 'health_checkup_report',
+            data: {
+              checkup_id: checkup._id.toString(),
+              triage_level: triageData?.triage_level || 'unknown',
+              conditions: baseConditions,
+              patient: { age: age?.value || 0, gender: sex || 'male' },
+              date: new Date().toISOString(),
+            },
+          },
         };
       }
 
@@ -3457,7 +3468,7 @@ export class EkaService {
         if (tr.name === 'run_checkup_interview' && tr.result?.status === 'completed') {
           textOnlyNextRound = false;
           forceToolNextRound = 'generate_checkup_report';
-          this.logger.log('Trial: Interview completed — will auto-chain generate_checkup_report');
+          this.logger.log('Trial: Interview completed — will auto-chain generate_checkup_report (free in trial)');
         }
         if (tr.name === 'generate_checkup_report' && !tr.result?.error) {
           textOnlyNextRound = true;

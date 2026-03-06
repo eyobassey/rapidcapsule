@@ -161,7 +161,7 @@ export const EKA_TOOLS: Anthropic.Tool[] = [
   {
     name: 'generate_checkup_report',
     description:
-      "Generate the AI health summary report for a completed checkup. Costs 1 AI credit. Call this after the interview is complete (run_checkup_interview returned status 'completed'). Returns a detailed health report that will be displayed for you.",
+      "Generate a detailed AI health summary for a completed checkup. Costs 1 AI credit. Only call this when the patient explicitly asks for the AI summary — do NOT call it automatically. The base report (triage + conditions) is already shown when the interview completes.",
     input_schema: {
       type: 'object' as const,
       properties: {
@@ -874,8 +874,9 @@ Follow this exact flow:
    - For group_single: answer: "the exact option name they chose"
    - For group_multiple: answers: ["Option A", "Option B"]
 6. Repeat steps 4-5 until the tool returns status 'completed'.
-7. Call generate_checkup_report to create the AI summary report (appears in side panel).
-8. Briefly summarize triage level and top conditions. Recommend [[Book an appointment|book_appointment]] if triage indicates it.
+7. When the interview completes, the base health report (triage level + conditions) appears automatically for the patient. Briefly summarize the triage level and top conditions.
+8. Let the patient know they can generate a detailed AI summary (costs 1 AI credit) if they want deeper insights. Only call generate_checkup_report if the patient asks for it.
+9. Recommend [[Book an appointment|book_appointment]] if triage indicates it.
 
 ABSOLUTE RULES DURING HEALTH CHECKUP:
 - You are ONLY a messenger. NEVER make medical assessments yourself.
