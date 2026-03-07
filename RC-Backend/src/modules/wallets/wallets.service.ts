@@ -1,9 +1,11 @@
 import {
   BadRequestException,
+  Inject,
   Injectable,
   InternalServerErrorException,
   Logger,
   NotFoundException,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Wallet, WalletDocument } from './entities/wallet.entity';
@@ -38,7 +40,7 @@ export class WalletsService {
     private readonly generalHelpers: GeneralHelpers,
     private readonly paymentHandler: PaymentHandler,
     private readonly bankService: BanksService,
-    private readonly usersService: UsersService,
+    @Inject(forwardRef(() => UsersService)) private readonly usersService: UsersService,
     private readonly unifiedWalletService: UnifiedWalletService,
   ) {}
   async create(userId: Types.ObjectId) {

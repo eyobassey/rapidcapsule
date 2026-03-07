@@ -46,6 +46,10 @@
     </div>
 
     <div class="card-footer">
+      <div class="fee-row" v-if="specialist.consultation_fee">
+        <span class="fee-label">Consultation</span>
+        <span class="fee-amount">₦{{ Number(specialist.consultation_fee).toLocaleString() }}</span>
+      </div>
       <button class="select-btn" :class="{ 'btn-selected': isSelected }">
         {{ isSelected ? 'Selected' : 'Select' }}
       </button>
@@ -177,6 +181,24 @@ const truncateBio = (bio) => {
   margin-top: 16px;
   padding-top: 16px;
   border-top: 1px solid #f3f4f6;
+}
+
+.fee-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.fee-label {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.fee-amount {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0EAEC4;
 }
 
 .select-btn {

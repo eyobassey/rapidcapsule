@@ -71,6 +71,22 @@
           </div>
         </div>
       </div>
+
+      <!-- Consultation Fee -->
+      <div class="fee-summary" v-if="booking.specialist?.consultation_fee">
+        <div class="fee-row">
+          <span class="fee-label">Consultation Fee</span>
+          <span class="fee-value">{{ formatConverted(booking.specialist.consultation_fee) }}</span>
+        </div>
+        <div class="fee-row fee-row-muted">
+          <span class="fee-label">Platform Fee</span>
+          <span class="fee-value">{{ formatConverted(500) }}</span>
+        </div>
+        <div class="fee-row fee-row-total">
+          <span class="fee-label">Total</span>
+          <span class="fee-value">{{ formatConverted(booking.specialist.consultation_fee + 500) }}</span>
+        </div>
+      </div>
     </div>
 
     <!-- Payment Section (hidden in reschedule mode) -->
@@ -486,6 +502,56 @@ const addPaymentCard = async () => {
 .detail-value {
   font-size: 14px;
   font-weight: 500;
+  color: #1f2937;
+}
+
+// Fee Summary
+.fee-summary {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #f3f4f6;
+}
+
+.fee-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+}
+
+.fee-row-muted {
+  .fee-label, .fee-value {
+    font-size: 13px;
+    color: #9ca3af;
+  }
+}
+
+.fee-row-total {
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid #e5e7eb;
+
+  .fee-label {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1f2937;
+  }
+
+  .fee-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: #0EAEC4;
+  }
+}
+
+.fee-label {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.fee-value {
+  font-size: 14px;
+  font-weight: 600;
   color: #1f2937;
 }
 

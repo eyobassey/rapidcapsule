@@ -876,7 +876,7 @@ Follow this exact flow:
 6. Repeat steps 4-5 until the tool returns status 'completed'.
 7. When the interview completes, the base health report (triage level + conditions) appears automatically for the patient. Briefly summarize the triage level and top conditions.
 8. Let the patient know they can generate a detailed AI summary (costs 1 AI credit) if they want deeper insights. Only call generate_checkup_report if the patient asks for it.
-9. Recommend [[Book an appointment|book_appointment]] if triage indicates it.
+9. Recommend booking an appointment if triage indicates it. IMPORTANT: Include the checkup ID in the link so the checkup results are automatically shared with the specialist. Use this exact format: [[Book an appointment|book_appointment:CHECKUP_ID]] where CHECKUP_ID is the checkup_id from the completed results. This ensures the health checkup findings become part of the patient notes for the specialist.
 
 ABSOLUTE RULES DURING HEALTH CHECKUP:
 - You are ONLY a messenger. NEVER make medical assessments yourself.

@@ -111,7 +111,8 @@ export default {
             const drugId = key.slice(5)
             return `${linkText.trim()} (https://rapidcapsule.com/app/patient/pharmacy/drug/${drugId})`
           }
-          const route = ROUTE_MAP[key]
+          const [baseKey] = key.split(':')
+          const route = ROUTE_MAP[baseKey] || ROUTE_MAP[key]
           if (route) return `${linkText.trim()} (https://rapidcapsule.com${route})`
           return linkText.trim()
         })
@@ -136,9 +137,15 @@ export default {
           const route = `/app/patient/pharmacy/drug/${drugId}`
           return `<span class="eka-action-link eka-drug-link" data-route="${route}" data-new-tab="true">${linkText.trim()}</span>`
         }
-        const route = ROUTE_MAP[key]
+        // Handle parameterized route keys like book_appointment:CHECKUP_ID
+        const [baseKey, param] = key.split(':')
+        const route = ROUTE_MAP[baseKey] || ROUTE_MAP[key]
         if (route) {
-          return `<span class="eka-action-link" data-route="${route}">${linkText.trim()}</span>`
+          let fullRoute = route
+          if (baseKey === 'book_appointment' && param) {
+            fullRoute = `${route}?checkup_id=${param}&from_health_check=true`
+          }
+          return `<span class="eka-action-link" data-route="${fullRoute}">${linkText.trim()}</span>`
         }
         return linkText.trim()
       })

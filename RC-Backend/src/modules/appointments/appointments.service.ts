@@ -215,15 +215,53 @@ export class AppointmentsService {
     let appointmentFee: number = createAppointmentDto.appointment_fee || 0;
 
     if (!appointmentFee) {
-      // Get fee from specialist preferences (access via any to avoid type issues)
-      const specialistData = specialist as any;
-      const consultationRates = specialistData.specialist_preferences?.consultation_rates;
-      if (consultationRates) {
-        appointmentFee = urgency === 'urgent'
-          ? consultationRates.urgent_rate || consultationRates.routine_rate || 5000
-          : consultationRates.routine_rate || 5000;
-      } else {
-        appointmentFee = 5000; // Default fee
+      // Look up fee from specialist_preferences collection
+      try {
+        const prefs = await this.usersService.getUserAvailabilityAndPreferences(
+          new Types.ObjectId(specialist._id.toString()),
+        );
+        const rateCards = (prefs as any)?.rate_cards;
+        // Determine rate based on meeting channel
+        const channel = meeting_channel || 'zoom';
+        const isAudio = channel === 'phone' || channel === 'audio';
+        const channelRates = isAudio
+          ? rateCards?.audio_consultation
+          : rateCards?.video_consultation;
+
+        if (channelRates) {
+          appointmentFee = urgency === 'urgent'
+            ? channelRates.urgent_rate || channelRates.routine_rate || 0
+            : channelRates.routine_rate || 0;
+        }
+      } catch (e) {
+        // Silent — fall through to admin rates
+      }
+
+      // Fallback to professional_practice.consultation_fee on user doc
+      if (!appointmentFee && (specialist as any)?.professional_practice?.consultation_fee) {
+        appointmentFee = (specialist as any).professional_practice.consultation_fee;
+      }
+
+      // Fallback to admin settings rates
+      if (!appointmentFee) {
+        try {
+          const adminSetting = await this.adminSettingsService.findOne();
+          const adminRate = adminSetting?.specialist_rates?.find(
+            (r) =>
+              r.category === specialist?.professional_practice?.category &&
+              r.specialization === specialist?.professional_practice?.area_of_specialty,
+          );
+          if (adminRate?.rate?.number) {
+            appointmentFee = adminRate.rate.number;
+          }
+        } catch (e) {
+          // Silent
+        }
+      }
+
+      // System default
+      if (!appointmentFee) {
+        appointmentFee = 5000;
       }
     }
 
@@ -2239,6 +2277,26 @@ export class AppointmentsService {
           specialist.review_count = reviewCount;
         } catch (e) {
           specialist.review_count = 0;
+        }
+
+        // Fetch consultation fee from specialist preferences
+        try {
+          const prefs = await this.usersService.getUserAvailabilityAndPreferences(specialist._id);
+          if (prefs) {
+            const rateCards = (prefs as any).rate_cards;
+            const videoRate = rateCards?.video_consultation?.routine_rate;
+            const audioRate = rateCards?.audio_consultation?.routine_rate;
+            // Priority: specialist preferences > professional_practice field > null
+            specialist.consultation_fee = videoRate || audioRate
+              || specialist.professional_practice?.consultation_fee
+              || null;
+            specialist.meeting_channels = (prefs as any).meeting_preferences?.preferred_channels || [];
+          } else {
+            // No preferences doc — check legacy field on user
+            specialist.consultation_fee = specialist.professional_practice?.consultation_fee || null;
+          }
+        } catch (e) {
+          specialist.consultation_fee = specialist.professional_practice?.consultation_fee || null;
         }
 
         return specialist;

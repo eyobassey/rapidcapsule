@@ -145,6 +145,43 @@ export function useBookingState(route) {
     specialty.specialist_category = data.specialist_category || '';
   }
 
+  // Format health checkup data as structured patient notes
+  function formatCheckupAsNotes(data) {
+    const lines = [];
+    const date = data.assessment_date
+      ? new Date(data.assessment_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+      : '';
+    lines.push(`--- Health Checkup Results${date ? ` (${date})` : ''} ---`);
+
+    const triageLabels = {
+      emergency: 'Emergency', emergency_ambulance: 'Emergency',
+      consultation_24: 'Urgent — See a doctor within 24h',
+      consultation: 'See a Doctor', self_care: 'Self-Care',
+    };
+    if (data.triage_level && triageLabels[data.triage_level]) {
+      lines.push(`Triage: ${triageLabels[data.triage_level]}`);
+    }
+
+    if (data.conditions?.length) {
+      const condList = data.conditions.slice(0, 5).map(c => {
+        const name = c.common_name || c.name;
+        const pct = typeof c.probability === 'number'
+          ? c.probability <= 1 ? Math.round(c.probability * 100) : Math.round(c.probability)
+          : null;
+        return pct !== null ? `${name} (${pct}%)` : name;
+      }).join(', ');
+      lines.push(`Top conditions: ${condList}`);
+    }
+
+    if (data.symptoms?.length) {
+      const symptomNames = data.symptoms.map(s => s.common_name || s.name).filter(Boolean).slice(0, 8);
+      if (symptomNames.length) lines.push(`Symptoms reported: ${symptomNames.join(', ')}`);
+    }
+
+    lines.push('---');
+    return lines.join('\n');
+  }
+
   // Set health check data from session storage
   function setHealthCheckData(data) {
     healthCheckData.checkup_id = data.checkup_id || '';
@@ -154,8 +191,11 @@ export function useBookingState(route) {
     healthCheckData.patient_note = data.patient_note || '';
     healthCheckData.assessment_date = data.assessment_date || '';
 
-    // Pre-fill patient notes if available
-    if (data.patient_note) {
+    // Format structured checkup data into patient notes
+    const formattedNotes = formatCheckupAsNotes(data);
+    if (formattedNotes) {
+      patientNotes.value = formattedNotes;
+    } else if (data.patient_note) {
       patientNotes.value = data.patient_note;
     }
   }

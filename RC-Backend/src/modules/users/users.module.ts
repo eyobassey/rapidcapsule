@@ -24,7 +24,7 @@ import { BasicHealthScoreModule } from '../basic-health-score/basic-health-score
 @Module({
   imports: [
     TokensModule,
-    WalletsModule,
+    forwardRef(() => WalletsModule),
     UserSettingsModule,
     ReferralsModule,
     MongooseModule.forFeature([

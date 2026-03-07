@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { WalletsService } from './wallets.service';
 import { WalletsController } from './wallets.controller';
 import { SpecialistWalletService } from './specialist-wallet.service';
@@ -28,7 +28,7 @@ import { AccountingModule } from '../accounting/accounting.module';
 @Module({
   imports: [
     BanksModule,
-    UsersModule,
+    forwardRef(() => UsersModule),
     AdminSettingsModule,
     AccountingModule,
     MongooseModule.forFeature([
