@@ -7,7 +7,7 @@ import { EkaConversation, EkaConversationDocument } from './entities/eka-convers
 import { EkaChatDto } from './dto/eka.dto';
 import { EKA_TOOLS, buildSystemPrompt, RecoveryContext } from './eka-tools';
 import { THERAPEUTIC_EXERCISES, getExercise } from './eka-recovery-knowledge';
-import { AUDIT, DAST10, CAGE, ASSIST } from '../recovery/constants/screening-instruments';
+import { AUDIT, DAST10, CAGE, ASSIST, SCREENING_INSTRUMENTS } from '../recovery/constants/screening-instruments';
 import { SOBRIETY_MILESTONES, getNextSobrietyMilestone } from '../recovery/constants/milestone-definitions';
 import { EKA_TRIAL_TOOLS, buildTrialSystemPrompt } from './eka-trial-tools';
 import { Infermedica } from '../../common/external/infermedica/infermedica';
@@ -3834,16 +3834,18 @@ export class EkaService {
       craving_trend: cravingTrend,
       next_milestone: nextMilestone,
       recent_milestones: recentMilestones.map((m: any) => ({
-        name: m.name,
+        name: m.milestone_name || m.name || '',
         icon: m.icon || '🏆',
-        points: m.points || 0,
+        points: m.reward_points || m.points || 0,
         achieved_at: m.achieved_at,
       })),
       latest_screening: latestScreening ? {
         instrument: (latestScreening as any).instrument,
         score: (latestScreening as any).total_score,
-        max_score: (latestScreening as any).max_possible_score,
-        risk_level: (latestScreening as any).risk_zone?.level,
+        max_score: (latestScreening as any).max_possible_score
+          || (SCREENING_INSTRUMENTS[(latestScreening as any).instrument]?.scoring?.max_score)
+          || null,
+        risk_level: (latestScreening as any).risk_level || (latestScreening as any).risk_zone?.level,
         date: (latestScreening as any).completed_at,
       } : null,
     };
