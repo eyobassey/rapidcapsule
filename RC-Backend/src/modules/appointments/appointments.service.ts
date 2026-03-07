@@ -2125,6 +2125,7 @@ export class AppointmentsService {
       'professional_practice.category': professional_category,
       'professional_practice.area_of_specialty': specialist_category,
       ...(rating && this.ratingsQuery(rating)),
+      ...(gender && { 'profile.gender': gender }),
       ...(is_diaspora !== undefined && { 'profile.contact.is_diaspora': is_diaspora }),
       ...(languages?.length && { languages: { $in: languages } }),
     });
@@ -2291,12 +2292,20 @@ export class AppointmentsService {
               || specialist.professional_practice?.consultation_fee
               || null;
             specialist.meeting_channels = (prefs as any).meeting_preferences?.preferred_channels || [];
+            // Extract unique available days of the week
+            const daySet = new Set<string>();
+            ((prefs as any).time_availability || []).forEach((slot: any) => {
+              if (slot.day) daySet.add(slot.day);
+            });
+            specialist.available_days = Array.from(daySet);
           } else {
             // No preferences doc — check legacy field on user
             specialist.consultation_fee = specialist.professional_practice?.consultation_fee || null;
+            specialist.available_days = [];
           }
         } catch (e) {
           specialist.consultation_fee = specialist.professional_practice?.consultation_fee || null;
+          specialist.available_days = [];
         }
 
         return specialist;
