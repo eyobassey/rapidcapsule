@@ -652,12 +652,16 @@ export class AuthService {
     setting?: UserSettingsDocument | null,
   ) {
     const otp = await this.tokensService.create(TokenType.OTP, userId);
-    // send OTP to user email
-    this.generalHelpers.generateEmailAndSend({
-      email: profile.contact.email,
-      subject: Messages.LOGIN_VERIFICATION,
-      emailBody: otpEmail(profile.first_name, otp.token),
-    });
+    // send OTP to user email - await to ensure delivery
+    try {
+      await this.generalHelpers.sendEmail(
+        profile.contact.email,
+        Messages.LOGIN_VERIFICATION,
+        otpEmail(profile.first_name, otp.token),
+      );
+    } catch (error) {
+      console.error(`Failed to send 2FA OTP email: ${error.message}`);
+    }
     return { message: Messages.EMAIL_OTP_SENT, result: setting };
   }
 
