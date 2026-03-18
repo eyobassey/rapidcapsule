@@ -42,14 +42,15 @@ export class NotificationsController {
     const userId = req.user.sub.toString();
     const result = await this.notificationsService.findAllForUser(userId, query);
     return {
-      success: true,
       message: 'Notifications retrieved successfully',
-      data: result.notifications,
-      pagination: {
-        total: result.total,
-        page: result.page,
-        pages: result.pages,
-        limit: query.limit || 20,
+      result: {
+        notifications: result.notifications,
+        pagination: {
+          total: result.total,
+          page: result.page,
+          pages: result.pages,
+          limit: query.limit || 20,
+        },
       },
     };
   }
@@ -65,8 +66,7 @@ export class NotificationsController {
     const userId = req.user.sub.toString();
     const count = await this.notificationsService.getUnreadCount(userId);
     return {
-      success: true,
-      data: { unread_count: count },
+      result: { unread_count: count },
     };
   }
 
@@ -81,8 +81,8 @@ export class NotificationsController {
     const userId = req.user.sub.toString();
     const stats = await this.notificationsService.getNotificationStats(userId);
     return {
-      success: true,
-      data: stats,
+      message: 'Notification statistics retrieved successfully',
+      result: stats,
     };
   }
 
@@ -98,9 +98,8 @@ export class NotificationsController {
     const userId = req.user.sub.toString();
     const preferences = await this.orchestratorService.getNotificationPreferences(userId);
     return {
-      success: true,
       message: 'Notification preferences retrieved successfully',
-      data: preferences,
+      result: preferences,
     };
   }
 
@@ -119,9 +118,8 @@ export class NotificationsController {
     const userId = req.user.sub.toString();
     const preferences = await this.orchestratorService.updateNotificationPreferences(userId, dto);
     return {
-      success: true,
       message: 'Notification preferences updated successfully',
-      data: preferences,
+      result: preferences,
     };
   }
 
@@ -137,9 +135,8 @@ export class NotificationsController {
     const userId = req.user.sub.toString();
     const result = await this.notificationsService.markAllAsRead(userId);
     return {
-      success: true,
       message: `${result.modified} notifications marked as read`,
-      data: result,
+      result: result,
     };
   }
 
@@ -156,9 +153,8 @@ export class NotificationsController {
     const userId = req.user.sub.toString();
     const result = await this.notificationsService.markMultipleAsRead(userId, dto);
     return {
-      success: true,
       message: `${result.modified} notifications marked as read`,
-      data: result,
+      result: result,
     };
   }
 
@@ -175,9 +171,8 @@ export class NotificationsController {
     const userId = req.user.sub.toString();
     const result = await this.notificationsService.deleteMultiple(userId, body.notification_ids);
     return {
-      success: true,
       message: `${result.deleted} notifications deleted`,
-      data: result,
+      result: result,
     };
   }
 
@@ -195,8 +190,7 @@ export class NotificationsController {
     const userId = req.user.sub.toString();
     const notification = await this.notificationsService.findOne(id, userId);
     return {
-      success: true,
-      data: notification,
+      result: notification,
     };
   }
 
@@ -213,9 +207,8 @@ export class NotificationsController {
     const userId = req.user.sub.toString();
     const notification = await this.notificationsService.markAsRead(id, userId);
     return {
-      success: true,
       message: 'Notification marked as read',
-      data: notification,
+      result: notification,
     };
   }
 

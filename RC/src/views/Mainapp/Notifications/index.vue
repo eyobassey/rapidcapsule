@@ -281,13 +281,54 @@ export default {
       }
     };
 
+    // Map notification types to app routes
+    const typeRouteMap = {
+      recovery_check_in_reminder: '/app/patient/recovery',
+      recovery_milestone: '/app/patient/recovery',
+      recovery_streak: '/app/patient/recovery',
+      appointment_booked: '/app/patient/appointments',
+      appointment_confirmed: '/app/patient/appointments',
+      appointment_reminder: '/app/patient/appointments',
+      appointment_cancelled: '/app/patient/appointments',
+      appointment_rescheduled: '/app/patient/appointments',
+      prescription_created: '/app/patient/prescriptions',
+      prescription_updated: '/app/patient/prescriptions',
+      pharmacy_order_placed: '/app/patient/prescriptions',
+      pharmacy_order_updated: '/app/patient/prescriptions',
+      payment_received: '/app/patient/wallet',
+      payment_failed: '/app/patient/wallet',
+      health_checkup_complete: '/app/patient/health-checkup',
+      vitals_alert: '/app/patient/vitals',
+    };
+
     const handleNotificationClick = async (notification) => {
       if (!notification.is_read) {
         await markAsRead(notification._id);
       }
 
-      if (notification.action_url) {
-        router.push(notification.action_url);
+      let url = notification.action_url;
+
+      // If action_url exists, prefix /app/patient if needed
+      if (url) {
+        if (!url.startsWith('/app/')) {
+          url = `/app/patient${url.startsWith('/') ? '' : '/'}${url}`;
+        }
+        // Try full URL, then strip segments to find a valid route
+        let tryUrl = url;
+        while (tryUrl && tryUrl !== '/app/patient') {
+          const resolved = router.resolve(tryUrl);
+          if (resolved.matched.length > 0 && resolved.name !== 'NotFound') {
+            router.push(tryUrl);
+            return;
+          }
+          tryUrl = tryUrl.substring(0, tryUrl.lastIndexOf('/'));
+        }
+      }
+
+      // Fall back to type-based route
+      const fallback = typeRouteMap[notification.type];
+      if (fallback) {
+        router.push(fallback);
       }
     };
 

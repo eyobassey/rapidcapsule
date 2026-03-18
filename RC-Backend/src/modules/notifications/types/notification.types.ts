@@ -147,6 +147,15 @@ export interface NotificationPreferences {
     push?: boolean;
   };
 
+  // Recovery program notifications
+  recovery_updates?: {
+    in_app?: boolean;
+    email?: boolean;
+    sms?: boolean;
+    whatsapp?: boolean;
+    push?: boolean;
+  };
+
   // Prescription/Pharmacy notifications
   prescription_updates?: {
     in_app?: boolean;

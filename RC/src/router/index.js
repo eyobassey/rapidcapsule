@@ -612,6 +612,12 @@ const routes = [
         name: "SpecialistWallet",
         component: () => import("@/views/Mainapp/SpecialistApp/Wallet/index.vue"),
       },
+      // Specialist Notifications Route
+      {
+        path: "notifications",
+        name: "SpecialistNotifications",
+        component: () => import("@/views/Mainapp/Notifications/index.vue"),
+      },
       // Specialist Notification Settings Route
       {
         path: "notification-settings",
@@ -941,6 +947,11 @@ const routes = [
     path: "/terms-of-service",
     name: "Terms of Service",
     component: () => import("../views/Legal/TermsOfService.vue"),
+  },
+  {
+    path: "/about",
+    name: "About",
+    component: () => import("../views/Legal/About.vue"),
   },
   {
     path: "/verify/:prescriptionNumber",

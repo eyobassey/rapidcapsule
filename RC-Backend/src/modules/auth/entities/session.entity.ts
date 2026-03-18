@@ -38,6 +38,12 @@ export class Session {
   @Prop({ default: Date.now })
   lastActiveAt: Date;
 
+  @Prop()
+  refreshToken: string; // Hashed refresh token
+
+  @Prop()
+  refreshTokenExpiresAt: Date; // Refresh token expiry (30 days)
+
   @Prop({ default: false })
   isRevoked: boolean;
 

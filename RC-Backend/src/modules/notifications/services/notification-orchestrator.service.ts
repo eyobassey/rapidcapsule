@@ -137,6 +137,13 @@ export class NotificationOrchestratorService {
           whatsapp: false,
           push: false,
         },
+        recovery_updates: {
+          in_app: true,
+          email: true,
+          sms: false,
+          whatsapp: true,
+          push: true,
+        },
         message_notifications: {
           in_app: true,
           email: true,
@@ -173,6 +180,7 @@ export class NotificationOrchestratorService {
         health_reminders: { in_app: true, email: false, sms: false, whatsapp: false, push: true },
         vitals_alerts: { in_app: true, email: true, sms: true, whatsapp: false, push: true },
         prescription_updates: { in_app: true, email: true, sms: false, whatsapp: false, push: true },
+        recovery_updates: { in_app: true, email: true, sms: false, whatsapp: true, push: true },
         promotional: { in_app: true, email: false, sms: false, whatsapp: false, push: false },
         message_notifications: { in_app: true, email: true, sms: false, whatsapp: false, push: true },
       };
@@ -223,13 +231,13 @@ export class NotificationOrchestratorService {
       [NotificationType.NEW_USER_REGISTERED]: 'appointment_updates',
       [NotificationType.SPECIALIST_VERIFICATION_PENDING]: 'appointment_updates',
       [NotificationType.SUPPORT_TICKET]: 'appointment_updates',
-      [NotificationType.RECOVERY_RISK_MODERATE]: 'health_reminders',
-      [NotificationType.RECOVERY_RISK_HIGH]: 'health_reminders',
-      [NotificationType.RECOVERY_RISK_CRITICAL]: 'vitals_alerts',
-      [NotificationType.RECOVERY_RISK_IMPROVED]: 'health_reminders',
-      [NotificationType.RECOVERY_CHECK_IN_REMINDER]: 'health_reminders',
-      [NotificationType.RECOVERY_MILESTONE_ACHIEVED]: 'health_reminders',
-      [NotificationType.RECOVERY_MAT_COMPLIANCE_WARNING]: 'vitals_alerts',
+      [NotificationType.RECOVERY_RISK_MODERATE]: 'recovery_updates',
+      [NotificationType.RECOVERY_RISK_HIGH]: 'recovery_updates',
+      [NotificationType.RECOVERY_RISK_CRITICAL]: 'recovery_updates',
+      [NotificationType.RECOVERY_RISK_IMPROVED]: 'recovery_updates',
+      [NotificationType.RECOVERY_CHECK_IN_REMINDER]: 'recovery_updates',
+      [NotificationType.RECOVERY_MILESTONE_ACHIEVED]: 'recovery_updates',
+      [NotificationType.RECOVERY_MAT_COMPLIANCE_WARNING]: 'recovery_updates',
     };
 
     return mapping[type] || 'appointment_updates';

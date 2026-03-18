@@ -43,6 +43,7 @@ import {
   BiometricLoginVerifyDto,
   DeleteBiometricDto,
 } from './dto/biometric.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { SessionService } from './session.service';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
@@ -70,6 +71,16 @@ export class AuthController {
     const ipAddress = this.sessionService.getClientIP(req);
     const { message, result } = await this.authService.login(req.user, userAgent, ipAddress);
     return sendSuccessResponse(message, result);
+  }
+
+  @ApiOperation({ summary: 'Refresh access token', description: 'Exchanges a valid refresh token for a new JWT access token and a rotated refresh token. No authentication header required.' })
+  @ApiResponse({ status: 200, description: 'Returns new access token and rotated refresh token' })
+  @ApiResponse({ status: 400, description: 'Invalid or expired refresh token' })
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  async refreshToken(@Body() refreshTokenDto: RefreshTokenDto) {
+    const result = await this.authService.refreshTokens(refreshTokenDto.refresh_token);
+    return sendSuccessResponse('Token refreshed successfully', result);
   }
 
   @ApiOperation({ summary: 'Login with Apple ID', description: 'Authenticates or registers a user using Apple Sign In. Returns JWT token.' })
@@ -421,8 +432,8 @@ export class AuthController {
       };
       const userAgent = req.headers['user-agent'] || '';
       const ipAddress = this.sessionService.getClientIP(req);
-      const token = await this.authService.generateTokenWithSession(payload, userAgent, ipAddress);
-      return sendSuccessResponse('User authenticated successfully', token);
+      const tokens = await this.authService.generateTokenWithSession(payload, userAgent, ipAddress);
+      return sendSuccessResponse('User authenticated successfully', tokens);
     }
 
     return sendSuccessResponse('Biometric authentication failed', { verified: false });
@@ -460,8 +471,8 @@ export class AuthController {
       };
       const userAgent = req.headers['user-agent'] || '';
       const ipAddress = this.sessionService.getClientIP(req);
-      const token = await this.authService.generateTokenWithSession(payload, userAgent, ipAddress);
-      return sendSuccessResponse('User authenticated successfully', token);
+      const tokens = await this.authService.generateTokenWithSession(payload, userAgent, ipAddress);
+      return sendSuccessResponse('User authenticated successfully', tokens);
     }
 
     return sendSuccessResponse('Passkey authentication failed', { verified: false });

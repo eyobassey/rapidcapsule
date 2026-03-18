@@ -89,8 +89,8 @@ export class AuthService {
         user.sub,
       );
     }
-    const token = await this.generateTokenWithSession(user, userAgent, ipAddress);
-    return { message: Messages.USER_AUTHENTICATED, result: token };
+    const tokens = await this.generateTokenWithSession(user, userAgent, ipAddress);
+    return { message: Messages.USER_AUTHENTICATED, result: tokens };
   }
 
   async googleAltLogin(token: string, user_type: UserType, userAgent?: string, ipAddress?: string) {
@@ -150,7 +150,8 @@ export class AuthService {
     }
 
     const payload = AuthService.formatJwtPayload(user);
-    return await this.generateTokenWithSession(payload, userAgent, ipAddress);
+    const tokens = await this.generateTokenWithSession(payload, userAgent, ipAddress);
+    return tokens;
   }
 
   async forgotPassword(
@@ -250,10 +251,10 @@ export class AuthService {
     const verified = await this.tokensService.verifyOTP(user._id, token);
     if (verified) {
       const payload = AuthService.formatJwtPayload(user);
-      const jwtToken = await this.generateTokenWithSession(payload, userAgent, ipAddress);
-      // Return user data along with token for frontend
+      const tokens = await this.generateTokenWithSession(payload, userAgent, ipAddress);
+      // Return user data along with tokens for frontend
       return {
-        token: jwtToken,
+        ...tokens,
         user: {
           _id: user._id,
           email: user.profile.contact.email,
@@ -277,10 +278,10 @@ export class AuthService {
     );
     if (response.data.status === APPROVED) {
       const payload = AuthService.formatJwtPayload(user);
-      const jwtToken = await this.generateTokenWithSession(payload, userAgent, ipAddress);
-      // Return user data along with token for frontend
+      const tokens = await this.generateTokenWithSession(payload, userAgent, ipAddress);
+      // Return user data along with tokens for frontend
       return {
-        token: jwtToken,
+        ...tokens,
         user: {
           _id: user._id,
           email: user.profile.contact.email,
@@ -304,10 +305,10 @@ export class AuthService {
     );
     if (verified) {
       const payload = AuthService.formatJwtPayload(user);
-      const jwtToken = await this.generateTokenWithSession(payload, userAgent, ipAddress);
-      // Return user data along with token for frontend
+      const tokens = await this.generateTokenWithSession(payload, userAgent, ipAddress);
+      // Return user data along with tokens for frontend
       return {
-        token: jwtToken,
+        ...tokens,
         user: {
           _id: user._id,
           email: user.profile.contact.email,
@@ -571,14 +572,15 @@ export class AuthService {
   /**
    * Generate a JWT token with session tracking
    * Creates a session record and includes tokenId in the JWT payload
+   * Returns both access token and refresh token
    */
   async generateTokenWithSession(
     payload: IJwtPayload,
     userAgent?: string,
     ipAddress?: string,
-  ) {
+  ): Promise<{ token: string; refresh_token: string }> {
     // Create a session for this login
-    const { tokenId } = await this.sessionService.createSession(
+    const { tokenId, refreshToken } = await this.sessionService.createSession(
       payload.sub,
       userAgent || 'Unknown',
       ipAddress,
@@ -590,7 +592,39 @@ export class AuthService {
       tokenId,
     };
 
-    return await this.jwtService.signAsync(payloadWithSession);
+    const token = await this.jwtService.signAsync(payloadWithSession);
+    return { token, refresh_token: refreshToken };
+  }
+
+  /**
+   * Refresh an expired JWT using a valid refresh token
+   * Rotates the refresh token for security
+   */
+  async refreshTokens(rawRefreshToken: string): Promise<{ token: string; refresh_token: string }> {
+    const session = await this.sessionService.findSessionByRefreshToken(rawRefreshToken);
+    if (!session) {
+      throw new BadRequestException('Invalid or expired refresh token');
+    }
+
+    // Get the user to build JWT payload
+    const user = await this.usersService.findById(session.userId);
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    // Rotate the refresh token (new tokenId + new refresh token)
+    const { tokenId, refreshToken: newRefreshToken } =
+      await this.sessionService.rotateRefreshToken(session._id);
+
+    // Build new JWT with updated tokenId
+    const payload = AuthService.formatJwtPayload(user);
+    const payloadWithSession = {
+      ...payload,
+      tokenId,
+    };
+
+    const token = await this.jwtService.signAsync(payloadWithSession);
+    return { token, refresh_token: newRefreshToken };
   }
 
   private async twoFactorAuthAuthentication(

@@ -32,6 +32,7 @@ import { FileUploadHelper } from '../../common/helpers/file-upload.helpers';
 import { BasicHealthScoreService } from '../basic-health-score/basic-health-score.service';
 import { ScoreChangeTrigger } from '../basic-health-score/entities/basic-health-score-history.entity';
 import { UpdateIdentityVerificationDto } from './dto/update-identity-verification.dto';
+import { DeleteAccountDto } from './dto/delete-account.dto';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
 @ApiTags('Users')
@@ -67,6 +68,24 @@ export class UsersController {
   async findCurrentUser(@Request() req) {
     const result = await this.usersService.getProfile(req.user);
     return sendSuccessResponse(Messages.RETRIEVED, result);
+  }
+
+  @ApiOperation({ summary: 'Delete user account', description: 'Permanently delete the authenticated user\'s account. Requires password confirmation. Sets account status to Cancelled, clears sensitive data, and revokes all sessions. This action cannot be undone.' })
+  @ApiBearerAuth('JWT-auth')
+  @ApiResponse({ status: 200, description: 'Account deleted successfully' })
+  @ApiResponse({ status: 400, description: 'Incorrect password' })
+  @ApiResponse({ status: 401, description: 'Unauthorized – invalid or expired token' })
+  @UseGuards(JwtAuthGuard)
+  @Delete('me')
+  async deleteAccount(
+    @Body() deleteAccountDto: DeleteAccountDto,
+    @Request() req,
+  ) {
+    const result = await this.usersService.deleteAccount(
+      req.user.sub,
+      deleteAccountDto.password,
+    );
+    return sendSuccessResponse(Messages.ACCOUNT_DELETED, result);
   }
 
   @ApiOperation({ summary: 'Get specialist availability and preferences', description: 'Retrieve the time availability slots and consultation preferences for the authenticated specialist.' })

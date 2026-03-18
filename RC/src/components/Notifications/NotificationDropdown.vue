@@ -50,7 +50,7 @@
 
     <div class="notification-dropdown__footer">
       <router-link
-        to="/app/patient/notifications"
+        :to="viewAllRoute"
         class="notification-dropdown__view-all"
         @click="$emit('close')"
       >
@@ -61,7 +61,7 @@
 </template>
 
 <script>
-import { ref, defineComponent, onMounted, onUnmounted } from 'vue';
+import { ref, computed, defineComponent, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import NotificationItem from './NotificationItem.vue';
 import useNotifications from '@/composables/useNotifications';
@@ -131,16 +131,57 @@ export default defineComponent({
       }
     };
 
+    // Map notification types to app routes by user type
+    const typeRouteMap = {
+      recovery_check_in_reminder: { patient: '/app/patient/recovery', specialist: '/app/specialist/recovery' },
+      recovery_milestone: { patient: '/app/patient/recovery', specialist: '/app/specialist/recovery' },
+      recovery_streak: { patient: '/app/patient/recovery', specialist: '/app/specialist/recovery' },
+      appointment_booked: { patient: '/app/patient/appointments', specialist: '/app/specialist/appointments' },
+      appointment_confirmed: { patient: '/app/patient/appointments', specialist: '/app/specialist/appointments' },
+      appointment_reminder: { patient: '/app/patient/appointments', specialist: '/app/specialist/appointments' },
+      appointment_cancelled: { patient: '/app/patient/appointments', specialist: '/app/specialist/appointments' },
+      appointment_rescheduled: { patient: '/app/patient/appointments', specialist: '/app/specialist/appointments' },
+      prescription_created: { patient: '/app/patient/prescriptions', specialist: '/app/specialist/prescriptions' },
+      prescription_updated: { patient: '/app/patient/prescriptions', specialist: '/app/specialist/prescriptions' },
+      pharmacy_order_placed: { patient: '/app/patient/prescriptions', specialist: '/app/specialist/prescriptions' },
+      pharmacy_order_updated: { patient: '/app/patient/prescriptions', specialist: '/app/specialist/prescriptions' },
+      payment_received: { patient: '/app/patient/wallet', specialist: '/app/specialist/wallet' },
+      payment_failed: { patient: '/app/patient/wallet', specialist: '/app/specialist/wallet' },
+      health_checkup_complete: { patient: '/app/patient/health-checkup', specialist: '/app/specialist/dashboard' },
+      vitals_alert: { patient: '/app/patient/vitals', specialist: '/app/specialist/dashboard' },
+    };
+
     const handleNotificationClick = async (notification) => {
-      // Mark as read if unread
       if (!notification.is_read) {
         await markAsRead(notification._id);
       }
 
-      // Navigate to action URL if present
-      if (notification.action_url) {
+      const currentPath = router.currentRoute.value.path;
+      const userPrefix = currentPath.includes('/specialist') ? '/app/specialist' : '/app/patient';
+
+      let url = notification.action_url;
+
+      if (url) {
+        if (!url.startsWith('/app/')) {
+          url = `${userPrefix}${url.startsWith('/') ? '' : '/'}${url}`;
+        }
+        let tryUrl = url;
+        while (tryUrl && tryUrl !== userPrefix) {
+          const resolved = router.resolve(tryUrl);
+          if (resolved.matched.length > 0 && resolved.name !== 'NotFound') {
+            emit('close');
+            router.push(tryUrl);
+            return;
+          }
+          tryUrl = tryUrl.substring(0, tryUrl.lastIndexOf('/'));
+        }
+      }
+
+      const fallbackMap = typeRouteMap[notification.type];
+      if (fallbackMap) {
+        const fallback = currentPath.includes('/specialist') ? fallbackMap.specialist : fallbackMap.patient;
         emit('close');
-        router.push(notification.action_url);
+        router.push(fallback);
       }
     };
 
@@ -165,6 +206,13 @@ export default defineComponent({
       await loadMore();
     };
 
+    const viewAllRoute = computed(() => {
+      const currentPath = router.currentRoute.value.path;
+      return currentPath.includes('/specialist')
+        ? '/app/specialist/notification-settings'
+        : '/app/patient/notifications';
+    });
+
     return {
       dropdownRef,
       contentRef,
@@ -174,6 +222,7 @@ export default defineComponent({
       loadingMore,
       hasMore,
       markingAllRead,
+      viewAllRoute,
       handleNotificationClick,
       handleMarkAsRead,
       handleMarkAllAsRead,

@@ -378,6 +378,14 @@ export default {
           bgColor: "rgba(14, 165, 233, 0.1)",
         },
         {
+          id: "recovery_updates",
+          title: "Recovery Program",
+          description: "Check-in reminders, milestones, and recovery progress alerts",
+          icon: "hi-shield-check",
+          color: "#14b8a6",
+          bgColor: "rgba(20, 184, 166, 0.1)",
+        },
+        {
           id: "message_notifications",
           title: "Message Notifications",
           description: "Email notifications for unread messages",

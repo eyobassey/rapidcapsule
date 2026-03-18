@@ -53,6 +53,8 @@ import { CreateAwardDto } from './dto/create-award.dto';
 import { CreateCertificationsDto } from './dto/create-certifications.dto';
 import { ReferralsService } from '../referrals/referrals.service';
 import { WalletsService } from '../wallets/wallets.service';
+import { SessionService } from '../auth/session.service';
+import { ProfileStatus } from './entities/user.entity';
 
 const { ObjectId } = Types;
 
@@ -70,6 +72,7 @@ export class UsersService {
     private readonly referralsService: ReferralsService,
     private taskCron: TaskScheduler,
     private readonly walletsService: WalletsService,
+    private readonly sessionService: SessionService,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<UserDocument> {
@@ -1277,5 +1280,62 @@ export class UsersService {
       this.logger.error(`Error uploading ${docType} verification document: ${e}`);
       throw new InternalServerErrorException(`Failed to upload ${docType} document`);
     }
+  }
+
+  /**
+   * Soft-delete a user account for App Store compliance.
+   * Verifies the password, sets status to CANCELLED, clears sensitive data,
+   * and revokes all active sessions.
+   */
+  async deleteAccount(userId: Types.ObjectId, password: string) {
+    const user = await this.userModel.findById(userId).select('+profile.password');
+    if (!user) throw new NotFoundException(Messages.NO_USER_FOUND);
+
+    // Verify password
+    if (!user.profile?.password) {
+      throw new BadRequestException(Messages.INCORRECT_PASSWORD);
+    }
+    const isPasswordValid = await bcrypt.compare(
+      password,
+      user.profile.password,
+    );
+    if (!isPasswordValid) {
+      throw new BadRequestException(Messages.INCORRECT_PASSWORD);
+    }
+
+    // Generate a random hash to replace the password (prevents login)
+    const randomPassword = await this.hashPassword(
+      require('crypto').randomBytes(32).toString('hex'),
+    );
+
+    // Soft-delete: set status to CANCELLED and scrub sensitive fields
+    await this.userModel.updateOne(
+      { _id: userId },
+      {
+        $set: {
+          status: ProfileStatus.CANCELLED,
+          'profile.password': randomPassword,
+          'profile.contact.phone': { country_code: '', number: '' },
+          'profile.profile_photo': '',
+          'profile.basic_health_info': {},
+          'profile.health_risk_factors': {},
+          emergency_contacts: [],
+          dependants: [],
+          pre_existing_conditions: [],
+          medical_history: {},
+          allergies: {},
+          device_integration: {},
+          is_email_verified: false,
+          is_phone_verified: false,
+          is_auth_app_enabled: false,
+        },
+      },
+    );
+
+    // Revoke all active sessions
+    await this.sessionService.revokeAllSessions(userId);
+
+    this.logger.log(`Account soft-deleted for user ${userId}`);
+    return { message: Messages.ACCOUNT_DELETED };
   }
 }

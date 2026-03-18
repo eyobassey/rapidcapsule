@@ -11,16 +11,20 @@
 				<span class="cart-badge">{{ cartItemCount > 99 ? '99+' : cartItemCount }}</span>
 			</div>
 			<buttonIcon
-				v-for="(button, index) of buttons"
-				:key="index"
 				type="primary"
-				:iconName="button.icon"
-				:state="button.isActive"
-				@click="openFlyout(index)"
+				iconName="alarm-clock"
+				:state="buttons[0].isActive"
+				@click="openFlyout(0)"
 			/>
+			<div class="notification-btn-wrapper" @click="goToNotifications">
+				<buttonIcon
+					type="primary"
+					iconName="bell"
+					:state="false"
+				/>
+				<span v-if="unreadCount > 0" class="notification-badge">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
+			</div>
 		</div>
-		<!-- <Reminders v-if="state[0]" @collapse="state[0] = false" class="flyout" /> -->
-		<!-- <Reminders @collapse="state[0] = false" class="flyout-mobile" :class="{ open: state[0] }" /> -->
 		<div v-if="toggleState" class="flyout__container" :class="{ open: toggleState }">
 			<Reminders @collapse="closeFlyout" class="flyout" />
 		</div>
@@ -35,18 +39,10 @@ import Reminders from "./Reminders";
 export default {
 	data() {
 		return {
-			newMessageCount: false,
-			newMessages: [],
-			state: [false, false],
 			buttons: [
 				{
 					name: "reminders",
 					icon: "alarm-clock",
-					isActive: false,
-				},
-				{
-					name: "notification",
-					icon: "bell",
 					isActive: false,
 				},
 			],
@@ -56,22 +52,21 @@ export default {
 	computed: {
 		...mapGetters({
 			cartItemCount: "pharmacy/getCartItemCount",
+			unreadCount: "notifications/getUnreadCount",
 		}),
 
 		toggleState() {
-			return this.buttons.some((i) => i.isActive == true) ? true : false;
+			return this.buttons.some((i) => i.isActive);
 		},
+	},
+
+	mounted() {
+		this.$store.dispatch("notifications/fetchUnreadCount");
 	},
 
 	methods: {
 		openFlyout(index) {
-			this.buttons.forEach((i) => {
-				if (i.name === this.buttons[index].name) {
-					i.isActive = true;
-				} else {
-					i.isActive = false;
-				}
-			});
+			this.buttons[index].isActive = !this.buttons[index].isActive;
 		},
 
 		closeFlyout() {
@@ -82,6 +77,10 @@ export default {
 
 		goToCart() {
 			this.$router.push("/app/patient/pharmacy/cart");
+		},
+
+		goToNotifications() {
+			this.$router.push("/app/patient/notifications");
 		},
 	},
 
@@ -112,11 +111,13 @@ export default {
 			border-left: 1px solid $color-g-85;
 		}
 
-		.cart-button-wrapper {
+		.cart-button-wrapper,
+		.notification-btn-wrapper {
 			position: relative;
 			cursor: pointer;
 
-			.cart-badge {
+			.cart-badge,
+			.notification-badge {
 				position: absolute;
 				top: -$size-4;
 				right: -$size-4;

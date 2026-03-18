@@ -20,6 +20,7 @@ import {
 import { ReferralsModule } from '../referrals/referrals.module';
 import { WalletsModule } from "../wallets/wallets.module";
 import { BasicHealthScoreModule } from '../basic-health-score/basic-health-score.module';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { BasicHealthScoreModule } from '../basic-health-score/basic-health-score
       { name: PatientPreferences.name, schema: PatientPreferencesSchema },
     ]),
     forwardRef(() => BasicHealthScoreModule),
+    forwardRef(() => AuthModule),
   ],
   controllers: [UsersController],
   providers: [

@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
+import * as bcrypt from 'bcrypt';
 import axios from 'axios';
 import { Session, SessionDocument } from './entities/session.entity';
 
@@ -204,9 +205,18 @@ export class SessionService {
     userId: Types.ObjectId,
     userAgent: string,
     ipAddress?: string,
-  ): Promise<{ session: SessionDocument; tokenId: string }> {
+  ): Promise<{ session: SessionDocument; tokenId: string; refreshToken: string }> {
     const tokenId = uuidv4();
+    const rawRefreshToken = uuidv4();
     const deviceInfo = this.parseUserAgent(userAgent);
+
+    // Hash refresh token for secure storage
+    const salt = await bcrypt.genSalt(10);
+    const hashedRefreshToken = await bcrypt.hash(rawRefreshToken, salt);
+
+    // Refresh token expires in 30 days
+    const refreshTokenExpiresAt = new Date();
+    refreshTokenExpiresAt.setDate(refreshTokenExpiresAt.getDate() + 30);
 
     // Get location from IP (non-blocking, with fallback)
     const locationInfo = await this.getLocationFromIP(ipAddress || '');
@@ -218,9 +228,11 @@ export class SessionService {
       ipAddress: ipAddress || 'Unknown',
       ...locationInfo,
       lastActiveAt: new Date(),
+      refreshToken: hashedRefreshToken,
+      refreshTokenExpiresAt,
     });
 
-    return { session, tokenId };
+    return { session, tokenId, refreshToken: rawRefreshToken };
   }
 
   /**
@@ -325,6 +337,59 @@ export class SessionService {
    */
   async getSessionByTokenId(tokenId: string): Promise<SessionDocument | null> {
     return this.sessionModel.findOne({ tokenId, isRevoked: false });
+  }
+
+  /**
+   * Find a valid session by matching refresh token (checks all non-revoked sessions)
+   */
+  async findSessionByRefreshToken(
+    rawRefreshToken: string,
+  ): Promise<SessionDocument | null> {
+    // Get all non-revoked sessions that have a refresh token
+    const sessions = await this.sessionModel.find({
+      isRevoked: false,
+      refreshToken: { $exists: true, $ne: null },
+      refreshTokenExpiresAt: { $gt: new Date() },
+    });
+
+    // Compare the raw token against each hashed token
+    for (const session of sessions) {
+      const isMatch = await bcrypt.compare(rawRefreshToken, session.refreshToken);
+      if (isMatch) {
+        return session;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Rotate the refresh token on a session (generates new refresh token, new tokenId)
+   * Returns new tokenId and raw refresh token
+   */
+  async rotateRefreshToken(
+    sessionId: Types.ObjectId,
+  ): Promise<{ tokenId: string; refreshToken: string }> {
+    const newTokenId = uuidv4();
+    const newRawRefreshToken = uuidv4();
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedRefreshToken = await bcrypt.hash(newRawRefreshToken, salt);
+
+    const refreshTokenExpiresAt = new Date();
+    refreshTokenExpiresAt.setDate(refreshTokenExpiresAt.getDate() + 30);
+
+    await this.sessionModel.updateOne(
+      { _id: sessionId },
+      {
+        tokenId: newTokenId,
+        refreshToken: hashedRefreshToken,
+        refreshTokenExpiresAt,
+        lastActiveAt: new Date(),
+      },
+    );
+
+    return { tokenId: newTokenId, refreshToken: newRawRefreshToken };
   }
 
   /**

@@ -161,6 +161,15 @@ export class UpdateNotificationPreferencesDto {
   message_notifications?: ChannelPreferencesDto;
 
   @ApiPropertyOptional({
+    description: 'Channel preferences for recovery program notifications (check-ins, milestones, risk alerts)',
+    type: () => ChannelPreferencesDto,
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ChannelPreferencesDto)
+  recovery_updates?: ChannelPreferencesDto;
+
+  @ApiPropertyOptional({
     description: 'Channel preferences for promotional and marketing notifications',
     type: () => ChannelPreferencesDto,
   })
@@ -230,6 +239,12 @@ export class NotificationPreferencesResponseDto {
     type: () => ChannelPreferencesDto,
   })
   message_notifications: ChannelPreferencesDto;
+
+  @ApiProperty({
+    description: 'Channel preferences for recovery program notifications',
+    type: () => ChannelPreferencesDto,
+  })
+  recovery_updates: ChannelPreferencesDto;
 
   @ApiProperty({
     description: 'Channel preferences for promotional notifications',

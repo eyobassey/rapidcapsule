@@ -58,4 +58,6 @@ export enum Messages {
   EMAIL_CHANGED = 'Email address changed',
   PRESCRIPTION_SENT = 'Prescription sent successfully',
   APPOINTMENT_RESCHEDULE = 'Appointment rescheduled',
+  ACCOUNT_DELETED = 'Account deleted successfully',
+  INCORRECT_PASSWORD = 'Incorrect password',
 }

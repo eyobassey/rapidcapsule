@@ -157,18 +157,21 @@ export default {
         const response = await axios.get(`notifications?${params.toString()}`);
 
         if (response.status === 200) {
-          const { data, pagination } = response.data;
+          const responseData = response.data.data || response.data;
+          // data may be { notifications, pagination } or a flat array
+          const notifications = responseData.notifications || responseData;
+          const pagination = responseData.pagination || response.data.pagination;
 
           if (append) {
-            commit("APPEND_NOTIFICATIONS", data || []);
+            commit("APPEND_NOTIFICATIONS", Array.isArray(notifications) ? notifications : []);
           } else {
-            commit("SET_NOTIFICATIONS", data || []);
+            commit("SET_NOTIFICATIONS", Array.isArray(notifications) ? notifications : []);
           }
 
           commit("SET_PAGINATION", pagination || {
             page,
             pages: 1,
-            total: data?.length || 0,
+            total: Array.isArray(notifications) ? notifications.length : 0,
             limit,
           });
         }
@@ -189,7 +192,7 @@ export default {
       try {
         const response = await axios.get("notifications/unread-count");
         if (response.status === 200) {
-          const count = response.data.data?.unread_count || 0;
+          const count = response.data.data?.unread_count ?? response.data.unread_count ?? 0;
           commit("SET_UNREAD_COUNT", count);
           return count;
         }

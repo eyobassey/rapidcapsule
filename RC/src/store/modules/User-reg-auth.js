@@ -174,13 +174,17 @@ export default {
         let res = await axios.post("/auth/login", credentials);
         const responseData = res.data.data;
 
-        // Check if 2FA is disabled - response contains token string directly
+        // Check if 2FA is disabled - response contains token directly
         // When 2FA is enabled, response contains settings object with defaults.twoFA_medium
-        if (typeof responseData === 'string') {
-          // 2FA is disabled, responseData is the JWT token string
+        const token = responseData?.token || (typeof responseData === 'string' ? responseData : null);
+        if (token && !responseData?.defaults) {
+          // 2FA is disabled, store tokens and authenticate
           const storage = credentials.rememberMe ? localStorage : sessionStorage;
-          storage.setItem("token", responseData);
-          await dispatch("authenticate", responseData, { root: true });
+          storage.setItem("token", token);
+          if (responseData?.refresh_token) {
+            localStorage.setItem("refresh_token", responseData.refresh_token);
+          }
+          await dispatch("authenticate", token, { root: true });
           return;
         }
 
@@ -234,7 +238,12 @@ export default {
           });
         }
 
-        await dispatch("authenticate", response.data.data.token, { root: true });
+        const verifyData = response.data.data;
+        const verifyToken = verifyData?.token || (typeof verifyData === 'string' ? verifyData : null);
+        if (verifyData?.refresh_token) {
+          localStorage.setItem("refresh_token", verifyData.refresh_token);
+        }
+        await dispatch("authenticate", verifyToken, { root: true });
       } catch (error) {
         if (error) {
           let message =
@@ -340,12 +349,15 @@ export default {
           credential,
         });
 
-        // The response includes the JWT token
-        const token = res.data.data;
+        // The response includes the JWT token (may be string or {token, refresh_token})
+        const resData = res.data.data;
+        const token = resData?.token || (typeof resData === 'string' ? resData : null);
         if (token) {
-          // Store token and authenticate
-          const storage = localStorage; // Or determine based on remember me preference
+          const storage = localStorage;
           storage.setItem("token", token);
+          if (resData?.refresh_token) {
+            localStorage.setItem("refresh_token", resData.refresh_token);
+          }
           await dispatch("authenticate", token, { root: true });
           return { success: true };
         }
@@ -375,12 +387,15 @@ export default {
       try {
         const res = await axios.post("auth/biometric/passkey/verify", { credential });
 
-        // The response includes the JWT token
-        const token = res.data.data;
+        // The response includes the JWT token (may be string or {token, refresh_token})
+        const pkData = res.data.data;
+        const token = pkData?.token || (typeof pkData === 'string' ? pkData : null);
         if (token) {
-          // Store token and authenticate
           const storage = localStorage;
           storage.setItem("token", token);
+          if (pkData?.refresh_token) {
+            localStorage.setItem("refresh_token", pkData.refresh_token);
+          }
           await dispatch("authenticate", token, { root: true });
           return { success: true };
         }
