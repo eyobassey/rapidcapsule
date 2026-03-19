@@ -65,15 +65,18 @@ export class HealthTipsService {
 
     const tips = await this.tipModel
       .find(query)
-      .sort({ priority: 1, generated_at: -1 })
+      .sort({ generated_at: -1 })
       .limit(limit)
       .lean();
 
-    // Sort by priority order
+    // Secondary sort: urgent/high tips bubble up within same day
     tips.sort((a, b) => {
       const aPriority = priorityOrder[a.priority as TipPriority] ?? 4;
       const bPriority = priorityOrder[b.priority as TipPriority] ?? 4;
-      if (aPriority !== bPriority) return aPriority - bPriority;
+      // Only prioritize within the same day
+      const aDay = new Date(a.generated_at).toDateString();
+      const bDay = new Date(b.generated_at).toDateString();
+      if (aDay === bDay && aPriority !== bPriority) return aPriority - bPriority;
       return new Date(b.generated_at).getTime() - new Date(a.generated_at).getTime();
     });
 

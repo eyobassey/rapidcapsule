@@ -104,6 +104,7 @@
 
         <h3 class="tip-title">{{ tip.title }}</h3>
         <p class="tip-content">{{ tip.content }}</p>
+        <span class="tip-timestamp">{{ formatTimeAgo(tip.generated_at || tip.created_at) }}</span>
 
         <div class="tip-footer">
           <div class="tip-tags">
@@ -309,6 +310,22 @@ const dismissTip = async (tipId) => {
   } catch (error) {
     console.error('Error dismissing tip:', error);
   }
+};
+
+const formatTimeAgo = (dateStr) => {
+  if (!dateStr) return '';
+  const now = new Date();
+  const date = new Date(dateStr);
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+  if (diffMins < 1) return 'just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
+  return `${Math.floor(diffDays / 30)}mo ago`;
 };
 
 const handleAction = (tip) => {
@@ -813,9 +830,16 @@ $indigo-light: #E0E7FF;
   font-size: 14px;
   color: $slate;
   line-height: 1.6;
-  margin: 0 0 16px;
+  margin: 0 0 6px;
   word-wrap: break-word;
   overflow-wrap: break-word;
+}
+
+.tip-timestamp {
+  display: block;
+  font-size: 11px;
+  color: $light-gray;
+  margin-bottom: 12px;
 }
 
 .tip-footer {
