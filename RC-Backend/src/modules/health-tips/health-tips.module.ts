@@ -9,6 +9,7 @@ import { HealthTipsScheduledService } from './health-tips-scheduled.service';
 import { HealthTipsDataService } from './services/data.service';
 import { HealthTipsRuleEngine } from './services/rule-engine.service';
 import { HealthInsightsTriggerService } from './services/insight-trigger.service';
+import { VitalsBridgeService } from './services/vitals-bridge.service';
 import { User, UserSchema } from '../users/entities/user.entity';
 import { Vital, VitalSchema } from '../vitals/entities/vital.entity';
 import { HealthCheckup, HealthCheckupSchema } from '../health-checkup/entities/health-checkup.entity';
@@ -54,6 +55,7 @@ import { RecoveryInsightListener } from './listeners/recovery.listener';
     HealthTipsDataService,
     HealthTipsRuleEngine,
     HealthInsightsTriggerService,
+    VitalsBridgeService,
     // Event listeners
     VitalsInsightListener,
     HealthCheckupInsightListener,
