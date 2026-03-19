@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { CreateVitalDto } from './dto/create-vital.dto';
 import { UpdateVitalDto } from './dto/update-vital.dto';
 import { Model, Types } from 'mongoose';
@@ -21,6 +22,7 @@ export class VitalsService {
   constructor(
     @InjectModel(Vital.name) private vitalModel: Model<VitalDocument>,
     private readonly generalHelpers: GeneralHelpers,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
   /**
    * Batch check which patients have at least one vital record
@@ -35,7 +37,9 @@ export class VitalsService {
   }
 
   async createVitals(createVitalDto: CreateVitalDto, userId: Types.ObjectId) {
+    const vitalTypes: string[] = [];
     for (const vitalDtoKey in createVitalDto) {
+      vitalTypes.push(vitalDtoKey);
       await this.vitalModel.updateOne(
         { userId },
         {
@@ -44,6 +48,15 @@ export class VitalsService {
         { upsert: true },
       );
     }
+
+    // Emit event for health insights trigger
+    if (vitalTypes.length > 0) {
+      this.eventEmitter.emit('vitals.logged', {
+        userId: userId.toString(),
+        vitalTypes,
+      });
+    }
+
     return await this.findOneUserVitals(userId);
   }
 

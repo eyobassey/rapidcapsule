@@ -400,6 +400,15 @@ export class HealthIntegrationsService implements OnModuleInit {
       integration.lastSyncedAt = new Date();
       await integration.save();
 
+      // Emit event for health insights trigger
+      if (recordsSyncedToVitals > 0) {
+        this.eventEmitter.emit('health_data.synced', {
+          userId: integration.userId.toString(),
+          provider: integration.provider,
+          dataTypes: rawData.map((d: any) => d.data_type).filter(Boolean),
+        });
+      }
+
       return {
         provider: integration.provider,
         syncedCount: rawData.length,

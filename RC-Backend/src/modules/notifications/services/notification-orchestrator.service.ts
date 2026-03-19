@@ -238,6 +238,8 @@ export class NotificationOrchestratorService {
       [NotificationType.RECOVERY_CHECK_IN_REMINDER]: 'recovery_updates',
       [NotificationType.RECOVERY_MILESTONE_ACHIEVED]: 'recovery_updates',
       [NotificationType.RECOVERY_MAT_COMPLIANCE_WARNING]: 'recovery_updates',
+      [NotificationType.HEALTH_INSIGHT_NEW]: 'health_reminders',
+      [NotificationType.HEALTH_INSIGHT_URGENT]: 'vitals_alerts',
     };
 
     return mapping[type] || 'appointment_updates';

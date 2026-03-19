@@ -66,6 +66,10 @@ export enum NotificationType {
   RECOVERY_CHECK_IN_REMINDER = 'recovery_check_in_reminder',
   RECOVERY_MILESTONE_ACHIEVED = 'recovery_milestone_achieved',
   RECOVERY_MAT_COMPLIANCE_WARNING = 'recovery_mat_compliance_warning',
+
+  // Health Insights
+  HEALTH_INSIGHT_NEW = 'health_insight_new',
+  HEALTH_INSIGHT_URGENT = 'health_insight_urgent',
 }
 
 export enum NotificationPriority {
