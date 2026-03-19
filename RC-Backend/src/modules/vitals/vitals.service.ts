@@ -196,6 +196,28 @@ export class VitalsService {
       moment(d.updatedAt).isBetween(startDate, endDate, undefined, '[]'),
     );
 
+    // For cumulative vitals (steps, calories, etc.), aggregate by day
+    if (this.cumulativeVitals.has(vitalToSelect)) {
+      const dailyMap = new Map<string, { sum: number; unit: string; date: string }>();
+      for (const entry of data) {
+        const dayKey = moment(entry.updatedAt).format('YYYY-MM-DD');
+        const existing = dailyMap.get(dayKey);
+        const val = parseFloat(entry.value || '0');
+        if (existing) {
+          existing.sum += val;
+        } else {
+          dailyMap.set(dayKey, { sum: val, unit: entry.unit, date: dayKey });
+        }
+      }
+      return Array.from(dailyMap.values())
+        .sort((a, b) => moment(a.date).valueOf() - moment(b.date).valueOf())
+        .map(d => ({
+          date: d.date,
+          data: [{ value: vitalToSelect === 'distance' || vitalToSelect === 'sleep'
+            ? parseFloat(d.sum.toFixed(1)) : Math.round(d.sum), unit: d.unit, updatedAt: d.date }],
+        }));
+    }
+
     // Group by date and sort chronologically
     const groupedData = this.generalHelpers.groupByDate(data, 'updatedAt');
     return groupedData.sort((a, b) =>
