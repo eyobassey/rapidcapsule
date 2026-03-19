@@ -83,6 +83,28 @@ export class AuthController {
     return sendSuccessResponse('Token refreshed successfully', result);
   }
 
+  @ApiOperation({ summary: 'Logout and revoke session', description: 'Revokes the current session and invalidates the refresh token. Accepts either the JWT (via Authorization header) or a refresh_token in the body.' })
+  @ApiResponse({ status: 200, description: 'Session revoked successfully' })
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  async logout(@Request() req, @Body() body?: { refresh_token?: string }) {
+    try {
+      // Try JWT-based logout first
+      if (req.user?.tokenId) {
+        await this.sessionService.revokeSession(req.user.sub, req.user.tokenId);
+      } else if (body?.refresh_token) {
+        // Fallback: find session by refresh token and revoke it
+        const session = await this.sessionService.findSessionByRefreshToken(body.refresh_token);
+        if (session) {
+          await this.sessionService.revokeSession(session.userId, session.tokenId);
+        }
+      }
+    } catch (error) {
+      // Logout should never fail from the client's perspective
+    }
+    return sendSuccessResponse('Logged out successfully', null);
+  }
+
   @ApiOperation({ summary: 'Login with Apple ID', description: 'Authenticates or registers a user using Apple Sign In. Returns JWT token.' })
   @ApiResponse({ status: 200, description: 'Apple authentication successful' })
   @ApiResponse({ status: 400, description: 'Invalid Apple identity token' })
