@@ -15,6 +15,7 @@ const VITAL_FIELDS = [
   'body_temp', 'body_weight', 'blood_pressure', 'blood_sugar_level', 'pulse_rate',
   'spo2', 'steps', 'sleep', 'calories_burned', 'distance', 'respiratory_rate', 'stress_level',
   'body_fat', 'active_minutes', 'hydration', 'muscle_mass', 'bone_mass', 'body_water', 'visceral_fat', 'bmr',
+  'mood_score', 'anxiety_level', 'craving_level', 'motivation_level',
 ];
 
 @Injectable()
