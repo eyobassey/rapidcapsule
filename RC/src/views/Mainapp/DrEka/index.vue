@@ -239,8 +239,8 @@
                 <v-icon name="hi-calendar" scale="0.85" />
                 <span>{{ formatWeekRange(report) }}</span>
               </div>
-              <div v-if="report.health_score !== undefined && report.health_score !== null" class="weekly-score" :class="getScoreClass(report.health_score)">
-                <span class="score-value">{{ report.health_score }}</span>
+              <div v-if="getScoreValue(report.health_score) !== null" class="weekly-score" :class="getScoreClass(getScoreValue(report.health_score))">
+                <span class="score-value">{{ getScoreValue(report.health_score) }}</span>
                 <span class="score-label">Score</span>
               </div>
             </div>
@@ -263,18 +263,20 @@
             </div>
 
             <!-- Health Score Detail -->
-            <div v-if="report.health_score !== undefined && report.health_score !== null" class="weekly-section">
+            <div v-if="getScoreValue(report.health_score) !== null" class="weekly-section">
               <h4 class="section-title">
                 <v-icon name="hi-heart" scale="0.85" />
                 Health Score
               </h4>
               <div class="score-display">
-                <div class="score-ring" :class="getScoreClass(report.health_score)">
-                  <span>{{ report.health_score }}</span>
+                <div class="score-ring" :class="getScoreClass(getScoreValue(report.health_score))">
+                  <span>{{ getScoreValue(report.health_score) }}</span>
                 </div>
                 <div class="score-details">
-                  <span class="score-status">{{ getScoreLabel(report.health_score) }}</span>
-                  <p v-if="report.score_explanation">{{ report.score_explanation }}</p>
+                  <span class="score-status">{{ getScoreLabel(getScoreValue(report.health_score)) }}</span>
+                  <span v-if="report.health_score?.change" class="score-change" :class="report.health_score.trend === 'improving' ? 'trend-up' : report.health_score.trend === 'declining' ? 'trend-down' : ''">
+                    {{ report.health_score.change > 0 ? '+' : '' }}{{ report.health_score.change }} from last week
+                  </span>
                 </div>
               </div>
             </div>
@@ -484,6 +486,14 @@ const formatWeekRange = (report) => {
     return `${startStr} - ${endStr}`;
   }
   return formatDate(report.generated_at || report.created_at);
+};
+
+// Extract numeric score from either a number or { current, previous, change, trend } object
+const getScoreValue = (score) => {
+  if (score === null || score === undefined) return null;
+  if (typeof score === 'number') return score;
+  if (typeof score === 'object' && score.current != null) return score.current;
+  return null;
 };
 
 const getScoreClass = (score) => {
