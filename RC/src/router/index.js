@@ -1018,6 +1018,19 @@ const router = createRouter({
   routes,
 });
 
+// ── Auth guard: redirect to login if not authenticated ────────
+router.beforeEach((to, from, next) => {
+  const isAppRoute = to.path.startsWith('/app/');
+  if (!isAppRoute) return next();
+
+  const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+  if (token) return next();
+
+  // Not logged in — redirect to login with return URL
+  const loginPath = to.path.includes('/specialist') ? '/specialist-login' : '/login';
+  next({ path: loginPath, query: { redirect: to.fullPath } });
+});
+
 // ── SEO: Dynamic <head> management ────────────────────────────
 function setMeta(attr, key, content) {
   let el = document.querySelector(`meta[${attr}="${key}"]`);

@@ -327,7 +327,7 @@ export class NotificationOrchestratorService {
           <h2 style="color: #333;">${notification.title}</h2>
           <p>Hi ${firstName},</p>
           <p>${notification.message}</p>
-          ${notification.action_url ? `<p><a href="${notification.action_url}" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">View Details</a></p>` : ''}
+          ${notification.action_url ? `<p><a href="https://rapidcapsule.com${notification.action_url}" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">View Details</a></p>` : ''}
           <hr style="border: 1px solid #eee; margin: 20px 0;" />
           <p style="color: #666; font-size: 12px;">This is an automated message from Rapid Capsule.</p>
         </div>

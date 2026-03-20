@@ -270,7 +270,7 @@ export class AdminBroadcastService {
           <p style="color: #4b5563; font-size: 15px; line-height: 1.6;">${payload.message}</p>
           ${payload.action_url ? `
             <div style="margin-top: 25px;">
-              <a href="${payload.action_url}" style="display: inline-block; background-color: #4f46e5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 500;">
+              <a href="https://rapidcapsule.com${payload.action_url}" style="display: inline-block; background-color: #4f46e5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 500;">
                 Learn More
               </a>
             </div>

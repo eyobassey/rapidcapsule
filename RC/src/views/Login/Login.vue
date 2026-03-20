@@ -73,6 +73,13 @@ export default {
 					return;
 				}
 
+				// Check for redirect query param (from email links, etc.)
+				const redirectTo = this.$route.query.redirect;
+				if (redirectTo && redirectTo.startsWith('/app/')) {
+					this.$router.push(redirectTo);
+					return;
+				}
+
 				if (this.userProfile.user_type === "Patient") {
 					const emergencyContacts = this.userProfile.emergency_contacts;
 					if (!emergencyContacts || emergencyContacts.length === 0) {
