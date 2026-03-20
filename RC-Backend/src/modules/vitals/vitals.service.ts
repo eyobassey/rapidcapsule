@@ -101,8 +101,11 @@ export class VitalsService {
           if (todayEntries.length > 0) {
             entries = todayEntries;
           } else {
-            // Find the most recent day and sum all entries from that day
-            const lastEntry = validEntries[validEntries.length - 1];
+            // Find the actual most recent entry by date (not array position)
+            const sortedByDate = [...validEntries].sort(
+              (a: any, b: any) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+            );
+            const lastEntry = sortedByDate[0];
             const lastDay = new Date(lastEntry.updatedAt);
             lastDay.setHours(0, 0, 0, 0);
             const nextDay = new Date(lastDay);
@@ -119,8 +122,9 @@ export class VitalsService {
           const rounded = (key === 'distance' || key === 'sleep') ? parseFloat(sum.toFixed(1)) : Math.round(sum);
           recentVitals[key] = { value: String(rounded), unit: latest.unit, updatedAt: latest.updatedAt };
         } else {
+          // Find the most recent entry by actual date comparison
           recentVitals[key] = validEntries.reduce((a, b) =>
-            a.updatedAt > b.updatedAt ? a : b,
+            new Date(a.updatedAt).getTime() > new Date(b.updatedAt).getTime() ? a : b,
           );
         }
       }
