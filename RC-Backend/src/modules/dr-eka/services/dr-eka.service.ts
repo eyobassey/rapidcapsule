@@ -20,6 +20,8 @@ import {
 } from '../../notifications/types/notification.types';
 import { buildDailyDigestPrompt } from '../prompts/daily-prompt';
 import { buildWeeklyReportPrompt } from '../prompts/weekly-prompt';
+import { DrEkaEmailService } from './dr-eka-email.service';
+import { User, UserDocument } from '../../users/entities/user.entity';
 
 @Injectable()
 export class DrEkaService {
@@ -31,8 +33,10 @@ export class DrEkaService {
     private digestModel: Model<DrEkaDailyDigestDocument>,
     @InjectModel(DrEkaWeeklyReport.name)
     private weeklyReportModel: Model<DrEkaWeeklyReportDocument>,
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
     private readonly drEkaDataService: DrEkaDataService,
     private readonly notificationOrchestrator: NotificationOrchestratorService,
+    private readonly emailService: DrEkaEmailService,
   ) {
     this.initializeClaudeClient();
   }
@@ -138,6 +142,17 @@ export class DrEkaService {
       this.logger.warn(
         `Failed to send daily digest notification for user ${userId}: ${error.message}`,
       );
+    }
+
+    // Send email
+    try {
+      const user = await this.userModel.findById(userId).select('profile.contact.email profile.first_name').lean();
+      const email = (user as any)?.profile?.contact?.email;
+      if (email) {
+        await this.emailService.sendDailyDigestEmail(email, firstName, digest);
+      }
+    } catch (error) {
+      this.logger.warn(`Failed to send daily digest email for user ${userId}: ${error.message}`);
     }
 
     this.logger.log(
@@ -261,6 +276,23 @@ export class DrEkaService {
       this.logger.warn(
         `Failed to send weekly report notification for user ${userId}: ${error.message}`,
       );
+    }
+
+    // Send email
+    try {
+      const user = await this.userModel.findById(userId).select('profile.contact.email profile.first_name').lean();
+      const email = (user as any)?.profile?.contact?.email;
+      if (email) {
+        const sent = await this.emailService.sendWeeklyReportEmail(email, firstName, report);
+        if (sent) {
+          await this.weeklyReportModel.updateOne(
+            { _id: report._id },
+            { email_sent: true, email_sent_at: new Date() },
+          );
+        }
+      }
+    } catch (error) {
+      this.logger.warn(`Failed to send weekly report email for user ${userId}: ${error.message}`);
     }
 
     this.logger.log(
