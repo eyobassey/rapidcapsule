@@ -106,17 +106,19 @@ Return a JSON object with exactly this structure:
   "doctors_note": "A warm, encouraging 3-5 sentence personal note from Doctor Eka. Sign off with encouragement for the week ahead. This should feel like a handwritten note from a caring physician who knows them personally."
 }
 
-## Available Action URL Paths for Recommendations (MUST use these exact paths)
-- Health checkup: /app/patient/health-checkup
-- Book appointment: /app/patient/appointmentsv2/book
-- Vitals: /app/patient/vitals
+## Available Action URL Paths for Recommendations (MUST use these EXACT paths — do NOT modify them)
+- Health checkup / Start checkup: /app/patient/health-checkup
+- Book appointment / See specialist: /app/patient/appointmentsv2/book
+- Vitals / Log BP / Log vitals / Log activity / Log reading: /app/patient/health-monitor/vitals
 - Prescriptions: /app/patient/prescriptions
-- Pharmacy: /app/patient/pharmacy
-- Recovery: /app/patient/recovery
-- Profile/onboarding: /app/patient/onboarding
+- Pharmacy home: /app/patient/pharmacy
+- Check orders / Pharmacy orders / Order status: /app/patient/pharmacy/orders
+- Recovery / Coping exercises: /app/patient/recovery
+- Profile / Onboarding / Complete profile: /app/patient/onboarding
 - Wallet: /app/patient/wallet
-- Health tips: /app/patient/health-tips
+- Health tips / Health insights: /app/patient/health-tips
 - Dr. Eka: /app/patient/dr-eka
+- Dashboard: /app/patient/dashboard
 
 ## Rules
 - The summary should be a compelling narrative, not a list of bullet points
