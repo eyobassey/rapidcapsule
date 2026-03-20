@@ -149,6 +149,8 @@ export default defineComponent({
       payment_failed: { patient: '/app/patient/wallet', specialist: '/app/specialist/wallet' },
       health_checkup_complete: { patient: '/app/patient/health-checkup', specialist: '/app/specialist/dashboard' },
       vitals_alert: { patient: '/app/patient/vitals', specialist: '/app/specialist/dashboard' },
+      health_insight_new: { patient: '/app/patient/health-tips', specialist: '/app/specialist/dashboard' },
+      health_insight_urgent: { patient: '/app/patient/health-tips', specialist: '/app/specialist/dashboard' },
     };
 
     const handleNotificationClick = async (notification) => {

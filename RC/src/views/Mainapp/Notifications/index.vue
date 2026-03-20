@@ -299,6 +299,8 @@ export default {
       payment_failed: '/app/patient/wallet',
       health_checkup_complete: '/app/patient/health-checkup',
       vitals_alert: '/app/patient/vitals',
+      health_insight_new: '/app/patient/health-tips',
+      health_insight_urgent: '/app/patient/health-tips',
     };
 
     const handleNotificationClick = async (notification) => {
