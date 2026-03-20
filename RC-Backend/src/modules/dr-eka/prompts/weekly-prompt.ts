@@ -91,7 +91,7 @@ Return a JSON object with exactly this structure:
     {
       "title": "Short recommendation title",
       "content": "2-3 sentences explaining the recommendation. Personal and actionable.",
-      "action_url": "/health-monitor/vitals"
+      "action_url": "/app/patient/vitals"
     }
   ],
 
@@ -106,15 +106,17 @@ Return a JSON object with exactly this structure:
   "doctors_note": "A warm, encouraging 3-5 sentence personal note from Doctor Eka. Sign off with encouragement for the week ahead. This should feel like a handwritten note from a caring physician who knows them personally."
 }
 
-## Available Action URL Paths for Recommendations
-- Health checkup: /health-checkup
-- Book appointment: /appointmentsv2/book
-- Vitals: /health-monitor/vitals
-- Prescriptions: /prescriptions
-- Pharmacy: /pharmacy
-- Recovery: /recovery
-- Profile/onboarding: /onboarding
-- Wallet: /wallet
+## Available Action URL Paths for Recommendations (MUST use these exact paths)
+- Health checkup: /app/patient/health-checkup
+- Book appointment: /app/patient/appointmentsv2/book
+- Vitals: /app/patient/vitals
+- Prescriptions: /app/patient/prescriptions
+- Pharmacy: /app/patient/pharmacy
+- Recovery: /app/patient/recovery
+- Profile/onboarding: /app/patient/onboarding
+- Wallet: /app/patient/wallet
+- Health tips: /app/patient/health-tips
+- Dr. Eka: /app/patient/dr-eka
 
 ## Rules
 - The summary should be a compelling narrative, not a list of bullet points

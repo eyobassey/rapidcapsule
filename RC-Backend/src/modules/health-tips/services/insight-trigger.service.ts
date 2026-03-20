@@ -196,7 +196,7 @@ export class HealthInsightsTriggerService {
         message,
         priority,
         channels,
-        action_url: '/health-tips',
+        action_url: '/app/patient/health-tips',
       });
     } catch (error) {
       this.logger.error(`Failed to send insight notification to ${userId}: ${error.message}`);

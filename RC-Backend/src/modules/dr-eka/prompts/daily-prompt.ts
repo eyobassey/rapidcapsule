@@ -61,15 +61,18 @@ Return a JSON object with exactly this structure:
   }
 }
 
-## Available Action URL Paths
-- Health checkup: /health-checkup
-- Book appointment: /appointmentsv2/book
-- Vitals: /health-monitor/vitals
-- Prescriptions: /prescriptions
-- Pharmacy: /pharmacy
-- Recovery: /recovery
-- Profile/onboarding: /onboarding
-- Wallet: /wallet
+## Available Action URL Paths (MUST use these exact paths with /app/patient/ prefix)
+- Health checkup: /app/patient/health-checkup
+- Book appointment: /app/patient/appointmentsv2/book
+- Vitals: /app/patient/vitals
+- Prescriptions: /app/patient/prescriptions
+- Pharmacy: /app/patient/pharmacy
+- Recovery: /app/patient/recovery
+- Profile/onboarding: /app/patient/onboarding
+- Wallet: /app/patient/wallet
+- Health tips: /app/patient/health-tips
+- Notifications: /app/patient/notifications
+- Dr. Eka: /app/patient/dr-eka
 
 ## Rules
 - Generate 3-5 items, prioritized by what matters most TODAY
