@@ -14,6 +14,10 @@ import {
   DrEkaWeeklyReport,
   DrEkaWeeklyReportSchema,
 } from './entities/weekly-report.entity';
+import {
+  DrEkaMonthlyReport,
+  DrEkaMonthlyReportSchema,
+} from './entities/monthly-report.entity';
 
 // Imported schemas from other modules
 import { User, UserSchema } from '../users/entities/user.entity';
@@ -72,6 +76,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
       // Dr Eka own entities
       { name: DrEkaDailyDigest.name, schema: DrEkaDailyDigestSchema },
       { name: DrEkaWeeklyReport.name, schema: DrEkaWeeklyReportSchema },
+      { name: DrEkaMonthlyReport.name, schema: DrEkaMonthlyReportSchema },
 
       // Cross-module schemas for data aggregation
       { name: User.name, schema: UserSchema },

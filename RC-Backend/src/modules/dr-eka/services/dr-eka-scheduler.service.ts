@@ -168,4 +168,47 @@ export class DrEkaSchedulerService {
       );
     }
   }
+
+  /**
+   * 1st of every month at 9 AM — generate monthly reports for all active patients
+   */
+  @Cron('0 9 1 * *')
+  async runMonthlyReports(): Promise<void> {
+    this.logger.log('Dr. Eka starting monthly report generation...');
+    const startTime = Date.now();
+
+    let processedCount = 0;
+    let successCount = 0;
+    let errorCount = 0;
+
+    try {
+      const patients = await this.userModel
+        .find({ user_type: 'Patient', status: 'Active', is_email_verified: true })
+        .select('_id')
+        .limit(500)
+        .lean();
+
+      for (let i = 0; i < patients.length; i++) {
+        try {
+          await this.drEkaService.generateMonthlyReport(patients[i]._id);
+          successCount++;
+        } catch (error) {
+          this.logger.error(`Monthly report failed for ${patients[i]._id}: ${error.message}`);
+          errorCount++;
+        }
+        processedCount++;
+        // 5 second delay between patients for monthly (expensive)
+        if (i < patients.length - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 5000));
+        }
+      }
+
+      const duration = Date.now() - startTime;
+      this.logger.log(
+        `Dr. Eka monthly reports complete: ${processedCount} patients, ${successCount} reports, ${errorCount} errors, ${duration}ms`,
+      );
+    } catch (error) {
+      this.logger.error(`Dr. Eka monthly reports failed: ${error.message}`, error.stack);
+    }
+  }
 }

@@ -225,4 +225,56 @@ export class DrEkaController {
     );
     return sendSuccessResponse('Weekly report generated', report);
   }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // MONTHLY REPORTS
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  @Get('monthly')
+  @ApiOperation({
+    summary: 'Get latest monthly report',
+    description: 'Retrieve the most recent monthly health report from Doctor Eka, including executive summary, achievements, goals, and comprehensive health analysis.',
+  })
+  @ApiResponse({ status: 200, description: 'Monthly report retrieved' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async getLatestMonthlyReport(@Request() req) {
+    const report = await this.drEkaService.getLatestMonthlyReport(req.user.sub);
+    return sendSuccessResponse('Monthly report retrieved', report);
+  }
+
+  @Get('monthly/history')
+  @ApiOperation({
+    summary: 'Get monthly report history',
+    description: 'Retrieve paginated history of all monthly reports from Doctor Eka.',
+  })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number', example: 1 })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Items per page', example: 10 })
+  @ApiResponse({ status: 200, description: 'Monthly report history retrieved' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async getMonthlyReports(
+    @Request() req,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const result = await this.drEkaService.getMonthlyReports(
+      req.user.sub,
+      page ? parseInt(page, 10) : 1,
+      limit ? parseInt(limit, 10) : 10,
+    );
+    return sendSuccessResponse('Monthly reports retrieved', result);
+  }
+
+  @Post('monthly/generate')
+  @ApiOperation({
+    summary: 'Generate monthly report',
+    description: 'Manually trigger Doctor Eka to generate a comprehensive monthly health report with achievements, goals, and deep analysis.',
+  })
+  @ApiResponse({ status: 201, description: 'Monthly report generated' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async generateMonthlyReport(@Request() req) {
+    const report = await this.drEkaService.generateMonthlyReport(
+      new Types.ObjectId(req.user.sub),
+    );
+    return sendSuccessResponse('Monthly report generated', report);
+  }
 }
