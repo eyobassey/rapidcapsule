@@ -150,6 +150,11 @@ const routes = [
         name: "HealthTips",
         component: () => import("@/views/Mainapp/HealthTips/index.vue"),
       },
+      {
+        path: "dr-eka",
+        name: "DrEka",
+        component: () => import("@/views/Mainapp/DrEka/index.vue"),
+      },
       // V1 Appointments - Redirect to V2
       {
         path: "appointments",

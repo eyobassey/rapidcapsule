@@ -1005,6 +1005,27 @@ const apiFactory = {
     return http.delete(`/eka/conversations/${conversationId}`);
   },
 
+  // ============ Dr. Eka AI Physician APIs ============
+
+  $_getDrEkaDigest() {
+    return http.get('/dr-eka/daily');
+  },
+  $_getDrEkaDigestHistory(params) {
+    return http.get('/dr-eka/daily/history', { params });
+  },
+  $_generateDrEkaDigest() {
+    return http.post('/dr-eka/daily/generate');
+  },
+  $_getDrEkaWeeklyReport() {
+    return http.get('/dr-eka/weekly');
+  },
+  $_getDrEkaWeeklyReports(params) {
+    return http.get('/dr-eka/weekly/history', { params });
+  },
+  $_generateDrEkaWeeklyReport() {
+    return http.post('/dr-eka/weekly/generate');
+  },
+
   test(params) {
     console.log("PARAMS", params);
   },

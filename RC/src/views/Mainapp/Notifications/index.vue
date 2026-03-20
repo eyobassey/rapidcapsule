@@ -301,6 +301,8 @@ export default {
       vitals_alert: '/app/patient/vitals',
       health_insight_new: '/app/patient/health-tips',
       health_insight_urgent: '/app/patient/health-tips',
+      dr_eka_daily_digest: '/app/patient/dr-eka',
+      dr_eka_weekly_report: '/app/patient/dr-eka',
     };
 
     const handleNotificationClick = async (notification) => {

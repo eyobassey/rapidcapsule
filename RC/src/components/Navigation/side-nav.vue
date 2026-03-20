@@ -202,6 +202,13 @@ export default {
           icon: "eka-chat",
           iconColor: "#0288D1",
         },
+        {
+          link: "/app/patient/dr-eka",
+          label: "Dr. Eka",
+          children: [],
+          icon: "stethoscope",
+          iconColor: "#0288D1",
+        },
       ],
       secondaryNav: [
         {

@@ -151,6 +151,8 @@ export default defineComponent({
       vitals_alert: { patient: '/app/patient/vitals', specialist: '/app/specialist/dashboard' },
       health_insight_new: { patient: '/app/patient/health-tips', specialist: '/app/specialist/dashboard' },
       health_insight_urgent: { patient: '/app/patient/health-tips', specialist: '/app/specialist/dashboard' },
+      dr_eka_daily_digest: { patient: '/app/patient/dr-eka', specialist: '/app/specialist/dashboard' },
+      dr_eka_weekly_report: { patient: '/app/patient/dr-eka', specialist: '/app/specialist/dashboard' },
     };
 
     const handleNotificationClick = async (notification) => {

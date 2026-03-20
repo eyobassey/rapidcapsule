@@ -323,6 +323,25 @@
         </div>
       </section>
 
+      <!-- Dr. Eka Card -->
+      <section class="dr-eka-section" @click="goToDrEka">
+        <div class="dr-eka-card">
+          <div class="dr-eka-avatar">
+            <v-icon name="gi-stethoscope" scale="1.4" />
+          </div>
+          <div class="dr-eka-info">
+            <div class="dr-eka-name">
+              <h3>Dr. Eka</h3>
+              <span class="dr-eka-badge">AI Physician</span>
+            </div>
+            <p class="dr-eka-summary">{{ drEkaSummary || 'Your personal AI physician is ready with daily health insights.' }}</p>
+          </div>
+          <div class="dr-eka-arrow">
+            <v-icon name="hi-chevron-right" scale="0.9" />
+          </div>
+        </div>
+      </section>
+
       <!-- AI Health Insights Section -->
       <section class="insights-section">
         <div class="insights-header">
@@ -467,6 +486,7 @@ const healthTips = ref([]);
 const loadingTips = ref(false);
 const premiumScore = ref(null);
 const showPasskeyPrompt = ref(false);
+const drEkaSummary = ref('');
 
 // Computed for AI credits display
 const hasAICredits = computed(() => aiCredits.value > 0);
@@ -1003,6 +1023,7 @@ const goToPharmacy = () => {
   console.log('goToPharmacy clicked');
   router.push('/app/patient/pharmacy');
 };
+const goToDrEka = () => router.push('/app/patient/dr-eka');
 const openSupport = () => window.open('https://wa.me/2348000000000', '_blank');
 
 const joinMeeting = (appointment) => {
@@ -1014,6 +1035,22 @@ const joinMeeting = (appointment) => {
 const viewAppointment = (appointment) => {
   // Go to appointments page - no detail page exists for patients
   router.push('/app/patient/appointmentsv2');
+};
+
+// Dr. Eka Digest Loader
+const loadDrEkaDigest = async () => {
+  try {
+    const res = await $http.$_getDrEkaDigest?.();
+    const data = res?.data?.data || res?.data;
+    if (data?.summary) {
+      drEkaSummary.value = data.summary;
+    } else if (data?.items?.length > 0) {
+      drEkaSummary.value = `${data.items.length} health insights ready for you today`;
+    }
+  } catch (error) {
+    // Silently fail - Dr. Eka card will show default text
+    console.error('Error loading Dr. Eka digest:', error);
+  }
 };
 
 // Data Fetching
@@ -1153,6 +1190,7 @@ onMounted(() => {
   }
   fetchDashboardData();
   loadHealthTips();
+  loadDrEkaDigest();
 
   // Check if we should show passkey setup prompt
   checkPasskeyPrompt();
@@ -2262,6 +2300,95 @@ $violet-light: #EDE9FE;
       background: $sky-dark;
     }
   }
+}
+
+// Dr. Eka Section
+.dr-eka-section {
+  margin-top: 24px;
+  cursor: pointer;
+}
+
+.dr-eka-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 20px;
+  background: linear-gradient(135deg, #0F4C81 0%, #0288D1 60%, #4FC3F7 100%);
+  border-radius: 20px;
+  box-shadow: 0 4px 20px rgba(2, 136, 209, 0.25);
+  transition: all 0.25s;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(2, 136, 209, 0.35);
+  }
+}
+
+.dr-eka-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.dr-eka-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.dr-eka-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+
+  h3 {
+    font-size: 16px;
+    font-weight: 700;
+    color: white;
+    margin: 0;
+  }
+}
+
+.dr-eka-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  background: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.9);
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.dr-eka-summary {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.dr-eka-arrow {
+  color: rgba(255, 255, 255, 0.6);
+  flex-shrink: 0;
+  transition: transform 0.2s;
+}
+
+.dr-eka-card:hover .dr-eka-arrow {
+  transform: translateX(3px);
+  color: white;
 }
 
 // AI Health Insights Section
