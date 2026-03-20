@@ -242,6 +242,8 @@ export class NotificationOrchestratorService {
       [NotificationType.RECOVERY_MAT_COMPLIANCE_WARNING]: 'recovery_updates',
       [NotificationType.HEALTH_INSIGHT_NEW]: 'health_reminders',
       [NotificationType.HEALTH_INSIGHT_URGENT]: 'vitals_alerts',
+      [NotificationType.DR_EKA_DAILY_DIGEST]: 'health_reminders',
+      [NotificationType.DR_EKA_WEEKLY_REPORT]: 'health_reminders',
     };
 
     return mapping[type] || 'appointment_updates';

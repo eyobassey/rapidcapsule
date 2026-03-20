@@ -45,6 +45,7 @@ import { LanguagesModule } from './modules/languages/languages.module';
 import { SpecialistCategoriesModule } from './modules/specialist-categories/specialist-categories.module';
 import { ConsultationServicesModule } from './modules/consultation-services/consultation-services.module';
 import { HealthTipsModule } from './modules/health-tips/health-tips.module';
+import { DrEkaModule } from './modules/dr-eka/dr-eka.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { TrialModule } from './modules/trial/trial.module';
 import { EkaModule } from './modules/eka/eka.module';
@@ -98,6 +99,7 @@ dotenv.config();
     SpecialistCategoriesModule,
     ConsultationServicesModule,
     HealthTipsModule,
+    DrEkaModule,
     NotificationsModule,
     TrialModule,
     EkaModule,

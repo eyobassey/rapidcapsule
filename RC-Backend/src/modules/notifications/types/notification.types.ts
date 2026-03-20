@@ -70,6 +70,10 @@ export enum NotificationType {
   // Health Insights
   HEALTH_INSIGHT_NEW = 'health_insight_new',
   HEALTH_INSIGHT_URGENT = 'health_insight_urgent',
+
+  // Dr. Eka
+  DR_EKA_DAILY_DIGEST = 'dr_eka_daily_digest',
+  DR_EKA_WEEKLY_REPORT = 'dr_eka_weekly_report',
 }
 
 export enum NotificationPriority {
