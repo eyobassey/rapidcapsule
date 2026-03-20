@@ -12,6 +12,7 @@ import { NotificationsService } from './notifications.service';
 import { NotificationOrchestratorService } from './services/notification-orchestrator.service';
 import { SmsNotificationService } from './services/sms-notification.service';
 import { PushNotificationService } from './services/push-notification.service';
+import { OneSignalPushService } from './services/onesignal-push.service';
 import { ScheduledNotificationService } from './services/scheduled-notification.service';
 import { AdminBroadcastService } from './services/admin-broadcast.service';
 
@@ -65,6 +66,7 @@ import { UserSetting, UserSettingSchema } from '../user-settings/entities/user-s
     NotificationOrchestratorService,
     SmsNotificationService,
     PushNotificationService,
+    OneSignalPushService,
     ScheduledNotificationService,
     AdminBroadcastService,
     AppointmentListener,

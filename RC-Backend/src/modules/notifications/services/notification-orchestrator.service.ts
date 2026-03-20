@@ -8,6 +8,7 @@ import { NotificationsGateway } from '../notifications.gateway';
 import { GeneralHelpers } from '../../../common/helpers/general.helpers';
 import { SmsNotificationService } from './sms-notification.service';
 import { PushNotificationService } from './push-notification.service';
+import { OneSignalPushService } from './onesignal-push.service';
 import { WhatsAppNotificationService, NotificationType as WhatsAppNotificationType } from '../../whatsapp/services/whatsapp-notification.service';
 import {
   NotificationType,
@@ -38,6 +39,7 @@ export class NotificationOrchestratorService {
     private generalHelpers: GeneralHelpers,
     private smsNotificationService: SmsNotificationService,
     private pushNotificationService: PushNotificationService,
+    @Optional() private oneSignalPushService: OneSignalPushService,
     @Optional() private whatsAppNotificationService: WhatsAppNotificationService,
   ) {}
 
@@ -443,44 +445,54 @@ export class NotificationOrchestratorService {
     }
   }
 
-  // Send push notification using Firebase
+  // Send push notification via OneSignal (primary) with Firebase fallback
   private async sendPushNotification(notification: any, user: any): Promise<void> {
-    try {
-      const result = await this.pushNotificationService.sendToUser(
-        user._id.toString(),
-        {
-          title: notification.title,
-          body: notification.message,
-          data: {
-            type: notification.type,
-            notification_id: notification._id.toString(),
-            action_url: notification.action_url || '',
-          },
-        },
-      );
+    const userId = user._id.toString();
+    const payload = {
+      title: notification.title,
+      body: notification.message,
+      data: {
+        type: notification.type,
+        notification_id: notification._id.toString(),
+        action_url: notification.action_url || '',
+      },
+    };
 
-      if (result.success) {
+    try {
+      // Try OneSignal first (preferred — uses external_id, no device tokens needed)
+      if (this.oneSignalPushService) {
+        const result = await this.oneSignalPushService.sendToUser(userId, payload);
+        if (result.success) {
+          await this.notificationsService.updateDeliveryStatus(
+            notification._id.toString(),
+            NotificationChannel.PUSH,
+            'sent' as any,
+          );
+          this.logger.log(`Push sent via OneSignal to user ${userId}`);
+          return;
+        }
+        this.logger.debug(`OneSignal push failed for ${userId}: ${result.error}, trying Firebase fallback`);
+      }
+
+      // Fallback to Firebase
+      const fbResult = await this.pushNotificationService.sendToUser(userId, payload);
+      if (fbResult.success) {
         await this.notificationsService.updateDeliveryStatus(
           notification._id.toString(),
           NotificationChannel.PUSH,
           'sent' as any,
         );
-        this.logger.log(`Push notification sent to user ${user._id}`);
-      } else {
-        // If no device tokens, silently skip
-        if (result.error?.includes('No device tokens')) {
-          this.logger.debug(`Push not sent - no device tokens for user ${user._id}`);
-        } else {
-          await this.notificationsService.updateDeliveryStatus(
-            notification._id.toString(),
-            NotificationChannel.PUSH,
-            'failed' as any,
-            result.error,
-          );
-        }
+        this.logger.log(`Push sent via Firebase to user ${userId}`);
+      } else if (!fbResult.error?.includes('No device tokens') && !fbResult.error?.includes('not configured')) {
+        await this.notificationsService.updateDeliveryStatus(
+          notification._id.toString(),
+          NotificationChannel.PUSH,
+          'failed' as any,
+          fbResult.error,
+        );
       }
     } catch (error) {
-      this.logger.error(`Failed to send push to user ${user._id}: ${error.message}`);
+      this.logger.error(`Failed to send push to user ${userId}: ${error.message}`);
       await this.notificationsService.updateDeliveryStatus(
         notification._id.toString(),
         NotificationChannel.PUSH,
