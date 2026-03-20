@@ -124,13 +124,10 @@ export default createStore({
   mutations: {
     SET_TOKEN(state, data) {
       state.token = data.token;
-      // Store token in localStorage for HTTP interceptor
       if (data && data.token) {
-        // Always store in sessionStorage for now to debug
+        // Always store in both so email links work across tabs
+        localStorage.setItem("token", data.token);
         sessionStorage.setItem("token", data.token);
-        if (data.remember_login) {
-          localStorage.setItem("token", data.token);
-        }
       } else {
         localStorage.removeItem("token");
         sessionStorage.removeItem("token");
