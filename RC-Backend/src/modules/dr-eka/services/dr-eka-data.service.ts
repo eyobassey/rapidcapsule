@@ -833,10 +833,29 @@ export class DrEkaDataService {
           new Date(r.updatedAt) < sevenDaysAgo,
       );
 
-      // Compute averages
+      // Cumulative vitals need daily aggregation before averaging
+      const CUMULATIVE_VITALS = new Set([
+        'steps', 'calories_burned', 'active_minutes', 'distance',
+      ]);
+
       const computeAvg = (arr: any[]): number | null => {
         const nums = arr.map(parseVal).filter((n) => !isNaN(n));
         if (nums.length === 0) return null;
+
+        if (CUMULATIVE_VITALS.has(vitalType)) {
+          // Sum by day, then average daily totals
+          const dailyMap = new Map<string, number>();
+          for (const entry of arr) {
+            const val = parseVal(entry);
+            if (isNaN(val)) continue;
+            const day = new Date(entry.updatedAt).toISOString().split('T')[0];
+            dailyMap.set(day, (dailyMap.get(day) || 0) + val);
+          }
+          if (dailyMap.size === 0) return null;
+          const dailyTotals = Array.from(dailyMap.values());
+          return Math.round(dailyTotals.reduce((a, b) => a + b, 0) / dailyTotals.length);
+        }
+
         return (
           Math.round(
             (nums.reduce((a, b) => a + b, 0) / nums.length) * 10,
