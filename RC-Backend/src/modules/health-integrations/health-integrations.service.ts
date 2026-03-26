@@ -202,10 +202,36 @@ export class HealthIntegrationsService implements OnModuleInit {
     const authUrl = await provider.getAuthUrl(userId, state);
 
     // Apple Health (and other push-based) don't return an auth URL
+    // but we still need to create/update the integration record
     if (authUrl === null) {
+      await this.healthIntegrationModel.findOneAndUpdate(
+        {
+          userId: new Types.ObjectId(userId),
+          provider: connectDto.provider,
+        },
+        {
+          status: IntegrationStatus.CONNECTED,
+          providerType: ProviderType.DIRECT,
+          isActive: true,
+          metadata: {
+            syncFrequency: connectDto.metadata?.syncFrequency || 'hourly',
+            dataTypes: connectDto.dataTypes?.length
+              ? connectDto.dataTypes
+              : DEFAULT_DATA_TYPES[connectDto.provider] || [],
+          },
+          syncSettings: {
+            autoSync: connectDto.autoSync ?? true,
+            syncDirection: connectDto.syncDirection ?? 'push',
+            dataMapping: {},
+          },
+        },
+        { upsert: true, new: true },
+      );
+
       return {
         provider: connectDto.provider,
         requiresNativeApp: true,
+        status: 'connected',
         instructions: 'Please use the Rapid Capsule mobile app to connect this provider',
       };
     }
